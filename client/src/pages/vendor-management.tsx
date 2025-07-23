@@ -62,7 +62,7 @@ export default function VendorManagement() {
     },
   });
 
-  const { data: vendors, isLoading } = useQuery({
+  const { data: vendors = [], isLoading } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors", { search: searchQuery, status: statusFilter, category: categoryFilter }],
     retry: false,
   });
@@ -164,7 +164,7 @@ export default function VendorManagement() {
     }
   };
 
-  const filteredVendors = vendors?.filter((vendor: Vendor) => {
+  const filteredVendors = vendors.filter((vendor: Vendor) => {
     const matchesSearch = vendor.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          vendor.contactPerson?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          vendor.email?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -337,7 +337,7 @@ export default function VendorManagement() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Vendors</p>
-                      <p className="text-2xl font-bold">{vendors?.length || 0}</p>
+                      <p className="text-2xl font-bold">{vendors.length}</p>
                     </div>
                     <Users className="w-8 h-8 text-primary" />
                   </div>
@@ -349,7 +349,7 @@ export default function VendorManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Approved</p>
                       <p className="text-2xl font-bold text-success">
-                        {vendors?.filter((v: Vendor) => v.status === 'approved').length || 0}
+                        {vendors.filter((v: Vendor) => v.status === 'approved').length}
                       </p>
                     </div>
                     <CheckCircle className="w-8 h-8 text-success" />
@@ -362,7 +362,7 @@ export default function VendorManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Pending</p>
                       <p className="text-2xl font-bold text-warning">
-                        {vendors?.filter((v: Vendor) => v.status === 'pending').length || 0}
+                        {vendors.filter((v: Vendor) => v.status === 'pending').length}
                       </p>
                     </div>
                     <Clock className="w-8 h-8 text-warning" />
@@ -375,7 +375,7 @@ export default function VendorManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Rejected</p>
                       <p className="text-2xl font-bold text-destructive">
-                        {vendors?.filter((v: Vendor) => v.status === 'rejected').length || 0}
+                        {vendors.filter((v: Vendor) => v.status === 'rejected').length}
                       </p>
                     </div>
                     <XCircle className="w-8 h-8 text-destructive" />

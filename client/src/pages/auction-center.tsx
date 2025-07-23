@@ -59,13 +59,13 @@ export default function AuctionCenter() {
     },
   });
 
-  const { data: auctions, isLoading } = useQuery({
+  const { data: auctions = [], isLoading } = useQuery<Auction[]>({
     queryKey: ["/api/auctions", { status: statusFilter }],
     retry: false,
   });
 
-  const { data: selectedAuctionDetails } = useQuery({
-    queryKey: ["/api/auctions", selectedAuction],
+  const { data: selectedAuctionDetails = null } = useQuery<any>({
+    queryKey: [`/api/auctions/${selectedAuction}`],
     enabled: !!selectedAuction,
     retry: false,
   });
@@ -183,7 +183,7 @@ export default function AuctionCenter() {
     }
   };
 
-  const filteredAuctions = auctions?.filter((auction: Auction) => {
+  const filteredAuctions = auctions.filter((auction: Auction) => {
     const matchesSearch = auction.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          auction.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || auction.status === statusFilter;
@@ -313,7 +313,7 @@ export default function AuctionCenter() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Auctions</p>
-                      <p className="text-2xl font-bold">{auctions?.length || 0}</p>
+                      <p className="text-2xl font-bold">{auctions.length}</p>
                     </div>
                     <Gavel className="w-8 h-8 text-primary" />
                   </div>
@@ -325,7 +325,7 @@ export default function AuctionCenter() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Live Auctions</p>
                       <p className="text-2xl font-bold text-success">
-                        {auctions?.filter((a: Auction) => a.status === 'live').length || 0}
+                        {auctions.filter((a: Auction) => a.status === 'live').length}
                       </p>
                     </div>
                     <Activity className="w-8 h-8 text-success" />
