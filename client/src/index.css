@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(142, 76%, 36%);
+  --secondary-foreground: hsl(211, 100%, 99%);
+  --accent: hsl(38, 92%, 50%);
+  --accent-foreground: hsl(26, 83%, 14%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --success: hsl(142, 76%, 36%);
+  --success-foreground: hsl(211, 100%, 99%);
+  --warning: hsl(38, 92%, 50%);
+  --warning-foreground: hsl(26, 83%, 14%);
+  --info: hsl(207, 90%, 54%);
+  --info-foreground: hsl(211, 100%, 99%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --success: hsl(142, 76%, 36%);
+  --success-foreground: hsl(211, 100%, 99%);
+  --warning: hsl(38, 92%, 50%);
+  --warning-foreground: hsl(26, 83%, 14%);
+  --info: hsl(207, 90%, 54%);
+  --info-foreground: hsl(211, 100%, 99%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .bento-grid {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+  
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full mr-2;
+  }
+  
+  .ai-chat-bubble {
+    @apply bg-gradient-to-r from-primary to-blue-500 text-primary-foreground rounded-2xl rounded-bl-md p-3 mb-2 max-w-xs animate-in fade-in-0 slide-in-from-left-2;
+  }
+  
+  .user-chat-bubble {
+    @apply bg-muted text-muted-foreground rounded-2xl rounded-br-md p-3 mb-2 max-w-xs ml-auto animate-in fade-in-0 slide-in-from-right-2;
+  }
+  
+  .notification-badge {
+    @apply absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-semibold;
+  }
+  
+  .sidebar-nav {
+    @apply flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200;
+  }
+  
+  .sidebar-nav:hover {
+    @apply bg-muted;
+  }
+  
+  .chart-container {
+    @apply h-48 bg-gradient-to-br from-muted to-slate-100 rounded-lg relative overflow-hidden;
+  }
+  
+  .progress-ring {
+    @apply transform -rotate-90;
+  }
+  
+  .progress-ring-circle {
+    stroke-dasharray: 251.2;
+    stroke-dashoffset: 251.2;
+    transition: stroke-dashoffset 0.5s ease-in-out;
+  }
+}
+
+@layer utilities {
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

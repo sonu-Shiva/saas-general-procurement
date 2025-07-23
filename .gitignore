@@ -48,3 +48,6 @@ Thumbs.db
 *.mov
 *.wmv
 
+server/public
+vite.config.ts.*
+*.tar.gz
