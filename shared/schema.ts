@@ -485,7 +485,6 @@ export const insertRfxEventSchema = createInsertSchema(rfxEvents).omit({
 });
 
 export const insertRfxInvitationSchema = createInsertSchema(rfxInvitations).omit({
-  id: true,
   invitedAt: true,
 });
 
@@ -501,7 +500,6 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
 });
 
 export const insertAuctionParticipantSchema = createInsertSchema(auctionParticipants).omit({
-  id: true,
   registeredAt: true,
 });
 
