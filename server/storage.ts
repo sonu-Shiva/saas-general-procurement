@@ -535,13 +535,16 @@ export class DatabaseStorage implements IStorage {
   
   // AI/Search operations
   async searchVendors(query: string, filters?: { location?: string; category?: string; certifications?: string[] }): Promise<Vendor[]> {
-    const conditions = [like(vendors.companyName, `%${query}%`)];
+    const conditions = [
+      like(vendors.companyName, `%${query}%`),
+      eq(vendors.status, 'approved') // Only show approved vendors
+    ];
     
-    if (filters?.location) {
+    if (filters?.location && filters.location !== 'all') {
       conditions.push(sql`${vendors.officeLocations} @> ARRAY[${filters.location}]::text[]`);
     }
     
-    if (filters?.category) {
+    if (filters?.category && filters.category !== 'all') {
       conditions.push(sql`${vendors.categories} @> ARRAY[${filters.category}]::text[]`);
     }
     

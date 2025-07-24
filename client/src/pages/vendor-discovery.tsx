@@ -33,7 +33,7 @@ export default function VendorDiscovery() {
   const [performanceRange, setPerformanceRange] = useState([4.0]);
   const [aiSearchMode, setAiSearchMode] = useState(false);
 
-  const { data: searchResults, isLoading } = useQuery({
+  const { data: searchResults, isLoading } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors/search", { 
       q: searchQuery, 
       location: locationFilter, 
@@ -44,7 +44,7 @@ export default function VendorDiscovery() {
     retry: false,
   });
 
-  const { data: allVendors } = useQuery({
+  const { data: allVendors } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors", { status: "approved" }],
     retry: false,
   });
@@ -62,7 +62,7 @@ export default function VendorDiscovery() {
     // AI search functionality would be implemented here
   };
 
-  const displayVendors = searchQuery.length > 2 ? searchResults : (allVendors || []).filter((vendor: Vendor) => {
+  const displayVendors = searchQuery.length > 2 ? (searchResults || []) : (allVendors || []).filter((vendor: Vendor) => {
     const matchesLocation = locationFilter === "all" || vendor.officeLocations?.includes(locationFilter);
     const matchesCategory = categoryFilter === "all" || vendor.categories?.includes(categoryFilter);
     const matchesCertifications = certificationFilters.length === 0 || 
