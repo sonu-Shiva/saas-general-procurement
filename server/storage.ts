@@ -180,17 +180,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getVendors(filters?: { status?: string; category?: string; search?: string }): Promise<Vendor[]> {
-    let query = db.select().from(vendors);
+    const conditions = [];
     
     if (filters?.status) {
-      query = query.where(eq(vendors.status, filters.status as any));
+      conditions.push(eq(vendors.status, filters.status as any));
     }
     
     if (filters?.search) {
-      query = query.where(like(vendors.companyName, `%${filters.search}%`));
+      conditions.push(like(vendors.companyName, `%${filters.search}%`));
     }
     
-    return await query.orderBy(desc(vendors.createdAt));
+    return await db
+      .select()
+      .from(vendors)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(vendors.createdAt));
   }
 
   async updateVendor(id: string, updates: Partial<InsertVendor>): Promise<Vendor> {
@@ -214,21 +218,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProducts(filters?: { category?: string; search?: string; isActive?: boolean }): Promise<Product[]> {
-    let query = db.select().from(products);
+    const conditions = [];
     
     if (filters?.category) {
-      query = query.where(eq(products.category, filters.category));
+      conditions.push(eq(products.category, filters.category));
     }
     
     if (filters?.search) {
-      query = query.where(like(products.itemName, `%${filters.search}%`));
+      conditions.push(like(products.itemName, `%${filters.search}%`));
     }
     
     if (filters?.isActive !== undefined) {
-      query = query.where(eq(products.isActive, filters.isActive));
+      conditions.push(eq(products.isActive, filters.isActive));
     }
     
-    return await query.orderBy(desc(products.createdAt));
+    return await db
+      .select()
+      .from(products)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(products.createdAt));
   }
 
   async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product> {
@@ -252,13 +260,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBoms(createdBy?: string): Promise<Bom[]> {
-    let query = db.select().from(boms);
-    
-    if (createdBy) {
-      query = query.where(eq(boms.createdBy, createdBy));
-    }
-    
-    return await query.orderBy(desc(boms.createdAt));
+    return await db
+      .select()
+      .from(boms)
+      .where(createdBy ? eq(boms.createdBy, createdBy) : undefined)
+      .orderBy(desc(boms.createdAt));
   }
 
   async createBomItem(bomItem: InsertBomItem): Promise<BomItem> {
@@ -282,21 +288,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRfxEvents(filters?: { status?: string; type?: string; createdBy?: string }): Promise<RfxEvent[]> {
-    let query = db.select().from(rfxEvents);
+    const conditions = [];
     
     if (filters?.status) {
-      query = query.where(eq(rfxEvents.status, filters.status as any));
+      conditions.push(eq(rfxEvents.status, filters.status as any));
     }
     
     if (filters?.type) {
-      query = query.where(eq(rfxEvents.type, filters.type as any));
+      conditions.push(eq(rfxEvents.type, filters.type as any));
     }
     
     if (filters?.createdBy) {
-      query = query.where(eq(rfxEvents.createdBy, filters.createdBy));
+      conditions.push(eq(rfxEvents.createdBy, filters.createdBy));
     }
     
-    return await query.orderBy(desc(rfxEvents.createdAt));
+    return await db
+      .select()
+      .from(rfxEvents)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(rfxEvents.createdAt));
   }
 
   async updateRfxEvent(id: string, updates: Partial<InsertRfxEvent>): Promise<RfxEvent> {
@@ -338,17 +348,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuctions(filters?: { status?: string; createdBy?: string }): Promise<Auction[]> {
-    let query = db.select().from(auctions);
+    const conditions = [];
     
     if (filters?.status) {
-      query = query.where(eq(auctions.status, filters.status as any));
+      conditions.push(eq(auctions.status, filters.status as any));
     }
     
     if (filters?.createdBy) {
-      query = query.where(eq(auctions.createdBy, filters.createdBy));
+      conditions.push(eq(auctions.createdBy, filters.createdBy));
     }
     
-    return await query.orderBy(desc(auctions.createdAt));
+    return await db
+      .select()
+      .from(auctions)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(auctions.createdAt));
   }
 
   async updateAuction(id: string, updates: Partial<InsertAuction>): Promise<Auction> {
@@ -407,21 +421,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPurchaseOrders(filters?: { status?: string; vendorId?: string; createdBy?: string }): Promise<PurchaseOrder[]> {
-    let query = db.select().from(purchaseOrders);
+    const conditions = [];
     
     if (filters?.status) {
-      query = query.where(eq(purchaseOrders.status, filters.status as any));
+      conditions.push(eq(purchaseOrders.status, filters.status as any));
     }
     
     if (filters?.vendorId) {
-      query = query.where(eq(purchaseOrders.vendorId, filters.vendorId));
+      conditions.push(eq(purchaseOrders.vendorId, filters.vendorId));
     }
     
     if (filters?.createdBy) {
-      query = query.where(eq(purchaseOrders.createdBy, filters.createdBy));
+      conditions.push(eq(purchaseOrders.createdBy, filters.createdBy));
     }
     
-    return await query.orderBy(desc(purchaseOrders.createdAt));
+    return await db
+      .select()
+      .from(purchaseOrders)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(purchaseOrders.createdAt));
   }
 
   async updatePurchaseOrder(id: string, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
@@ -517,24 +535,25 @@ export class DatabaseStorage implements IStorage {
   
   // AI/Search operations
   async searchVendors(query: string, filters?: { location?: string; category?: string; certifications?: string[] }): Promise<Vendor[]> {
-    let queryBuilder = db.select().from(vendors);
-    
-    // Search in company name and description
-    queryBuilder = queryBuilder.where(like(vendors.companyName, `%${query}%`));
+    const conditions = [like(vendors.companyName, `%${query}%`)];
     
     if (filters?.location) {
-      queryBuilder = queryBuilder.where(sql`${vendors.officeLocations} @> ARRAY[${filters.location}]::text[]`);
+      conditions.push(sql`${vendors.officeLocations} @> ARRAY[${filters.location}]::text[]`);
     }
     
     if (filters?.category) {
-      queryBuilder = queryBuilder.where(sql`${vendors.categories} @> ARRAY[${filters.category}]::text[]`);
+      conditions.push(sql`${vendors.categories} @> ARRAY[${filters.category}]::text[]`);
     }
     
     if (filters?.certifications && filters.certifications.length > 0) {
-      queryBuilder = queryBuilder.where(sql`${vendors.certifications} && ARRAY[${filters.certifications.join(',')}]::text[]`);
+      conditions.push(sql`${vendors.certifications} && ARRAY[${filters.certifications.join(',')}]::text[]`);
     }
     
-    return await queryBuilder.orderBy(desc(vendors.performanceScore));
+    return await db
+      .select()
+      .from(vendors)
+      .where(and(...conditions))
+      .orderBy(desc(vendors.performanceScore));
   }
 }
 
