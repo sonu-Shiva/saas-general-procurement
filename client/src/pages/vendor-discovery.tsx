@@ -27,8 +27,8 @@ import type { Vendor } from "@shared/schema";
 
 export default function VendorDiscovery() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [certificationFilters, setCertificationFilters] = useState<string[]>([]);
   const [performanceRange, setPerformanceRange] = useState([4.0]);
   const [aiSearchMode, setAiSearchMode] = useState(false);
@@ -63,8 +63,8 @@ export default function VendorDiscovery() {
   };
 
   const displayVendors = searchQuery.length > 2 ? searchResults : (allVendors || []).filter((vendor: Vendor) => {
-    const matchesLocation = !locationFilter || vendor.officeLocations?.includes(locationFilter);
-    const matchesCategory = !categoryFilter || vendor.categories?.includes(categoryFilter);
+    const matchesLocation = locationFilter === "all" || vendor.officeLocations?.includes(locationFilter);
+    const matchesCategory = categoryFilter === "all" || vendor.categories?.includes(categoryFilter);
     const matchesCertifications = certificationFilters.length === 0 || 
       certificationFilters.some(cert => vendor.certifications?.includes(cert));
     const matchesPerformance = !vendor.performanceScore || 
@@ -167,7 +167,7 @@ export default function VendorDiscovery() {
                           <SelectValue placeholder="Select location" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Locations</SelectItem>
+                          <SelectItem value="all">All Locations</SelectItem>
                           <SelectItem value="Mumbai">Mumbai</SelectItem>
                           <SelectItem value="Delhi">Delhi</SelectItem>
                           <SelectItem value="Bangalore">Bangalore</SelectItem>
@@ -191,7 +191,7 @@ export default function VendorDiscovery() {
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Categories</SelectItem>
+                          <SelectItem value="all">All Categories</SelectItem>
                           <SelectItem value="electronics">Electronics & IT</SelectItem>
                           <SelectItem value="raw-materials">Raw Materials</SelectItem>
                           <SelectItem value="office-supplies">Office Supplies</SelectItem>
@@ -263,8 +263,8 @@ export default function VendorDiscovery() {
                       variant="outline" 
                       className="w-full"
                       onClick={() => {
-                        setLocationFilter("");
-                        setCategoryFilter("");
+                        setLocationFilter("all");
+                        setCategoryFilter("all");
                         setCertificationFilters([]);
                         setPerformanceRange([4.0]);
                       }}
