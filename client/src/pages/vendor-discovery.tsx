@@ -62,7 +62,7 @@ export default function VendorDiscovery() {
     // AI search functionality would be implemented here
   };
 
-  const displayVendors = searchQuery.length > 2 ? searchResults : allVendors?.filter((vendor: Vendor) => {
+  const displayVendors = searchQuery.length > 2 ? searchResults : (allVendors || []).filter((vendor: Vendor) => {
     const matchesLocation = !locationFilter || vendor.officeLocations?.includes(locationFilter);
     const matchesCategory = !categoryFilter || vendor.categories?.includes(categoryFilter);
     const matchesCertifications = certificationFilters.length === 0 || 

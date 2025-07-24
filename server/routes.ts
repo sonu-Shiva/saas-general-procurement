@@ -64,6 +64,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vendor search/discovery routes (must be before parameterized routes)
+  app.get('/api/vendors/search', isAuthenticated, async (req, res) => {
+    try {
+      const { q, location, category, certifications } = req.query;
+      
+      if (!q) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      
+      const vendors = await storage.searchVendors(
+        q as string,
+        {
+          location: location as string,
+          category: category as string,
+          certifications: certifications ? (certifications as string).split(',') : undefined,
+        }
+      );
+      res.json(vendors);
+    } catch (error) {
+      console.error("Error searching vendors:", error);
+      res.status(500).json({ message: "Failed to search vendors" });
+    }
+  });
+
   app.get('/api/vendors', isAuthenticated, async (req, res) => {
     try {
       const { status, category, search } = req.query;
@@ -100,25 +124,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating vendor:", error);
       res.status(400).json({ message: "Failed to update vendor" });
-    }
-  });
-
-  // Vendor search/discovery routes
-  app.get('/api/vendors/search', isAuthenticated, async (req, res) => {
-    try {
-      const { q, location, category, certifications } = req.query;
-      const vendors = await storage.searchVendors(
-        q as string,
-        {
-          location: location as string,
-          category: category as string,
-          certifications: certifications ? (certifications as string).split(',') : undefined,
-        }
-      );
-      res.json(vendors);
-    } catch (error) {
-      console.error("Error searching vendors:", error);
-      res.status(500).json({ message: "Failed to search vendors" });
     }
   });
 
