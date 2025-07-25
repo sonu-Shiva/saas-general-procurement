@@ -361,7 +361,7 @@ export default function ProductCatalogue() {
                         }
                       </p>
                     </div>
-                    <TbCurrencyRupee className="w-8 h-8 text-secondary" />
+                    <div className="w-8 h-8 text-secondary flex items-center justify-center font-bold text-xl">₹</div>
                   </div>
                 </CardContent>
               </Card>
