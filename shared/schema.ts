@@ -459,12 +459,20 @@ export const insertVendorSchema = createInsertSchema(vendors).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  performanceScore: z.union([z.string(), z.number()]).optional().transform((val) => 
+    val ? String(val) : undefined
+  ),
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  basePrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+    val ? String(val) : undefined
+  ),
 });
 
 export const insertBomSchema = createInsertSchema(boms).omit({
@@ -476,12 +484,24 @@ export const insertBomSchema = createInsertSchema(boms).omit({
 export const insertBomItemSchema = createInsertSchema(bomItems).omit({
   id: true,
   createdAt: true,
+}).extend({
+  quantity: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  unitPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+    val ? String(val) : undefined
+  ),
+  totalPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+    val ? String(val) : undefined
+  ),
 });
 
 export const insertRfxEventSchema = createInsertSchema(rfxEvents).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  budget: z.union([z.string(), z.number()]).optional().transform((val) => 
+    val ? String(val) : undefined
+  ),
 });
 
 export const insertRfxInvitationSchema = createInsertSchema(rfxInvitations).omit({
@@ -497,6 +517,11 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  startingPrice: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  currentBid: z.union([z.string(), z.number()]).optional().transform((val) => 
+    val ? String(val) : undefined
+  ),
 });
 
 export const insertAuctionParticipantSchema = createInsertSchema(auctionParticipants).omit({
@@ -506,16 +531,24 @@ export const insertAuctionParticipantSchema = createInsertSchema(auctionParticip
 export const insertBidSchema = createInsertSchema(bids).omit({
   id: true,
   timestamp: true,
+}).extend({
+  amount: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
 export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  totalAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
 export const insertPoLineItemSchema = createInsertSchema(poLineItems).omit({
   id: true,
+}).extend({
+  quantity: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  unitPrice: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  lineTotal: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
 export const insertApprovalSchema = createInsertSchema(approvals).omit({
