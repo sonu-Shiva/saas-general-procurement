@@ -8,6 +8,24 @@ This is a modern, full-stack procurement management platform built with React an
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### Role-Based Access Control (December 2024)
+- Implemented comprehensive role-based differentiation:
+  - **Vendors/Sellers**: Can create and upload products to the catalogue
+  - **Buyers** (buyer_admin, buyer_user, sourcing_manager): Can view products and create BOMs
+  - Added role selection interface with detailed role descriptions
+  - Updated product catalogue to show role-appropriate functionality
+  - Added role badges in header with ability to change roles
+  - Fixed all DollarSign icons replaced with Indian Rupee (₹) symbols
+  - Enhanced middleware with `isVendor` and `isBuyer` role validation
+
+### Authentication Enhancement
+- Enhanced role-based middleware for API endpoints
+- Product creation restricted to vendors only
+- BOM creation restricted to buyers only
+- Role selection component with comprehensive feature descriptions
+
 ## System Architecture
 
 ### Frontend Architecture

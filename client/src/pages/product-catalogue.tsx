@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -33,12 +34,18 @@ import { TbCurrencyRupee } from "react-icons/tb";
 import type { Product } from "@shared/schema";
 
 export default function ProductCatalogue() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check if user is a vendor (can create products)
+  const isVendor = user?.role === 'vendor';
+  // Check if user is a buyer (can view products and create BOMs)
+  const isBuyer = user?.role === 'buyer_admin' || user?.role === 'buyer_user' || user?.role === 'sourcing_manager';
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),
@@ -142,19 +149,21 @@ export default function ProductCatalogue() {
                 <p className="text-muted-foreground">Manage your centralized product and service catalogue</p>
               </div>
               <div className="flex space-x-3">
-                <Button variant="outline">
-                  <Tag className="w-4 h-4 mr-2" />
-                  Import
-                </Button>
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Product
+                {isVendor && (
+                  <>
+                    <Button variant="outline">
+                      <Tag className="w-4 h-4 mr-2" />
+                      Import
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-primary hover:bg-primary/90">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Product
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
                       <DialogTitle>Add New Product</DialogTitle>
                     </DialogHeader>
                     <Form {...form}>
@@ -305,8 +314,10 @@ export default function ProductCatalogue() {
                         </div>
                       </form>
                     </Form>
-                  </DialogContent>
-                </Dialog>
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                )}
               </div>
             </div>
 
@@ -521,10 +532,14 @@ export default function ProductCatalogue() {
                     <p className="text-muted-foreground mb-4">
                       {searchQuery || categoryFilter !== "all" || statusFilter !== "all"
                         ? "Try adjusting your search criteria or filters"
-                        : "Start by adding your first product to the catalogue"
+                        : isVendor 
+                          ? "Start by adding your first product to the catalogue"
+                          : isBuyer
+                            ? "Browse the product catalogue to create BOMs and purchase orders"
+                            : "Contact your administrator to set up your role"
                       }
                     </p>
-                    {!searchQuery && categoryFilter === "all" && statusFilter === "all" && (
+                    {!searchQuery && categoryFilter === "all" && statusFilter === "all" && isVendor && (
                       <Button onClick={() => setIsCreateDialogOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Product

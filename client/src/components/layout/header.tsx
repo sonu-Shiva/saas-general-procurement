@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -11,10 +12,12 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { ShoppingCart, Search, Bot, Bell, Moon, Sun, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import RoleSelector from "@/components/role-selector";
 
 export default function Header() {
   const { user } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isRoleSelectorOpen, setIsRoleSelectorOpen] = useState(false);
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
@@ -77,9 +80,19 @@ export default function Header() {
                       {user?.firstName?.[0]?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium hidden md:block">
-                    {user?.firstName || "User"}
-                  </span>
+                  <div className="hidden md:block">
+                    <span className="text-sm font-medium">
+                      {user?.firstName || "User"}
+                    </span>
+                    {user?.role && (
+                      <Badge variant="secondary" className="text-xs ml-2">
+                        {user.role === 'buyer_admin' ? 'Buyer Admin' :
+                         user.role === 'buyer_user' ? 'Buyer' :
+                         user.role === 'sourcing_manager' ? 'Sourcing Manager' :
+                         user.role === 'vendor' ? 'Vendor' : user.role}
+                      </Badge>
+                    )}
+                  </div>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -88,9 +101,9 @@ export default function Header() {
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsRoleSelectorOpen(true)}>
                   <Settings className="w-4 h-4 mr-2" />
-                  Settings
+                  Change Role
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => window.location.href = '/api/logout'}>
@@ -102,6 +115,12 @@ export default function Header() {
           </div>
         </div>
       </div>
+      
+      <RoleSelector 
+        open={isRoleSelectorOpen} 
+        onClose={() => setIsRoleSelectorOpen(false)}
+        currentRole={user?.role}
+      />
     </header>
   );
 }

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, isVendor, isBuyer } from "./replitAuth";
 import {
   insertVendorSchema,
   insertProductSchema,
@@ -33,6 +33,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Update user role - only for first-time setup or admin use
+  app.patch('/api/auth/user/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { role } = req.body;
+      
+      if (!['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update user role
+      const updatedUser = await storage.upsertUser({
+        id: userId,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        role: role,
+        organizationId: user.organizationId,
+        isActive: user.isActive,
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
     }
   });
 
@@ -127,8 +161,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product routes
-  app.post('/api/products', isAuthenticated, async (req: any, res) => {
+  // Product routes - Only vendors can create products
+  app.post('/api/products', isAuthenticated, isVendor, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const validatedData = insertProductSchema.parse({
@@ -181,8 +215,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // BOM routes
-  app.post('/api/boms', isAuthenticated, async (req: any, res) => {
+  // BOM routes - Only buyers can create BOMs
+  app.post('/api/boms', isAuthenticated, isBuyer, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const validatedData = insertBomSchema.parse({

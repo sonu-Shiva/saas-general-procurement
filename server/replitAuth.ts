@@ -156,3 +156,48 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return;
   }
 };
+
+// Role-based middleware
+export const isVendor: RequestHandler = async (req: any, res, next) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Import storage here to avoid circular dependencies
+    const { storage } = await import('./storage');
+    const user = await storage.getUser(userId);
+    
+    if (!user || user.role !== 'vendor') {
+      return res.status(403).json({ message: "Access denied. Vendor role required." });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Error checking vendor role:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const isBuyer: RequestHandler = async (req: any, res, next) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Import storage here to avoid circular dependencies
+    const { storage } = await import('./storage');
+    const user = await storage.getUser(userId);
+    
+    if (!user || !['buyer_admin', 'buyer_user', 'sourcing_manager'].includes(user.role)) {
+      return res.status(403).json({ message: "Access denied. Buyer role required." });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Error checking buyer role:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

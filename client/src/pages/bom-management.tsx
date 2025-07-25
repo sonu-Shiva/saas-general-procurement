@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import BomBuilder from "@/components/bom-builder";
@@ -27,11 +28,16 @@ import {
 import type { Bom } from "@shared/schema";
 
 export default function BomManagement() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Check if user is a buyer (can create BOMs)
+  const isBuyer = user?.role === 'buyer_admin' || user?.role === 'buyer_user' || user?.role === 'sourcing_manager';
+  const isVendor = user?.role === 'vendor';
 
   const { data: boms, isLoading } = useQuery({
     queryKey: ["/api/boms"],
@@ -60,13 +66,25 @@ export default function BomManagement() {
                 <p className="text-muted-foreground">Create and manage Bills of Materials for grouped procurement</p>
               </div>
               <div className="flex space-x-3">
-                <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-                      <Bot className="w-4 h-4 mr-2" />
-                      AI BOM Builder
-                    </Button>
-                  </DialogTrigger>
+                {!isBuyer && (
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {isVendor 
+                        ? "BOM creation is restricted to buyers. Switch to a buyer role to create BOMs."
+                        : "Please select a buyer role to access BOM management features."
+                      }
+                    </p>
+                  </div>
+                )}
+                {isBuyer && (
+                  <>
+                    <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+                          <Bot className="w-4 h-4 mr-2" />
+                          AI BOM Builder
+                        </Button>
+                      </DialogTrigger>
                   <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle className="flex items-center">
@@ -129,22 +147,24 @@ export default function BomManagement() {
                         </div>
                       </div>
                     </div>
-                  </DialogContent>
-                </Dialog>
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create BOM
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Create New BOM</DialogTitle>
-                    </DialogHeader>
-                    <BomBuilder onClose={() => setIsCreateDialogOpen(false)} />
-                  </DialogContent>
-                </Dialog>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-primary hover:bg-primary/90">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create BOM
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Create New BOM</DialogTitle>
+                        </DialogHeader>
+                        <BomBuilder onClose={() => setIsCreateDialogOpen(false)} />
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                )}
               </div>
             </div>
 
