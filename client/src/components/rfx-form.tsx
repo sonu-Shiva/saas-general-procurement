@@ -26,7 +26,7 @@ import {
   Upload,
   Bot,
   Clock,
-  DollarSign,
+
   CheckCircle
 } from "lucide-react";
 

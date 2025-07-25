@@ -12,7 +12,7 @@ import {
   BarChart3, 
   TrendingUp, 
   TrendingDown, 
-  DollarSign, 
+ 
   Users, 
   ShoppingCart,
   Calendar,
@@ -142,7 +142,7 @@ export default function Analytics() {
                         <span className="text-sm text-success">+12.5%</span>
                       </div>
                     </div>
-                    <DollarSign className="w-8 h-8 text-primary" />
+                    <div className="w-8 h-8 text-primary flex items-center justify-center font-bold text-xl">₹</div>
                   </div>
                 </CardContent>
               </Card>

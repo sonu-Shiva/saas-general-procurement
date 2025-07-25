@@ -30,7 +30,7 @@ import {
   Clock,
   Users,
   TrendingDown,
-  DollarSign,
+
   Timer,
   Award,
   Activity,
@@ -351,7 +351,7 @@ export default function AuctionCenter() {
                       <p className="text-sm text-muted-foreground mb-1">Total Savings</p>
                       <p className="text-2xl font-bold text-secondary">{formatCurrency(2400000)}</p>
                     </div>
-                    <DollarSign className="w-8 h-8 text-secondary" />
+                    <div className="w-8 h-8 text-secondary flex items-center justify-center font-bold text-xl">₹</div>
                   </div>
                 </CardContent>
               </Card>

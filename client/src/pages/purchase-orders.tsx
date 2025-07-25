@@ -31,7 +31,7 @@ import {
   Clock,
   Truck,
   FileText,
-  DollarSign,
+
   Package,
   Calendar,
   AlertTriangle,
@@ -179,7 +179,7 @@ export default function PurchaseOrders() {
       case "delivered":
         return <Package className="w-4 h-4" />;
       case "invoiced":
-        return <DollarSign className="w-4 h-4" />;
+        return <div className="w-4 h-4 flex items-center justify-center font-bold text-xs">₹</div>;
       case "paid":
         return <CheckCircle className="w-4 h-4" />;
       case "cancelled":
@@ -360,7 +360,7 @@ export default function PurchaseOrders() {
                           )) : 0)}
                       </p>
                     </div>
-                    <DollarSign className="w-8 h-8 text-accent" />
+                    <div className="w-8 h-8 text-accent flex items-center justify-center font-bold text-xl">₹</div>
                   </div>
                 </CardContent>
               </Card>
