@@ -27,9 +27,9 @@ import {
   CheckCircle,
   Clock,
   Tag,
-  DollarSign,
   Layers
 } from "lucide-react";
+import { TbCurrencyRupee } from "react-icons/tb";
 import type { Product } from "@shared/schema";
 
 export default function ProductCatalogue() {
@@ -361,7 +361,7 @@ export default function ProductCatalogue() {
                         }
                       </p>
                     </div>
-                    <DollarSign className="w-8 h-8 text-secondary" />
+                    <TbCurrencyRupee className="w-8 h-8 text-secondary" />
                   </div>
                 </CardContent>
               </Card>
