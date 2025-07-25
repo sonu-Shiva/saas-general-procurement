@@ -16,6 +16,7 @@ import { insertProductSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { formatCurrency } from "@/lib/utils";
 import { 
   Plus, 
   Search, 
@@ -56,8 +57,22 @@ export default function ProductCatalogue() {
     },
   });
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["/api/products", { search: searchQuery, category: categoryFilter, isActive: statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined }],
+  const { data: products, isLoading } = useQuery<Product[]>({
+    queryKey: ["/api/products", searchQuery, categoryFilter, statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (categoryFilter !== 'all') params.append('category', categoryFilter);
+      if (statusFilter === 'active') params.append('isActive', 'true');
+      if (statusFilter === 'inactive') params.append('isActive', 'false');
+      
+      const url = `/api/products${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      return response.json();
+    },
     retry: false,
   });
 
@@ -259,9 +274,9 @@ export default function ProductCatalogue() {
                           name="basePrice"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Base Price</FormLabel>
+                              <FormLabel>Base Price (₹)</FormLabel>
                               <FormControl>
-                                <Input type="number" step="0.01" {...field} />
+                                <Input type="number" step="0.01" placeholder="Enter amount in rupees" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -340,7 +355,10 @@ export default function ProductCatalogue() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Avg. Price</p>
                       <p className="text-2xl font-bold">
-                        ₹{products ? (products.reduce((sum: number, p: Product) => sum + (parseFloat(p.basePrice || "0")), 0) / products.length).toFixed(0) : 0}
+                        {products && products.length > 0 
+                          ? formatCurrency(products.reduce((sum: number, p: Product) => sum + (parseFloat(p.basePrice || "0")), 0) / products.length)
+                          : formatCurrency(0)
+                        }
                       </p>
                     </div>
                     <DollarSign className="w-8 h-8 text-secondary" />
@@ -461,7 +479,7 @@ export default function ProductCatalogue() {
                             </td>
                             <td className="py-4 px-6">
                               <p className="font-medium">
-                                {product.basePrice ? `₹${parseFloat(product.basePrice).toLocaleString()}` : "N/A"}
+                                {product.basePrice ? formatCurrency(product.basePrice) : "N/A"}
                               </p>
                             </td>
                             <td className="py-4 px-6">

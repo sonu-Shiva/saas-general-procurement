@@ -18,6 +18,7 @@ import { insertAuctionSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { formatCurrency } from "@/lib/utils";
 import { 
   Plus, 
   Search, 
@@ -348,7 +349,7 @@ export default function AuctionCenter() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Savings</p>
-                      <p className="text-2xl font-bold text-secondary">₹2.4M</p>
+                      <p className="text-2xl font-bold text-secondary">{formatCurrency(2400000)}</p>
                     </div>
                     <DollarSign className="w-8 h-8 text-secondary" />
                   </div>
@@ -430,13 +431,13 @@ export default function AuctionCenter() {
                               <div>
                                 <p className="text-muted-foreground">Current Bid</p>
                                 <p className="font-semibold">
-                                  ₹{auction.currentBid ? parseFloat(auction.currentBid).toLocaleString() : 'No bids'}
+                                  {auction.currentBid ? formatCurrency(auction.currentBid) : 'No bids'}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-muted-foreground">Reserve Price</p>
                                 <p className="font-semibold">
-                                  ₹{auction.reservePrice ? parseFloat(auction.reservePrice).toLocaleString() : 'N/A'}
+                                  {auction.reservePrice ? formatCurrency(auction.reservePrice) : 'N/A'}
                                 </p>
                               </div>
                               <div>
@@ -485,14 +486,14 @@ export default function AuctionCenter() {
                           <div className="space-y-4">
                             <div className="text-center">
                               <p className="text-2xl font-bold text-success">
-                                ₹{selectedAuctionDetails.currentBid ? parseFloat(selectedAuctionDetails.currentBid).toLocaleString() : '0'}
+                                {selectedAuctionDetails.currentBid ? formatCurrency(selectedAuctionDetails.currentBid) : formatCurrency(0)}
                               </p>
                               <p className="text-sm text-muted-foreground">Current Winning Bid</p>
                             </div>
                             <div>
                               <Input
                                 type="number"
-                                placeholder="Enter your bid amount"
+                                placeholder="Enter your bid amount in rupees"
                                 value={bidAmount}
                                 onChange={(e) => setBidAmount(e.target.value)}
                                 className="mb-3"
@@ -537,7 +538,7 @@ export default function AuctionCenter() {
                             selectedAuctionDetails.bids.slice(0, 5).map((bid: Bid, index: number) => (
                               <div key={bid.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                                 <div>
-                                  <p className="font-medium">₹{parseFloat(bid.amount).toLocaleString()}</p>
+                                  <p className="font-medium">{formatCurrency(bid.amount)}</p>
                                   <p className="text-xs text-muted-foreground">
                                     {new Date(bid.timestamp || '').toLocaleTimeString()}
                                   </p>

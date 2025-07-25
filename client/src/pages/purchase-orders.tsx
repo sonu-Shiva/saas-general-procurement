@@ -18,6 +18,7 @@ import { insertPurchaseOrderSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { formatCurrency } from "@/lib/utils";
 import { 
   Plus, 
   Search, 
@@ -353,10 +354,10 @@ export default function PurchaseOrders() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Value</p>
                       <p className="text-2xl font-bold">
-                        ₹{purchaseOrders ? 
+                        {formatCurrency(purchaseOrders ? 
                           (purchaseOrders.reduce((sum: number, po: PurchaseOrder) => 
                             sum + parseFloat(po.totalAmount || '0'), 0
-                          )).toLocaleString() : '0'}
+                          )) : 0)}
                       </p>
                     </div>
                     <DollarSign className="w-8 h-8 text-accent" />
@@ -478,7 +479,7 @@ export default function PurchaseOrders() {
                               <div>
                                 <p className="text-muted-foreground">Amount</p>
                                 <p className="font-semibold">
-                                  ₹{parseFloat(po.totalAmount || '0').toLocaleString()}
+                                  {formatCurrency(po.totalAmount)}
                                 </p>
                               </div>
                               <div>
@@ -539,7 +540,7 @@ export default function PurchaseOrders() {
                           <div>
                             <p className="text-sm text-muted-foreground">Total Amount</p>
                             <p className="text-2xl font-bold text-primary">
-                              ₹{parseFloat(selectedPODetails.totalAmount || '0').toLocaleString()}
+                              {formatCurrency(selectedPODetails.totalAmount)}
                             </p>
                           </div>
                           <div>
@@ -624,12 +625,12 @@ export default function PurchaseOrders() {
                                   </div>
                                   <div>
                                     <p className="text-muted-foreground">Unit Price</p>
-                                    <p>₹{parseFloat(item.unitPrice || '0').toLocaleString()}</p>
+                                    <p>{formatCurrency(item.unitPrice)}</p>
                                   </div>
                                 </div>
                                 <div className="mt-2">
                                   <p className="text-muted-foreground text-sm">Total</p>
-                                  <p className="font-semibold">₹{parseFloat(item.totalPrice || '0').toLocaleString()}</p>
+                                  <p className="font-semibold">{formatCurrency(item.totalPrice)}</p>
                                 </div>
                               </div>
                             ))
