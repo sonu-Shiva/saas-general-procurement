@@ -146,11 +146,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/products', isAuthenticated, async (req, res) => {
     try {
       const { category, search, isActive } = req.query;
-      const products = await storage.getProducts({
-        category: category as string,
-        search: search as string,
-        isActive: isActive === 'true',
-      });
+      const filters: any = {};
+      
+      if (category && category !== 'all') {
+        filters.category = category as string;
+      }
+      
+      if (search) {
+        filters.search = search as string;
+      }
+      
+      if (isActive !== undefined) {
+        filters.isActive = isActive === 'true';
+      }
+      
+      const products = await storage.getProducts(filters);
       res.json(products);
     } catch (error) {
       console.error("Error fetching products:", error);
