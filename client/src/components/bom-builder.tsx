@@ -65,7 +65,7 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
     },
   });
 
-  const { data: products } = useQuery({
+  const { data: products = [] } = useQuery<any[]>({
     queryKey: ["/api/products", { isActive: true }],
     retry: false,
   });
@@ -79,15 +79,17 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
         validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
       });
       
-      // Then add all BOM items
-      for (const item of bomItems) {
-        await apiRequest("POST", `/api/boms/${bomResponse.id}/items`, {
-          productId: item.productId,
-          quantity: item.quantity.toString(),
-          uom: item.uom,
-          unitPrice: item.unitPrice.toString(),
-          totalPrice: item.totalPrice.toString(),
-        });
+      // Then add all BOM items if bomResponse has an id
+      if (bomResponse && (bomResponse as any).id) {
+        for (const item of bomItems) {
+          await apiRequest("POST", `/api/boms/${(bomResponse as any).id}/items`, {
+            productId: item.productId,
+            quantity: item.quantity.toString(),
+            uom: item.uom,
+            unitPrice: item.unitPrice.toString(),
+            totalPrice: item.totalPrice.toString(),
+          });
+        }
       }
       
       return bomResponse;
@@ -346,7 +348,7 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
                           </div>
                           
                           <div className="max-h-64 overflow-y-auto space-y-2">
-                            {products?.map((product: any) => (
+                            {products.map((product: any) => (
                               <div
                                 key={product.id}
                                 className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -531,7 +533,7 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
                       {bomItems.length > 0 ? (
                         Object.entries(
                           bomItems.reduce((acc, item) => {
-                            const product = products?.find((p: any) => p.id === item.productId);
+                            const product = products.find((p: any) => p.id === item.productId);
                             const category = product?.category || 'Uncategorized';
                             acc[category] = (acc[category] || 0) + item.totalPrice;
                             return acc;
@@ -558,7 +560,19 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
               Cancel
             </Button>
             <div className="flex space-x-2">
-              <Button type="button" variant="outline">
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => {
+                  const formData = form.getValues();
+                  // Save as draft with isActive: false
+                  createBomMutation.mutate({
+                    ...formData,
+                    isActive: false
+                  });
+                }}
+                disabled={createBomMutation.isPending || bomItems.length === 0}
+              >
                 <Save className="w-4 h-4 mr-2" />
                 Save Draft
               </Button>
