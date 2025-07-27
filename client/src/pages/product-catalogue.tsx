@@ -49,6 +49,12 @@ export default function ProductCatalogue() {
   const isVendor = (user as any)?.role === 'vendor';
   // Check if user is a buyer (can view products and create BOMs)
   const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
+  
+  // Debug: Log current user role to understand the issue
+  console.log('Current user:', user);
+  console.log('User role:', (user as any)?.role);
+  console.log('Is vendor:', isVendor);
+  console.log('Is buyer:', isBuyer);
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),
@@ -194,8 +200,8 @@ export default function ProductCatalogue() {
     setSelectedProduct(product);
     editForm.reset({
       itemName: product.itemName,
-      internalCode: product.internalCode ?? "",
-      externalCode: product.externalCode ?? "",
+      internalCode: product.internalCode || "",
+      externalCode: product.externalCode || "",
       description: product.description ?? "",
       category: product.category,
       subCategory: product.subCategory ?? "",
@@ -599,12 +605,10 @@ export default function ProductCatalogue() {
                                   <Eye className="w-3 h-3 mr-1" />
                                   View
                                 </Button>
-                                {isVendor && (
-                                  <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
-                                    <Edit className="w-3 h-3 mr-1" />
-                                    Edit
-                                  </Button>
-                                )}
+                                <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
+                                  <Edit className="w-3 h-3 mr-1" />
+                                  Edit
+                                </Button>
                               </div>
                             </td>
                           </tr>
