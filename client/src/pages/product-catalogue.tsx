@@ -39,15 +39,35 @@ export default function ProductCatalogue() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Check if user is a vendor (can create products)
-  const isVendor = user?.role === 'vendor';
+  const isVendor = (user as any)?.role === 'vendor';
   // Check if user is a buyer (can view products and create BOMs)
-  const isBuyer = user?.role === 'buyer_admin' || user?.role === 'buyer_user' || user?.role === 'sourcing_manager';
+  const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
 
   const form = useForm({
+    resolver: zodResolver(insertProductSchema),
+    defaultValues: {
+      itemName: "",
+      internalCode: "",
+      externalCode: "",
+      description: "",
+      category: "",
+      subCategory: "",
+      uom: "",
+      basePrice: "",
+      specifications: {},
+      tags: [],
+      isActive: true,
+    },
+  });
+
+  const editForm = useForm({
     resolver: zodResolver(insertProductSchema),
     defaultValues: {
       itemName: "",
@@ -119,8 +139,73 @@ export default function ProductCatalogue() {
     },
   });
 
+  const updateProductMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!selectedProduct) throw new Error("No product selected");
+      await apiRequest("PUT", `/api/products/${selectedProduct.id}`, {
+        ...data,
+        basePrice: data.basePrice ? parseFloat(data.basePrice) : undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
+      setIsEditDialogOpen(false);
+      setSelectedProduct(null);
+      editForm.reset();
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update product",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: any) => {
     createProductMutation.mutate(data);
+  };
+
+  const onEditSubmit = (data: any) => {
+    updateProductMutation.mutate(data);
+  };
+
+  const handleViewProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setSelectedProduct(product);
+    editForm.reset({
+      itemName: product.itemName,
+      internalCode: product.internalCode ?? "",
+      externalCode: product.externalCode ?? "",
+      description: product.description ?? "",
+      category: product.category,
+      subCategory: product.subCategory ?? "",
+      uom: product.uom,
+      basePrice: product.basePrice?.toString() ?? "",
+      specifications: product.specifications ?? {},
+      tags: [],
+      isActive: product.isActive ?? true,
+    });
+    setIsEditDialogOpen(true);
   };
 
   const filteredProducts = products?.filter((product: Product) => {
@@ -510,14 +595,16 @@ export default function ProductCatalogue() {
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex space-x-2">
-                                <Button size="sm" variant="outline">
+                                <Button size="sm" variant="outline" onClick={() => handleViewProduct(product)}>
                                   <Eye className="w-3 h-3 mr-1" />
                                   View
                                 </Button>
-                                <Button size="sm" variant="outline">
-                                  <Edit className="w-3 h-3 mr-1" />
-                                  Edit
-                                </Button>
+                                {isVendor && (
+                                  <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
+                                    <Edit className="w-3 h-3 mr-1" />
+                                    Edit
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -549,6 +636,250 @@ export default function ProductCatalogue() {
                 )}
               </CardContent>
             </Card>
+
+            {/* View Product Dialog */}
+            <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Product Details</DialogTitle>
+                </DialogHeader>
+                {selectedProduct && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Item Name</label>
+                        <p className="font-medium">{selectedProduct.itemName}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Internal Code</label>
+                        <p className="font-medium">{selectedProduct.internalCode || "N/A"}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">External Code</label>
+                        <p className="font-medium">{selectedProduct.externalCode || "N/A"}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Unit of Measure</label>
+                        <Badge variant="outline">{selectedProduct.uom}</Badge>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Category</label>
+                        <Badge variant="secondary">{selectedProduct.category}</Badge>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Sub Category</label>
+                        <p className="font-medium">{selectedProduct.subCategory || "N/A"}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Base Price</label>
+                      <p className="font-medium text-lg">
+                        {selectedProduct.basePrice ? formatCurrency(selectedProduct.basePrice) : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Description</label>
+                      <p className="text-sm">{selectedProduct.description || "No description available"}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <Badge variant={selectedProduct.isActive ? "default" : "secondary"}>
+                        {selectedProduct.isActive ? (
+                          <>
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3 h-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Edit Product Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Edit Product</DialogTitle>
+                </DialogHeader>
+                <Form {...editForm}>
+                  <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={editForm.control}
+                        name="itemName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Item Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="internalCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Internal Code</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={editForm.control}
+                        name="externalCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>External Code</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="uom"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Unit of Measure</FormLabel>
+                            <FormControl>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select UOM" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pieces">Pieces</SelectItem>
+                                  <SelectItem value="kg">Kilograms</SelectItem>
+                                  <SelectItem value="meters">Meters</SelectItem>
+                                  <SelectItem value="liters">Liters</SelectItem>
+                                  <SelectItem value="boxes">Boxes</SelectItem>
+                                  <SelectItem value="units">Units</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={editForm.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Category</FormLabel>
+                            <FormControl>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="electronics">Electronics</SelectItem>
+                                  <SelectItem value="raw-materials">Raw Materials</SelectItem>
+                                  <SelectItem value="office-supplies">Office Supplies</SelectItem>
+                                  <SelectItem value="industrial">Industrial Equipment</SelectItem>
+                                  <SelectItem value="automotive">Automotive</SelectItem>
+                                  <SelectItem value="textiles">Textiles</SelectItem>
+                                  <SelectItem value="chemicals">Chemicals</SelectItem>
+                                  <SelectItem value="food">Food & Beverages</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={editForm.control}
+                        name="subCategory"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sub Category</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={editForm.control}
+                      name="basePrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Base Price (₹)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" placeholder="Enter amount in rupees" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <input 
+                              type="checkbox" 
+                              checked={field.value} 
+                              onChange={field.onChange}
+                              className="w-4 h-4"
+                            />
+                          </FormControl>
+                          <FormLabel>Active Product</FormLabel>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end space-x-3">
+                      <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={updateProductMutation.isPending}>
+                        {updateProductMutation.isPending ? "Updating..." : "Update Product"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
         </main>
       </div>

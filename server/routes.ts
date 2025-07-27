@@ -215,6 +215,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/products/:id', isAuthenticated, isVendor, async (req, res) => {
+    try {
+      const updates = insertProductSchema.partial().parse(req.body);
+      const product = await storage.updateProduct(req.params.id, updates);
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(400).json({ message: "Failed to update product" });
+    }
+  });
+
   // BOM routes - Only buyers can create BOMs
   app.post('/api/boms', isAuthenticated, isBuyer, async (req: any, res) => {
     try {
