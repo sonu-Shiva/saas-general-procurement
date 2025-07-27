@@ -49,12 +49,6 @@ export default function ProductCatalogue() {
   const isVendor = (user as any)?.role === 'vendor';
   // Check if user is a buyer (can view products and create BOMs)
   const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
-  
-  // Debug: Log current user role to understand the issue
-  console.log('Current user:', user);
-  console.log('User role:', (user as any)?.role);
-  console.log('Is vendor:', isVendor);
-  console.log('Is buyer:', isBuyer);
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),
@@ -198,19 +192,20 @@ export default function ProductCatalogue() {
 
   const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);
-    editForm.reset({
+    const formData = {
       itemName: product.itemName,
-      internalCode: product.internalCode || "",
-      externalCode: product.externalCode || "",
+      internalCode: product.internalCode ?? "",
+      externalCode: product.externalCode ?? "",
       description: product.description ?? "",
-      category: product.category,
+      category: product.category ?? "",
       subCategory: product.subCategory ?? "",
-      uom: product.uom,
+      uom: product.uom ?? "",
       basePrice: product.basePrice?.toString() ?? "",
       specifications: product.specifications ?? {},
       tags: [],
       isActive: product.isActive ?? true,
-    });
+    };
+    editForm.reset(formData);
     setIsEditDialogOpen(true);
   };
 
@@ -605,10 +600,12 @@ export default function ProductCatalogue() {
                                   <Eye className="w-3 h-3 mr-1" />
                                   View
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
-                                  <Edit className="w-3 h-3 mr-1" />
-                                  Edit
-                                </Button>
+                                {(isVendor || (user as any)?.id === product.createdBy) && (
+                                  <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
+                                    <Edit className="w-3 h-3 mr-1" />
+                                    Edit
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>

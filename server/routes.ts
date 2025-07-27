@@ -215,10 +215,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/products/:id', isAuthenticated, isVendor, async (req, res) => {
+  app.put('/api/products/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const productId = req.params.id;
+      
+      // Get the existing product to check ownership
+      const existingProduct = await storage.getProduct(productId);
+      if (!existingProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      // Check if user is the creator of the product or is a vendor
+      const user = await storage.getUser(userId);
+      const isVendor = user?.role === 'vendor';
+      const isOwner = existingProduct.createdBy === userId;
+      
+      if (!isVendor && !isOwner) {
+        return res.status(403).json({ message: "You can only edit products you created" });
+      }
+      
       const updates = insertProductSchema.partial().parse(req.body);
-      const product = await storage.updateProduct(req.params.id, updates);
+      const product = await storage.updateProduct(productId, updates);
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
