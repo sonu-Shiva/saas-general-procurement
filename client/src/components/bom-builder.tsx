@@ -145,13 +145,15 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       
       console.log("BOM payload:", bomPayload);
       
-      const bomResponse = isEditing 
+      const bomRawResponse = isEditing 
         ? await apiRequest("PUT", `/api/boms/${existingBom.id}`, bomPayload)
         : await apiRequest("POST", "/api/boms", bomPayload);
       
+      const bomResponse = await bomRawResponse.json();
       console.log("BOM response:", bomResponse);
       
-      const bomId = bomResponse ? (bomResponse as any).id || existingBom?.id : null;
+      const bomId = bomResponse ? bomResponse.id || existingBom?.id : null;
+      console.log("Extracted BOM ID:", bomId);
       
       // Handle BOM items
       if (bomId && bomItems.length > 0) {
@@ -186,10 +188,12 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
           console.log("ProductId:", item.productId);
           
           try {
-            const itemResponse = await apiRequest("POST", `/api/boms/${bomId}/items`, itemPayload);
+            const itemRawResponse = await apiRequest("POST", `/api/boms/${bomId}/items`, itemPayload);
+            const itemResponse = await itemRawResponse.json();
             console.log("BOM item added successfully:", itemResponse);
           } catch (itemError) {
             console.error("Failed to add BOM item:", itemError);
+            console.error("Item error details:", itemError);
             throw itemError;
           }
         }
