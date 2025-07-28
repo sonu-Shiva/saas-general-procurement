@@ -275,6 +275,19 @@ export class DatabaseStorage implements IStorage {
   async getBomItems(bomId: string): Promise<BomItem[]> {
     return await db.select().from(bomItems).where(eq(bomItems.bomId, bomId));
   }
+
+  async updateBom(id: string, updates: Partial<InsertBom>): Promise<Bom> {
+    const [bom] = await db
+      .update(boms)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(boms.id, id))
+      .returning();
+    return bom;
+  }
+
+  async deleteBomItems(bomId: string): Promise<void> {
+    await db.delete(bomItems).where(eq(bomItems.bomId, bomId));
+  }
   
   // RFx operations
   async createRfxEvent(rfx: InsertRfxEvent): Promise<RfxEvent> {

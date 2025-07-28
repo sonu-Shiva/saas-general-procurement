@@ -33,6 +33,8 @@ export default function BomManagement() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingBom, setEditingBom] = useState<Bom | null>(null);
   const { toast } = useToast();
 
   // Check if user is a buyer (can create BOMs)
@@ -51,6 +53,16 @@ export default function BomManagement() {
     
     return matchesSearch && matchesCategory;
   });
+
+  const handleEditBom = (bom: Bom) => {
+    setEditingBom(bom);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setEditingBom(null);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -161,6 +173,21 @@ export default function BomManagement() {
                           <DialogTitle>Create New BOM</DialogTitle>
                         </DialogHeader>
                         <BomBuilder onClose={() => setIsCreateDialogOpen(false)} />
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* Edit BOM Dialog */}
+                    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Edit BOM: {editingBom?.name}</DialogTitle>
+                        </DialogHeader>
+                        {editingBom && (
+                          <BomBuilder 
+                            onClose={handleCloseEditDialog} 
+                            existingBom={editingBom}
+                          />
+                        )}
                       </DialogContent>
                     </Dialog>
                   </>
@@ -340,7 +367,13 @@ export default function BomManagement() {
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleEditBom(bom)}
+                          disabled={!isBuyer}
+                        >
                           <Edit className="w-3 h-3 mr-1" />
                           Edit
                         </Button>

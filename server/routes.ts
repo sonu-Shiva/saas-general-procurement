@@ -285,6 +285,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/boms/:id', isAuthenticated, isBuyer, async (req: any, res) => {
+    try {
+      const bomId = req.params.id;
+      const userId = req.user.claims.sub;
+      
+      // Check if BOM exists and user has permission to edit it
+      const existingBom = await storage.getBom(bomId);
+      if (!existingBom) {
+        return res.status(404).json({ message: "BOM not found" });
+      }
+      
+      if (existingBom.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only edit BOMs you created" });
+      }
+      
+      const updates = insertBomSchema.partial().parse(req.body);
+      const bom = await storage.updateBom(bomId, updates);
+      res.json(bom);
+    } catch (error) {
+      console.error("Error updating BOM:", error);
+      res.status(400).json({ message: "Failed to update BOM" });
+    }
+  });
+
   app.post('/api/boms/:id/items', isAuthenticated, async (req, res) => {
     try {
       const validatedData = insertBomItemSchema.parse({
@@ -296,6 +320,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating BOM item:", error);
       res.status(400).json({ message: "Failed to create BOM item" });
+    }
+  });
+
+  app.delete('/api/boms/:id/items', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteBomItems(req.params.id);
+      res.json({ message: "BOM items deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting BOM items:", error);
+      res.status(400).json({ message: "Failed to delete BOM items" });
     }
   });
 
