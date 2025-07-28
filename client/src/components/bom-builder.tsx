@@ -112,6 +112,8 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
             }));
             console.log("BOM Builder - Setting BOM items:", loadedItems);
             console.log("BOM Builder - Items count:", loadedItems.length);
+            console.log("BOM Builder - Items with productId:", loadedItems.filter(item => item.productId));
+            console.log("BOM Builder - Custom items:", loadedItems.filter(item => !item.productId));
             setBomItems(loadedItems);
           }
         } catch (error) {
@@ -180,6 +182,8 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
             specifications: item.specifications || undefined,
           };
           console.log("Adding BOM item:", itemPayload);
+          console.log("Item type:", item.productId ? 'Product Catalogue Item' : 'Custom Item');
+          console.log("ProductId:", item.productId);
           
           try {
             const itemResponse = await apiRequest("POST", `/api/boms/${bomId}/items`, itemPayload);
