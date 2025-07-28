@@ -123,20 +123,25 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
 
   const createBomMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Creating BOM with data:", data);
+      console.log("BOM items to be added:", bomItems);
+      
       const isEditing = !!existingBom?.id;
       
       // Create or update the BOM
+      const bomPayload = {
+        ...data,
+        validFrom: data.validFrom ? new Date(data.validFrom).toISOString() : undefined,
+        validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
+      };
+      
+      console.log("BOM payload:", bomPayload);
+      
       const bomResponse = isEditing 
-        ? await apiRequest("PUT", `/api/boms/${existingBom.id}`, {
-            ...data,
-            validFrom: data.validFrom ? new Date(data.validFrom).toISOString() : undefined,
-            validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
-          })
-        : await apiRequest("POST", "/api/boms", {
-            ...data,
-            validFrom: data.validFrom ? new Date(data.validFrom).toISOString() : undefined,
-            validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
-          });
+        ? await apiRequest("PUT", `/api/boms/${existingBom.id}`, bomPayload)
+        : await apiRequest("POST", "/api/boms", bomPayload);
+      
+      console.log("BOM response:", bomResponse);
       
       const bomId = bomResponse ? (bomResponse as any).id || existingBom?.id : null;
       
@@ -182,6 +187,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       onClose();
     },
     onError: (error) => {
+      console.error("BOM creation/update error:", error);
       if (isUnauthorizedError(error as Error)) {
         toast({
           title: "Unauthorized",
@@ -195,7 +201,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       }
       toast({
         title: "Error",
-        description: existingBom ? "Failed to update BOM" : "Failed to create BOM",
+        description: `${existingBom ? "Failed to update BOM" : "Failed to create BOM"}: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     },

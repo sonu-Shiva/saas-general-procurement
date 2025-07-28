@@ -257,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate code if not provided
       if (!validatedData.code) {
         const siblings = await storage.getProductCategories({
-          parentId: validatedData.parentId || null,
+          parentId: validatedData.parentId || undefined,
           isActive: true,
         });
         const maxCode = siblings.length > 0 
