@@ -187,8 +187,13 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       
       return bomResponse;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("BOM creation/update successful:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/boms"] });
+      // Also invalidate specific BOM queries
+      if (existingBom?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/boms", existingBom.id] });
+      }
       toast({
         title: "Success",
         description: existingBom ? "BOM updated successfully" : "BOM created successfully",
@@ -232,6 +237,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     
     const submitData = {
       ...data,
+      isActive: true, // Explicitly set as active when creating/updating BOM
       validFrom: data.validFrom || undefined,
       validTo: data.validTo || undefined,
     };

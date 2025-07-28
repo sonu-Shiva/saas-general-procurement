@@ -49,6 +49,9 @@ export default function BomManagement() {
     retry: false,
   });
 
+  // Debug logging for BOM data
+  console.log("BOM Management - Raw boms data:", boms);
+
   const filteredBoms = boms?.filter((bom: Bom) => {
     const matchesSearch = bom.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          bom.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -56,6 +59,10 @@ export default function BomManagement() {
     
     return matchesSearch && matchesCategory;
   });
+
+  // Debug logging for filtered BOMs
+  console.log("BOM Management - Filtered boms:", filteredBoms);
+  console.log("BOM Management - Active BOMs count:", boms?.filter((b: Bom) => b.isActive).length);
 
   const handleEditBom = (bom: Bom) => {
     setEditingBom(bom);
