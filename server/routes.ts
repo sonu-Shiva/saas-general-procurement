@@ -6,6 +6,7 @@ import { setupAuth, isAuthenticated, isVendor, isBuyer } from "./replitAuth";
 import {
   insertVendorSchema,
   insertProductSchema,
+  insertProductCategorySchema,
   insertBomSchema,
   insertBomItemSchema,
   insertRfxEventSchema,
@@ -241,6 +242,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating product:", error);
       res.status(400).json({ message: "Failed to update product" });
+    }
+  });
+
+  // Product Category routes - Only vendors can create/manage categories
+  app.post('/api/product-categories', isAuthenticated, isVendor, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = insertProductCategorySchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+      
+      // Generate code if not provided
+      if (!validatedData.code) {
+        const siblings = await storage.getProductCategories({
+          parentId: validatedData.parentId || null,
+          isActive: true,
+        });
+        const maxCode = siblings.length > 0 
+          ? Math.max(...siblings.map(s => parseInt(s.code.split('.').pop() || '0'))) 
+          : 0;
+        const nextNumber = maxCode + 1;
+        
+        if (validatedData.parentId) {
+          const parent = await storage.getProductCategory(validatedData.parentId);
+          validatedData.code = `${parent?.code}.${nextNumber}`;
+          validatedData.level = (parent?.level || 0) + 1;
+        } else {
+          validatedData.code = nextNumber.toString();
+          validatedData.level = 1;
+        }
+      }
+      
+      const category = await storage.createProductCategory(validatedData);
+      res.json(category);
+    } catch (error) {
+      console.error("Error creating product category:", error);
+      res.status(400).json({ message: "Failed to create product category" });
+    }
+  });
+
+  app.get('/api/product-categories', isAuthenticated, async (req, res) => {
+    try {
+      const { parentId, level, isActive } = req.query;
+      const categories = await storage.getProductCategories({
+        parentId: parentId as string,
+        level: level ? parseInt(level as string) : undefined,
+        isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+      });
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching product categories:", error);
+      res.status(500).json({ message: "Failed to fetch product categories" });
+    }
+  });
+
+  app.get('/api/product-categories/hierarchy', isAuthenticated, async (req, res) => {
+    try {
+      const hierarchy = await storage.getProductCategoryHierarchy();
+      res.json(hierarchy);
+    } catch (error) {
+      console.error("Error fetching category hierarchy:", error);
+      res.status(500).json({ message: "Failed to fetch category hierarchy" });
+    }
+  });
+
+  app.get('/api/product-categories/:id', isAuthenticated, async (req, res) => {
+    try {
+      const category = await storage.getProductCategory(req.params.id);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      console.error("Error fetching product category:", error);
+      res.status(500).json({ message: "Failed to fetch product category" });
+    }
+  });
+
+  app.put('/api/product-categories/:id', isAuthenticated, isVendor, async (req: any, res) => {
+    try {
+      const categoryId = req.params.id;
+      const userId = req.user.claims.sub;
+      
+      // Check if category exists and user has permission to edit it
+      const existingCategory = await storage.getProductCategory(categoryId);
+      if (!existingCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      if (existingCategory.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only edit categories you created" });
+      }
+      
+      const updates = insertProductCategorySchema.partial().parse(req.body);
+      const category = await storage.updateProductCategory(categoryId, updates);
+      res.json(category);
+    } catch (error) {
+      console.error("Error updating product category:", error);
+      res.status(400).json({ message: "Failed to update product category" });
+    }
+  });
+
+  app.delete('/api/product-categories/:id', isAuthenticated, isVendor, async (req: any, res) => {
+    try {
+      const categoryId = req.params.id;
+      const userId = req.user.claims.sub;
+      
+      // Check if category exists and user has permission to delete it
+      const existingCategory = await storage.getProductCategory(categoryId);
+      if (!existingCategory) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      if (existingCategory.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only delete categories you created" });
+      }
+      
+      // Check if category has children or products
+      const children = await storage.getProductCategories({ parentId: categoryId });
+      if (children.length > 0) {
+        return res.status(400).json({ message: "Cannot delete category with subcategories" });
+      }
+      
+      await storage.deleteProductCategory(categoryId);
+      res.json({ message: "Category deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting product category:", error);
+      res.status(400).json({ message: "Failed to delete product category" });
     }
   });
 

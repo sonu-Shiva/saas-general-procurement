@@ -2,6 +2,7 @@ import {
   users,
   vendors,
   products,
+  productCategories,
   boms,
   bomItems,
   rfxEvents,
@@ -21,6 +22,8 @@ import {
   type InsertVendor,
   type Product,
   type InsertProduct,
+  type ProductCategory,
+  type InsertProductCategory,
   type Bom,
   type InsertBom,
   type BomItem,
@@ -49,7 +52,7 @@ import {
   type InsertOrganization,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, like, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, sql, like, inArray, isNull, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations - mandatory for Replit Auth
@@ -66,10 +69,18 @@ export interface IStorage {
   getVendors(filters?: { status?: string; category?: string; search?: string }): Promise<Vendor[]>;
   updateVendor(id: string, updates: Partial<InsertVendor>): Promise<Vendor>;
   
+  // Product Category operations
+  createProductCategory(category: InsertProductCategory): Promise<ProductCategory>;
+  getProductCategory(id: string): Promise<ProductCategory | undefined>;
+  getProductCategories(filters?: { parentId?: string; level?: number; isActive?: boolean }): Promise<ProductCategory[]>;
+  updateProductCategory(id: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory>;
+  deleteProductCategory(id: string): Promise<void>;
+  getProductCategoryHierarchy(): Promise<any[]>;
+  
   // Product operations
   createProduct(product: InsertProduct): Promise<Product>;
   getProduct(id: string): Promise<Product | undefined>;
-  getProducts(filters?: { category?: string; search?: string; isActive?: boolean }): Promise<Product[]>;
+  getProducts(filters?: { category?: string; categoryId?: string; search?: string; isActive?: boolean }): Promise<Product[]>;
   updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product>;
   
   // BOM operations
@@ -217,15 +228,31 @@ export class DatabaseStorage implements IStorage {
     return product;
   }
 
-  async getProducts(filters?: { category?: string; search?: string; isActive?: boolean }): Promise<Product[]> {
+  async getProducts(filters?: { 
+    category?: string; 
+    categoryId?: string; 
+    search?: string; 
+    isActive?: boolean 
+  }): Promise<Product[]> {
     const conditions = [];
     
+    // Support both legacy category filtering and new categoryId filtering
     if (filters?.category) {
       conditions.push(eq(products.category, filters.category));
     }
     
+    if (filters?.categoryId) {
+      conditions.push(eq(products.categoryId, filters.categoryId));
+    }
+    
     if (filters?.search) {
-      conditions.push(like(products.itemName, `%${filters.search}%`));
+      conditions.push(
+        or(
+          like(products.itemName, `%${filters.search}%`),
+          like(products.internalCode, `%${filters.search}%`),
+          like(products.description, `%${filters.search}%`)
+        )
+      );
     }
     
     if (filters?.isActive !== undefined) {
@@ -287,6 +314,84 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBomItems(bomId: string): Promise<void> {
     await db.delete(bomItems).where(eq(bomItems.bomId, bomId));
+  }
+
+  // Product Category operations
+  async createProductCategory(category: InsertProductCategory): Promise<ProductCategory> {
+    const [newCategory] = await db.insert(productCategories).values(category).returning();
+    return newCategory;
+  }
+
+  async getProductCategory(id: string): Promise<ProductCategory | undefined> {
+    const [category] = await db.select().from(productCategories).where(eq(productCategories.id, id));
+    return category;
+  }
+
+  async getProductCategories(filters?: { parentId?: string; level?: number; isActive?: boolean }): Promise<ProductCategory[]> {
+    const conditions = [];
+    
+    if (filters?.parentId !== undefined) {
+      conditions.push(filters.parentId ? eq(productCategories.parentId, filters.parentId) : isNull(productCategories.parentId));
+    }
+    
+    if (filters?.level) {
+      conditions.push(eq(productCategories.level, filters.level));
+    }
+    
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(productCategories.isActive, filters.isActive));
+    }
+    
+    return await db
+      .select()
+      .from(productCategories)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(asc(productCategories.sortOrder), asc(productCategories.name));
+  }
+
+  async updateProductCategory(id: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory> {
+    const [category] = await db
+      .update(productCategories)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(productCategories.id, id))
+      .returning();
+    return category;
+  }
+
+  async deleteProductCategory(id: string): Promise<void> {
+    await db.delete(productCategories).where(eq(productCategories.id, id));
+  }
+
+  async getProductCategoryHierarchy(): Promise<any[]> {
+    // Get all categories and build hierarchy
+    const allCategories = await db
+      .select()
+      .from(productCategories)
+      .where(eq(productCategories.isActive, true))
+      .orderBy(asc(productCategories.level), asc(productCategories.sortOrder), asc(productCategories.name));
+    
+    // Build hierarchy tree
+    const categoryMap = new Map();
+    const rootCategories: any[] = [];
+    
+    // First pass: create map of all categories
+    allCategories.forEach(category => {
+      categoryMap.set(category.id, { ...category, children: [] });
+    });
+    
+    // Second pass: build hierarchy
+    allCategories.forEach(category => {
+      if (category.parentId) {
+        const parent = categoryMap.get(category.parentId);
+        if (parent) {
+          parent.children.push(categoryMap.get(category.id));
+        }
+      } else {
+        rootCategories.push(categoryMap.get(category.id));
+      }
+    });
+    
+    return rootCategories;
   }
   
   // RFx operations

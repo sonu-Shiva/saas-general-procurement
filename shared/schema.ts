@@ -78,14 +78,30 @@ export const vendors = pgTable("vendors", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Product Categories - Hierarchical category system
+export const productCategories = pgTable("product_categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 100 }).unique().notNull(), // e.g., "1.1.1", "1.2", etc.
+  description: text("description"),
+  parentId: uuid("parent_id"),
+  level: integer("level").notNull().default(1), // 1 = top level, 2 = second level, etc.
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const products = pgTable("products", {
   id: uuid("id").primaryKey().defaultRandom(),
   itemName: varchar("item_name", { length: 255 }).notNull(),
   internalCode: varchar("internal_code", { length: 100 }),
   externalCode: varchar("external_code", { length: 100 }),
   description: text("description"),
-  category: varchar("category", { length: 255 }),
-  subCategory: varchar("sub_category", { length: 255 }),
+  categoryId: uuid("category_id").references(() => productCategories.id),
+  category: varchar("category", { length: 255 }), // Legacy field, keep for backward compatibility
+  subCategory: varchar("sub_category", { length: 255 }), // Legacy field
   uom: varchar("uom", { length: 50 }),
   basePrice: decimal("base_price", { precision: 10, scale: 2 }),
   specifications: jsonb("specifications"),
@@ -295,7 +311,25 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
   purchaseOrders: many(purchaseOrders),
 }));
 
+export const productCategoriesRelations = relations(productCategories, ({ one, many }) => ({
+  parent: one(productCategories, {
+    fields: [productCategories.parentId],
+    references: [productCategories.id],
+    relationName: "categoryParent",
+  }),
+  children: many(productCategories, { relationName: "categoryParent" }),
+  products: many(products),
+  createdBy: one(users, {
+    fields: [productCategories.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export const productsRelations = relations(products, ({ one, many }) => ({
+  category: one(productCategories, {
+    fields: [products.categoryId],
+    references: [productCategories.id],
+  }),
   createdBy: one(users, {
     fields: [products.createdBy],
     references: [users.id],
@@ -470,6 +504,12 @@ export const insertVendorSchema = createInsertSchema(vendors).omit({
   ),
 });
 
+export const insertProductCategorySchema = createInsertSchema(productCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
@@ -575,6 +615,8 @@ export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type InsertProductCategory = z.infer<typeof insertProductCategorySchema>;
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Bom = typeof boms.$inferSelect;
