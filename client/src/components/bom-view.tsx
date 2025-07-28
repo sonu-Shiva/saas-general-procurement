@@ -44,14 +44,19 @@ export default function BomView({ bom, onClose }: BomViewProps) {
   const { data: bomItemsData, isLoading } = useQuery<BomItem[]>({
     queryKey: ["/api/boms", bom.id, "items"],
     queryFn: async () => {
+      console.log("BOM View - Fetching items for BOM:", bom.id);
       const response = await apiRequest("GET", `/api/boms/${bom.id}`) as any;
+      console.log("BOM View - API response:", response);
+      console.log("BOM View - Items from response:", response?.items);
       return response?.items || [];
     },
     retry: false,
   });
 
   useEffect(() => {
+    console.log("BOM View - bomItemsData changed:", bomItemsData);
     if (bomItemsData) {
+      console.log("BOM View - Setting BOM items:", bomItemsData);
       setBomItems(bomItemsData);
     }
   }, [bomItemsData]);

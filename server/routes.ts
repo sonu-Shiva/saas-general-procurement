@@ -413,12 +413,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/boms/:id', isAuthenticated, async (req, res) => {
     try {
+      console.log("Fetching BOM with ID:", req.params.id);
       const bom = await storage.getBom(req.params.id);
       if (!bom) {
+        console.log("BOM not found:", req.params.id);
         return res.status(404).json({ message: "BOM not found" });
       }
+      console.log("BOM found:", bom);
+      
       const items = await storage.getBomItems(req.params.id);
-      res.json({ ...bom, items });
+      console.log("BOM items found:", items);
+      console.log("Items count:", items.length);
+      
+      const response = { ...bom, items };
+      console.log("Sending BOM response:", response);
+      res.json(response);
     } catch (error) {
       console.error("Error fetching BOM:", error);
       res.status(500).json({ message: "Failed to fetch BOM" });
