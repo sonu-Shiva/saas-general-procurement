@@ -115,11 +115,16 @@ export const boms = pgTable("boms", {
 export const bomItems = pgTable("bom_items", {
   id: uuid("id").primaryKey().defaultRandom(),
   bomId: uuid("bom_id").references(() => boms.id, { onDelete: "cascade" }).notNull(),
-  productId: uuid("product_id").references(() => products.id).notNull(),
+  productId: uuid("product_id").references(() => products.id),
+  itemName: varchar("item_name", { length: 255 }).notNull(),
+  itemCode: varchar("item_code", { length: 100 }),
+  description: text("description"),
+  category: varchar("category", { length: 255 }),
   quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
   uom: varchar("uom", { length: 50 }),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }),
+  specifications: jsonb("specifications"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -492,6 +497,8 @@ export const insertBomItemSchema = createInsertSchema(bomItems).omit({
   totalPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
     val ? String(val) : undefined
   ),
+  productId: z.string().uuid().optional(),
+  itemName: z.string().min(1, "Item name is required"),
 });
 
 export const insertRfxEventSchema = createInsertSchema(rfxEvents).omit({

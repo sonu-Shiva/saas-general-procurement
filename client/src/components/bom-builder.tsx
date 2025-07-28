@@ -36,19 +36,34 @@ interface BomBuilderProps {
 }
 
 interface BomLineItem {
-  productId: string;
-  productName: string;
+  productId?: string;
+  itemName: string;
+  itemCode?: string;
+  description?: string;
+  category?: string;
   quantity: number;
   uom: string;
   unitPrice: number;
   totalPrice: number;
+  specifications?: any;
+  isCustomItem: boolean;
 }
 
 export default function BomBuilder({ onClose }: BomBuilderProps) {
   const [bomItems, setBomItems] = useState<BomLineItem[]>([]);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
+  const [isAddCustomItemDialogOpen, setIsAddCustomItemDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [productQuantity, setProductQuantity] = useState<number>(1);
+  const [customItemForm, setCustomItemForm] = useState({
+    itemName: '',
+    itemCode: '',
+    description: '',
+    category: '',
+    quantity: 1,
+    uom: 'units',
+    unitPrice: 0,
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -79,15 +94,20 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
         validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
       });
       
-      // Then add all BOM items if bomResponse has an id
-      if (bomResponse && (bomResponse as any).id) {
+      // Then add all BOM items if bomResponse has an id and there are items
+      if (bomResponse && (bomResponse as any).id && bomItems.length > 0) {
         for (const item of bomItems) {
           await apiRequest("POST", `/api/boms/${(bomResponse as any).id}/items`, {
-            productId: item.productId,
+            productId: item.productId || undefined,
+            itemName: item.itemName,
+            itemCode: item.itemCode || undefined,
+            description: item.description || undefined,
+            category: item.category || undefined,
             quantity: item.quantity.toString(),
             uom: item.uom,
             unitPrice: item.unitPrice.toString(),
             totalPrice: item.totalPrice.toString(),
+            specifications: item.specifications || undefined,
           });
         }
       }
@@ -123,7 +143,7 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
   });
 
   const onSubmit = (data: any) => {
-    if (bomItems.length === 0) {
+    if (bomItems.length === 0 && data.isActive !== false) {
       toast({
         title: "Error",
         description: "Please add at least one item to the BOM",
@@ -134,10 +154,20 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
     createBomMutation.mutate(data);
   };
 
+  const saveDraft = () => {
+    const formData = form.getValues();
+    createBomMutation.mutate({
+      ...formData,
+      isActive: false
+    });
+  };
+
   const addProductToBom = () => {
     if (!selectedProduct) return;
 
-    const existingItemIndex = bomItems.findIndex(item => item.productId === selectedProduct.id);
+    const existingItemIndex = bomItems.findIndex(item => 
+      item.productId === selectedProduct.id && !item.isCustomItem
+    );
     
     if (existingItemIndex >= 0) {
       // Update existing item quantity
@@ -154,11 +184,16 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
       // Add new item
       const newItem: BomLineItem = {
         productId: selectedProduct.id,
-        productName: selectedProduct.itemName,
+        itemName: selectedProduct.itemName,
+        itemCode: selectedProduct.internalCode || selectedProduct.externalCode,
+        description: selectedProduct.description,
+        category: selectedProduct.category,
         quantity: productQuantity,
         uom: selectedProduct.uom || 'units',
         unitPrice: parseFloat(selectedProduct.basePrice || '0'),
         totalPrice: productQuantity * parseFloat(selectedProduct.basePrice || '0'),
+        specifications: selectedProduct.specifications,
+        isCustomItem: false,
       };
       setBomItems(prev => [...prev, newItem]);
     }
@@ -166,6 +201,36 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
     setSelectedProduct(null);
     setProductQuantity(1);
     setIsAddProductDialogOpen(false);
+  };
+
+  const addCustomItemToBom = () => {
+    if (!customItemForm.itemName) return;
+
+    const newItem: BomLineItem = {
+      itemName: customItemForm.itemName,
+      itemCode: customItemForm.itemCode,
+      description: customItemForm.description,
+      category: customItemForm.category,
+      quantity: customItemForm.quantity,
+      uom: customItemForm.uom,
+      unitPrice: customItemForm.unitPrice,
+      totalPrice: customItemForm.quantity * customItemForm.unitPrice,
+      isCustomItem: true,
+    };
+
+    setBomItems(prev => [...prev, newItem]);
+    
+    // Reset form
+    setCustomItemForm({
+      itemName: '',
+      itemCode: '',
+      description: '',
+      category: '',
+      quantity: 1,
+      uom: 'units',
+      unitPrice: 0,
+    });
+    setIsAddCustomItemDialogOpen(false);
   };
 
   const removeItemFromBom = (index: number) => {
@@ -325,97 +390,229 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
                       <Package className="w-5 h-5 mr-2" />
                       BOM Items
                     </div>
-                    <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Item
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Add Product to BOM</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium text-foreground mb-2 block">
-                              Search Products
-                            </label>
-                            <div className="relative">
-                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <Input placeholder="Search by product name..." className="pl-10" />
-                            </div>
-                          </div>
-                          
-                          <div className="max-h-64 overflow-y-auto space-y-2">
-                            {products.map((product: any) => (
-                              <div
-                                key={product.id}
-                                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                  selectedProduct?.id === product.id
-                                    ? 'border-primary bg-primary/5'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                                onClick={() => setSelectedProduct(product)}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <h4 className="font-medium">{product.itemName}</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                      {product.internalCode} • {product.category}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="font-semibold">
-                                      ₹{parseFloat(product.basePrice || '0').toLocaleString()}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">per {product.uom}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                    <div className="flex space-x-2">
+                      <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline">
+                            <Package className="w-4 h-4 mr-2" />
+                            From Catalogue
+                          </Button>
+                        </DialogTrigger>
+                      </Dialog>
+                      <Dialog open={isAddCustomItemDialogOpen} onOpenChange={setIsAddCustomItemDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Custom Item
+                          </Button>
+                        </DialogTrigger>
+                      </Dialog>
+                    </div>
+                  </CardTitle>
 
-                          {selectedProduct && (
-                            <div className="p-4 bg-muted rounded-lg">
-                              <h4 className="font-medium mb-3">Selected: {selectedProduct.itemName}</h4>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label className="text-sm font-medium text-foreground mb-1 block">
-                                    Quantity
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    value={productQuantity}
-                                    onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-foreground mb-1 block">
-                                    Total Price
-                                  </label>
-                                  <Input
-                                    readOnly
-                                    value={`₹${(productQuantity * parseFloat(selectedProduct.basePrice || '0')).toLocaleString()}`}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex justify-end space-x-2">
-                            <Button variant="outline" onClick={() => setIsAddProductDialogOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button onClick={addProductToBom} disabled={!selectedProduct}>
-                              Add to BOM
-                            </Button>
+                  {/* Product Catalogue Dialog */}
+                  <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Add Product to BOM</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium text-foreground mb-2 block">
+                            Search Products
+                          </label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input placeholder="Search by product name..." className="pl-10" />
                           </div>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  </CardTitle>
+                        
+                        <div className="max-h-64 overflow-y-auto space-y-2">
+                          {products.map((product: any) => (
+                            <div
+                              key={product.id}
+                              className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                selectedProduct?.id === product.id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                              onClick={() => setSelectedProduct(product)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">{product.itemName}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {product.internalCode} • {product.category}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-semibold">
+                                    ₹{parseFloat(product.basePrice || '0').toLocaleString()}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">per {product.uom}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {selectedProduct && (
+                          <div className="p-4 bg-muted rounded-lg">
+                            <h4 className="font-medium mb-3">Selected: {selectedProduct.itemName}</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-foreground mb-1 block">
+                                  Quantity
+                                </label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={productQuantity}
+                                  onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-foreground mb-1 block">
+                                  Total Price
+                                </label>
+                                <Input
+                                  readOnly
+                                  value={`₹${(productQuantity * parseFloat(selectedProduct.basePrice || '0')).toLocaleString()}`}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-end space-x-2">
+                          <Button variant="outline" onClick={() => setIsAddProductDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={addProductToBom} disabled={!selectedProduct}>
+                            Add to BOM
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Custom Item Dialog */}
+                  <Dialog open={isAddCustomItemDialogOpen} onOpenChange={setIsAddCustomItemDialogOpen}>
+                    <DialogContent className="max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Add Custom Item to BOM</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Item Name *
+                            </label>
+                            <Input
+                              value={customItemForm.itemName}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, itemName: e.target.value}))}
+                              placeholder="Enter item name"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Item Code
+                            </label>
+                            <Input
+                              value={customItemForm.itemCode}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, itemCode: e.target.value}))}
+                              placeholder="Enter item code"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium text-foreground mb-2 block">
+                            Description
+                          </label>
+                          <Input
+                            value={customItemForm.description}
+                            onChange={(e) => setCustomItemForm(prev => ({...prev, description: e.target.value}))}
+                            placeholder="Enter description"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Category
+                            </label>
+                            <Input
+                              value={customItemForm.category}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, category: e.target.value}))}
+                              placeholder="Enter category"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              UOM
+                            </label>
+                            <Select 
+                              value={customItemForm.uom} 
+                              onValueChange={(value) => setCustomItemForm(prev => ({...prev, uom: value}))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="units">Units</SelectItem>
+                                <SelectItem value="kg">Kilograms</SelectItem>
+                                <SelectItem value="m">Meters</SelectItem>
+                                <SelectItem value="pieces">Pieces</SelectItem>
+                                <SelectItem value="liters">Liters</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Quantity
+                            </label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={customItemForm.quantity}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, quantity: parseInt(e.target.value) || 1}))}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Unit Price
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={customItemForm.unitPrice}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, unitPrice: parseFloat(e.target.value) || 0}))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-muted rounded-lg">
+                          <div className="text-sm text-muted-foreground">Total Price</div>
+                          <div className="text-lg font-semibold">
+                            ₹{(customItemForm.quantity * customItemForm.unitPrice).toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end space-x-2">
+                          <Button variant="outline" onClick={() => setIsAddCustomItemDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={addCustomItemToBom} disabled={!customItemForm.itemName}>
+                            Add to BOM
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </CardHeader>
                 <CardContent>
                   {bomItems.length > 0 ? (
@@ -435,7 +632,12 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
                             <tr key={index}>
                               <td className="py-3 px-4">
                                 <div>
-                                  <p className="font-medium">{item.productName}</p>
+                                  <p className="font-medium">{item.itemName}</p>
+                                  {item.isCustomItem && (
+                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                      Custom
+                                    </span>
+                                  )}
                                   <p className="text-sm text-muted-foreground">per {item.uom}</p>
                                 </div>
                               </td>
@@ -563,15 +765,8 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
               <Button 
                 type="button" 
                 variant="outline"
-                onClick={() => {
-                  const formData = form.getValues();
-                  // Save as draft with isActive: false
-                  createBomMutation.mutate({
-                    ...formData,
-                    isActive: false
-                  });
-                }}
-                disabled={createBomMutation.isPending || bomItems.length === 0}
+                onClick={saveDraft}
+                disabled={createBomMutation.isPending}
               >
                 <Save className="w-4 h-4 mr-2" />
                 Save Draft
