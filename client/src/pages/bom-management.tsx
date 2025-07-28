@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import BomBuilder from "@/components/bom-builder";
+import BomView from "@/components/bom-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +35,9 @@ export default function BomManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [editingBom, setEditingBom] = useState<Bom | null>(null);
+  const [viewingBom, setViewingBom] = useState<Bom | null>(null);
   const { toast } = useToast();
 
   // Check if user is a buyer (can create BOMs)
@@ -59,9 +62,19 @@ export default function BomManagement() {
     setIsEditDialogOpen(true);
   };
 
+  const handleViewBom = (bom: Bom) => {
+    setViewingBom(bom);
+    setIsViewDialogOpen(true);
+  };
+
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false);
     setEditingBom(null);
+  };
+
+  const handleCloseViewDialog = () => {
+    setIsViewDialogOpen(false);
+    setViewingBom(null);
   };
 
   return (
@@ -188,6 +201,16 @@ export default function BomManagement() {
                             existingBom={editingBom}
                           />
                         )}
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* View BOM Dialog */}
+                    <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>BOM Details: {viewingBom?.name}</DialogTitle>
+                        </DialogHeader>
+                        {viewingBom && <BomView bom={viewingBom} onClose={handleCloseViewDialog} />}
                       </DialogContent>
                     </Dialog>
                   </>
@@ -363,7 +386,12 @@ export default function BomManagement() {
                       )}
 
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleViewBom(bom)}
+                        >
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
