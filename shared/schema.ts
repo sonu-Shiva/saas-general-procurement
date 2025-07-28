@@ -524,6 +524,13 @@ export const insertBomSchema = createInsertSchema(boms).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  validFrom: z.union([z.string(), z.date()]).optional().transform((val) => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
+  validTo: z.union([z.string(), z.date()]).optional().transform((val) => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
 });
 
 export const insertBomItemSchema = createInsertSchema(bomItems).omit({

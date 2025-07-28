@@ -131,8 +131,8 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       // Create or update the BOM
       const bomPayload = {
         ...data,
-        validFrom: data.validFrom ? new Date(data.validFrom).toISOString() : undefined,
-        validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
+        validFrom: data.validFrom || undefined,
+        validTo: data.validTo || undefined,
       };
       
       console.log("BOM payload:", bomPayload);
@@ -232,8 +232,8 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     
     const submitData = {
       ...data,
-      validFrom: data.validFrom ? new Date(data.validFrom).toISOString() : undefined,
-      validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
+      validFrom: data.validFrom || undefined,
+      validTo: data.validTo || undefined,
     };
     
     console.log("Submitting BOM data:", submitData);
@@ -247,8 +247,8 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     createBomMutation.mutate({
       ...formData,
       isActive: false,
-      validFrom: formData.validFrom ? new Date(formData.validFrom).toISOString() : undefined,
-      validTo: formData.validTo ? new Date(formData.validTo).toISOString() : undefined,
+      validFrom: formData.validFrom || undefined,
+      validTo: formData.validTo || undefined,
     });
   };
 
