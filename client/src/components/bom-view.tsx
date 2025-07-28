@@ -47,6 +47,7 @@ export default function BomView({ bom, onClose }: BomViewProps) {
       console.log("BOM View - Fetching items for BOM:", bom.id);
       const response = await apiRequest("GET", `/api/boms/${bom.id}`) as any;
       console.log("BOM View - Full API response:", JSON.stringify(response, null, 2));
+      console.log("BOM View - Response keys:", Object.keys(response || {}));
       console.log("BOM View - Items from response:", response?.items);
       console.log("BOM View - Items type:", typeof response?.items);
       console.log("BOM View - Items length:", response?.items?.length);
@@ -54,7 +55,7 @@ export default function BomView({ bom, onClose }: BomViewProps) {
     },
     retry: false,
     staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache
+    gcTime: 0, // Don't cache
   });
 
   useEffect(() => {
@@ -62,11 +63,11 @@ export default function BomView({ bom, onClose }: BomViewProps) {
     console.log("BOM View - bomItemsData type:", typeof bomItemsData);
     console.log("BOM View - bomItemsData is array:", Array.isArray(bomItemsData));
     console.log("BOM View - error:", error);
-    if (bomItemsData) {
+    if (bomItemsData && Array.isArray(bomItemsData)) {
       console.log("BOM View - Setting BOM items:", bomItemsData);
       setBomItems(bomItemsData);
     } else {
-      console.log("BOM View - No bomItemsData, setting empty array");
+      console.log("BOM View - No bomItemsData or not array, setting empty array");
       setBomItems([]);
     }
   }, [bomItemsData, error]);
