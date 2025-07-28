@@ -161,7 +161,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
         
         // Add all BOM items
         for (const item of bomItems) {
-          await apiRequest("POST", `/api/boms/${bomId}/items`, {
+          const itemPayload = {
             productId: item.productId || undefined,
             itemName: item.itemName,
             itemCode: item.itemCode || undefined,
@@ -172,7 +172,16 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
             unitPrice: item.unitPrice.toString(),
             totalPrice: item.totalPrice.toString(),
             specifications: item.specifications || undefined,
-          });
+          };
+          console.log("Adding BOM item:", itemPayload);
+          
+          try {
+            const itemResponse = await apiRequest("POST", `/api/boms/${bomId}/items`, itemPayload);
+            console.log("BOM item added successfully:", itemResponse);
+          } catch (itemError) {
+            console.error("Failed to add BOM item:", itemError);
+            throw itemError;
+          }
         }
       }
       
@@ -208,6 +217,10 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
   });
 
   const onSubmit = (data: any) => {
+    console.log("Form submitted with data:", data);
+    console.log("Current BOM items:", bomItems);
+    console.log("Form validation errors:", form.formState.errors);
+    
     if (bomItems.length === 0 && data.isActive !== false) {
       toast({
         title: "Error",
@@ -216,11 +229,15 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       });
       return;
     }
-    createBomMutation.mutate({
+    
+    const submitData = {
       ...data,
       validFrom: data.validFrom ? new Date(data.validFrom).toISOString() : undefined,
       validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
-    });
+    };
+    
+    console.log("Submitting BOM data:", submitData);
+    createBomMutation.mutate(submitData);
   };
 
   const saveDraft = () => {

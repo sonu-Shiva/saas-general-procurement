@@ -378,15 +378,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/boms', isAuthenticated, isBuyer, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log("Creating BOM for user:", userId);
+      console.log("Request body:", req.body);
+      
       const validatedData = insertBomSchema.parse({
         ...req.body,
         createdBy: userId,
       });
+      
+      console.log("Validated BOM data:", validatedData);
       const bom = await storage.createBom(validatedData);
+      console.log("BOM created successfully:", bom);
       res.json(bom);
     } catch (error) {
       console.error("Error creating BOM:", error);
-      res.status(400).json({ message: "Failed to create BOM" });
+      if (error instanceof Error) {
+        res.status(400).json({ message: `Failed to create BOM: ${error.message}` });
+      } else {
+        res.status(400).json({ message: "Failed to create BOM" });
+      }
     }
   });
 
@@ -441,15 +451,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/boms/:id/items', isAuthenticated, async (req, res) => {
     try {
+      console.log("Creating BOM item for BOM:", req.params.id);
+      console.log("BOM item data:", req.body);
+      
       const validatedData = insertBomItemSchema.parse({
         ...req.body,
         bomId: req.params.id,
       });
+      
+      console.log("Validated BOM item data:", validatedData);
       const bomItem = await storage.createBomItem(validatedData);
+      console.log("BOM item created successfully:", bomItem);
       res.json(bomItem);
     } catch (error) {
       console.error("Error creating BOM item:", error);
-      res.status(400).json({ message: "Failed to create BOM item" });
+      if (error instanceof Error) {
+        res.status(400).json({ message: `Failed to create BOM item: ${error.message}` });
+      } else {
+        res.status(400).json({ message: "Failed to create BOM item" });
+      }
     }
   });
 
