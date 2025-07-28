@@ -45,11 +45,16 @@ export default function BomView({ bom, onClose }: BomViewProps) {
     queryKey: ["/api/boms", bom.id],
     queryFn: async () => {
       console.log("BOM View - Fetching items for BOM:", bom.id);
-      const response = await apiRequest("GET", `/api/boms/${bom.id}`) as any;
-      console.log("BOM View - Full API response:", JSON.stringify(response, null, 2));
+      const rawResponse = await apiRequest("GET", `/api/boms/${bom.id}`);
+      console.log("BOM View - Raw response type:", typeof rawResponse);
+      console.log("BOM View - Raw response:", rawResponse);
+      
+      const response = await rawResponse.json();
+      console.log("BOM View - Parsed JSON response:", JSON.stringify(response, null, 2));
       console.log("BOM View - Response keys:", Object.keys(response || {}));
       console.log("BOM View - Items from response:", response?.items);
       console.log("BOM View - Items type:", typeof response?.items);
+      console.log("BOM View - Items is array:", Array.isArray(response?.items));
       console.log("BOM View - Items length:", response?.items?.length);
       return response?.items || [];
     },

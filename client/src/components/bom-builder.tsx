@@ -92,7 +92,8 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       const fetchBomItems = async () => {
         try {
           console.log("BOM Builder - Loading items for existing BOM:", existingBom.id);
-          const response = await apiRequest("GET", `/api/boms/${existingBom.id}`) as any;
+          const rawResponse = await apiRequest("GET", `/api/boms/${existingBom.id}`);
+          const response = await rawResponse.json();
           console.log("BOM Builder - API response:", response);
           console.log("BOM Builder - Items from response:", response?.items);
           if (response?.items) {
