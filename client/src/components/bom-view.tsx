@@ -41,25 +41,35 @@ export default function BomView({ bom, onClose }: BomViewProps) {
   const [bomItems, setBomItems] = useState<BomItem[]>([]);
 
   // Fetch BOM items
-  const { data: bomItemsData, isLoading } = useQuery<BomItem[]>({
-    queryKey: ["/api/boms", bom.id, "items"],
+  const { data: bomItemsData, isLoading, error } = useQuery<BomItem[]>({
+    queryKey: ["/api/boms", bom.id],
     queryFn: async () => {
       console.log("BOM View - Fetching items for BOM:", bom.id);
       const response = await apiRequest("GET", `/api/boms/${bom.id}`) as any;
-      console.log("BOM View - API response:", response);
+      console.log("BOM View - Full API response:", JSON.stringify(response, null, 2));
       console.log("BOM View - Items from response:", response?.items);
+      console.log("BOM View - Items type:", typeof response?.items);
+      console.log("BOM View - Items length:", response?.items?.length);
       return response?.items || [];
     },
     retry: false,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache
   });
 
   useEffect(() => {
     console.log("BOM View - bomItemsData changed:", bomItemsData);
+    console.log("BOM View - bomItemsData type:", typeof bomItemsData);
+    console.log("BOM View - bomItemsData is array:", Array.isArray(bomItemsData));
+    console.log("BOM View - error:", error);
     if (bomItemsData) {
       console.log("BOM View - Setting BOM items:", bomItemsData);
       setBomItems(bomItemsData);
+    } else {
+      console.log("BOM View - No bomItemsData, setting empty array");
+      setBomItems([]);
     }
-  }, [bomItemsData]);
+  }, [bomItemsData, error]);
 
   const totalBomValue = bomItems.reduce((sum, item) => {
     const totalPrice = parseFloat(item.totalPrice || '0');
@@ -176,7 +186,9 @@ export default function BomView({ bom, onClose }: BomViewProps) {
               <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No items found in this BOM</p>
               <p className="text-xs mt-2">Debug: bomItems = {JSON.stringify(bomItems)}</p>
-              <p className="text-xs">Debug: bomItemsData = {JSON.stringify(bomItemsData)}</p>
+              <p className="text-xs">Debug: bomItemsData = {JSON.stringify(bomItemsData)}</p>  
+              <p className="text-xs">Debug: isLoading = {String(isLoading)}</p>
+              <p className="text-xs">Debug: error = {JSON.stringify(error)}</p>
             </div>
           ) : (
             <div className="space-y-4">
