@@ -91,7 +91,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     if (existingBom?.id) {
       const fetchBomItems = async () => {
         try {
-          const response = await apiRequest("GET", `/api/boms/${existingBom.id}`);
+          const response = await apiRequest("GET", `/api/boms/${existingBom.id}`) as any;
           if (response?.items) {
             const loadedItems = response.items.map((item: any) => ({
               productId: item.productId,
@@ -210,14 +210,22 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       });
       return;
     }
-    createBomMutation.mutate(data);
+    createBomMutation.mutate({
+      ...data,
+      validFrom: data.validFrom ? new Date(data.validFrom).toISOString() : undefined,
+      validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
+    });
   };
 
   const saveDraft = () => {
     const formData = form.getValues();
+    console.log("Saving draft with form data:", formData);
+    console.log("Current BOM items:", bomItems);
     createBomMutation.mutate({
       ...formData,
-      isActive: false
+      isActive: false,
+      validFrom: formData.validFrom ? new Date(formData.validFrom).toISOString() : undefined,
+      validTo: formData.validTo ? new Date(formData.validTo).toISOString() : undefined,
     });
   };
 
