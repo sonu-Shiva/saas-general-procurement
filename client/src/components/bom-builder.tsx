@@ -109,6 +109,8 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
               specifications: item.specifications,
               isCustomItem: !item.productId,
             }));
+            console.log("BOM Builder - Setting BOM items:", loadedItems);
+            console.log("BOM Builder - Items count:", loadedItems.length);
             setBomItems(loadedItems);
           }
         } catch (error) {

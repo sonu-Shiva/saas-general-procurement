@@ -66,6 +66,10 @@ export default function BomView({ bom, onClose }: BomViewProps) {
     return sum + totalPrice;
   }, 0);
 
+  console.log("BOM View - Current bomItems state:", bomItems);
+  console.log("BOM View - Total BOM value:", totalBomValue);
+  console.log("BOM View - isLoading:", isLoading);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -171,6 +175,8 @@ export default function BomView({ bom, onClose }: BomViewProps) {
             <div className="text-center py-8 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No items found in this BOM</p>
+              <p className="text-xs mt-2">Debug: bomItems = {JSON.stringify(bomItems)}</p>
+              <p className="text-xs">Debug: bomItemsData = {JSON.stringify(bomItemsData)}</p>
             </div>
           ) : (
             <div className="space-y-4">
