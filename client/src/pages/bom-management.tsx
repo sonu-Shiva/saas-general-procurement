@@ -41,10 +41,10 @@ export default function BomManagement() {
   const { toast } = useToast();
 
   // Check if user is a buyer (can create BOMs)
-  const isBuyer = user?.role === 'buyer_admin' || user?.role === 'buyer_user' || user?.role === 'sourcing_manager';
-  const isVendor = user?.role === 'vendor';
+  const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
+  const isVendor = (user as any)?.role === 'vendor';
 
-  const { data: boms, isLoading } = useQuery({
+  const { data: boms = [], isLoading } = useQuery({
     queryKey: ["/api/boms"],
     retry: false,
   });
@@ -52,13 +52,13 @@ export default function BomManagement() {
   // Debug logging for BOM data
   console.log("BOM Management - Raw boms data:", boms);
 
-  const filteredBoms = boms?.filter((bom: Bom) => {
-    const matchesSearch = bom.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredBoms = (boms as Bom[])?.filter((bom: Bom) => {
+    const matchesSearch = bom.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          bom.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === "all" || bom.category === categoryFilter;
     
     return matchesSearch && matchesCategory;
-  });
+  }) || [];
 
   // Debug logging for filtered BOMs
   console.log("BOM Management - Filtered boms:", filteredBoms);
@@ -82,6 +82,24 @@ export default function BomManagement() {
   const handleCloseViewDialog = () => {
     setIsViewDialogOpen(false);
     setViewingBom(null);
+  };
+
+  const handleCopyBom = (bom: Bom) => {
+    // Create a copy of the BOM with modified name and reset dates
+    const bomCopy = {
+      ...bom,
+      name: `${bom.name} (Copy)`,
+      version: "1.0",
+      isActive: false, // Start as draft
+      validFrom: null,
+      validTo: null,
+    };
+    setEditingBom(bomCopy);
+    setIsCreateDialogOpen(true);
+    toast({
+      title: "BOM Copied",
+      description: "BOM has been copied. You can now modify and save it.",
+    });
   };
 
   return (
@@ -190,9 +208,15 @@ export default function BomManagement() {
                       </DialogTrigger>
                       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                          <DialogTitle>Create New BOM</DialogTitle>
+                          <DialogTitle>{editingBom && !isEditDialogOpen ? 'Copy BOM' : 'Create New BOM'}</DialogTitle>
                         </DialogHeader>
-                        <BomBuilder onClose={() => setIsCreateDialogOpen(false)} />
+                        <BomBuilder 
+                          existingBom={editingBom && !isEditDialogOpen ? editingBom : undefined}
+                          onClose={() => {
+                            setIsCreateDialogOpen(false);
+                            setEditingBom(null);
+                          }} 
+                        />
                       </DialogContent>
                     </Dialog>
 
@@ -232,7 +256,7 @@ export default function BomManagement() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total BOMs</p>
-                      <p className="text-2xl font-bold">{boms?.length || 0}</p>
+                      <p className="text-2xl font-bold">{(boms as Bom[])?.length || 0}</p>
                     </div>
                     <Layers className="w-8 h-8 text-primary" />
                   </div>
@@ -244,7 +268,7 @@ export default function BomManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Active BOMs</p>
                       <p className="text-2xl font-bold text-success">
-                        {boms?.filter((b: Bom) => b.isActive).length || 0}
+                        {(boms as Bom[])?.filter((b: Bom) => b.isActive).length || 0}
                       </p>
                     </div>
                     <FileText className="w-8 h-8 text-success" />
@@ -257,7 +281,7 @@ export default function BomManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Categories</p>
                       <p className="text-2xl font-bold">
-                        {boms ? new Set(boms.map((b: Bom) => b.category)).size : 0}
+                        {(boms as Bom[]) ? new Set((boms as Bom[]).map((b: Bom) => b.category)).size : 0}
                       </p>
                     </div>
                     <Package className="w-8 h-8 text-accent" />
@@ -270,7 +294,7 @@ export default function BomManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">This Month</p>
                       <p className="text-2xl font-bold">
-                        {boms?.filter((b: Bom) => {
+                        {(boms as Bom[])?.filter((b: Bom) => {
                           const bomDate = new Date(b.createdAt || '');
                           const now = new Date();
                           return bomDate.getMonth() === now.getMonth() && bomDate.getFullYear() === now.getFullYear();
@@ -412,7 +436,12 @@ export default function BomManagement() {
                           <Edit className="w-3 h-3 mr-1" />
                           Edit
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleCopyBom(bom)}
+                          title="Copy BOM"
+                        >
                           <Copy className="w-3 h-3" />
                         </Button>
                       </div>

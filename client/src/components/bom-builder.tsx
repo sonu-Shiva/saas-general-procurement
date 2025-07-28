@@ -112,8 +112,8 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
             }));
             console.log("BOM Builder - Setting BOM items:", loadedItems);
             console.log("BOM Builder - Items count:", loadedItems.length);
-            console.log("BOM Builder - Items with productId:", loadedItems.filter(item => item.productId));
-            console.log("BOM Builder - Custom items:", loadedItems.filter(item => !item.productId));
+            console.log("BOM Builder - Items with productId:", loadedItems.filter((item: any) => item.productId));
+            console.log("BOM Builder - Custom items:", loadedItems.filter((item: any) => !item.productId));
             setBomItems(loadedItems);
           }
         } catch (error) {
