@@ -245,8 +245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Product Category routes - Only vendors can create/manage categories
-  app.post('/api/product-categories', isAuthenticated, isVendor, async (req: any, res) => {
+  // Product Category routes - Both vendors and buyers can create/manage categories
+  app.post('/api/product-categories', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const validatedData = insertProductCategorySchema.parse({
@@ -321,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/product-categories/:id', isAuthenticated, isVendor, async (req: any, res) => {
+  app.put('/api/product-categories/:id', isAuthenticated, async (req: any, res) => {
     try {
       const categoryId = req.params.id;
       const userId = req.user.claims.sub;
@@ -345,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/product-categories/:id', isAuthenticated, isVendor, async (req: any, res) => {
+  app.delete('/api/product-categories/:id', isAuthenticated, async (req: any, res) => {
     try {
       const categoryId = req.params.id;
       const userId = req.user.claims.sub;
