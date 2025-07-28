@@ -469,6 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       console.log("Validated BOM item data:", validatedData);
+      console.log("ProductId in validated data:", validatedData.productId);
       const bomItem = await storage.createBomItem(validatedData);
       console.log("BOM item created successfully:", bomItem);
       res.json(bomItem);
