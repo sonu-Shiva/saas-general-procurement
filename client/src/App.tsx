@@ -15,19 +15,10 @@ import RfxManagement from "@/pages/rfx-management";
 import AuctionCenter from "@/pages/auction-center";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Analytics from "@/pages/analytics";
-import { useEffect } from "react";
+
 
 function Router() {
-  const { isAuthenticated, isLoading, error } = useAuth();
-
-  // Handle authentication errors on page refresh
-  useEffect(() => {
-    if (error && error.message?.includes('401') && !isLoading) {
-      // Clear any stale data from cache
-      queryClient.clear();
-      console.log("Authentication error detected, cleared cache");
-    }
-  }, [error, isLoading]);
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -41,24 +32,24 @@ function Router() {
     );
   }
 
+  // If not authenticated, show landing page for ALL routes
+  if (!isAuthenticated) {
+    return <Landing />;
+  }
+
+  // If authenticated, show the router with protected routes
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/vendors" component={VendorManagement} />
-          <Route path="/vendor-discovery" component={VendorDiscovery} />
-          <Route path="/products" component={ProductCatalogue} />
-          <Route path="/product-catalogue" component={ProductCatalogue} />
-          <Route path="/boms" component={BomManagement} />
-          <Route path="/rfx" component={RfxManagement} />
-          <Route path="/auctions" component={AuctionCenter} />
-          <Route path="/purchase-orders" component={PurchaseOrders} />
-          <Route path="/analytics" component={Analytics} />
-        </>
-      )}
+      <Route path="/" component={Dashboard} />
+      <Route path="/vendors" component={VendorManagement} />
+      <Route path="/vendor-discovery" component={VendorDiscovery} />
+      <Route path="/products" component={ProductCatalogue} />
+      <Route path="/product-catalogue" component={ProductCatalogue} />
+      <Route path="/boms" component={BomManagement} />
+      <Route path="/rfx" component={RfxManagement} />
+      <Route path="/auctions" component={AuctionCenter} />
+      <Route path="/purchase-orders" component={PurchaseOrders} />
+      <Route path="/analytics" component={Analytics} />
       <Route component={NotFound} />
     </Switch>
   );

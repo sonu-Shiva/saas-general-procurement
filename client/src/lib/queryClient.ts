@@ -64,28 +64,13 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: true, // Refetch when tab becomes active again
+      refetchOnWindowFocus: false, // Don't refetch when tab becomes active again
       staleTime: 2 * 60 * 1000, // 2 minutes
       gcTime: 5 * 60 * 1000, // 5 minutes
-      retry: (failureCount, error: any) => {
-        // Don't retry authentication errors
-        if (error?.message?.includes('401')) {
-          return false;
-        }
-        // Retry network errors up to 2 times
-        return failureCount < 2;
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
+      retry: false, // Disable automatic retries to prevent loops
     },
     mutations: {
-      retry: (failureCount, error: any) => {
-        // Don't retry authentication errors
-        if (error?.message?.includes('401')) {
-          return false;
-        }
-        // Retry network errors once
-        return failureCount < 1;
-      },
+      retry: false, // Disable automatic retries for mutations too
     },
   },
 });
