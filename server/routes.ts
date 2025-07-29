@@ -165,16 +165,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product routes - Only vendors can create products
   app.post('/api/products', isAuthenticated, isVendor, async (req: any, res) => {
     try {
+      console.log("=== PRODUCT CREATION ===");
+      console.log("User ID:", req.user.claims.sub);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
       const userId = req.user.claims.sub;
       const validatedData = insertProductSchema.parse({
         ...req.body,
         createdBy: userId,
       });
+      
+      console.log("Validated data:", JSON.stringify(validatedData, null, 2));
       const product = await storage.createProduct(validatedData);
+      console.log("Product created successfully:", product.id);
       res.json(product);
     } catch (error) {
       console.error("Error creating product:", error);
-      res.status(400).json({ message: "Failed to create product" });
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      res.status(400).json({ message: `Failed to create product: ${error instanceof Error ? error.message : 'Unknown error'}` });
     }
   });
 

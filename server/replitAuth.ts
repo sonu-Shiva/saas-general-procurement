@@ -205,19 +205,26 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 // Role-based middleware
 export const isVendor: RequestHandler = async (req: any, res, next) => {
   try {
+    console.log("=== VENDOR ROLE CHECK ===");
     const userId = req.user?.claims?.sub;
+    console.log("User ID from claims:", userId);
+    
     if (!userId) {
+      console.log("No user ID found in claims");
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     // Import storage here to avoid circular dependencies
     const { storage } = await import('./storage');
     const user = await storage.getUser(userId);
+    console.log("User from database:", user ? `${user.email} (${user.role})` : "not found");
     
     if (!user || user.role !== 'vendor') {
+      console.log("Access denied - not a vendor role");
       return res.status(403).json({ message: "Access denied. Vendor role required." });
     }
     
+    console.log("Vendor role confirmed, proceeding");
     next();
   } catch (error) {
     console.error("Error checking vendor role:", error);
