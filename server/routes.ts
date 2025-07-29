@@ -252,12 +252,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter results based on query - more flexible matching
       let filteredVendors = testVendors;
       
-      if (query) {
-        const searchTerm = query.toLowerCase();
+      if (query && query.trim() !== "") {
+        const searchTerm = query.toLowerCase().trim();
         filteredVendors = filteredVendors.filter(vendor => 
           vendor.name.toLowerCase().includes(searchTerm) ||
           vendor.category.toLowerCase().includes(searchTerm) ||
-          vendor.description.toLowerCase().includes(searchTerm)
+          vendor.description.toLowerCase().includes(searchTerm) ||
+          vendor.location.toLowerCase().includes(searchTerm)
         );
       }
       
