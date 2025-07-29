@@ -91,8 +91,18 @@ export default function BomManagement() {
 
   const handleCopyBom = (bom: Bom) => {
     setCopyingBom(bom);
+    // Smart copy naming - avoid duplicate "(Copy)" text
+    let copyName = bom.name;
+    if (copyName.endsWith(' (Copy)')) {
+      // If it already ends with (Copy), replace it with (Copy 2)
+      copyName = copyName.replace(' (Copy)', ' (Copy 2)');
+    } else {
+      // Otherwise just add (Copy)
+      copyName = `${copyName} (Copy)`;
+    }
+    
     setCopyForm({ 
-      name: `${bom.name} (Copy)`, 
+      name: copyName, 
       version: "1.0" 
     });
     setIsCopyDialogOpen(true);
