@@ -62,19 +62,70 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
 
   const createRfxMutation = useMutation({
     mutationFn: async (data: RfxFormData) => {
-      const payload = {
-        ...data,
+      // First create the RFx event
+      const rfxPayload = {
+        title: data.title,
+        scope: data.scope,
+        type: data.type,
         dueDate: new Date(data.dueDate),
         budget: data.budget || undefined,
-        bomId: undefined, // Will be handled separately for RFQ
+        bomId: undefined,
         criteria: data.criteria || undefined,
         evaluationParameters: data.evaluationParameters || undefined,
+        status: "draft",
       };
       
-      console.log("RFx payload:", payload);
-      return await apiRequest("/api/rfx", "POST", payload);
+      console.log("RFx payload before API call:", rfxPayload);
+      console.log("Selected vendors:", data.selectedVendors);
+      
+      const response = await fetch("/api/rfx", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(rfxPayload),
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const rfxEvent = await response.json();
+      console.log("RFx event created:", rfxEvent);
+      
+      // Create vendor invitations
+      if (data.selectedVendors && data.selectedVendors.length > 0) {
+        const invitePromises = data.selectedVendors.map(async (vendorId) => {
+          const inviteResponse = await fetch("/api/rfx/invitations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              rfxId: rfxEvent.id,
+              vendorId: vendorId,
+            }),
+            credentials: "include",
+          });
+          
+          if (!inviteResponse.ok) {
+            console.error(`Failed to invite vendor ${vendorId}`);
+          }
+          
+          return inviteResponse.json();
+        });
+        
+        await Promise.all(invitePromises);
+        console.log("Vendor invitations sent");
+      }
+      
+      return rfxEvent;
     },
     onSuccess: () => {
+      console.log("RFx created successfully!");
       queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
       onSuccess();
       onClose();

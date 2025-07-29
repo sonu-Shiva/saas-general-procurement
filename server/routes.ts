@@ -927,17 +927,42 @@ Focus on established businesses with verifiable contact information.`;
   // RFx routes
   app.post('/api/rfx', isAuthenticated, async (req: any, res) => {
     try {
+      console.log("RFx creation request body:", req.body);
       const userId = req.user.claims.sub;
       const validatedData = insertRfxEventSchema.parse({
         ...req.body,
         createdBy: userId,
         referenceNo: `RFX-${Date.now()}`,
       });
+      console.log("Validated RFx data:", validatedData);
       const rfx = await storage.createRfxEvent(validatedData);
+      console.log("Created RFx:", rfx);
       res.json(rfx);
     } catch (error) {
       console.error("Error creating RFx:", error);
-      res.status(400).json({ message: "Failed to create RFx" });
+      if (error instanceof Error) {
+        console.error("Error details:", error.message);
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: "Failed to create RFx" });
+      }
+    }
+  });
+
+  // RFx invitations route
+  app.post('/api/rfx/invitations', isAuthenticated, async (req: any, res) => {
+    try {
+      console.log("RFx invitation request:", req.body);
+      const validatedData = insertRfxInvitationSchema.parse(req.body);
+      const invitation = await storage.createRfxInvitation(validatedData);
+      res.json(invitation);
+    } catch (error) {
+      console.error("Error creating RFx invitation:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: "Failed to create RFx invitation" });
+      }
     }
   });
 
