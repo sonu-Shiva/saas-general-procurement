@@ -120,8 +120,8 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
               {/* RFI Option */}
               <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
                 selectedType === "RFI" 
-                  ? "ring-2 ring-primary bg-primary/5 border-primary" 
-                  : "hover:border-primary/50"
+                  ? "border-2 border-primary bg-primary/5" 
+                  : "border-2 border-border hover:border-primary/50"
               }`}>
                 <CardContent className="p-6">
                   <label className="cursor-pointer block">
@@ -149,8 +149,8 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
               {/* RFP Option */}
               <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
                 selectedType === "RFP" 
-                  ? "ring-2 ring-primary bg-primary/5 border-primary" 
-                  : "hover:border-primary/50"
+                  ? "border-2 border-primary bg-primary/5" 
+                  : "border-2 border-border hover:border-primary/50"
               }`}>
                 <CardContent className="p-6">
                   <label className="cursor-pointer block">
@@ -178,8 +178,8 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
               {/* RFQ Option */}
               <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
                 selectedType === "RFQ" 
-                  ? "ring-2 ring-primary bg-primary/5 border-primary" 
-                  : "hover:border-primary/50"
+                  ? "border-2 border-primary bg-primary/5" 
+                  : "border-2 border-border hover:border-primary/50"
               }`}>
                 <CardContent className="p-6">
                   <label className="cursor-pointer block">
