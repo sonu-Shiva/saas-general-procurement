@@ -69,7 +69,7 @@ export default function ProductCatalogue() {
       internalCode: "",
       externalCode: "",
       description: "",
-      categoryId: undefined,
+      categoryId: "",
       category: "",
       subCategory: "",
       uom: "",
@@ -253,37 +253,6 @@ export default function ProductCatalogue() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Product Catalogue is vendor-only access - buyers should use BOM management
-  if (isBuyer) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-        <Header />
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto">
-            <div className="max-w-7xl mx-auto px-6 py-8">
-              <div className="text-center py-12">
-                <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <h2 className="text-2xl font-bold mb-4">Product Catalogue - Vendor Access Only</h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  As a buyer, you access vendor products through BOM creation. The product catalogue is for vendors to manage their inventory.
-                </p>
-                <div className="space-y-2">
-                  <Button onClick={() => window.location.href = '/bom-management'} className="mr-3">
-                    Go to BOM Management
-                  </Button>
-                  <Button variant="outline" onClick={() => window.location.href = '/vendor-discovery'}>
-                    Find Vendors
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header />
@@ -295,13 +264,7 @@ export default function ProductCatalogue() {
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">Product Catalogue</h1>
-                <p className="text-muted-foreground">Vendor portal - manage your product and service catalogue with hierarchical categories</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Vendor Portal</p>
-                <Badge variant="default" className="text-sm">
-                  Vendor Access Only
-                </Badge>
+                <p className="text-muted-foreground">Manage your centralized product and service catalogue with hierarchical categories</p>
               </div>
             </div>
 
@@ -361,7 +324,7 @@ export default function ProductCatalogue() {
                               <h4 className="font-semibold">Products in this Category</h4>
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-xs">
-                                  {filteredProducts.length} items
+                                  {filteredProducts.filter(p => p.categoryId === selectedCategory.id || p.category === selectedCategory.name).length} items
                                 </Badge>
                                 <div className="debug-info text-xs mb-2">
                                   User: {(user as any)?.email}, Role: {(user as any)?.role}, IsVendor: {isVendor.toString()}
@@ -369,11 +332,7 @@ export default function ProductCatalogue() {
                                 {isVendor ? (
                                   <Button 
                                     size="sm" 
-                                    onClick={() => {
-                                      console.log("Add Product button clicked in category details");
-                                      console.log("Current selectedCategory:", selectedCategory);
-                                      handleOpenAddProductDialog();
-                                    }}
+                                    onClick={handleOpenAddProductDialog}
                                     className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white"
                                     style={{ pointerEvents: 'auto' }}
                                   >
@@ -388,9 +347,9 @@ export default function ProductCatalogue() {
                               </div>
                             </div>
                             
-                            {filteredProducts.length > 0 ? (
+                            {filteredProducts.filter(p => p.categoryId === selectedCategory.id || p.category === selectedCategory.name).length > 0 ? (
                               <div className="space-y-2 max-h-64 overflow-y-auto">
-                                {filteredProducts.map((product) => (
+                                {filteredProducts.filter(p => p.categoryId === selectedCategory.id || p.category === selectedCategory.name).map((product) => (
                                   <div 
                                     key={product.id} 
                                     className="flex items-center justify-between p-3 border border-border rounded-md hover:bg-muted/30 transition-colors"
@@ -512,10 +471,7 @@ export default function ProductCatalogue() {
                           </Button>
                           <Button 
                             className="bg-primary hover:bg-primary/90"
-                            onClick={() => {
-                              console.log("Add Product button clicked in main toolbar");
-                              handleOpenAddProductDialog();
-                            }}
+                            onClick={handleOpenAddProductDialog}
                           >
                             <Plus className="w-4 h-4 mr-2" />
                             Add Product
@@ -635,10 +591,7 @@ export default function ProductCatalogue() {
                                     <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                                       Cancel
                                     </Button>
-                                    <Button 
-                                      type="submit" 
-                                      disabled={createProductMutation.isPending}
-                                    >
+                                    <Button type="submit" disabled={createProductMutation.isPending}>
                                       {createProductMutation.isPending ? "Creating..." : "Create Product"}
                                     </Button>
                                   </div>
@@ -707,7 +660,7 @@ export default function ProductCatalogue() {
                           }
                         </p>
                         {isVendor && (
-                          <Button onClick={handleOpenAddProductDialog}>
+                          <Button onClick={() => setIsCreateDialogOpen(true)}>
                             <Plus className="w-4 h-4 mr-2" />
                             Add Product
                           </Button>
