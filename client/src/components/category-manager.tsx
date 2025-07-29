@@ -329,6 +329,8 @@ export default function CategoryManager({
   };
 
   const onSubmit = (data: any) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form validation errors:", form.formState.errors);
     if (editingCategory) {
       updateCategoryMutation.mutate(data);
     } else {

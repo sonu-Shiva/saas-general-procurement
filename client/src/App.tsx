@@ -29,6 +29,7 @@ function Router() {
           <Route path="/vendors" component={VendorManagement} />
           <Route path="/vendor-discovery" component={VendorDiscovery} />
           <Route path="/products" component={ProductCatalogue} />
+          <Route path="/product-catalogue" component={ProductCatalogue} />
           <Route path="/boms" component={BomManagement} />
           <Route path="/rfx" component={RfxManagement} />
           <Route path="/auctions" component={AuctionCenter} />
