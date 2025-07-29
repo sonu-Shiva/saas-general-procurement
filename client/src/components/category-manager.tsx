@@ -434,7 +434,16 @@ export default function CategoryManager({
             </DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form 
+              onSubmit={(e) => {
+                console.log("=== CREATE DIALOG FORM SUBMIT ===");
+                console.log("Native form event:", e);
+                e.preventDefault();
+                console.log("About to call form.handleSubmit with onSubmit...");
+                form.handleSubmit(onSubmit)(e);
+              }} 
+              className="space-y-4"
+            >
               <FormField
                 control={form.control}
                 name="name"
@@ -493,6 +502,21 @@ export default function CategoryManager({
                 >
                   Cancel
                 </Button>
+                
+                {/* Test button to bypass form */}
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    console.log("=== DIRECT CREATE TEST ===");
+                    const formData = form.getValues();
+                    console.log("Form data:", formData);
+                    onSubmit(formData);
+                  }}
+                >
+                  Test Create (Direct)
+                </Button>
+                
                 <Button 
                   type="submit" 
                   disabled={createCategoryMutation.isPending}
