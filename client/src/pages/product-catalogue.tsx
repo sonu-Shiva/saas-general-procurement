@@ -31,7 +31,8 @@ import {
   Clock,
   Tag,
   Layers,
-  FolderTree
+  FolderTree,
+  Trash2
 } from "lucide-react";
 import { TbCurrencyRupee } from "react-icons/tb";
 import type { Product, ProductCategory } from "@shared/schema";
@@ -44,6 +45,7 @@ export default function ProductCatalogue() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
   const [activeTab, setActiveTab] = useState("categories");
@@ -173,6 +175,39 @@ export default function ProductCatalogue() {
       toast({
         title: "Error",
         description: "Failed to update product",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      return await apiRequest("DELETE", `/api/products/${productId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
+      setIsDeleteDialogOpen(false);
+      setSelectedProduct(null);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: `Failed to delete product: ${(error as Error).message || 'Unknown error'}`,
         variant: "destructive",
       });
     },
@@ -612,13 +647,26 @@ export default function ProductCatalogue() {
                                     <Eye className="w-4 h-4" />
                                   </Button>
                                   {isVendor && (
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => handleEditProduct(product)}
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </Button>
+                                    <>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleEditProduct(product)}
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedProduct(product);
+                                          setIsDeleteDialogOpen(true);
+                                        }}
+                                        className="text-red-600 hover:text-red-700 hover:border-red-300"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -799,10 +847,7 @@ export default function ProductCatalogue() {
       </Dialog>
 
       {/* Add Product Dialog - Moved outside all tabs and conditions */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-        console.log("Dialog onOpenChange triggered with:", open);
-        setIsCreateDialogOpen(open);
-      }}>
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Product</DialogTitle>
@@ -917,10 +962,7 @@ export default function ProductCatalogue() {
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => {
-                    console.log("Cancel button clicked");
-                    setIsCreateDialogOpen(false);
-                  }}
+                  onClick={() => setIsCreateDialogOpen(false)}
                 >
                   Cancel
                 </Button>
@@ -942,6 +984,40 @@ export default function ProductCatalogue() {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Product Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Are you sure you want to delete "{selectedProduct?.itemName}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDeleteDialogOpen(false)}
+                disabled={deleteProductMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => {
+                  if (selectedProduct) {
+                    deleteProductMutation.mutate(selectedProduct.id);
+                  }
+                }}
+                disabled={deleteProductMutation.isPending}
+              >
+                {deleteProductMutation.isPending ? "Deleting..." : "Delete Product"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

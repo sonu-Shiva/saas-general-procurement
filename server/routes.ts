@@ -256,6 +256,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/products/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const productId = req.params.id;
+      
+      console.log("=== DELETE PRODUCT ===");
+      console.log("User ID:", userId);
+      console.log("Product ID:", productId);
+      
+      // Get the existing product to check ownership
+      const existingProduct = await storage.getProduct(productId);
+      if (!existingProduct) {
+        console.log("Product not found");
+        return res.status(404).json({ message: "Product not found" });
+      }
+      
+      console.log("Product found:", existingProduct.itemName);
+      console.log("Product created by:", existingProduct.createdBy);
+      
+      // Check if user is the creator of the product or is a vendor
+      const user = await storage.getUser(userId);
+      const isVendor = user?.role === 'vendor';
+      const isOwner = existingProduct.createdBy === userId;
+      
+      console.log("User role:", user?.role);
+      console.log("Is vendor:", isVendor);
+      console.log("Is owner:", isOwner);
+      
+      if (!isVendor && !isOwner) {
+        console.log("Permission denied - user cannot delete this product");
+        return res.status(403).json({ message: "You can only delete products you created" });
+      }
+      
+      await storage.deleteProduct(productId);
+      console.log("Product deleted successfully");
+      res.json({ message: "Product deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      res.status(400).json({ message: `Failed to delete product: ${error instanceof Error ? error.message : 'Unknown error'}` });
+    }
+  });
+
   // Product Category routes - Both vendors and buyers can create/manage categories
   app.post('/api/product-categories', isAuthenticated, async (req: any, res) => {
     try {

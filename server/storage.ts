@@ -82,6 +82,7 @@ export interface IStorage {
   getProduct(id: string): Promise<Product | undefined>;
   getProducts(filters?: { category?: string; categoryId?: string; search?: string; isActive?: boolean }): Promise<Product[]>;
   updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product>;
+  deleteProduct(id: string): Promise<void>;
   
   // BOM operations
   createBom(bom: InsertBom): Promise<Bom>;
@@ -275,6 +276,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(products.id, id))
       .returning();
     return product;
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
   }
   
   // BOM operations
