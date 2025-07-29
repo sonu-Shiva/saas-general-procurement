@@ -183,6 +183,12 @@ export default function ProductCatalogue() {
     createProductMutation.mutate(productData);
   };
 
+  // Reset form when dialog opens
+  const handleOpenAddProductDialog = () => {
+    form.reset();
+    setIsCreateDialogOpen(true);
+  };
+
   const onEditSubmit = (data: any) => {
     updateProductMutation.mutate(data);
   };
@@ -339,7 +345,7 @@ export default function ProductCatalogue() {
                                   {filteredProducts.length} items
                                 </Badge>
                                 {isVendor && (
-                                  <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
+                                  <Button size="sm" onClick={handleOpenAddProductDialog}>
                                     <Plus className="w-3 h-3 mr-1" />
                                     Add Product
                                   </Button>
@@ -409,7 +415,7 @@ export default function ProductCatalogue() {
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
-                                    onClick={() => setIsCreateDialogOpen(true)}
+                                    onClick={handleOpenAddProductDialog}
                                     className="mt-2"
                                   >
                                     <Plus className="w-3 h-3 mr-1" />
@@ -469,13 +475,15 @@ export default function ProductCatalogue() {
                             <Tag className="w-4 h-4 mr-2" />
                             Import
                           </Button>
+                          <Button 
+                            className="bg-primary hover:bg-primary/90"
+                            onClick={handleOpenAddProductDialog}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Product
+                          </Button>
+                          
                           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                            <DialogTrigger asChild>
-                              <Button className="bg-primary hover:bg-primary/90">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Product
-                              </Button>
-                            </DialogTrigger>
                             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>Add New Product</DialogTitle>
@@ -661,7 +669,7 @@ export default function ProductCatalogue() {
                           }
                         </p>
                         {isVendor && (
-                          <Button onClick={() => setIsCreateDialogOpen(true)}>
+                          <Button onClick={handleOpenAddProductDialog}>
                             <Plus className="w-4 h-4 mr-2" />
                             Add Product
                           </Button>
