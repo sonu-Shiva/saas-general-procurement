@@ -1,12 +1,42 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import Header from "@/components/layout/header";
+import Sidebar from "@/components/layout/sidebar";
 import RfxForm from "@/components/rfx-form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  FileText, 
+  Eye,
+  Edit,
+  Send,
+  Clock,
+  CheckCircle,
+  Users,
+  Calendar,
+  Bot,
+  MessageSquare,
+  Target,
+  TrendingUp
+} from "lucide-react";
 
 export default function RfxManagement() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: rfxEvents = [], isLoading } = useQuery({
@@ -49,173 +79,245 @@ export default function RfxManagement() {
   };
   
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">RFx Management</h1>
-            <p className="text-slate-600 dark:text-slate-300 mt-2">
-              Manage Request for Quotes, Proposals, and Information
-            </p>
-          </div>
-          <button 
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
-          >
-            <span>+</span>
-            <span>Create Request</span>
-          </button>
-        </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <Header />
+      <div className="flex">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            {/* Page Header */}
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">RFx Management</h1>
+                <p className="text-muted-foreground">Manage Request for Quotes, Proposals, and Information</p>
+              </div>
+              <div className="flex space-x-3">
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary hover:bg-primary/90">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create RFx
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Create New RFx Request</DialogTitle>
+                    </DialogHeader>
+                    <RfxForm onSuccess={() => {
+                      setIsCreateDialogOpen(false);
+                      queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+                    }} />
+                  </DialogContent>
+                </Dialog>
+                <Button variant="outline" onClick={() => setIsAiDialogOpen(true)}>
+                  <Bot className="w-4 h-4 mr-2" />
+                  AI Assistant
+                </Button>
+              </div>
+            </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow">
-            <div className="text-2xl font-bold text-blue-600">{rfxEventsArray.length}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Total RFx</div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow">
-            <div className="text-2xl font-bold text-green-600">
-              {rfxEventsArray.filter((r: any) => r.status === 'active').length}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Active</div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow">
-            <div className="text-2xl font-bold text-yellow-600">
-              {rfxEventsArray.filter((r: any) => r.status === 'draft').length}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Draft</div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow">
-            <div className="text-2xl font-bold text-gray-600">
-              {rfxEventsArray.filter((r: any) => r.status === 'completed').length}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
-          </div>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-64">
-              <input
-                type="text"
-                placeholder="Search RFx by title, description, or vendor..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-              />
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="all">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="all">All Types</option>
-              <option value="RFI">RFI</option>
-              <option value="RFP">RFP</option>
-              <option value="RFQ">RFQ</option>
-            </select>
-          </div>
-        </div>
-
-        {/* RFx List */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow">
-          {isLoading ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-500 dark:text-gray-400">Loading RFx events...</p>
-            </div>
-          ) : filteredRfxEvents.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="text-4xl mb-4">📄</div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No RFx Found</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
-                {rfxEventsArray.length === 0 
-                  ? "Create your first RFx to get started with vendor management."
-                  : "No RFx match your current filters. Try adjusting your search criteria."
-                }
-              </p>
-              <button 
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
-              >
-                Create First Request
-              </button>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredRfxEvents.map((rfx: any) => (
-                <div key={rfx.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">{rfx.title}</h3>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          rfx.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                          rfx.status === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                          rfx.status === 'completed' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
-                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}>
-                          {rfx.status}
-                        </span>
-                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
-                          {rfx.type}
-                        </span>
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 mb-3">{rfx.scope}</p>
-                      <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
-                        <span>📅 Deadline: {rfx.dueDate ? new Date(rfx.dueDate).toLocaleDateString() : 'Not set'}</span>
-                        <span>💰 Budget: {rfx.budget ? `₹${rfx.budget}` : 'Not specified'}</span>
-                        {rfx.parentRfxId && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                            🔗 Workflow continuation
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex space-x-2 ml-4">
-                      <button className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 font-medium">
-                        View
-                      </button>
-                      <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 font-medium">
-                        Edit
-                      </button>
-                      {(rfx.type === 'rfi' || rfx.type === 'rfp') && rfx.status === 'closed' && (
-                        <button 
-                          onClick={() => handleCreateNextStage(rfx)}
-                          className="px-3 py-1 text-sm text-green-600 hover:text-green-800 font-medium"
-                        >
-                          Create {rfx.type === 'rfi' ? 'RFP' : 'RFQ'}
-                        </button>
-                      )}
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <FileText className="w-8 h-8 text-primary" />
+                    <div>
+                      <div className="text-2xl font-bold text-foreground">{rfxEventsArray.length}</div>
+                      <div className="text-sm text-muted-foreground">Total RFx</div>
                     </div>
                   </div>
-                </div>
-              ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-foreground">
+                        {rfxEventsArray.filter((r: any) => r.status === 'active').length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Active</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <Clock className="w-8 h-8 text-yellow-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-foreground">
+                        {rfxEventsArray.filter((r: any) => r.status === 'draft').length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Draft</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <Target className="w-8 h-8 text-slate-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-foreground">
+                        {rfxEventsArray.filter((r: any) => r.status === 'completed').length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">Completed</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
-        </div>
 
-        {/* Create RFx Dialog */}
-        {isCreateDialogOpen && (
-          <RfxForm
-            onClose={() => setIsCreateDialogOpen(false)}
-            onSuccess={() => {
-              console.log("RFx created successfully!");
-            }}
-          />
-        )}
+            {/* Search and Filters */}
+            <Card className="mb-6">
+              <CardContent className="p-6">
+                <div className="flex flex-wrap gap-4 items-center">
+                  <div className="flex-1 min-w-64 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      type="text"
+                      placeholder="Search RFx by title, description, or vendor..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="RFI">RFI</SelectItem>
+                      <SelectItem value="RFP">RFP</SelectItem>
+                      <SelectItem value="RFQ">RFQ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* RFx List */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <FileText className="w-5 h-5" />
+                  <span>RFx Requests</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-12 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading RFx events...</p>
+                  </div>
+                ) : filteredRfxEvents.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-2">No RFx Found</h3>
+                    <p className="text-muted-foreground mb-6">
+                      {rfxEventsArray.length === 0 
+                        ? "Create your first RFx to get started with vendor management."
+                        : "No RFx match your current filters. Try adjusting your search criteria."
+                      }
+                    </p>
+                    <Button onClick={() => setIsCreateDialogOpen(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create First Request
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {filteredRfxEvents.map((rfx: any) => (
+                      <div key={rfx.id} className="p-6 hover:bg-muted/50 transition-colors">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h3 className="text-lg font-medium text-foreground">{rfx.title}</h3>
+                              <Badge variant={
+                                rfx.status === 'active' ? 'default' :
+                                rfx.status === 'draft' ? 'secondary' :
+                                rfx.status === 'completed' ? 'outline' : 'destructive'
+                              }>
+                                {rfx.status}
+                              </Badge>
+                              <Badge variant="secondary">
+                                {rfx.type}
+                              </Badge>
+                            </div>
+                            <p className="text-muted-foreground mb-3">{rfx.scope}</p>
+                            <div className="flex items-center space-x-6 text-sm text-muted-foreground">
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="w-4 h-4" />
+                                <span>Deadline: {rfx.dueDate ? new Date(rfx.dueDate).toLocaleDateString() : 'Not set'}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <TrendingUp className="w-4 h-4" />
+                                <span>Budget: {rfx.budget ? `₹${rfx.budget}` : 'Not specified'}</span>
+                              </div>
+                              {rfx.parentRfxId && (
+                                <Badge variant="outline" className="text-xs">
+                                  Workflow continuation
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex space-x-2 ml-4">
+                            <Button variant="ghost" size="sm">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                            {(rfx.type === 'rfi' || rfx.type === 'rfp') && rfx.status === 'closed' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleCreateNextStage(rfx)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <Send className="w-4 h-4 mr-1" />
+                                Create {rfx.type === 'rfi' ? 'RFP' : 'RFQ'}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* AI Assistant Dialog */}
+            <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>AI RFx Assistant</DialogTitle>
+                </DialogHeader>
+                <div className="p-4">
+                  <p className="text-muted-foreground">AI-powered assistance for RFx management coming soon...</p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </main>
       </div>
     </div>
   );
