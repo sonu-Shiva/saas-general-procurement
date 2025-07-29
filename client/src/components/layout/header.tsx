@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDjangoAuth } from "@/hooks/useDjangoAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,7 +15,7 @@ import { ShoppingCart, Search, Bot, Bell, Moon, Sun, ChevronDown, User, Settings
 import RoleSelector from "@/components/role-selector";
 
 export default function Header() {
-  const { user, logout } = useDjangoAuth();
+  const { user } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isRoleSelectorOpen, setIsRoleSelectorOpen] = useState(false);
 
@@ -75,21 +75,21 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 p-2">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={user?.profile_image_url || ""} alt={user?.first_name || "User"} />
+                    <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(user as any)?.firstName || "User"} />
                     <AvatarFallback>
-                      {user?.first_name?.[0]?.toUpperCase() || "U"}
+                      {(user as any)?.firstName?.[0]?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block">
                     <span className="text-sm font-medium">
-                      {user?.first_name || "User"}
+                      {(user as any)?.firstName || "User"}
                     </span>
-                    {user?.role && (
+                    {(user as any)?.role && (
                       <Badge variant="secondary" className="text-xs ml-2">
-                        {user.role === 'buyer_admin' ? 'Buyer Admin' :
-                         user.role === 'buyer_user' ? 'Buyer' :
-                         user.role === 'sourcing_manager' ? 'Sourcing Manager' :
-                         user.role === 'vendor' ? 'Vendor' : user.role}
+                        {(user as any).role === 'buyer_admin' ? 'Buyer Admin' :
+                         (user as any).role === 'buyer_user' ? 'Buyer' :
+                         (user as any).role === 'sourcing_manager' ? 'Sourcing Manager' :
+                         (user as any).role === 'vendor' ? 'Vendor' : (user as any).role}
                       </Badge>
                     )}
                   </div>
@@ -106,7 +106,7 @@ export default function Header() {
                   Change Role
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={() => window.location.href = '/api/logout'}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </DropdownMenuItem>
@@ -119,7 +119,7 @@ export default function Header() {
       <RoleSelector 
         open={isRoleSelectorOpen} 
         onClose={() => setIsRoleSelectorOpen(false)}
-        currentRole={user?.role}
+        currentRole={(user as any)?.role}
       />
     </header>
   );

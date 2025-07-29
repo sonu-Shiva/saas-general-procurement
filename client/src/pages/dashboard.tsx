@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useDjangoAuth } from "@/hooks/useDjangoAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -23,7 +23,7 @@ import {
 import { isUnauthorizedError } from "@/lib/authUtils";
 
 export default function Dashboard() {
-  const { user, isLoading, isAuthenticated } = useDjangoAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
   // Redirect to home if not authenticated

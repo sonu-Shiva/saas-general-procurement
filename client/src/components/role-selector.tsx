@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { djangoApiRequest, djangoQueryClient } from "@/lib/djangoClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -87,11 +87,11 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
   const updateRoleMutation = useMutation({
     mutationFn: async (role: string) => {
       console.log("Updating role to:", role);
-      const response = await djangoApiRequest("PATCH", "/api/auth/user/role", { role });
+      const response = await apiRequest("PATCH", "/api/auth/user/role", { role });
       return response.json();
     },
     onSuccess: () => {
-      djangoQueryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Role Updated",
         description: "Your role has been successfully updated. You may need to refresh the page to see all changes.",

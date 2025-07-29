@@ -134,14 +134,31 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/login", (req, res, next) => {
     console.log("Login attempt for hostname:", req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    
+    // For localhost development, use the first domain from REPLIT_DOMAINS
+    const strategyName = req.hostname === 'localhost' 
+      ? `replitauth:${process.env.REPLIT_DOMAINS!.split(",")[0]}`
+      : `replitauth:${req.hostname}`;
+    
+    console.log("Using strategy:", strategyName);
+    
+    passport.authenticate(strategyName, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    console.log("Callback for hostname:", req.hostname);
+    
+    // For localhost development, use the first domain from REPLIT_DOMAINS
+    const strategyName = req.hostname === 'localhost'
+      ? `replitauth:${process.env.REPLIT_DOMAINS!.split(",")[0]}`
+      : `replitauth:${req.hostname}`;
+    
+    console.log("Using callback strategy:", strategyName);
+    
+    passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
