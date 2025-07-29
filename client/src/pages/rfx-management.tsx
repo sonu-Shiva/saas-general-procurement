@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
-import SimpleRfxForm from "@/components/simple-rfx-form";
+import SinglePageRfxForm from "@/components/single-page-rfx-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,7 +104,7 @@ export default function RfxManagement() {
                       <DialogTitle>Create New RFx Request</DialogTitle>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto pr-2">
-                      <SimpleRfxForm 
+                      <SinglePageRfxForm 
                         onClose={() => setIsCreateDialogOpen(false)}
                         onSuccess={() => {
                           setIsCreateDialogOpen(false);
