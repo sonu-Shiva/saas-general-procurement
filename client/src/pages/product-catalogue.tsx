@@ -62,7 +62,7 @@ export default function ProductCatalogue() {
       internalCode: "",
       externalCode: "",
       description: "",
-      categoryId: "",
+      categoryId: undefined,
       category: "",
       subCategory: "",
       uom: "",
@@ -172,6 +172,10 @@ export default function ProductCatalogue() {
   });
 
   const onSubmit = (data: any) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form validation errors:", form.formState.errors);
+    console.log("Selected category:", selectedCategory);
+    
     // Add the selected category ID to the form data for vendor products
     const productData = {
       ...data,
@@ -181,7 +185,6 @@ export default function ProductCatalogue() {
     };
     
     console.log("Creating vendor product with data:", productData);
-    console.log("Selected category:", selectedCategory);
     
     createProductMutation.mutate(productData);
   };
@@ -498,7 +501,15 @@ export default function ProductCatalogue() {
                                     <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                                       Cancel
                                     </Button>
-                                    <Button type="submit" disabled={createProductMutation.isPending}>
+                                    <Button 
+                                      type="submit" 
+                                      disabled={createProductMutation.isPending}
+                                      onClick={() => {
+                                        console.log("Create Product button clicked");
+                                        console.log("Form state:", form.formState);
+                                        console.log("Form errors:", form.formState.errors);
+                                      }}
+                                    >
                                       {createProductMutation.isPending ? "Creating..." : "Create Product"}
                                     </Button>
                                   </div>
