@@ -957,6 +957,19 @@ export default function ProductCatalogue() {
                 >
                   Cancel
                 </Button>
+                
+                {/* Test button to check if onClick works */}
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    console.log("TEST BUTTON CLICKED - this should work!");
+                    alert("Test button works!");
+                  }}
+                >
+                  Test Button
+                </Button>
+                
                 <Button 
                   type="button"
                   disabled={createProductMutation.isPending}
