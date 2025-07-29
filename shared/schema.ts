@@ -70,7 +70,7 @@ export const vendors = pgTable("vendors", {
   certifications: text("certifications").array(),
   yearsOfExperience: integer("years_of_experience"),
   officeLocations: text("office_locations").array(),
-  status: varchar("status", { enum: ["pending", "approved", "rejected", "suspended"] }).default("pending"),
+  status: varchar("status", { enum: ["pending", "approved", "rejected", "suspended", "inactive"] }).default("pending"),
   tags: text("tags").array(),
   performanceScore: decimal("performance_score", { precision: 3, scale: 2 }),
   userId: varchar("user_id").references(() => users.id),
