@@ -61,12 +61,12 @@ export default function RfxForm({ onClose }: RfxFormProps) {
     },
   });
 
-  const { data: vendors } = useQuery({
+  const { data: vendors = [] } = useQuery({
     queryKey: ["/api/vendors", { status: "approved" }],
     retry: false,
   });
 
-  const { data: boms } = useQuery({
+  const { data: boms = [] } = useQuery({
     queryKey: ["/api/boms"],
     retry: false,
   });
@@ -258,7 +258,7 @@ export default function RfxForm({ onClose }: RfxFormProps) {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="">No BOM</SelectItem>
-                              {boms?.map((bom: any) => (
+                              {boms.map((bom: any) => (
                                 <SelectItem key={bom.id} value={bom.id}>
                                   {bom.name} (v{bom.version})
                                 </SelectItem>
@@ -372,7 +372,7 @@ export default function RfxForm({ onClose }: RfxFormProps) {
                     <Input placeholder="Search vendors..." className="max-w-md" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {vendors?.map((vendor: any) => (
+                    {vendors.map((vendor: any) => (
                       <div
                         key={vendor.id}
                         className={`p-4 border rounded-lg cursor-pointer transition-colors ${
