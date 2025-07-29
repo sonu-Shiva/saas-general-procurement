@@ -205,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "llama-3.1-sonar-small-128k-online",
+          model: "sonar-pro",
           messages: [
             {
               role: "system",
@@ -218,16 +218,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ],
           max_tokens: 2000,
           temperature: 0.2,
-          top_p: 0.9,
-          return_images: false,
-          return_related_questions: false,
-          search_recency_filter: "month",
           stream: false
         })
       });
 
       if (!perplexityResponse.ok) {
-        throw new Error(`Perplexity API error: ${perplexityResponse.status}`);
+        const errorText = await perplexityResponse.text();
+        console.error(`Perplexity API error ${perplexityResponse.status}:`, errorText);
+        throw new Error(`Perplexity API error: ${perplexityResponse.status} - ${errorText}`);
       }
 
       const perplexityData = await perplexityResponse.json();
