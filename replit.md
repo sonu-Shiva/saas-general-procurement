@@ -19,12 +19,13 @@ Preferred communication style: Simple, everyday language.
 - **Authentication Integration**: Django REST Framework JWT authentication ready for frontend integration
 
 ### Major Session & RFx Fixes (January 2025)
-- **Session Persistence Completely Fixed**: Implemented proper memorystore-based session management
-- **Refresh Issue Resolved**: Page refreshes now maintain login state without redirecting to sign-in
+- **Session Persistence Completely Fixed**: Implemented PostgreSQL-backed session management for persistent login across server restarts
+- **Refresh Issue Resolved**: Page refreshes now maintain login state without redirecting to sign-in using database sessions
 - **Database Crash Prevention**: Enhanced connection stability with proper error handling
 - **RFx TypeScript Errors Fixed**: Resolved all array typing issues preventing form rendering
 - **Create RFx Functionality Working**: Form dialog opens properly with all tabs functional
-- **Memory Store Integration**: Using dedicated memorystore package for reliable session persistence
+- **RFx UI Consistency Fixed**: Implemented uniform 2px borders across all form elements (cards, inputs, textareas, checkboxes)
+- **PostgreSQL Session Store**: Using database-backed sessions for development stability and production readiness
 - **Authentication Stability**: Rolling sessions with proper cookie configuration
 - **Form Validation Ready**: Complete RFx creation workflow with vendor selection and BOM integration
 

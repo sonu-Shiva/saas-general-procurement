@@ -272,13 +272,13 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
               {(vendors as any[]).map((vendor: any) => (
-                <Card key={vendor.id} className="p-3">
+                <Card key={vendor.id} className="p-3 border-2 border-border hover:border-primary/50 transition-colors">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
                       value={vendor.id}
                       {...form.register("selectedVendors")}
-                      className="rounded border-input text-primary focus:ring-primary"
+                      className="h-4 w-4 rounded border-2 border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
                     />
                     <div className="flex-1">
                       <div className="font-medium text-foreground">{vendor.name}</div>
