@@ -3,8 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
-// Temporary import fix - will replace with component
-// import VendorDiscovery from "@/components/vendor-discovery";
+import AddVendorForm from "@/components/add-vendor-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,8 +28,9 @@ export default function VendorManagement() {
 
   // Filter vendors based on search term
   const filteredVendors = (vendors as any[]).filter((vendor: any) =>
+    vendor.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vendor.categories?.some((cat: string) => cat.toLowerCase().includes(searchTerm.toLowerCase())) ||
     vendor.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -127,7 +127,7 @@ export default function VendorManagement() {
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
                         <div className="space-y-1">
-                          <CardTitle className="text-lg">{vendor.name}</CardTitle>
+                          <CardTitle className="text-lg">{vendor.companyName || vendor.name || "Unknown Vendor"}</CardTitle>
                           <div className="flex items-center gap-2">
                             <Badge {...getStatusBadge(vendor.status)}>{getStatusBadge(vendor.status).label}</Badge>
                             <Badge {...getTypeBadge(vendor.type)}>{getTypeBadge(vendor.type).label}</Badge>
@@ -140,7 +140,18 @@ export default function VendorManagement() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="text-sm">
-                        <Badge variant="outline">{vendor.category}</Badge>
+                        {vendor.categories && vendor.categories.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {vendor.categories.slice(0, 2).map((category: string, index: number) => (
+                              <Badge key={index} variant="outline">{category}</Badge>
+                            ))}
+                            {vendor.categories.length > 2 && (
+                              <Badge variant="outline">+{vendor.categories.length - 2} more</Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <Badge variant="outline">General</Badge>
+                        )}
                       </div>
                       
                       {vendor.description && (
@@ -190,13 +201,13 @@ export default function VendorManagement() {
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Add Vendors</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="text-center">
-              <p>Vendor Discovery Component Loading...</p>
-              <Button onClick={() => setIsAddVendorOpen(false)} className="mt-4">
-                Close for now
-              </Button>
-            </div>
+          <div className="flex-1 overflow-y-auto">
+            <AddVendorForm
+              onClose={() => setIsAddVendorOpen(false)}
+              onSuccess={() => {
+                setIsAddVendorOpen(false);
+              }}
+            />
           </div>
         </DialogContent>
       </Dialog>
