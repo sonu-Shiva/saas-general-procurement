@@ -26,7 +26,8 @@ import {
   Bot,
   MessageSquare,
   Target,
-  TrendingUp
+  TrendingUp,
+  X
 } from "lucide-react";
 
 export default function RfxManagement() {
@@ -75,6 +76,72 @@ export default function RfxManagement() {
       }
     } catch (error) {
       console.error('Error creating next stage:', error);
+    }
+  };
+
+  const handleViewRfx = (rfx: any) => {
+    toast({
+      title: "View RFx",
+      description: `Viewing ${rfx.type.toUpperCase()}: ${rfx.title}`,
+    });
+    // TODO: Navigate to RFx detail page
+  };
+
+  const handleEditRfx = (rfx: any) => {
+    toast({
+      title: "Edit RFx",
+      description: `Editing ${rfx.type.toUpperCase()}: ${rfx.title}`,
+    });
+    // TODO: Open edit dialog with pre-filled data
+  };
+
+  const handlePublishRfx = async (rfxId: string) => {
+    try {
+      const response = await fetch(`/api/rfx/${rfxId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'active' }),
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "RFx published and made active",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to publish RFx",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCloseRfx = async (rfxId: string) => {
+    try {
+      const response = await fetch(`/api/rfx/${rfxId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'closed' }),
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "RFx closed successfully",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to close RFx",
+        variant: "destructive",
+      });
     }
   };
   
@@ -282,14 +349,38 @@ export default function RfxManagement() {
                             </div>
                           </div>
                           <div className="flex space-x-2 ml-4">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewRfx(rfx)}>
                               <Eye className="w-4 h-4 mr-1" />
                               View
                             </Button>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="w-4 h-4 mr-1" />
-                              Edit
-                            </Button>
+                            {rfx.status === 'draft' && (
+                              <Button variant="ghost" size="sm" onClick={() => handleEditRfx(rfx)}>
+                                <Edit className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                            )}
+                            {rfx.status === 'draft' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handlePublishRfx(rfx.id)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <Send className="w-4 h-4 mr-1" />
+                                Publish
+                              </Button>
+                            )}
+                            {rfx.status === 'active' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleCloseRfx(rfx.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <X className="w-4 h-4 mr-1" />
+                                Close
+                              </Button>
+                            )}
                             {(rfx.type === 'rfi' || rfx.type === 'rfp') && rfx.status === 'closed' && (
                               <Button 
                                 variant="ghost" 

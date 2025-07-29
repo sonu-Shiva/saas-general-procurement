@@ -99,6 +99,7 @@ export interface IStorage {
   getRfxEvent(id: string): Promise<RfxEvent | undefined>;
   getRfxEvents(filters?: { status?: string; type?: string; createdBy?: string }): Promise<RfxEvent[]>;
   updateRfxEvent(id: string, updates: Partial<InsertRfxEvent>): Promise<RfxEvent>;
+  updateRfxEventStatus(id: string, status: string): Promise<RfxEvent>;
   
   createRfxInvitation(invitation: InsertRfxInvitation): Promise<RfxInvitation>;
   getRfxInvitations(rfxId: string): Promise<RfxInvitation[]>;
@@ -530,6 +531,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(rfxEvents.id, id))
       .returning();
     return rfx;
+  }
+
+  async updateRfxEventStatus(id: string, status: string): Promise<RfxEvent> {
+    const [updatedRfx] = await db
+      .update(rfxEvents)
+      .set({ 
+        status: status as any,
+        updatedAt: new Date()
+      })
+      .where(eq(rfxEvents.id, id))
+      .returning();
+    return updatedRfx;
   }
 
   async createRfxInvitation(invitation: InsertRfxInvitation): Promise<RfxInvitation> {

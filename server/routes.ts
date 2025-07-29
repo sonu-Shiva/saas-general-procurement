@@ -1087,6 +1087,33 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // RFx status update route
+  app.patch('/api/rfx/:id/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { status } = req.body;
+      
+      if (!['draft', 'active', 'closed', 'cancelled'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const rfx = await storage.getRfxEvent(req.params.id);
+      if (!rfx) {
+        return res.status(404).json({ message: "RFx not found" });
+      }
+
+      if (rfx.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only update status of your own RFx" });
+      }
+
+      const updatedRfx = await storage.updateRfxEventStatus(req.params.id, status);
+      res.json(updatedRfx);
+    } catch (error) {
+      console.error("Error updating RFx status:", error);
+      res.status(500).json({ message: "Failed to update RFx status" });
+    }
+  });
+
   // Auction routes
   app.post('/api/auctions', isAuthenticated, async (req: any, res) => {
     try {
