@@ -118,13 +118,12 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
   };
 
   const onDiscoverVendors = () => {
-    if (aiQuery.trim()) {
-      discoverVendorsMutation.mutate({
-        query: aiQuery,
-        location: locationFilter !== "all" ? locationFilter : undefined,
-        category: categoryFilter !== "all" ? categoryFilter : undefined
-      });
-    }
+    // Allow empty search to show all vendors for browsing
+    discoverVendorsMutation.mutate({
+      query: aiQuery.trim(),
+      location: locationFilter === "all" ? "" : locationFilter,
+      category: categoryFilter === "all" ? "" : categoryFilter,
+    });
   };
 
   const addDiscoveredVendor = async (vendor: any) => {

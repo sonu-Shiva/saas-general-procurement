@@ -252,27 +252,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter results based on query - more flexible matching
       let filteredVendors = testVendors;
       
+      console.log("=== VENDOR DISCOVERY DEBUG ===");
+      console.log("Query:", query);
+      console.log("Location:", location);
+      console.log("Category:", category);
+      console.log("Total vendors:", testVendors.length);
+      
       if (query && query.trim() !== "") {
         const searchTerm = query.toLowerCase().trim();
+        console.log("Searching for:", searchTerm);
         filteredVendors = filteredVendors.filter(vendor => 
           vendor.name.toLowerCase().includes(searchTerm) ||
           vendor.category.toLowerCase().includes(searchTerm) ||
           vendor.description.toLowerCase().includes(searchTerm) ||
           vendor.location.toLowerCase().includes(searchTerm)
         );
+        console.log("After query filter:", filteredVendors.length);
       }
       
-      if (location && location !== "all") {
+      if (location && location !== "all" && location.trim() !== "") {
+        console.log("Filtering by location:", location);
         filteredVendors = filteredVendors.filter(vendor => 
           vendor.location.toLowerCase().includes(location.toLowerCase())
         );
+        console.log("After location filter:", filteredVendors.length);
       }
       
-      if (category && category !== "all") {
+      if (category && category !== "all" && category.trim() !== "") {
+        console.log("Filtering by category:", category);
         filteredVendors = filteredVendors.filter(vendor => 
           vendor.category.toLowerCase().includes(category.toLowerCase())
         );
+        console.log("After category filter:", filteredVendors.length);
       }
+      
+      console.log("Final results:", filteredVendors.length);
+      console.log("=== END DEBUG ===");
 
       res.json(filteredVendors);
     } catch (error) {
