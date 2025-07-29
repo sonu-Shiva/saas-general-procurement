@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Search, Plus, Building2, Mail, Phone, MapPin, Globe, MoreVertical, Trash2, UserX } from "lucide-react";
+import { Search, Plus, Building2, Mail, Phone, MapPin, Globe, MoreVertical, Trash2, UserX, UserCheck } from "lucide-react";
 
 export default function VendorManagement() {
   const { user } = useAuth();
@@ -23,6 +23,7 @@ export default function VendorManagement() {
   const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
   const [vendorToDelete, setVendorToDelete] = useState<string | null>(null);
   const [vendorToDisengage, setVendorToDisengage] = useState<string | null>(null);
+  const [vendorToReactivate, setVendorToReactivate] = useState<string | null>(null);
 
   // Fetch vendors
   const { data: vendors = [], isLoading, error } = useQuery({
@@ -44,11 +45,15 @@ export default function VendorManagement() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
+      pending: { variant: "outline" as const, label: "Pending" },
+      approved: { variant: "default" as const, label: "Active" },
+      rejected: { variant: "destructive" as const, label: "Rejected" },
+      suspended: { variant: "secondary" as const, label: "Suspended" },
+      inactive: { variant: "secondary" as const, label: "Inactive" },
       active: { variant: "default" as const, label: "Active" },
       pending_verification: { variant: "secondary" as const, label: "Pending Verification" },
-      inactive: { variant: "outline" as const, label: "Inactive" },
     };
-    return statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
+    return statusConfig[status as keyof typeof statusConfig] || statusConfig.approved;
   };
 
   const getTypeBadge = (type: string) => {
@@ -101,6 +106,30 @@ export default function VendorManagement() {
       toast({
         title: "Error", 
         description: error.message || "Failed to remove vendor. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reactivate vendor mutation (mark as approved)
+  const reactivateVendorMutation = useMutation({
+    mutationFn: async (vendorId: string) => {
+      return await apiRequest("PATCH", `/api/vendors/${vendorId}`, {
+        status: "approved"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
+      toast({
+        title: "Vendor Reactivated",
+        description: "The vendor has been reactivated successfully.",
+      });
+      setVendorToReactivate(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reactivate vendor. Please try again.",
         variant: "destructive",
       });
     },
@@ -194,13 +223,23 @@ export default function VendorManagement() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => setVendorToDisengage(vendor.id)}
-                              className="text-orange-600 hover:text-orange-700"
-                            >
-                              <UserX className="h-4 w-4 mr-2" />
-                              Remove Vendor
-                            </DropdownMenuItem>
+                            {vendor.status === "inactive" ? (
+                              <DropdownMenuItem
+                                onClick={() => setVendorToReactivate(vendor.id)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <UserCheck className="h-4 w-4 mr-2" />
+                                Reactivate Vendor
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => setVendorToDisengage(vendor.id)}
+                                className="text-orange-600 hover:text-orange-700"
+                              >
+                                <UserX className="h-4 w-4 mr-2" />
+                                Remove Vendor
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => setVendorToDelete(vendor.id)}
@@ -324,6 +363,27 @@ export default function VendorManagement() {
               className="bg-orange-600 hover:bg-orange-700"
             >
               Remove Vendor
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reactivate Vendor Confirmation Dialog */}
+      <AlertDialog open={!!vendorToReactivate} onOpenChange={() => setVendorToReactivate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reactivate Vendor</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the vendor as active again and they will appear in your active vendor network.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => vendorToReactivate && reactivateVendorMutation.mutate(vendorToReactivate)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Reactivate Vendor
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
