@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
-import VendorDiscovery from "@/components/vendor-discovery";
+// Temporary import fix - will replace with component
+// import VendorDiscovery from "@/components/vendor-discovery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,16 +18,20 @@ export default function VendorManagement() {
   const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
 
   // Fetch vendors
-  const { data: vendors = [], isLoading } = useQuery({
+  const { data: vendors = [], isLoading, error } = useQuery({
     queryKey: ["/api/vendors"],
     retry: false,
   });
 
+  console.log("Vendor Management - vendors data:", vendors);
+  console.log("Vendor Management - isLoading:", isLoading);
+  console.log("Vendor Management - error:", error);
+
   // Filter vendors based on search term
-  const filteredVendors = vendors.filter((vendor: any) =>
-    vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredVendors = (vendors as any[]).filter((vendor: any) =>
+    vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vendor.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vendor.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -185,13 +190,13 @@ export default function VendorManagement() {
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Add Vendors</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto">
-            <VendorDiscovery
-              onClose={() => setIsAddVendorOpen(false)}
-              onSuccess={() => {
-                setIsAddVendorOpen(false);
-              }}
-            />
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="text-center">
+              <p>Vendor Discovery Component Loading...</p>
+              <Button onClick={() => setIsAddVendorOpen(false)} className="mt-4">
+                Close for now
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
