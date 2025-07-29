@@ -175,47 +175,12 @@ export default function CategoryManager({
   const queryClient = useQueryClient();
 
   // Check if user can create/manage categories (both vendors and buyers can create categories)
-  const canManageCategories = true; // Temporarily allow all users for debugging
-  // Original logic: (user as any)?.role === 'vendor' || 
-  //                 (user as any)?.role === 'buyer_admin' || 
-  //                 (user as any)?.role === 'buyer_user' || 
-  //                 (user as any)?.role === 'sourcing_manager';
+  const canManageCategories = (user as any)?.role === 'vendor' || 
+                              (user as any)?.role === 'buyer_admin' || 
+                              (user as any)?.role === 'buyer_user' || 
+                              (user as any)?.role === 'sourcing_manager';
   
-  console.log("=== CategoryManager Debug ===");
-  console.log("User role:", (user as any)?.role);
-  console.log("User object:", user);
-  console.log("canManageCategories:", canManageCategories);
-  console.log("Dialog state:", isCreateDialogOpen);
-  console.log("Component rendering at:", new Date().toISOString());
-  
-  // Alert for immediate feedback
-  if (typeof window !== 'undefined') {
-    console.log("CategoryManager is definitely rendering! Window exists.");
-  }
-  
-  // Force dialog open for testing
-  useEffect(() => {
-    console.log("CategoryManager useEffect - setting up test");
-    (window as any).testOpenDialog = () => {
-      console.log("Manual dialog open test");
-      setIsCreateDialogOpen(true);
-    };
-    
-    // Also add a simple test button in the page temporarily
-    const testButton = document.createElement('button');
-    testButton.innerText = 'TEST DIALOG';
-    testButton.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: red; color: white; padding: 10px;';
-    testButton.onclick = () => {
-      console.log("Test button clicked - opening dialog");
-      setIsCreateDialogOpen(true);
-    };
-    document.body.appendChild(testButton);
-    
-    return () => {
-      const existingBtn = document.querySelector('button[style*="position: fixed"]');
-      if (existingBtn) existingBtn.remove();
-    };
-  }, []);
+
 
   const { data: categoryHierarchy = [], isLoading } = useQuery<CategoryNode[]>({
     queryKey: ["/api/product-categories/hierarchy"],
@@ -335,28 +300,14 @@ export default function CategoryManager({
   });
 
   const handleCreateCategory = (parentCat?: ProductCategory) => {
-    console.log("=== handleCreateCategory CALLED ===");
-    console.log("Arguments:", { parentCat, canManageCategories, user: (user as any)?.role });
-    console.log("Current dialog state BEFORE:", isCreateDialogOpen);
-    console.log("About to open create dialog...");
-    
     setParentCategory(parentCat || null);
     setIsCreateDialogOpen(true);
-    
-    console.log("setState calls completed - dialog should open now");
-    console.log("Form reset starting...");
     form.reset({
       name: "",
       description: "",
       parentId: parentCat?.id || "",
       sortOrder: 0,
     });
-    console.log("Form reset completed");
-    
-    // Check state after a moment
-    setTimeout(() => {
-      console.log("Dialog state after 100ms:", isCreateDialogOpen);
-    }, 100);
   };
 
   const handleEditCategory = (category: ProductCategory) => {
@@ -416,19 +367,7 @@ export default function CategoryManager({
             </div>
             {canManageCategories && (
               <Button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log("Add Category button clicked! Event:", e);
-                  console.log("canManageCategories:", canManageCategories);
-                  console.log("Current state - isCreateDialogOpen:", isCreateDialogOpen);
-                  try {
-                    handleCreateCategory();
-                    console.log("handleCreateCategory called successfully");
-                  } catch (error) {
-                    console.error("Error in handleCreateCategory:", error);
-                  }
-                }}
+                onClick={() => handleCreateCategory()}
                 type="button"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -443,39 +382,16 @@ export default function CategoryManager({
         <ScrollArea className="h-[400px]">
           <div className="p-4 space-y-1">
             {categoryHierarchy.length === 0 ? (
-              <div className="text-center py-8 text-gray-500" style={{ position: 'relative', zIndex: 10 }}>
+              <div className="text-center py-8 text-gray-500">
                 <FolderTree className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No categories created yet.</p>
                 {canManageCategories && (
                   <Button 
                     variant="outline" 
                     className="mt-4"
-                    style={{ 
-                      position: 'relative', 
-                      zIndex: 20, 
-                      pointerEvents: 'auto',
-                      border: '2px solid red' // Temporary visual indicator
-                    }}
-                    onClick={(e) => {
-                      console.log("🔥 BUTTON CLICKED! 🔥");
-                      alert("Button clicked! Check console for details.");
-                      console.log("=== BUTTON CLICK DETECTED ===");
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log("Event object:", e);
-                      console.log("Button element:", e.target);
-                      console.log("canManageCategories:", canManageCategories);
-                      console.log("Current dialog state:", isCreateDialogOpen);
-                      try {
-                        console.log("About to call handleCreateCategory...");
-                        handleCreateCategory();
-                        console.log("handleCreateCategory call completed");
-                      } catch (error) {
-                        console.error("ERROR in handleCreateCategory:", error);
-                      }
-                    }}
-                    onMouseDown={() => console.log("Button mousedown detected")}
-                    onMouseUp={() => console.log("Button mouseup detected")}
+
+                    onClick={() => handleCreateCategory()}
+
                     type="button"
                   >
                     Create your first category
