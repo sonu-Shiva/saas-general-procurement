@@ -457,6 +457,8 @@ export default function CategoryManager({
                       border: '2px solid red' // Temporary visual indicator
                     }}
                     onClick={(e) => {
+                      console.log("🔥 BUTTON CLICKED! 🔥");
+                      alert("Button clicked! Check console for details.");
                       console.log("=== BUTTON CLICK DETECTED ===");
                       e.preventDefault();
                       e.stopPropagation();
