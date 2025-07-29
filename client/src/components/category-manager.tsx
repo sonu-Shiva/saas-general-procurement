@@ -181,10 +181,36 @@ export default function CategoryManager({
   //                 (user as any)?.role === 'buyer_user' || 
   //                 (user as any)?.role === 'sourcing_manager';
   
-  console.log("CategoryManager - user role:", (user as any)?.role, "canManageCategories:", canManageCategories);
-  console.log("CategoryManager - user object:", user);
-  console.log("CategoryManager - dialog state:", isCreateDialogOpen);
-  console.log("CategoryManager component mounted and rendering...");
+  console.log("=== CategoryManager Debug ===");
+  console.log("User role:", (user as any)?.role);
+  console.log("User object:", user);
+  console.log("canManageCategories:", canManageCategories);
+  console.log("Dialog state:", isCreateDialogOpen);
+  console.log("Component rendering at:", new Date().toISOString());
+  
+  // Force dialog open for testing
+  useEffect(() => {
+    console.log("CategoryManager useEffect - setting up test");
+    (window as any).testOpenDialog = () => {
+      console.log("Manual dialog open test");
+      setIsCreateDialogOpen(true);
+    };
+    
+    // Also add a simple test button in the page temporarily
+    const testButton = document.createElement('button');
+    testButton.innerText = 'TEST DIALOG';
+    testButton.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: red; color: white; padding: 10px;';
+    testButton.onclick = () => {
+      console.log("Test button clicked - opening dialog");
+      setIsCreateDialogOpen(true);
+    };
+    document.body.appendChild(testButton);
+    
+    return () => {
+      const existingBtn = document.querySelector('button[style*="position: fixed"]');
+      if (existingBtn) existingBtn.remove();
+    };
+  }, []);
 
   const { data: categoryHierarchy = [], isLoading } = useQuery<CategoryNode[]>({
     queryKey: ["/api/product-categories/hierarchy"],
