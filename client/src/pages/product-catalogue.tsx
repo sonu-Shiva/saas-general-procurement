@@ -202,10 +202,16 @@ export default function ProductCatalogue() {
 
   // Reset form when dialog opens
   const handleOpenAddProductDialog = () => {
+    console.log("=== BUTTON CLICKED ===");
     console.log("Opening Add Product dialog");
+    console.log("Current dialog state:", isCreateDialogOpen);
     console.log("Selected category:", selectedCategory);
+    console.log("User role:", (user as any)?.role);
+    console.log("Is vendor:", isVendor);
     form.reset();
     setIsCreateDialogOpen(true);
+    console.log("Dialog state set to true");
+    console.log("=== END BUTTON CLICK ===");
   };
 
   const onEditSubmit = (data: any) => {
@@ -476,129 +482,6 @@ export default function ProductCatalogue() {
                             <Plus className="w-4 h-4 mr-2" />
                             Add Product
                           </Button>
-                          
-                          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle>Add New Product</DialogTitle>
-                              </DialogHeader>
-                              <Form {...form}>
-                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name="itemName"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Item Name</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name="internalCode"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Internal Code</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name="externalCode"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>External Code</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name="uom"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Unit of Measure</FormLabel>
-                                          <FormControl>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                              <SelectTrigger>
-                                                <SelectValue placeholder="Select UOM" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="pieces">Pieces</SelectItem>
-                                                <SelectItem value="kg">Kilograms</SelectItem>
-                                                <SelectItem value="meters">Meters</SelectItem>
-                                                <SelectItem value="liters">Liters</SelectItem>
-                                                <SelectItem value="boxes">Boxes</SelectItem>
-                                                <SelectItem value="units">Units</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  
-                                  {selectedCategory && (
-                                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                      <p className="text-sm text-blue-800 dark:text-blue-200">
-                                        Will be added to category: <strong>{selectedCategory.name}</strong> ({selectedCategory.code})
-                                      </p>
-                                    </div>
-                                  )}
-                                  
-                                  <FormField
-                                    control={form.control}
-                                    name="basePrice"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Base Price (₹)</FormLabel>
-                                        <FormControl>
-                                          <Input type="number" step="0.01" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Description</FormLabel>
-                                        <FormControl>
-                                          <Textarea {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <div className="flex justify-end space-x-3">
-                                    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                                      Cancel
-                                    </Button>
-                                    <Button type="submit" disabled={createProductMutation.isPending}>
-                                      {createProductMutation.isPending ? "Creating..." : "Create Product"}
-                                    </Button>
-                                  </div>
-                                </form>
-                              </Form>
-                            </DialogContent>
-                          </Dialog>
                         </>
                       )}
                     </div>
@@ -908,6 +791,138 @@ export default function ProductCatalogue() {
                 </Button>
                 <Button type="submit" disabled={updateProductMutation.isPending}>
                   {updateProductMutation.isPending ? "Updating..." : "Update Product"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Product Dialog - Moved outside all tabs and conditions */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+            <div className="text-sm text-muted-foreground">
+              Dialog state: {isCreateDialogOpen ? 'OPEN' : 'CLOSED'} | 
+              User role: {(user as any)?.role} | 
+              Is vendor: {isVendor ? 'YES' : 'NO'}
+            </div>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="itemName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Item Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Enter product name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="internalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Internal Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g. PRD-001" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="externalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>External Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="External reference code" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="uom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit of Measure</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select UOM" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pieces">Pieces</SelectItem>
+                            <SelectItem value="kg">Kilograms</SelectItem>
+                            <SelectItem value="meters">Meters</SelectItem>
+                            <SelectItem value="liters">Liters</SelectItem>
+                            <SelectItem value="boxes">Boxes</SelectItem>
+                            <SelectItem value="units">Units</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              {selectedCategory && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    Will be added to category: <strong>{selectedCategory.name}</strong> ({selectedCategory.code})
+                  </p>
+                </div>
+              )}
+              
+              <FormField
+                control={form.control}
+                name="basePrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Base Price (₹)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} placeholder="0.00" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="Product description..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex justify-end space-x-3">
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createProductMutation.isPending}
+                >
+                  {createProductMutation.isPending ? "Creating..." : "Create Product"}
                 </Button>
               </div>
             </form>
