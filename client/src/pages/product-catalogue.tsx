@@ -172,10 +172,6 @@ export default function ProductCatalogue() {
   });
 
   const onSubmit = (data: any) => {
-    console.log("Form submitted with data:", data);
-    console.log("Form validation errors:", form.formState.errors);
-    console.log("Selected category:", selectedCategory);
-    
     // Add the selected category ID to the form data for vendor products
     const productData = {
       ...data,
@@ -183,8 +179,6 @@ export default function ProductCatalogue() {
       // Keep legacy category fields for backward compatibility
       category: selectedCategory?.name || data.category,
     };
-    
-    console.log("Creating vendor product with data:", productData);
     
     createProductMutation.mutate(productData);
   };
@@ -335,13 +329,107 @@ export default function ProductCatalogue() {
                               <p>{selectedCategory.sortOrder}</p>
                             </div>
                           </div>
+                          
+                          {/* Products in this Category */}
                           <div className="pt-4">
-                            <Button 
-                              onClick={() => setActiveTab("products")}
-                              className="w-full"
-                            >
-                              View Products in this Category
-                            </Button>
+                            <div className="flex justify-between items-center mb-4">
+                              <h4 className="font-semibold">Products in this Category</h4>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {filteredProducts.length} items
+                                </Badge>
+                                {isVendor && (
+                                  <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Add Product
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {filteredProducts.length > 0 ? (
+                              <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {filteredProducts.map((product) => (
+                                  <div 
+                                    key={product.id} 
+                                    className="flex items-center justify-between p-3 border border-border rounded-md hover:bg-muted/30 transition-colors"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <p className="font-medium text-sm truncate">{product.itemName}</p>
+                                        {product.isActive ? (
+                                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs h-5">
+                                            Active
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 text-xs h-5">
+                                            Inactive
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                        {product.internalCode && <span>Code: {product.internalCode}</span>}
+                                        {product.uom && <span>UOM: {product.uom}</span>}
+                                        {product.basePrice && (
+                                          <div className="flex items-center text-green-600 font-medium">
+                                            <TbCurrencyRupee className="w-3 h-3" />
+                                            {formatCurrency(parseFloat(product.basePrice))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 ml-2">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        onClick={() => handleViewProduct(product)}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                      </Button>
+                                      {isVendor && (
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm"
+                                          onClick={() => handleEditProduct(product)}
+                                          className="h-7 w-7 p-0"
+                                        >
+                                          <Edit className="w-3 h-3" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-6 text-muted-foreground border border-dashed border-muted rounded-lg">
+                                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">No products in this category yet</p>
+                                {isVendor && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => setIsCreateDialogOpen(true)}
+                                    className="mt-2"
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Add First Product
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                            
+                            <div className="pt-2 border-t border-muted mt-4">
+                              <Button 
+                                onClick={() => setActiveTab("products")}
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                              >
+                                <Package className="w-3 h-3 mr-1" />
+                                View All Products
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -504,11 +592,6 @@ export default function ProductCatalogue() {
                                     <Button 
                                       type="submit" 
                                       disabled={createProductMutation.isPending}
-                                      onClick={() => {
-                                        console.log("Create Product button clicked");
-                                        console.log("Form state:", form.formState);
-                                        console.log("Form errors:", form.formState.errors);
-                                      }}
                                     >
                                       {createProductMutation.isPending ? "Creating..." : "Create Product"}
                                     </Button>
