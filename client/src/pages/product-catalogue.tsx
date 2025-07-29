@@ -818,7 +818,8 @@ export default function ProductCatalogue() {
             <div className="text-sm text-muted-foreground">
               Dialog state: {isCreateDialogOpen ? 'OPEN' : 'CLOSED'} | 
               User role: {(user as any)?.role} | 
-              Is vendor: {isVendor ? 'YES' : 'NO'}
+              Is vendor: {isVendor ? 'YES' : 'NO'} |
+              Mutation pending: {createProductMutation.isPending ? 'YES' : 'NO'}
             </div>
           </DialogHeader>
           <Form {...form}>
@@ -932,17 +933,29 @@ export default function ProductCatalogue() {
                 )}
               />
               <div className="flex justify-end space-x-3">
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    console.log("Cancel button clicked");
+                    setIsCreateDialogOpen(false);
+                  }}
+                >
                   Cancel
                 </Button>
                 <Button 
-                  type="submit" 
+                  type="button"
                   disabled={createProductMutation.isPending}
                   onClick={(e) => {
                     console.log("=== BUTTON CLICKED DIRECTLY ===");
-                    console.log("Button clicked, form will submit");
+                    console.log("Button clicked!");
                     console.log("Form values:", form.getValues());
                     console.log("Form errors:", form.formState.errors);
+                    
+                    // Manually trigger form submission
+                    const formValues = form.getValues();
+                    console.log("Calling onSubmit manually with:", formValues);
+                    onSubmit(formValues);
                   }}
                 >
                   {createProductMutation.isPending ? "Creating..." : "Create Product"}
