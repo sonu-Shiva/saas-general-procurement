@@ -54,6 +54,10 @@ export default function ProductCatalogue() {
   const isVendor = (user as any)?.role === 'vendor';
   // Check if user is a buyer (can view products and create BOMs)
   const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
+  
+  console.log("User role:", (user as any)?.role);
+  console.log("Is vendor:", isVendor);
+  console.log("Is buyer:", isBuyer);
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),
@@ -185,6 +189,8 @@ export default function ProductCatalogue() {
 
   // Reset form when dialog opens
   const handleOpenAddProductDialog = () => {
+    console.log("Opening Add Product dialog");
+    console.log("Selected category:", selectedCategory);
     form.reset();
     setIsCreateDialogOpen(true);
   };
