@@ -55,9 +55,12 @@ export default function ProductCatalogue() {
   // Check if user is a buyer (can view products and create BOMs)
   const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
   
-  console.log("User role:", (user as any)?.role);
-  console.log("Is vendor:", isVendor);
-  console.log("Is buyer:", isBuyer);
+  console.log("DEBUG: User object:", user);
+  console.log("DEBUG: User role:", (user as any)?.role);
+  console.log("DEBUG: Is vendor:", isVendor);
+  console.log("DEBUG: Is buyer:", isBuyer);
+  console.log("DEBUG: Selected category:", selectedCategory);
+  console.log("DEBUG: isCreateDialogOpen state:", isCreateDialogOpen);
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),
@@ -350,11 +353,19 @@ export default function ProductCatalogue() {
                                 <Badge variant="outline" className="text-xs">
                                   {filteredProducts.length} items
                                 </Badge>
-                                {isVendor && (
-                                  <Button size="sm" onClick={handleOpenAddProductDialog}>
+                                {isVendor ? (
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => {
+                                      console.log("Add Product button clicked in category details");
+                                      handleOpenAddProductDialog();
+                                    }}
+                                  >
                                     <Plus className="w-3 h-3 mr-1" />
                                     Add Product
                                   </Button>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">Vendor access required</div>
                                 )}
                               </div>
                             </div>
@@ -483,7 +494,10 @@ export default function ProductCatalogue() {
                           </Button>
                           <Button 
                             className="bg-primary hover:bg-primary/90"
-                            onClick={handleOpenAddProductDialog}
+                            onClick={() => {
+                              console.log("Add Product button clicked in main toolbar");
+                              handleOpenAddProductDialog();
+                            }}
                           >
                             <Plus className="w-4 h-4 mr-2" />
                             Add Product
