@@ -367,9 +367,6 @@ export default function ProductCatalogue() {
                                 <Badge variant="outline" className="text-xs">
                                   {filteredProducts.filter(p => p.categoryId === selectedCategory.id || p.category === selectedCategory.name).length} items
                                 </Badge>
-                                <div className="debug-info text-xs mb-2">
-                                  User: {(user as any)?.email}, Role: {(user as any)?.role}, IsVendor: {isVendor.toString()}
-                                </div>
                                 {isVendor ? (
                                   <Button 
                                     size="sm" 
