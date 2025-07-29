@@ -129,20 +129,22 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
         email: vendor.email,
         phone: vendor.phone,
         address: vendor.location || vendor.address,
+        website: vendor.website,
         categories: [vendor.category],
+        description: vendor.description,
         status: "approved",
-        type: "ai_discovered"
+        type: "supplier"
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
       toast({
-        title: "Success",
-        description: `Added ${vendor.name} to your vendor list!`,
+        title: "Vendor Added Successfully",
+        description: `${vendor.name} has been added to your vendor database and is ready for RFx workflows.`,
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to add vendor",
+        title: "Failed to Add Vendor",
+        description: error.message || "Unable to add vendor. Please try again.",
         variant: "destructive",
       });
     }

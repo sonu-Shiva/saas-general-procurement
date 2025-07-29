@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { nanoid } from "nanoid";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isVendor, isBuyer } from "./replitAuth";
 import {
@@ -162,21 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/vendors", isAuthenticated, async (req, res) => {
-    try {
-      const vendorData = {
-        ...req.body,
-        id: nanoid(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      const vendor = await storage.createVendor(vendorData);
-      res.status(201).json(vendor);
-    } catch (error) {
-      console.error("Error creating vendor:", error);
-      res.status(500).json({ message: "Failed to create vendor" });
-    }
-  });
+  // Removed duplicate - vendor creation is handled above with proper validation
 
   app.post("/api/vendors/discover", isAuthenticated, async (req, res) => {
     try {
