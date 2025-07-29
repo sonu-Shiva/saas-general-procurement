@@ -169,9 +169,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { query, location, category } = req.body;
       
-      // Comprehensive vendor database for testing - will be replaced with Perplexity API later
-      const testVendors = [
-        // Electronics & Technology
+      console.log("=== AI VENDOR DISCOVERY ===");
+      console.log("Query:", query);
+      console.log("Location:", location);
+      console.log("Category:", category);
+
+      if (!process.env.PERPLEXITY_API_KEY) {
+        throw new Error("Perplexity API key not configured");
+      }
+
+      // Build search prompt based on user input
+      let searchPrompt = "Find me professional vendors and suppliers";
+      
+      if (query && query.trim()) {
+        searchPrompt += ` specializing in ${query.trim()}`;
+      }
+      
+      if (category && category !== "all" && category.trim()) {
+        searchPrompt += ` in the ${category} category`;
+      }
+      
+      if (location && location !== "all" && location.trim()) {
+        searchPrompt += ` located in ${location}`;
+      }
+      
+      searchPrompt += ". For each vendor, provide: company name, contact email, phone number, full address, website, business category, and detailed description of their services/products. Focus on established businesses with good reputation.";
+
+      console.log("Perplexity search prompt:", searchPrompt);
+
+      // Call Perplexity API
+      const perplexityResponse = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-sonar-small-128k-online",
+          messages: [
+            {
+              role: "system",
+              content: "You are a procurement assistant specializing in vendor discovery. Return vendor information in a structured format with real companies and their contact details. Focus on accuracy and completeness."
+            },
+            {
+              role: "user",
+              content: searchPrompt
+            }
+          ],
+          max_tokens: 2000,
+          temperature: 0.2,
+          top_p: 0.9,
+          return_images: false,
+          return_related_questions: false,
+          search_recency_filter: "month",
+          stream: false
+        })
+      });
+
+      if (!perplexityResponse.ok) {
+        throw new Error(`Perplexity API error: ${perplexityResponse.status}`);
+      }
+
+      const perplexityData = await perplexityResponse.json();
+      const aiResponse = perplexityData.choices[0]?.message?.content || "";
+      
+      console.log("AI Response:", aiResponse);
+
+      // Parse AI response to extract vendor information
+      const vendors = parseVendorResponse(aiResponse);
+      
+      console.log(`Found ${vendors.length} vendors from AI discovery`);
+      
+      res.json(vendors);
+    } catch (error) {
+      console.error("Error in AI vendor discovery:", error);
+      
+      // Fallback to test data if API fails
+      console.log("Falling back to test data");
+      const fallbackVendors = [
         {
           name: "TechFlow Electronics",
           category: "Electronics",
@@ -179,18 +254,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: "+91-9876543210",
           location: "Mumbai, Maharashtra",
           website: "www.techflow.co.in",
-          description: "Leading supplier of semiconductors, PCBs, and electronic components with ISO 9001 certification.",
+          description: "Leading supplier of semiconductors and electronic components (fallback data)",
         },
-        {
-          name: "Digital Components Hub",
-          category: "Electronics",
-          email: "info@digitalcomponents.in",
-          phone: "+91-8765432109",
-          location: "Bangalore, Karnataka",
-          website: "www.digitalcomponents.in",
-          description: "Specialized in microcontrollers, sensors, and IoT components for industrial applications.",
-        },
-        // Manufacturing & Industrial
         {
           name: "Precision Manufacturing Ltd",
           category: "Manufacturing",
@@ -198,103 +263,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: "+91-9123456789",
           location: "Chennai, Tamil Nadu",
           website: "www.precisionmfg.com",
-          description: "Automotive parts manufacturer with TS 16949 certification and 20+ years experience.",
-        },
-        {
-          name: "Industrial Systems Co",
-          category: "Manufacturing",
-          email: "contact@industrialsystems.in",
-          phone: "+91-7654321098",
-          location: "Pune, Maharashtra",
-          website: "www.industrialsystems.in",
-          description: "Heavy machinery and industrial equipment supplier for construction and mining sectors.",
-        },
-        // Services & Consulting
-        {
-          name: "Business Solutions Inc",
-          category: "Services",
-          email: "hello@businesssolutions.co.in",
-          phone: "+91-6543210987",
-          location: "Delhi, NCR",
-          website: "www.businesssolutions.co.in",
-          description: "IT consulting, digital transformation, and business process outsourcing services.",
-        },
-        {
-          name: "Professional Services Group",
-          category: "Services",
-          email: "info@proservices.in",
-          phone: "+91-5432109876",
-          location: "Hyderabad, Telangana",
-          website: "www.proservices.in",
-          description: "Financial consulting, legal services, and compliance management for enterprises.",
-        },
-        // Additional categories
-        {
-          name: "Green Energy Solutions",
-          category: "Energy",
-          email: "sales@greenenergy.co.in",
-          phone: "+91-4321098765",
-          location: "Ahmedabad, Gujarat",
-          website: "www.greenenergy.co.in",
-          description: "Solar panels, wind energy systems, and renewable energy solutions provider.",
-        },
-        {
-          name: "LogiTech Supply Chain",
-          category: "Logistics",
-          email: "operations@logitechsc.com",
-          phone: "+91-3210987654",
-          location: "Kolkata, West Bengal",
-          website: "www.logitechsc.com",
-          description: "End-to-end supply chain management, warehousing, and transportation services.",
+          description: "Automotive parts manufacturer with certifications (fallback data)",
         }
       ];
-
-      // Filter results based on query - more flexible matching
-      let filteredVendors = testVendors;
       
-      console.log("=== VENDOR DISCOVERY DEBUG ===");
-      console.log("Query:", query);
-      console.log("Location:", location);
-      console.log("Category:", category);
-      console.log("Total vendors:", testVendors.length);
-      
-      if (query && query.trim() !== "") {
-        const searchTerm = query.toLowerCase().trim();
-        console.log("Searching for:", searchTerm);
-        filteredVendors = filteredVendors.filter(vendor => 
-          vendor.name.toLowerCase().includes(searchTerm) ||
-          vendor.category.toLowerCase().includes(searchTerm) ||
-          vendor.description.toLowerCase().includes(searchTerm) ||
-          vendor.location.toLowerCase().includes(searchTerm)
-        );
-        console.log("After query filter:", filteredVendors.length);
-      }
-      
-      if (location && location !== "all" && location.trim() !== "") {
-        console.log("Filtering by location:", location);
-        filteredVendors = filteredVendors.filter(vendor => 
-          vendor.location.toLowerCase().includes(location.toLowerCase())
-        );
-        console.log("After location filter:", filteredVendors.length);
-      }
-      
-      if (category && category !== "all" && category.trim() !== "") {
-        console.log("Filtering by category:", category);
-        filteredVendors = filteredVendors.filter(vendor => 
-          vendor.category.toLowerCase().includes(category.toLowerCase())
-        );
-        console.log("After category filter:", filteredVendors.length);
-      }
-      
-      console.log("Final results:", filteredVendors.length);
-      console.log("=== END DEBUG ===");
-
-      res.json(filteredVendors);
-    } catch (error) {
-      console.error("Error discovering vendors:", error);
-      res.status(500).json({ message: "Failed to discover vendors" });
+      res.json(fallbackVendors);
     }
   });
+
+  // Helper function to parse AI response into structured vendor data
+  function parseVendorResponse(aiResponse: string) {
+    const vendors = [];
+    
+    try {
+      // Try to extract vendor information from the AI response
+      // This is a simplified parser - in production, you'd want more robust parsing
+      const lines = aiResponse.split('\n');
+      let currentVendor: any = {};
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        
+        // Look for company names (usually start with numbers or bullets)
+        if (trimmedLine.match(/^\d+\.|^[-*]\s*/) && trimmedLine.length > 10) {
+          if (currentVendor.name) {
+            vendors.push(currentVendor);
+          }
+          currentVendor = {
+            name: trimmedLine.replace(/^\d+\.|^[-*]\s*/, '').trim(),
+            category: "Business",
+            email: "contact@example.com",
+            phone: "+91-XXXXXXXXXX",
+            location: "India",
+            website: "www.example.com",
+            description: "Professional services provider"
+          };
+        }
+        
+        // Extract email addresses
+        const emailMatch = trimmedLine.match(/[\w\.-]+@[\w\.-]+\.\w+/);
+        if (emailMatch && currentVendor.name) {
+          currentVendor.email = emailMatch[0];
+        }
+        
+        // Extract phone numbers
+        const phoneMatch = trimmedLine.match(/[\+]?[\d\s\-\(\)]{10,}/);
+        if (phoneMatch && currentVendor.name) {
+          currentVendor.phone = phoneMatch[0].trim();
+        }
+        
+        // Extract websites
+        const websiteMatch = trimmedLine.match(/(?:www\.|https?:\/\/)[\w\.-]+\.\w+/);
+        if (websiteMatch && currentVendor.name) {
+          currentVendor.website = websiteMatch[0];
+        }
+      }
+      
+      // Add the last vendor
+      if (currentVendor.name) {
+        vendors.push(currentVendor);
+      }
+      
+    } catch (error) {
+      console.error("Error parsing AI response:", error);
+    }
+    
+    return vendors.slice(0, 10); // Limit to 10 results
+  }
 
   // Product routes - Only vendors can create products
   app.post('/api/products', isAuthenticated, isVendor, async (req: any, res) => {
