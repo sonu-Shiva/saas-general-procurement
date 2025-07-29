@@ -53,7 +53,7 @@ export default function VendorManagement() {
 
   const getTypeBadge = (type: string) => {
     const typeConfig = {
-      buyer_added: { variant: "default" as const, label: "Direct Entry" },
+      buyer_added: { variant: "default" as const, label: "Registered" },
       ai_discovered: { variant: "secondary" as const, label: "AI Discovered" },
       self_registered: { variant: "outline" as const, label: "Self Registered" },
     };
@@ -92,15 +92,15 @@ export default function VendorManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
       toast({
-        title: "Vendor Disengaged",
+        title: "Vendor Removed",
         description: "The vendor has been marked as inactive.",
       });
       setVendorToDisengage(null);
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to disengage vendor. Please try again.",
+        title: "Error", 
+        description: error.message || "Failed to remove vendor. Please try again.",
         variant: "destructive",
       });
     },
@@ -199,7 +199,7 @@ export default function VendorManagement() {
                               className="text-orange-600 hover:text-orange-700"
                             >
                               <UserX className="h-4 w-4 mr-2" />
-                              Disengage Vendor
+                              Remove Vendor
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -312,7 +312,7 @@ export default function VendorManagement() {
       <AlertDialog open={!!vendorToDisengage} onOpenChange={() => setVendorToDisengage(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disengage Vendor</AlertDialogTitle>
+            <AlertDialogTitle>Remove Vendor</AlertDialogTitle>
             <AlertDialogDescription>
               This will mark the vendor as inactive in your network. You can reactivate them later if needed.
             </AlertDialogDescription>
@@ -323,7 +323,7 @@ export default function VendorManagement() {
               onClick={() => vendorToDisengage && disengageVendorMutation.mutate(vendorToDisengage)}
               className="bg-orange-600 hover:bg-orange-700"
             >
-              Disengage Vendor
+              Remove Vendor
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
