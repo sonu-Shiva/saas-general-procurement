@@ -331,9 +331,16 @@ export default function CategoryManager({
   const onSubmit = (data: any) => {
     console.log("Form submitted with data:", data);
     console.log("Form validation errors:", form.formState.errors);
+    console.log("Form is valid:", form.formState.isValid);
+    console.log("User role:", (user as any)?.role);
+    console.log("Can manage categories:", canManageCategories);
+    console.log("Editing category:", editingCategory);
+    
     if (editingCategory) {
+      console.log("Updating category...");
       updateCategoryMutation.mutate(data);
     } else {
+      console.log("Creating new category...");
       createCategoryMutation.mutate(data);
     }
   };
