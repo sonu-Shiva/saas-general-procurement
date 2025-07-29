@@ -30,10 +30,11 @@ export function getSession() {
   if (process.env.NODE_ENV === "development") {
     console.log("Using memory store for sessions in development");
     return session({
-      secret: process.env.SESSION_SECRET || nanoid(32),
-      resave: false,
-      saveUninitialized: false,
+      secret: process.env.SESSION_SECRET || "dev-session-secret-key",
+      resave: true, // Save session back to store
+      saveUninitialized: true, // Save new sessions
       rolling: true, // Extend session on each request
+      name: 'sessionId', // Set a specific session name
       cookie: {
         httpOnly: true,
         secure: false, // Allow HTTP in development
@@ -121,8 +122,14 @@ export async function setupAuth(app: Express) {
     passport.use(strategy);
   }
 
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+  passport.serializeUser((user: Express.User, cb) => {
+    console.log("Serializing user:", user ? "exists" : "null");
+    cb(null, user);
+  });
+  passport.deserializeUser((user: Express.User, cb) => {
+    console.log("Deserializing user:", user ? "exists" : "null");
+    cb(null, user);
+  });
 
   app.get("/api/login", (req, res, next) => {
     console.log("Login attempt for hostname:", req.hostname);
@@ -156,8 +163,11 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 
   console.log("=== AUTH CHECK ===");
   console.log("Session ID:", req.sessionID);
+  console.log("Session exists:", !!req.session);
+  console.log("Session passport:", req.session?.passport ? "exists" : "null");
   console.log("Authenticated:", req.isAuthenticated());
   console.log("User object:", user ? "exists" : "null");
+  console.log("User claims:", user?.claims ? "exists" : "null");
   console.log("Expires at:", user?.expires_at);
 
   if (!req.isAuthenticated() || !user?.expires_at) {
