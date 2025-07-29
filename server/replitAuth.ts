@@ -24,12 +24,12 @@ const getOidcConfig = memoize(
 );
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtl = 30 * 24 * 60 * 60 * 1000; // 30 days
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
+    createTableIfMissing: true, // Auto-create sessions table
+    ttl: sessionTtl / 1000, // TTL in seconds for pg store
     tableName: "sessions",
   });
   return session({
@@ -37,10 +37,12 @@ export function getSession() {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    rolling: true, // Extend session on each request
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: sessionTtl,
+      sameSite: 'lax',
     },
   });
 }
@@ -103,6 +105,7 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    console.log("Login attempt for hostname:", req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -131,17 +134,27 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  console.log("=== AUTH CHECK ===");
+  console.log("Session ID:", req.sessionID);
+  console.log("Authenticated:", req.isAuthenticated());
+  console.log("User object:", user ? "exists" : "null");
+  console.log("Expires at:", user?.expires_at);
+
+  if (!req.isAuthenticated() || !user?.expires_at) {
+    console.log("Not authenticated or no expiry");
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
+    console.log("Token still valid");
     return next();
   }
 
+  console.log("Token expired, attempting refresh");
   const refreshToken = user.refresh_token;
   if (!refreshToken) {
+    console.log("No refresh token available");
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
@@ -150,8 +163,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
+    console.log("Token refreshed successfully");
     return next();
   } catch (error) {
+    console.log("Token refresh failed:", error);
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
