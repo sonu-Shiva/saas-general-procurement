@@ -327,6 +327,13 @@ export class DatabaseStorage implements IStorage {
     return bom;
   }
 
+  async deleteBom(id: string): Promise<void> {
+    // Delete BOM items first (cascade should handle this, but being explicit)
+    await db.delete(bomItems).where(eq(bomItems.bomId, id));
+    // Delete the BOM
+    await db.delete(boms).where(eq(boms.id, id));
+  }
+
   async deleteBomItems(bomId: string): Promise<void> {
     await db.delete(bomItems).where(eq(bomItems.bomId, bomId));
   }

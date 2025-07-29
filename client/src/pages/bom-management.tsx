@@ -25,8 +25,19 @@ import {
   Bot,
   FileText,
   Calendar,
-  Package
+  Package,
+  Trash2
 } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { Bom } from "@shared/schema";
 
 export default function BomManagement() {
@@ -42,6 +53,8 @@ export default function BomManagement() {
   const [viewingBom, setViewingBom] = useState<Bom | null>(null);
   const [copyingBom, setCopyingBom] = useState<Bom | null>(null);
   const [copyForm, setCopyForm] = useState({ name: '', version: '' });
+  const [deletingBom, setDeletingBom] = useState<Bom | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -89,6 +102,46 @@ export default function BomManagement() {
     setViewingBom(null);
   };
 
+  const handleDeleteBom = (bom: Bom) => {
+    setDeletingBom(bom);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Delete BOM mutation
+  const deleteBomMutation = useMutation({
+    mutationFn: async (bomId: string) => {
+      const response = await apiRequest("DELETE", `/api/boms/${bomId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "BOM deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/boms"] });
+      setIsDeleteDialogOpen(false);
+      setDeletingBom(null);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete BOM",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCopyBom = (bom: Bom) => {
     setCopyingBom(bom);
     // Smart copy naming - avoid duplicate "(Copy)" text
@@ -115,15 +168,15 @@ export default function BomManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/boms"] });
-      setIsCopyDialogOpen(false);
-      setCopyingBom(null);
-      setCopyForm({ name: '', version: '' });
       toast({
         title: "Success",
         description: "BOM copied successfully",
       });
+      setIsCopyDialogOpen(false);
+      setCopyingBom(null);
+      setCopyForm({ name: '', version: '' });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -137,7 +190,7 @@ export default function BomManagement() {
       }
       toast({
         title: "Error",
-        description: error.message || "Failed to copy BOM",
+        description: error instanceof Error ? error.message : "Failed to copy BOM",
         variant: "destructive",
       });
     },
@@ -502,6 +555,16 @@ export default function BomManagement() {
                         >
                           <Copy className="w-3 h-3" />
                         </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeleteBom(bom)}
+                          title="Delete BOM"
+                          disabled={!isBuyer}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -574,6 +637,30 @@ export default function BomManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete BOM Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete BOM</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "<strong>{deletingBom?.name}</strong>" (v{deletingBom?.version})?
+              <br />
+              <span className="text-destructive font-medium">This action cannot be undone and will also delete all associated BOM items.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteBomMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingBom && deleteBomMutation.mutate(deletingBom.id)}
+              disabled={deleteBomMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteBomMutation.isPending ? "Deleting..." : "Delete BOM"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

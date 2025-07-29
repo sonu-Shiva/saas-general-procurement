@@ -511,6 +511,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/boms/:id', isAuthenticated, isBuyer, async (req: any, res) => {
+    try {
+      const bomId = req.params.id;
+      const userId = req.user.claims.sub;
+      
+      console.log("=== DELETE BOM ===");
+      console.log("User ID:", userId);
+      console.log("BOM ID:", bomId);
+      
+      // Check if BOM exists and user has permission to delete it
+      const existingBom = await storage.getBom(bomId);
+      if (!existingBom) {
+        console.log("BOM not found");
+        return res.status(404).json({ message: "BOM not found" });
+      }
+      
+      console.log("BOM found:", existingBom.name);
+      console.log("BOM created by:", existingBom.createdBy);
+      
+      // Check if user is the creator of the BOM
+      const isOwner = existingBom.createdBy === userId;
+      console.log("Is owner:", isOwner);
+      
+      if (!isOwner) {
+        console.log("Permission denied - user cannot delete this BOM");
+        return res.status(403).json({ message: "You can only delete BOMs you created" });
+      }
+      
+      await storage.deleteBom(bomId);
+      console.log("BOM deleted successfully");
+      res.json({ message: "BOM deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting BOM:", error);
+      res.status(400).json({ message: `Failed to delete BOM: ${error instanceof Error ? error.message : 'Unknown error'}` });
+    }
+  });
+
   app.post('/api/boms/:id/items', isAuthenticated, async (req, res) => {
     try {
       console.log("Creating BOM item for BOM:", req.params.id);
