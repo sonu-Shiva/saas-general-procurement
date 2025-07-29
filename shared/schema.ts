@@ -574,6 +574,9 @@ export const insertRfxEventSchema = createInsertSchema(rfxEvents).omit({
   budget: z.union([z.string(), z.number()]).optional().transform((val) => 
     val ? String(val) : undefined
   ),
+  dueDate: z.union([z.string(), z.date()]).optional().transform((val) => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
 });
 
 export const insertRfxInvitationSchema = createInsertSchema(rfxInvitations).omit({

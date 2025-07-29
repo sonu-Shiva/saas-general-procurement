@@ -67,7 +67,7 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
         title: data.title,
         scope: data.scope,
         type: data.type,
-        dueDate: new Date(data.dueDate),
+        dueDate: data.dueDate,
         budget: data.budget || undefined,
         bomId: undefined,
         criteria: data.criteria || undefined,
