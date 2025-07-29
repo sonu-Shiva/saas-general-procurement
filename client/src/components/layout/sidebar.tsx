@@ -18,7 +18,6 @@ import {
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Vendor Management", href: "/vendors", icon: Users },
-  { name: "Vendor Discovery", href: "/vendor-discovery", icon: Search },
   { name: "Product Catalogue", href: "/products", icon: Package },
   { name: "BOM Management", href: "/boms", icon: Layers },
   { name: "RFx Management", href: "/rfx", icon: FileText },
