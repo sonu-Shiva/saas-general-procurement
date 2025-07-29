@@ -192,7 +192,7 @@ export default function CategoryManager({
     defaultValues: {
       name: "",
       description: "",
-      parentId: "",
+      parentId: undefined,
       sortOrder: 0,
     },
   });
@@ -301,13 +301,14 @@ export default function CategoryManager({
 
   const handleCreateCategory = (parentCat?: ProductCategory) => {
     setParentCategory(parentCat || null);
-    setIsCreateDialogOpen(true);
+    // Reset form with proper default values
     form.reset({
       name: "",
       description: "",
-      parentId: parentCat?.id || "",
+      parentId: parentCat?.id || undefined,
       sortOrder: 0,
     });
+    setIsCreateDialogOpen(true);
   };
 
   const handleEditCategory = (category: ProductCategory) => {
@@ -316,7 +317,7 @@ export default function CategoryManager({
     form.reset({
       name: category.name,
       description: category.description || "",
-      parentId: category.parentId || "",
+      parentId: category.parentId || undefined,
       sortOrder: category.sortOrder || 0,
     });
   };
@@ -503,19 +504,7 @@ export default function CategoryManager({
                   Cancel
                 </Button>
                 
-                {/* Test button to bypass form */}
-                <Button 
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    console.log("=== DIRECT CREATE TEST ===");
-                    const formData = form.getValues();
-                    console.log("Form data:", formData);
-                    onSubmit(formData);
-                  }}
-                >
-                  Test Create (Direct)
-                </Button>
+
                 
                 <Button 
                   type="submit" 

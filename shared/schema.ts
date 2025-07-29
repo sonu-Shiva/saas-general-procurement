@@ -511,6 +511,9 @@ export const insertProductCategorySchema = createInsertSchema(productCategories)
   id: true,
   createdAt: true,
   updatedAt: true,
+}).partial({
+  code: true,  // Make code optional since it's auto-generated
+  level: true, // Make level optional since it's auto-generated
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({
