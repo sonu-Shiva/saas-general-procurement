@@ -46,18 +46,24 @@ export default function RfxForm({ onClose }: RfxFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  console.log("RfxForm component rendering");
+
   const form = useForm({
-    resolver: zodResolver(insertRfxEventSchema),
+    resolver: zodResolver(insertRfxEventSchema.omit({
+      createdBy: true,
+      referenceNo: true,
+    })),
     defaultValues: {
       title: "",
       type: "rfq" as const,
       scope: "",
       criteria: "",
-      dueDate: "",
+      dueDate: undefined,
       contactPerson: "",
-      budget: "",
+      budget: undefined,
       evaluationParameters: {},
-      bomId: "",
+      bomId: undefined,
+      status: "draft" as const,
     },
   });
 
@@ -142,6 +148,8 @@ export default function RfxForm({ onClose }: RfxFormProps) {
   };
 
   const totalWeight = evaluationCriteria.reduce((sum, criterion) => sum + criterion.weight, 0);
+
+  console.log("About to render RfxForm");
 
   return (
     <div className="max-w-4xl mx-auto">
