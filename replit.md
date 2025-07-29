@@ -10,12 +10,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Product Catalogue Access Restriction (January 2025)
+- **Major Architecture Change**: Product Catalogue is now vendor-only access
+- **Buyers cannot access Product Catalogue directly** - they interact with vendor products only through BOM creation
+- **Workflow**: Buyers find vendors → Browse vendor's product catalogue → Add to BOM
+- **Enhanced role-based restrictions**: Clear access control with informative redirect messages
+- **Improved user experience**: Buyers guided to appropriate sections (BOM Management, Vendor Discovery)
+
 ### Role-Based Access Control (December 2024)
 - Implemented comprehensive role-based differentiation:
-  - **Vendors/Sellers**: Can create and upload products to the catalogue
-  - **Buyers** (buyer_admin, buyer_user, sourcing_manager): Can view products and create BOMs
+  - **Vendors/Sellers**: Full product catalogue access - create categories and products
+  - **Buyers** (buyer_admin, buyer_user, sourcing_manager): Access vendor products only via BOMs
   - Added role selection interface with detailed role descriptions
-  - Updated product catalogue to show role-appropriate functionality
   - Added role badges in header with ability to change roles
   - Fixed all DollarSign icons replaced with Indian Rupee (₹) symbols
   - Enhanced middleware with `isVendor` and `isBuyer` role validation

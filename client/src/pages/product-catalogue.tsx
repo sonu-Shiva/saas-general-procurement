@@ -172,7 +172,7 @@ export default function ProductCatalogue() {
   });
 
   const onSubmit = (data: any) => {
-    // Add the selected category ID to the form data
+    // Add the selected category ID to the form data for vendor products
     const productData = {
       ...data,
       categoryId: selectedCategory?.id || undefined,
@@ -180,7 +180,7 @@ export default function ProductCatalogue() {
       category: selectedCategory?.name || data.category,
     };
     
-    console.log("Creating product with data:", productData);
+    console.log("Creating vendor product with data:", productData);
     console.log("Selected category:", selectedCategory);
     
     createProductMutation.mutate(productData);
@@ -231,6 +231,37 @@ export default function ProductCatalogue() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  // Product Catalogue is vendor-only access - buyers should use BOM management
+  if (isBuyer) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <main className="flex-1 overflow-y-auto">
+            <div className="max-w-7xl mx-auto px-6 py-8">
+              <div className="text-center py-12">
+                <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <h2 className="text-2xl font-bold mb-4">Product Catalogue - Vendor Access Only</h2>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  As a buyer, you access vendor products through BOM creation. The product catalogue is for vendors to manage their inventory.
+                </p>
+                <div className="space-y-2">
+                  <Button onClick={() => window.location.href = '/bom-management'} className="mr-3">
+                    Go to BOM Management
+                  </Button>
+                  <Button variant="outline" onClick={() => window.location.href = '/vendor-discovery'}>
+                    Find Vendors
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header />
@@ -242,15 +273,13 @@ export default function ProductCatalogue() {
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">Product Catalogue</h1>
-                <p className="text-muted-foreground">Manage your centralized product and service catalogue with hierarchical categories</p>
+                <p className="text-muted-foreground">Vendor portal - manage your product and service catalogue with hierarchical categories</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Your Role</p>
-                  <Badge variant={isVendor ? "default" : "secondary"} className="text-sm">
-                    {isVendor ? "Vendor" : isBuyer ? "Buyer" : "Unknown"}
-                  </Badge>
-                </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Vendor Portal</p>
+                <Badge variant="default" className="text-sm">
+                  Vendor Access Only
+                </Badge>
               </div>
             </div>
 
@@ -303,33 +332,13 @@ export default function ProductCatalogue() {
                               <p>{selectedCategory.sortOrder}</p>
                             </div>
                           </div>
-                          <div className="pt-4 space-y-2">
+                          <div className="pt-4">
                             <Button 
                               onClick={() => setActiveTab("products")}
                               className="w-full"
-                              variant="outline"
                             >
                               View Products in this Category
                             </Button>
-                            {isVendor && (
-                              <Button 
-                                onClick={() => {
-                                  setActiveTab("products");
-                                  setIsCreateDialogOpen(true);
-                                }}
-                                className="w-full"
-                              >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Product to "{selectedCategory.name}"
-                              </Button>
-                            )}
-                            {isBuyer && (
-                              <div className="text-center text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-                                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                <p>You're viewing as a buyer. Only vendors can add products to categories.</p>
-                                <p className="text-xs mt-1">Contact vendors to populate this category with products.</p>
-                              </div>
-                            )}
                           </div>
                         </div>
                       ) : (
@@ -362,35 +371,20 @@ export default function ProductCatalogue() {
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col space-y-2">
-                      {/* Role-based messaging */}
-                      {isBuyer && (
-                        <p className="text-xs text-muted-foreground text-right">
-                          Viewing as buyer - contact vendors to add products
-                        </p>
-                      )}
-                      {!selectedCategory && isVendor && (
-                        <p className="text-xs text-muted-foreground text-right">
-                          Select a category first to add products
-                        </p>
-                      )}
-                      <div className="flex space-x-3">
-                        {isVendor && (
-                          <>
-                            <Button variant="outline">
-                              <Tag className="w-4 h-4 mr-2" />
-                              Import
-                            </Button>
-                            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  className="bg-primary hover:bg-primary/90"
-                                  disabled={!selectedCategory}
-                                >
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  {selectedCategory ? `Add Product to "${selectedCategory.name}"` : "Select Category First"}
-                                </Button>
-                              </DialogTrigger>
+                    <div className="flex space-x-3">
+                      {isVendor && (
+                        <>
+                          <Button variant="outline">
+                            <Tag className="w-4 h-4 mr-2" />
+                            Import
+                          </Button>
+                          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button className="bg-primary hover:bg-primary/90">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Product
+                              </Button>
+                            </DialogTrigger>
                             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>Add New Product</DialogTitle>
@@ -658,25 +652,7 @@ export default function ProductCatalogue() {
                       ))}
                     </div>
                   )}
-
-                  {/* Show message for buyers when no products */}
-                  {isBuyer && filteredProducts.length === 0 && (
-                    <div className="text-center py-12">
-                      <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No products found</h3>
-                      <p className="text-muted-foreground mb-4">
-                        {selectedCategory 
-                          ? `No products available in "${selectedCategory.name}" category yet.` 
-                          : "No products available yet. Products will appear here once vendors add them."
-                        }
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Contact your vendors to add products to the catalog.
-                      </p>
-                    </div>
-                  )}
                 </div>
-              </div>
               </TabsContent>
             </Tabs>
           </div>
