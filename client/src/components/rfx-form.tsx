@@ -61,12 +61,12 @@ export default function RfxForm({ onClose }: RfxFormProps) {
     },
   });
 
-  const { data: vendors = [] } = useQuery({
+  const { data: vendors = [] } = useQuery<any[]>({
     queryKey: ["/api/vendors", { status: "approved" }],
     retry: false,
   });
 
-  const { data: boms = [] } = useQuery({
+  const { data: boms = [] } = useQuery<any[]>({
     queryKey: ["/api/boms"],
     retry: false,
   });
@@ -142,6 +142,8 @@ export default function RfxForm({ onClose }: RfxFormProps) {
   };
 
   const totalWeight = evaluationCriteria.reduce((sum, criterion) => sum + criterion.weight, 0);
+
+  console.log("RfxForm rendering", { vendors, boms, isLoading: createRfxMutation.isPending });
 
   return (
     <div className="max-w-4xl mx-auto">
