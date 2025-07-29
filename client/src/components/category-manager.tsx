@@ -179,6 +179,8 @@ export default function CategoryManager({
                               (user as any)?.role === 'buyer_admin' || 
                               (user as any)?.role === 'buyer_user' || 
                               (user as any)?.role === 'sourcing_manager';
+  
+  console.log("CategoryManager - user role:", user?.role, "canManageCategories:", canManageCategories);
 
   const { data: categoryHierarchy = [], isLoading } = useQuery<CategoryNode[]>({
     queryKey: ["/api/product-categories/hierarchy"],
@@ -298,6 +300,7 @@ export default function CategoryManager({
   });
 
   const handleCreateCategory = (parentCat?: ProductCategory) => {
+    console.log("handleCreateCategory called", { parentCat, canManageCategories, user: user?.role });
     setParentCategory(parentCat || null);
     setIsCreateDialogOpen(true);
     form.reset({
