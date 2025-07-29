@@ -13,14 +13,14 @@ import { Card, CardContent } from "@/components/ui/card";
 // Form validation schema
 const rfxFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  type: z.enum(["RFQ", "RFP", "RFI"]),
-  deadline: z.string().min(1, "Deadline is required"),
+  scope: z.string().min(1, "Description is required"),
+  type: z.enum(["rfi", "rfp", "rfq"]),
+  dueDate: z.string().min(1, "Due date is required"),
   budget: z.string().optional(),
   selectedVendors: z.array(z.string()).min(1, "At least one vendor must be selected"),
-  bomItems: z.array(z.string()).optional(),
-  requirements: z.string().optional(),
-  evaluationCriteria: z.string().optional(),
+  bomId: z.string().optional(),
+  criteria: z.string().optional(),
+  evaluationParameters: z.string().optional(),
 });
 
 type RfxFormData = z.infer<typeof rfxFormSchema>;
@@ -50,31 +50,37 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
     resolver: zodResolver(rfxFormSchema),
     defaultValues: {
       title: "",
-      description: "",
-      type: "RFI",
-      deadline: "",
+      scope: "",
+      type: "rfi",
+      dueDate: "",
       budget: "",
       selectedVendors: [],
-      bomItems: [],
-      requirements: "",
-      evaluationCriteria: "",
+      bomId: "",
+      criteria: "",
+      evaluationParameters: "",
     },
   });
 
   const createRfxMutation = useMutation({
     mutationFn: async (data: RfxFormData) => {
-      return await apiRequest("/api/rfx", "POST", data);
+      return await apiRequest("POST", "/api/rfx", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
       onSuccess();
       onClose();
     },
+    onError: (error: any) => {
+      console.error("Error creating RFx:", error);
+      console.error("Error details:", error.message);
+    },
   });
 
   const selectedType = form.watch("type");
 
   const onSubmit = (data: RfxFormData) => {
+    console.log("Form submission data:", data);
+    console.log("Form errors:", form.formState.errors);
     createRfxMutation.mutate(data);
   };
 
@@ -82,8 +88,8 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
     { id: "type", label: "Type Selection" },
     { id: "basic", label: "Basic Info" },
     { id: "vendors", label: "Vendor Selection" },
-    ...(selectedType === "RFQ" ? [{ id: "bom", label: "BOM Items" }] : []),
-    { id: "requirements", label: selectedType === "RFI" ? "Information Required" : "Requirements" },
+    ...(selectedType === "rfq" ? [{ id: "bom", label: "BOM Items" }] : []),
+    { id: "requirements", label: selectedType === "rfi" ? "Information Required" : "Requirements" },
   ];
 
   return (
@@ -119,7 +125,7 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* RFI Option */}
               <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                selectedType === "RFI" 
+                selectedType === "rfi" 
                   ? "border-2 border-primary bg-primary/5" 
                   : "border-2 border-border hover:border-primary/50"
               }`}>
@@ -127,14 +133,14 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                   <label className="cursor-pointer block">
                     <input
                       type="radio"
-                      value="RFI"
+                      value="rfi"
                       {...form.register("type")}
                       className="sr-only"
                     />
                     <div className="text-center space-y-3">
                       <div className="text-3xl">ℹ️</div>
                       <h4 className={`text-lg font-semibold ${
-                        selectedType === "RFI" ? "text-primary" : "text-foreground"
+                        selectedType === "rfi" ? "text-primary" : "text-foreground"
                       }`}>
                         Request for Information (RFI)
                       </h4>
@@ -148,7 +154,7 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
 
               {/* RFP Option */}
               <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                selectedType === "RFP" 
+                selectedType === "rfp" 
                   ? "border-2 border-primary bg-primary/5" 
                   : "border-2 border-border hover:border-primary/50"
               }`}>
@@ -156,14 +162,14 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                   <label className="cursor-pointer block">
                     <input
                       type="radio"
-                      value="RFP"
+                      value="rfp"
                       {...form.register("type")}
                       className="sr-only"
                     />
                     <div className="text-center space-y-3">
                       <div className="text-3xl">📋</div>
                       <h4 className={`text-lg font-semibold ${
-                        selectedType === "RFP" ? "text-primary" : "text-foreground"
+                        selectedType === "rfp" ? "text-primary" : "text-foreground"
                       }`}>
                         Request for Proposal (RFP)
                       </h4>
@@ -177,7 +183,7 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
 
               {/* RFQ Option */}
               <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                selectedType === "RFQ" 
+                selectedType === "rfq" 
                   ? "border-2 border-primary bg-primary/5" 
                   : "border-2 border-border hover:border-primary/50"
               }`}>
@@ -185,14 +191,14 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                   <label className="cursor-pointer block">
                     <input
                       type="radio"
-                      value="RFQ"
+                      value="rfq"
                       {...form.register("type")}
                       className="sr-only"
                     />
                     <div className="text-center space-y-3">
                       <div className="text-3xl">💰</div>
                       <h4 className={`text-lg font-semibold ${
-                        selectedType === "RFQ" ? "text-primary" : "text-foreground"
+                        selectedType === "rfq" ? "text-primary" : "text-foreground"
                       }`}>
                         Request for Quote (RFQ)
                       </h4>
@@ -223,28 +229,28 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="scope">Description *</Label>
               <Textarea
-                id="description"
-                {...form.register("description")}
+                id="scope"
+                {...form.register("scope")}
                 rows={4}
                 placeholder="Describe the RFx requirements"
               />
-              {form.formState.errors.description && (
-                <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
+              {form.formState.errors.scope && (
+                <p className="text-sm text-destructive">{form.formState.errors.scope.message}</p>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="deadline">Deadline *</Label>
+                <Label htmlFor="dueDate">Due Date *</Label>
                 <Input
-                  id="deadline"
+                  id="dueDate"
                   type="datetime-local"
-                  {...form.register("deadline")}
+                  {...form.register("dueDate")}
                 />
-                {form.formState.errors.deadline && (
-                  <p className="text-sm text-destructive">{form.formState.errors.deadline.message}</p>
+                {form.formState.errors.dueDate && (
+                  <p className="text-sm text-destructive">{form.formState.errors.dueDate.message}</p>
                 )}
               </div>
 
@@ -299,27 +305,27 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
         {currentTab === "requirements" && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="requirements">
-                {selectedType === "RFI" ? "Information Required" : "Requirements"} (Optional)
+              <Label htmlFor="criteria">
+                {selectedType === "rfi" ? "Information Required" : "Requirements"} (Optional)
               </Label>
               <Textarea
-                id="requirements"
-                {...form.register("requirements")}
+                id="criteria"
+                {...form.register("criteria")}
                 rows={6}
                 placeholder={
-                  selectedType === "RFI" 
+                  selectedType === "rfi" 
                     ? "What specific information do you need from vendors?"
                     : "Detailed requirements and specifications"
                 }
               />
             </div>
 
-            {selectedType !== "RFI" && (
+            {selectedType !== "rfi" && (
               <div className="space-y-2">
-                <Label htmlFor="evaluationCriteria">Evaluation Criteria (Optional)</Label>
+                <Label htmlFor="evaluationParameters">Evaluation Criteria (Optional)</Label>
                 <Textarea
-                  id="evaluationCriteria"
-                  {...form.register("evaluationCriteria")}
+                  id="evaluationParameters"
+                  {...form.register("evaluationParameters")}
                   rows={4}
                   placeholder="How will proposals be evaluated? (e.g., price 40%, quality 30%, delivery 30%)"
                 />
@@ -367,8 +373,13 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
             <Button
               type="submit"
               disabled={createRfxMutation.isPending}
+              onClick={() => {
+                console.log("Submit button clicked");
+                console.log("Current tab:", currentTab);
+                console.log("Form valid:", form.formState.isValid);
+              }}
             >
-              {createRfxMutation.isPending ? "Creating..." : `Create ${selectedType}`}
+              {createRfxMutation.isPending ? "Creating..." : `Create ${selectedType.toUpperCase()}`}
             </Button>
           </div>
         </div>
