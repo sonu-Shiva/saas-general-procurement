@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Sparkles, Search } from "lucide-react";
+import { Building2, Sparkles, Search, Plus, Mail, Phone, MapPin, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Manual vendor form schema
@@ -87,11 +88,11 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
     mutationFn: async (query: string) => {
       return await apiRequest("/api/vendors/discover", "POST", { query });
     },
-    onSuccess: (vendors) => {
-      setDiscoveredVendors(vendors);
+    onSuccess: (data: any) => {
+      setDiscoveredVendors(Array.isArray(data) ? data : []);
       toast({
         title: "Success",
-        description: `Found ${vendors.length} potential vendors!`,
+        description: `Found ${Array.isArray(data) ? data.length : 0} potential vendors!`,
       });
     },
     onError: (error: any) => {
@@ -122,7 +123,7 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
         phone: vendor.phone,
         address: vendor.location || vendor.address,
         categories: [vendor.category],
-        status: "pending",
+        status: "approved",
         type: "ai_discovered"
       });
       
@@ -249,70 +250,146 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
 
         {/* AI Vendor Discovery */}
         <TabsContent value="ai" className="space-y-6">
-          <Card>
+          {/* AI Search Section */}
+          <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
             <CardHeader>
-              <CardTitle>Discover Vendors with AI</CardTitle>
+              <CardTitle className="flex items-center">
+                <Sparkles className="w-6 h-6 mr-2 text-primary" />
+                AI-Powered Vendor Discovery
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="aiQuery">What are you looking for?</Label>
-                  <Input
-                    id="aiQuery"
-                    value={aiQuery}
-                    onChange={(e) => setAiQuery(e.target.value)}
-                    placeholder="e.g., electronics suppliers, manufacturing companies, IT services"
-                  />
+                <div className="flex space-x-4">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Describe what you need... e.g., 'Find stainless steel pipe suppliers in Gujarat with ISO certification'"
+                      value={aiQuery}
+                      onChange={(e) => setAiQuery(e.target.value)}
+                      className="text-lg py-3"
+                    />
+                  </div>
+                  <Button 
+                    onClick={onDiscoverVendors}
+                    className="bg-primary hover:bg-primary/90 px-8"
+                    disabled={!aiQuery || discoverVendorsMutation.isPending}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {discoverVendorsMutation.isPending ? "Searching..." : "AI Search"}
+                  </Button>
                 </div>
-
-                <Button 
-                  onClick={onDiscoverVendors} 
-                  disabled={discoverVendorsMutation.isPending || !aiQuery.trim()}
-                  className="w-full flex items-center gap-2"
-                >
-                  <Search className="h-4 w-4" />
-                  {discoverVendorsMutation.isPending ? "Discovering..." : "Discover Vendors"}
-                </Button>
+                
+                {/* Sample AI Queries */}
+                <div className="flex flex-wrap gap-2">
+                  <Badge 
+                    variant="outline"
+                    className="cursor-pointer hover:bg-primary/10"
+                    onClick={() => setAiQuery("Electronics suppliers in Mumbai with ISO certification")}
+                  >
+                    Electronics suppliers
+                  </Badge>
+                  <Badge 
+                    variant="outline"
+                    className="cursor-pointer hover:bg-primary/10"
+                    onClick={() => setAiQuery("Steel manufacturers in Gujarat")}
+                  >
+                    Steel manufacturers
+                  </Badge>
+                  <Badge 
+                    variant="outline"
+                    className="cursor-pointer hover:bg-primary/10"
+                    onClick={() => setAiQuery("IT services companies in Bangalore")}
+                  >
+                    IT services
+                  </Badge>
+                  <Badge 
+                    variant="outline"
+                    className="cursor-pointer hover:bg-primary/10"
+                    onClick={() => setAiQuery("Chemical suppliers with export license")}
+                  >
+                    Chemical suppliers
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Discovered Vendors */}
+          {/* AI Insights */}
+          {aiQuery && (
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100">AI Insights</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
+                      Based on your search, I'll find vendors specializing in your requirements. 
+                      Results are ranked by relevance, certifications, and performance ratings.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Discovered Vendors Results */}
           {discoveredVendors.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Discovered Vendors ({discoveredVendors.length})</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Discovered Vendors ({discoveredVendors.length})</span>
+                  <Badge variant="secondary">AI-Curated Results</Badge>
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {discoveredVendors.map((vendor, index) => (
-                    <Card key={index} className="border-2 border-border">
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-semibold">{vendor.name}</h4>
-                              <p className="text-sm text-muted-foreground">{vendor.category}</p>
+                    <Card key={index} className="border-2 border-border hover:border-primary/50 transition-colors">
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="text-lg font-semibold">{vendor.name}</h4>
+                              <Badge variant="outline">{vendor.category}</Badge>
                             </div>
-                            <Button 
-                              size="sm" 
-                              onClick={() => addDiscoveredVendor(vendor)}
-                            >
-                              Add
-                            </Button>
+                            
+                            {vendor.description && (
+                              <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
+                                {vendor.description}
+                              </p>
+                            )}
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                <span>{vendor.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                <span>{vendor.phone}</span>
+                              </div>
+                              {vendor.location && (
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                                  <span>{vendor.location}</span>
+                                </div>
+                              )}
+                              {vendor.website && (
+                                <div className="flex items-center gap-2">
+                                  <Globe className="h-4 w-4 text-muted-foreground" />
+                                  <span>{vendor.website}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           
-                          {vendor.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {vendor.description}
-                            </p>
-                          )}
-                          
-                          <div className="text-sm space-y-1">
-                            <div>📧 {vendor.email}</div>
-                            <div>📞 {vendor.phone}</div>
-                            {vendor.location && <div>📍 {vendor.location}</div>}
-                          </div>
+                          <Button 
+                            onClick={() => addDiscoveredVendor(vendor)}
+                            className="ml-4"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add to Vendors
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
