@@ -35,10 +35,13 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
   const queryClient = useQueryClient();
 
   // Fetch vendors for selection
-  const { data: vendors = [] } = useQuery({
+  const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
     queryKey: ["/api/vendors"],
     retry: false,
   });
+
+  console.log("Vendors data:", vendors);
+  console.log("Vendors loading:", vendorsLoading);
 
   // Fetch BOMs for selection
   const { data: boms = [] } = useQuery({
@@ -81,7 +84,16 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
   const onSubmit = (data: RfxFormData) => {
     console.log("Form submission data:", data);
     console.log("Form errors:", form.formState.errors);
-    createRfxMutation.mutate(data);
+    
+    // Transform the data to match API expectations
+    const transformedData = {
+      ...data,
+      dueDate: new Date(data.dueDate),
+      bomId: data.bomId || undefined,
+    };
+    
+    console.log("Transformed data:", transformedData);
+    createRfxMutation.mutate(transformedData);
   };
 
   const tabs = [
@@ -276,24 +288,36 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-              {(vendors as any[]).map((vendor: any) => (
-                <Card key={vendor.id} className="p-3 border-2 border-border hover:border-primary/50 transition-colors">
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      value={vendor.id}
-                      {...form.register("selectedVendors")}
-                      className="h-4 w-4 rounded border-2 border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-foreground">{vendor.name}</div>
-                      <div className="text-sm text-muted-foreground">{vendor.category}</div>
-                    </div>
-                  </label>
-                </Card>
-              ))}
-            </div>
+            {vendorsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading vendors...</p>
+              </div>
+            ) : vendors.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No vendors available for selection.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                {(vendors as any[]).map((vendor: any) => (
+                  <Card key={vendor.id} className="p-3 border-2 border-border hover:border-primary/50 transition-colors">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        value={vendor.id}
+                        {...form.register("selectedVendors")}
+                        className="h-4 w-4 rounded border-2 border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-foreground">{vendor.companyName || vendor.name}</div>
+                        <div className="text-sm text-muted-foreground">{vendor.categories || vendor.category}</div>
+                        <div className="text-xs text-muted-foreground">{vendor.contactPerson}</div>
+                      </div>
+                    </label>
+                  </Card>
+                ))}
+              </div>
+            )}
             
             {form.formState.errors.selectedVendors && (
               <p className="text-sm text-destructive">{form.formState.errors.selectedVendors.message}</p>
