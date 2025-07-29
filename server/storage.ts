@@ -458,17 +458,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(productCategories.isActive, true))
       .orderBy(asc(productCategories.level), asc(productCategories.sortOrder), asc(productCategories.name));
     
+    const allCategoriesArray = Array.isArray(allCategories) ? allCategories : [];
+    
     // Build hierarchy tree
     const categoryMap = new Map();
     const rootCategories: any[] = [];
     
     // First pass: create map of all categories
-    allCategories.forEach(category => {
+    allCategoriesArray.forEach(category => {
       categoryMap.set(category.id, { ...category, children: [] });
     });
     
     // Second pass: build hierarchy
-    allCategories.forEach(category => {
+    allCategoriesArray.forEach(category => {
       if (category.parentId) {
         const parent = categoryMap.get(category.parentId);
         if (parent) {
@@ -540,6 +542,14 @@ export class DatabaseStorage implements IStorage {
 
   async getRfxResponses(rfxId: string): Promise<RfxResponse[]> {
     return await db.select().from(rfxResponses).where(eq(rfxResponses.rfxId, rfxId));
+  }
+
+  async getChildRfxEvents(parentRfxId: string): Promise<RfxEvent[]> {
+    return await db
+      .select()
+      .from(rfxEvents)
+      .where(eq(rfxEvents.parentRfxId, parentRfxId))
+      .orderBy(rfxEvents.createdAt);
   }
   
   // Auction operations

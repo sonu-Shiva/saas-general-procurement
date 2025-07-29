@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import RfxForm from "@/components/rfx-form";
 
 export default function RfxManagement() {
@@ -7,6 +7,7 @@ export default function RfxManagement() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: rfxEvents = [], isLoading } = useQuery({
     queryKey: ["/api/rfx"],
@@ -25,6 +26,27 @@ export default function RfxManagement() {
     const matchesType = typeFilter === "all" || rfx.type === typeFilter;
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  const handleCreateNextStage = async (parentRfx: any) => {
+    try {
+      const response = await fetch(`/api/rfx/${parentRfx.id}/create-next-stage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+        console.log(`Created ${data.nextRfx.type.toUpperCase()} from ${parentRfx.type.toUpperCase()}`);
+      } else {
+        console.error('Failed to create next stage');
+      }
+    } catch (error) {
+      console.error('Error creating next stage:', error);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8">
@@ -155,6 +177,11 @@ export default function RfxManagement() {
                       <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
                         <span>📅 Deadline: {rfx.dueDate ? new Date(rfx.dueDate).toLocaleDateString() : 'Not set'}</span>
                         <span>💰 Budget: {rfx.budget ? `₹${rfx.budget}` : 'Not specified'}</span>
+                        {rfx.parentRfxId && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            🔗 Workflow continuation
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex space-x-2 ml-4">
@@ -164,6 +191,14 @@ export default function RfxManagement() {
                       <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 font-medium">
                         Edit
                       </button>
+                      {(rfx.type === 'rfi' || rfx.type === 'rfp') && rfx.status === 'closed' && (
+                        <button 
+                          onClick={() => handleCreateNextStage(rfx)}
+                          className="px-3 py-1 text-sm text-green-600 hover:text-green-800 font-medium"
+                        >
+                          Create {rfx.type === 'rfi' ? 'RFP' : 'RFQ'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

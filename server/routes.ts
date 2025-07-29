@@ -664,10 +664,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const invitations = await storage.getRfxInvitations(req.params.id);
       const responses = await storage.getRfxResponses(req.params.id);
-      res.json({ ...rfx, invitations, responses });
+      const childRfxEvents = await storage.getChildRfxEvents(req.params.id);
+      const parentRfx = rfx.parentRfxId ? await storage.getRfxEvent(rfx.parentRfxId) : null;
+      res.json({ ...rfx, invitations, responses, childRfxEvents, parentRfx });
     } catch (error) {
       console.error("Error fetching RFx:", error);
       res.status(500).json({ message: "Failed to fetch RFx" });
+    }
+  });
+
+  // Create next stage RFx (RFI -> RFP -> RFQ)
+  app.post('/api/rfx/:id/create-next-stage', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const parentRfxId = req.params.id;
+      
+      const parentRfx = await storage.getRfxEvent(parentRfxId);
+      if (!parentRfx) {
+        return res.status(404).json({ message: "Parent RFx not found" });
+      }
+
+      if (parentRfx.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only create next stage for your own RFx" });
+      }
+
+      let nextType: string;
+      if (parentRfx.type === "rfi") {
+        nextType = "rfp";
+      } else if (parentRfx.type === "rfp") {
+        nextType = "rfq";
+      } else {
+        return res.status(400).json({ message: "RFQ is the final stage in the workflow" });
+      }
+
+      const responses = await storage.getRfxResponses(parentRfxId);
+      const invitations = await storage.getRfxInvitations(parentRfxId);
+      
+      // Pre-populate with information from parent RFx
+      const nextStageData = {
+        title: `${nextType.toUpperCase()} - ${parentRfx.title}`,
+        referenceNo: `${nextType.toUpperCase()}-${Date.now()}`,
+        type: nextType,
+        scope: parentRfx.scope,
+        criteria: parentRfx.criteria,
+        bomId: parentRfx.bomId,
+        contactPerson: parentRfx.contactPerson,
+        budget: parentRfx.budget,
+        parentRfxId: parentRfxId,
+        createdBy: userId,
+        status: "draft"
+      };
+
+      const nextRfx = await storage.createRfxEvent(nextStageData as any);
+      
+      // Copy vendor invitations from parent RFx
+      for (const invitation of invitations) {
+        await storage.createRfxInvitation({
+          rfxId: nextRfx.id,
+          vendorId: invitation.vendorId,
+          status: "invited"
+        });
+      }
+
+      res.json({ nextRfx, parentRfx, responses });
+    } catch (error) {
+      console.error("Error creating next stage RFx:", error);
+      res.status(500).json({ message: "Failed to create next stage RFx" });
     }
   });
 

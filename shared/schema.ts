@@ -161,6 +161,7 @@ export const rfxEvents = pgTable("rfx_events", {
   bomId: uuid("bom_id").references(() => boms.id),
   contactPerson: varchar("contact_person", { length: 255 }),
   budget: decimal("budget", { precision: 12, scale: 2 }),
+  parentRfxId: uuid("parent_rfx_id"),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -354,6 +355,7 @@ export const bomsRelations = relations(boms, ({ one, many }) => ({
   }),
   bomItems: many(bomItems),
   rfxEvents: many(rfxEvents),
+
 }));
 
 export const bomItemsRelations = relations(bomItems, ({ one }) => ({
@@ -376,6 +378,12 @@ export const rfxEventsRelations = relations(rfxEvents, ({ one, many }) => ({
     fields: [rfxEvents.bomId],
     references: [boms.id],
   }),
+  parent: one(rfxEvents, {
+    fields: [rfxEvents.parentRfxId],
+    references: [rfxEvents.id],
+    relationName: "parentChild"
+  }),
+  children: many(rfxEvents, { relationName: "parentChild" }),
   invitations: many(rfxInvitations),
   responses: many(rfxResponses),
   purchaseOrders: many(purchaseOrders),
