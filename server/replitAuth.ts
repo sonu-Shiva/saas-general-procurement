@@ -164,7 +164,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   console.log("=== AUTH CHECK ===");
   console.log("Session ID:", req.sessionID);
   console.log("Session exists:", !!req.session);
-  console.log("Session passport:", req.session?.passport ? "exists" : "null");
+  console.log("Session passport:", (req.session as any)?.passport ? "exists" : "null");
   console.log("Authenticated:", req.isAuthenticated());
   console.log("User object:", user ? "exists" : "null");
   console.log("User claims:", user?.claims ? "exists" : "null");
