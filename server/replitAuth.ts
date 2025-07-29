@@ -26,43 +26,27 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days
   
-  // Use enhanced in-memory configuration for development stability
-  if (process.env.NODE_ENV === "development") {
-    console.log("Using enhanced memory store for sessions in development");
-    return session({
-      secret: process.env.SESSION_SECRET || "dev-session-secret-key-for-sclen-procurement-stable-v2",
-      resave: false, // Don't save session if unmodified
-      saveUninitialized: false, // Don't create session until something stored
-      rolling: true, // Extend session on each request
-      name: 'sclen.sid', // Use unique session name
-      cookie: {
-        httpOnly: true,
-        secure: false, // Allow HTTP in development
-        maxAge: sessionTtl,
-        sameSite: 'lax',
-      },
-    });
-  }
+  console.log("Using PostgreSQL-backed sessions for persistent login across restarts");
   
-  // Use PostgreSQL store for production
+  // Always use PostgreSQL store for persistent sessions
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false, // Table already exists
-    ttl: sessionTtl / 1000, // TTL in seconds for pg store
+    createTableIfMissing: true, // Create table if missing
+    ttl: Math.floor(sessionTtl / 1000), // TTL in seconds for pg store
     tableName: "sessions",
   });
   
   return session({
-    secret: process.env.SESSION_SECRET || nanoid(32),
+    secret: process.env.SESSION_SECRET || "sclen-procurement-persistent-sessions-v1",
     store: sessionStore,
-    resave: true,
-    saveUninitialized: true,
+    resave: false, // Don't save session if unmodified
+    saveUninitialized: false, // Don't create session until something stored
     rolling: true, // Extend session on each request
-    name: 'connect.sid', // Use standard session name
+    name: 'sclen.sid', // Use unique session name
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Allow HTTP in development
       maxAge: sessionTtl,
       sameSite: 'lax',
     },
