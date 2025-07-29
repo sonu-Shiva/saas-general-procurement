@@ -209,11 +209,36 @@ export default function VendorManagement() {
                   <Card key={vendor.id} className="border-2 border-border hover:border-primary/50 transition-colors">
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">{vendor.companyName || vendor.name || "Unknown Vendor"}</CardTitle>
-                          <div className="flex items-center gap-2">
-                            <Badge {...getStatusBadge(vendor.status)}>{getStatusBadge(vendor.status).label}</Badge>
-                            <Badge {...getTypeBadge(vendor.type)}>{getTypeBadge(vendor.type).label}</Badge>
+                        <div className="flex items-center gap-3 flex-1">
+                          {/* Company Logo */}
+                          <div className="flex-shrink-0">
+                            {vendor.logoUrl ? (
+                              <img 
+                                src={vendor.logoUrl} 
+                                alt={`${vendor.companyName || vendor.name} logo`}
+                                className="w-12 h-12 object-cover rounded-lg border-2 border-border"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const fallback = target.nextElementSibling as HTMLElement;
+                                  if (fallback) fallback.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div 
+                              className={`w-12 h-12 bg-muted rounded-lg border-2 border-border flex items-center justify-center ${vendor.logoUrl ? 'hidden' : 'flex'}`}
+                            >
+                              <Building2 className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          </div>
+                          
+                          {/* Company Info */}
+                          <div className="space-y-1 flex-1">
+                            <CardTitle className="text-lg">{vendor.companyName || vendor.name || "Unknown Vendor"}</CardTitle>
+                            <div className="flex items-center gap-2">
+                              <Badge {...getStatusBadge(vendor.status)}>{getStatusBadge(vendor.status).label}</Badge>
+                              <Badge {...getTypeBadge(vendor.type)}>{getTypeBadge(vendor.type).label}</Badge>
+                            </div>
                           </div>
                         </div>
                         <DropdownMenu>

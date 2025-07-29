@@ -217,6 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 - Phone Number: [phone number]
 - Address: [full address]
 - Website: [website URL]
+- Logo URL: [company logo URL if available]
 - Description: [brief description of services/products]
 
 Focus on established businesses with verifiable contact information.`;
@@ -362,6 +363,7 @@ Focus on established businesses with verifiable contact information.`;
               phone: "",
               location: "",
               website: "",
+              logoUrl: "",
               description: ""
             };
           }
@@ -394,6 +396,13 @@ Focus on established businesses with verifiable contact information.`;
             const websiteMatch = line.match(/(?:www\.|https?:\/\/)[\w\.-]+\.\w+(?:\/[\w\.-]*)?/);
             if (websiteMatch) {
               currentVendor.website = websiteMatch[0];
+            }
+          }
+          
+          if (line.includes("Logo URL:") || line.includes("Logo:")) {
+            const logoMatch = line.match(/(?:Logo URL:|Logo:)\s*(.+)/);
+            if (logoMatch) {
+              currentVendor.logoUrl = logoMatch[1].trim();
             }
           }
           
@@ -436,6 +445,7 @@ Focus on established businesses with verifiable contact information.`;
           phone: hasRealPhone ? vendor.phone : "",
           location: hasRealAddress ? vendor.location : "",
           website: hasRealWebsite ? vendor.website : "",
+          logoUrl: vendor.logoUrl || "",
           description: vendor.description || `Professional services provider`,
           category: vendor.category || "Business Services"
         };

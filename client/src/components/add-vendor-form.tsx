@@ -24,6 +24,7 @@ const manualVendorSchema = z.object({
   address: z.string().optional(),
   categories: z.string().optional(),
   website: z.string().optional(),
+  logoUrl: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -135,6 +136,7 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
         phone: vendor.phone,
         address: vendor.location || vendor.address,
         website: vendor.website,
+        logoUrl: vendor.logoUrl,
         categories: [vendor.category],
         description: vendor.description,
         status: "approved",
@@ -230,12 +232,32 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="categories">Categories (Optional)</Label>
+                    <Input
+                      id="categories"
+                      {...form.register("categories")}
+                      placeholder="e.g., Electronics, Manufacturing"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Website (Optional)</Label>
+                    <Input
+                      id="website"
+                      {...form.register("website")} 
+                      placeholder="https://company.com"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="categories">Categories (Optional)</Label>
+                  <Label htmlFor="logoUrl">Company Logo URL (Optional)</Label>
                   <Input
-                    id="categories"
-                    {...form.register("categories")}
-                    placeholder="e.g., Electronics, Manufacturing, Services (comma separated)"
+                    id="logoUrl"
+                    {...form.register("logoUrl")}
+                    placeholder="https://company.com/logo.png"
                   />
                 </div>
 
