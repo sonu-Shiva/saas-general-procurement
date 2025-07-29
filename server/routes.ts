@@ -162,6 +162,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/vendors", isAuthenticated, async (req, res) => {
+    try {
+      const vendorData = {
+        ...req.body,
+        id: nanoid(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const vendor = await storage.createVendor(vendorData);
+      res.status(201).json(vendor);
+    } catch (error) {
+      console.error("Error creating vendor:", error);
+      res.status(500).json({ message: "Failed to create vendor" });
+    }
+  });
+
+  app.post("/api/vendors/discover", isAuthenticated, async (req, res) => {
+    try {
+      const { query, location, category } = req.body;
+      
+      // Mock AI discovery for now - in production, this would call an AI service
+      const mockVendors = [
+        {
+          name: "TechSupply Solutions",
+          category: category || "Electronics",
+          email: "contact@techsupply.com",
+          phone: "+91 98765 43210",
+          location: location || "Mumbai, India",
+          website: "https://techsupply.com",
+          description: "Leading supplier of electronic components and IT hardware with 15+ years experience.",
+        },
+        {
+          name: "Global Manufacturing Co",
+          category: category || "Manufacturing", 
+          email: "sales@globalmanuf.com",
+          phone: "+91 87654 32109",
+          location: location || "Chennai, India",
+          website: "https://globalmanuf.com",
+          description: "Specialized in precision manufacturing and industrial equipment supply.",
+        },
+        {
+          name: "ServiceFirst Ltd",
+          category: category || "Services",
+          email: "info@servicefirst.com",
+          phone: "+91 76543 21098",
+          location: location || "Bangalore, India", 
+          website: "https://servicefirst.com",
+          description: "Professional services company offering consulting, maintenance, and support solutions.",
+        }
+      ];
+
+      // Filter results based on query
+      const filteredVendors = mockVendors.filter(vendor => 
+        vendor.name.toLowerCase().includes(query.toLowerCase()) ||
+        vendor.category.toLowerCase().includes(query.toLowerCase()) ||
+        vendor.description.toLowerCase().includes(query.toLowerCase())
+      );
+
+      res.json(filteredVendors);
+    } catch (error) {
+      console.error("Error discovering vendors:", error);
+      res.status(500).json({ message: "Failed to discover vendors" });
+    }
+  });
+
   // Product routes - Only vendors can create products
   app.post('/api/products', isAuthenticated, isVendor, async (req: any, res) => {
     try {
