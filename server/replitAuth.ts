@@ -24,17 +24,17 @@ const getOidcConfig = memoize(
 );
 
 export function getSession() {
-  const sessionTtl = 30 * 24 * 60 * 60 * 1000; // 30 days
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days (more reasonable)
   
   // Use in-memory store for development to avoid database connection issues
   if (process.env.NODE_ENV === "development") {
     console.log("Using memory store for sessions in development");
     return session({
-      secret: process.env.SESSION_SECRET || "dev-session-secret-key",
-      resave: true, // Save session back to store
-      saveUninitialized: true, // Save new sessions
+      secret: process.env.SESSION_SECRET || "dev-session-secret-key-for-sclen-procurement",
+      resave: false, // Don't save session if unmodified
+      saveUninitialized: false, // Don't create session until something stored
       rolling: true, // Extend session on each request
-      name: 'sessionId', // Set a specific session name
+      name: 'connect.sid', // Use standard session name
       cookie: {
         httpOnly: true,
         secure: false, // Allow HTTP in development
@@ -59,6 +59,7 @@ export function getSession() {
     resave: false,
     saveUninitialized: false,
     rolling: true, // Extend session on each request
+    name: 'connect.sid', // Use standard session name
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
