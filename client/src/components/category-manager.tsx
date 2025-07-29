@@ -452,8 +452,19 @@ export default function CategoryManager({
                     className="mt-4"
                     onClick={(e) => {
                       e.preventDefault();
-                      console.log("Create first category button clicked!");
-                      handleCreateCategory();
+                      e.stopPropagation();
+                      console.log("=== CREATE FIRST CATEGORY BUTTON CLICKED ===");
+                      console.log("Event object:", e);
+                      console.log("Button element:", e.target);
+                      console.log("canManageCategories:", canManageCategories);
+                      console.log("Current dialog state:", isCreateDialogOpen);
+                      try {
+                        console.log("About to call handleCreateCategory...");
+                        handleCreateCategory();
+                        console.log("handleCreateCategory call completed");
+                      } catch (error) {
+                        console.error("ERROR in handleCreateCategory:", error);
+                      }
                     }}
                     type="button"
                   >
