@@ -31,8 +31,6 @@ import {
 import type { RfxEvent } from "@shared/schema";
 
 export default function RfxManagement() {
-  console.log("RfxManagement component rendering");
-  
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -40,11 +38,9 @@ export default function RfxManagement() {
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
 
   const { data: rfxEvents = [], isLoading } = useQuery<RfxEvent[]>({
-    queryKey: ["/api/rfx", { type: typeFilter, status: statusFilter }],
+    queryKey: ["/api/rfx"],
     retry: false,
   });
-  
-  console.log("RfxManagement state:", { rfxEvents, isLoading, searchQuery });
 
   const filteredRfxEvents = rfxEvents.filter((rfx: RfxEvent) => {
     const matchesSearch = rfx.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -84,8 +80,6 @@ export default function RfxManagement() {
     }
   };
 
-  console.log("About to render RfxManagement UI");
-  
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header />

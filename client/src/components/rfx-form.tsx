@@ -143,8 +143,6 @@ export default function RfxForm({ onClose }: RfxFormProps) {
 
   const totalWeight = evaluationCriteria.reduce((sum, criterion) => sum + criterion.weight, 0);
 
-  console.log("RfxForm rendering", { vendors, boms, isLoading: createRfxMutation.isPending });
-
   return (
     <div className="max-w-4xl mx-auto">
       <Form {...form}>
