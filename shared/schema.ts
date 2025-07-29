@@ -521,6 +521,7 @@ export const insertProductSchema = createInsertSchema(products).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
+  itemName: z.string().min(1, "Item name is required"),
   basePrice: z.union([z.string(), z.number()]).optional().transform((val) => 
     val ? String(val) : undefined
   ),

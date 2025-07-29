@@ -179,6 +179,16 @@ export default function ProductCatalogue() {
   });
 
   const onSubmit = (data: any) => {
+    // Validate required fields
+    if (!data.itemName || data.itemName.trim() === "") {
+      toast({
+        title: "Validation Error",
+        description: "Item Name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Add the selected category ID to the form data for vendor products
     const productData = {
       ...data,
@@ -353,19 +363,27 @@ export default function ProductCatalogue() {
                                 <Badge variant="outline" className="text-xs">
                                   {filteredProducts.length} items
                                 </Badge>
+                                <div className="debug-info text-xs mb-2">
+                                  User: {(user as any)?.email}, Role: {(user as any)?.role}, IsVendor: {isVendor.toString()}
+                                </div>
                                 {isVendor ? (
                                   <Button 
                                     size="sm" 
                                     onClick={() => {
                                       console.log("Add Product button clicked in category details");
+                                      console.log("Current selectedCategory:", selectedCategory);
                                       handleOpenAddProductDialog();
                                     }}
+                                    className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white"
+                                    style={{ pointerEvents: 'auto' }}
                                   >
                                     <Plus className="w-3 h-3 mr-1" />
                                     Add Product
                                   </Button>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground">Vendor access required</div>
+                                  <div className="text-xs text-muted-foreground bg-red-100 p-2 rounded">
+                                    Vendor access required (Current role: {(user as any)?.role || 'none'})
+                                  </div>
                                 )}
                               </div>
                             </div>
