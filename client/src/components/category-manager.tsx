@@ -328,6 +328,7 @@ export default function CategoryManager({
   };
 
   const onSubmit = (data: any) => {
+    console.log("=== FORM ONSUBMIT CALLED ===");
     console.log("Form submitted with data:", data);
     console.log("Form validation errors:", form.formState.errors);
     console.log("Form is valid:", form.formState.isValid);
@@ -336,10 +337,10 @@ export default function CategoryManager({
     console.log("Editing category:", editingCategory);
     
     if (editingCategory) {
-      console.log("Updating category...");
+      console.log("Path: Updating category...");
       updateCategoryMutation.mutate(data);
     } else {
-      console.log("Creating new category...");
+      console.log("Path: Creating new category...");
       createCategoryMutation.mutate(data);
     }
   };
@@ -495,6 +496,15 @@ export default function CategoryManager({
                 <Button 
                   type="submit" 
                   disabled={createCategoryMutation.isPending}
+                  onClick={(e) => {
+                    console.log("=== CREATE CATEGORY SUBMIT BUTTON CLICKED ===");
+                    console.log("Event:", e);
+                    console.log("Form state:", form.formState);
+                    console.log("Form values:", form.getValues());
+                    console.log("Form errors:", form.formState.errors);
+                    console.log("Is form valid:", form.formState.isValid);
+                    console.log("Mutation pending:", createCategoryMutation.isPending);
+                  }}
                 >
                   {createCategoryMutation.isPending ? "Creating..." : "Create Category"}
                 </Button>
