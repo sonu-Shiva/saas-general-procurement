@@ -110,18 +110,13 @@ export default function ProductCatalogue() {
 
   const createProductMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("Creating product with data:", data);
       if (selectedCategory) {
         data.categoryId = selectedCategory.id;
         data.category = selectedCategory.name; // Backward compatibility
       }
-      console.log("Final product data being sent:", data);
-      const result = await apiRequest("POST", "/api/products", data);
-      console.log("Product creation API response:", result);
-      return result;
+      return await apiRequest("POST", "/api/products", data);
     },
     onSuccess: () => {
-      console.log("Product created successfully!");
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
@@ -131,7 +126,6 @@ export default function ProductCatalogue() {
       form.reset();
     },
     onError: (error) => {
-      console.error("Product creation error:", error);
       if (isUnauthorizedError(error as Error)) {
         toast({
           title: "Unauthorized",
@@ -185,10 +179,6 @@ export default function ProductCatalogue() {
   });
 
   const onSubmit = (data: any) => {
-    console.log("=== FORM SUBMIT ===");
-    console.log("Form data:", data);
-    console.log("Selected category:", selectedCategory);
-    
     // Validate required fields
     if (!data.itemName || data.itemName.trim() === "") {
       toast({
@@ -207,8 +197,6 @@ export default function ProductCatalogue() {
       category: selectedCategory?.name || data.category,
     };
     
-    console.log("Final product data:", productData);
-    console.log("Submitting to API...");
     createProductMutation.mutate(productData);
   };
 
@@ -815,34 +803,13 @@ export default function ProductCatalogue() {
         console.log("Dialog onOpenChange triggered with:", open);
         setIsCreateDialogOpen(open);
       }}>
-        <DialogContent 
-          className="max-w-2xl max-h-[80vh] overflow-y-auto"
-          onPointerDownOutside={(e) => {
-            console.log("Pointer down outside dialog");
-            e.preventDefault(); // Prevent closing on outside click during debugging
-          }}
-          onEscapeKeyDown={(e) => {
-            console.log("Escape key pressed");
-            e.preventDefault(); // Prevent closing on escape during debugging
-          }}
-        >
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Product</DialogTitle>
-            <div className="text-sm text-muted-foreground">
-              Dialog state: {isCreateDialogOpen ? 'OPEN' : 'CLOSED'} | 
-              User role: {(user as any)?.role} | 
-              Is vendor: {isVendor ? 'YES' : 'NO'} |
-              Mutation pending: {createProductMutation.isPending ? 'YES' : 'NO'}
-            </div>
+
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={(e) => {
-              console.log("=== FORM SUBMIT EVENT ===");
-              console.log("Form submit triggered");
-              e.preventDefault(); // Prevent default form submission
-              console.log("Event:", e);
-              form.handleSubmit(onSubmit)(e);
-            }} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -958,32 +925,15 @@ export default function ProductCatalogue() {
                   Cancel
                 </Button>
                 
-                {/* Test button to check if onClick works */}
-                <Button 
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    console.log("TEST BUTTON CLICKED - this should work!");
-                    alert("Test button works!");
-                  }}
-                >
-                  Test Button
-                </Button>
+
                 
                 <Button 
                   type="button"
                   disabled={createProductMutation.isPending}
                   onClick={(e) => {
-                    console.log("=== BUTTON CLICKED DIRECTLY ===");
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log("Button clicked!");
-                    console.log("Form values:", form.getValues());
-                    console.log("Form errors:", form.formState.errors);
-                    
-                    // Manually trigger form submission
                     const formValues = form.getValues();
-                    console.log("Calling onSubmit manually with:", formValues);
                     onSubmit(formValues);
                   }}
                 >
