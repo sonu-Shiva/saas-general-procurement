@@ -26,7 +26,7 @@ interface RfxFormProps {
 }
 
 export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
-  const [currentTab, setCurrentTab] = useState("basic");
+  const [currentTab, setCurrentTab] = useState("type");
   const queryClient = useQueryClient();
 
   // Fetch vendors for selection
@@ -67,15 +67,18 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
     },
   });
 
+  const selectedType = form.watch("type");
+
   const onSubmit = (data: RfxFormData) => {
     createRfxMutation.mutate(data);
   };
 
   const tabs = [
+    { id: "type", label: "Type Selection" },
     { id: "basic", label: "Basic Info" },
     { id: "vendors", label: "Vendor Selection" },
-    { id: "bom", label: "BOM Items" },
-    { id: "requirements", label: "Requirements" },
+    ...(selectedType === "RFQ" ? [{ id: "bom", label: "BOM Items" }] : []),
+    { id: "requirements", label: selectedType === "RFI" ? "Information Required" : "Requirements" },
   ];
 
   return (
@@ -111,6 +114,158 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="p-6">
+          {/* Type Selection Tab */}
+          {currentTab === "type" && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  What type of request would you like to create?
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-8">
+                  Choose the type that best fits your procurement needs
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* RFQ Option */}
+                <label className={`relative cursor-pointer rounded-lg border-2 p-6 focus:outline-none ${
+                  selectedType === "RFQ" 
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                }`}>
+                  <input
+                    type="radio"
+                    value="RFQ"
+                    {...form.register("type")}
+                    className="sr-only"
+                  />
+                  <div className="text-center">
+                    <div className="text-3xl mb-3">💰</div>
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      Request for Quote (RFQ)
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Get price quotes for specific products or services with detailed specifications
+                    </p>
+                    <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                      • Price-focused
+                      • Detailed specifications
+                      • BOM integration
+                    </div>
+                  </div>
+                  {selectedType === "RFQ" && (
+                    <div className="absolute top-3 right-3 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                  )}
+                </label>
+
+                {/* RFP Option */}
+                <label className={`relative cursor-pointer rounded-lg border-2 p-6 focus:outline-none ${
+                  selectedType === "RFP" 
+                    ? "border-green-500 bg-green-50 dark:bg-green-900/20" 
+                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                }`}>
+                  <input
+                    type="radio"
+                    value="RFP"
+                    {...form.register("type")}
+                    className="sr-only"
+                  />
+                  <div className="text-center">
+                    <div className="text-3xl mb-3">📋</div>
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      Request for Proposal (RFP)
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Solicit comprehensive proposals for complex projects or services
+                    </p>
+                    <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                      • Solution-focused
+                      • Detailed proposals
+                      • Evaluation criteria
+                    </div>
+                  </div>
+                  {selectedType === "RFP" && (
+                    <div className="absolute top-3 right-3 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                  )}
+                </label>
+
+                {/* RFI Option */}
+                <label className={`relative cursor-pointer rounded-lg border-2 p-6 focus:outline-none ${
+                  selectedType === "RFI" 
+                    ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20" 
+                    : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
+                }`}>
+                  <input
+                    type="radio"
+                    value="RFI"
+                    {...form.register("type")}
+                    className="sr-only"
+                  />
+                  <div className="text-center">
+                    <div className="text-3xl mb-3">ℹ️</div>
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      Request for Information (RFI)
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Gather information about vendors, capabilities, or market research
+                    </p>
+                    <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                      • Information-focused
+                      • Market research
+                      • Vendor capabilities
+                    </div>
+                  </div>
+                  {selectedType === "RFI" && (
+                    <div className="absolute top-3 right-3 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {/* Type-specific description */}
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                {selectedType === "RFQ" && (
+                  <div>
+                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">RFQ Best Practices:</h5>
+                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <li>• Provide detailed specifications and quantities</li>
+                      <li>• Include delivery requirements and timelines</li>
+                      <li>• Specify evaluation criteria (price, quality, delivery)</li>
+                      <li>• Attach BOM items for accurate quoting</li>
+                    </ul>
+                  </div>
+                )}
+                {selectedType === "RFP" && (
+                  <div>
+                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">RFP Best Practices:</h5>
+                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <li>• Define project scope and objectives clearly</li>
+                      <li>• Include evaluation criteria and weightings</li>
+                      <li>• Specify proposal format and requirements</li>
+                      <li>• Set realistic timelines for response and evaluation</li>
+                    </ul>
+                  </div>
+                )}
+                {selectedType === "RFI" && (
+                  <div>
+                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">RFI Best Practices:</h5>
+                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <li>• Ask specific, focused questions</li>
+                      <li>• Research vendor capabilities and experience</li>
+                      <li>• Gather market intelligence and benchmarks</li>
+                      <li>• Use insights to inform future RFQ/RFP processes</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Basic Info Tab */}
           {currentTab === "basic" && (
             <div className="space-y-4">
@@ -222,8 +377,8 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
             </div>
           )}
 
-          {/* BOM Items Tab */}
-          {currentTab === "bom" && (
+          {/* BOM Items Tab - Only for RFQ */}
+          {currentTab === "bom" && selectedType === "RFQ" && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">BOM Items (Optional)</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -254,32 +409,56 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
             </div>
           )}
 
-          {/* Requirements Tab */}
+          {/* Requirements Tab - Adapts based on type */}
           {currentTab === "requirements" && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Detailed Requirements
+                  {selectedType === "RFI" ? "Information Required" : 
+                   selectedType === "RFQ" ? "Detailed Specifications" : 
+                   "Project Requirements"}
                 </label>
                 <textarea
                   {...form.register("requirements")}
                   rows={6}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Provide detailed requirements and specifications..."
+                  placeholder={
+                    selectedType === "RFI" ? "What specific information do you need from vendors? (capabilities, experience, certifications, etc.)" :
+                    selectedType === "RFQ" ? "Provide detailed specifications, quantities, quality requirements, delivery terms, etc." :
+                    "Describe the project scope, objectives, deliverables, and technical requirements..."
+                  }
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Evaluation Criteria
+                  {selectedType === "RFI" ? "Response Format" : "Evaluation Criteria"}
                 </label>
                 <textarea
                   {...form.register("evaluationCriteria")}
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="Describe how proposals will be evaluated..."
+                  placeholder={
+                    selectedType === "RFI" ? "How should vendors structure their responses? What format do you prefer?" :
+                    selectedType === "RFQ" ? "How will quotes be evaluated? (price 40%, quality 30%, delivery 20%, etc.)" :
+                    "Describe evaluation criteria and weightings for proposals..."
+                  }
                 />
               </div>
+
+              {/* Type-specific additional fields */}
+              {selectedType === "RFP" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Proposal Format Requirements
+                  </label>
+                  <textarea
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="Specify required sections, page limits, presentation format, etc."
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -294,7 +473,7 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                     setCurrentTab(tabs[currentIndex - 1].id);
                   }
                 }}
-                disabled={currentTab === "basic"}
+                disabled={currentTab === "type"}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
