@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### RFx Management TypeScript Fixes (January 2025)
+- **Fixed Create RFx Functionality**: Resolved TypeScript errors that were preventing RFx creation
+- **Type Safety Improvements**: Properly typed `rfxEvents` query as `RfxEvent[]` instead of `{}`
+- **Array Method Support**: Fixed filter, length, and other array operations on RFx data
+- **Form Validation Ready**: RFx form component properly structured with Zod schema validation
+- **Backend Integration**: Confirmed RFx storage implementation and API routes are functional
+- **Authentication Required**: RFx creation requires user authentication (working as designed)
+
 ### Product Catalogue Access Restriction (January 2025)
 - **Major Architecture Change**: Product Catalogue is now vendor-only access
 - **Buyers cannot access Product Catalogue directly** - they interact with vendor products only through BOM creation

@@ -37,12 +37,12 @@ export default function RfxManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
 
-  const { data: rfxEvents, isLoading } = useQuery({
+  const { data: rfxEvents = [], isLoading } = useQuery<RfxEvent[]>({
     queryKey: ["/api/rfx", { type: typeFilter, status: statusFilter }],
     retry: false,
   });
 
-  const filteredRfxEvents = rfxEvents?.filter((rfx: RfxEvent) => {
+  const filteredRfxEvents = rfxEvents.filter((rfx: RfxEvent) => {
     const matchesSearch = rfx.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          rfx.referenceNo?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = typeFilter === "all" || rfx.type === typeFilter;
@@ -197,7 +197,7 @@ export default function RfxManagement() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total RFx</p>
-                      <p className="text-2xl font-bold">{rfxEvents?.length || 0}</p>
+                      <p className="text-2xl font-bold">{rfxEvents.length || 0}</p>
                     </div>
                     <FileText className="w-8 h-8 text-primary" />
                   </div>
@@ -209,7 +209,7 @@ export default function RfxManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Active</p>
                       <p className="text-2xl font-bold text-success">
-                        {rfxEvents?.filter((r: RfxEvent) => r.status === 'active' || r.status === 'published').length || 0}
+                        {rfxEvents.filter((r: RfxEvent) => r.status === 'active' || r.status === 'published').length || 0}
                       </p>
                     </div>
                     <CheckCircle className="w-8 h-8 text-success" />
@@ -222,7 +222,7 @@ export default function RfxManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Draft</p>
                       <p className="text-2xl font-bold text-warning">
-                        {rfxEvents?.filter((r: RfxEvent) => r.status === 'draft').length || 0}
+                        {rfxEvents.filter((r: RfxEvent) => r.status === 'draft').length || 0}
                       </p>
                     </div>
                     <Clock className="w-8 h-8 text-warning" />
@@ -235,7 +235,7 @@ export default function RfxManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">This Month</p>
                       <p className="text-2xl font-bold">
-                        {rfxEvents?.filter((r: RfxEvent) => {
+                        {rfxEvents.filter((r: RfxEvent) => {
                           const rfxDate = new Date(r.createdAt || '');
                           const now = new Date();
                           return rfxDate.getMonth() === now.getMonth() && rfxDate.getFullYear() === now.getFullYear();
