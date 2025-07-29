@@ -23,6 +23,8 @@ const manualVendorSchema = z.object({
   contactPerson: z.string().min(1, "Contact person is required"),
   address: z.string().optional(),
   categories: z.string().optional(),
+  website: z.string().optional(),
+  description: z.string().optional(),
 });
 
 type ManualVendorData = z.infer<typeof manualVendorSchema>;
@@ -51,6 +53,8 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
       contactPerson: "",
       address: "",
       categories: "",
+      website: "",
+      description: "",
     },
   });
 
@@ -64,8 +68,9 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
         phone: data.phone,
         address: data.address,
         categories: data.categories ? data.categories.split(',').map(c => c.trim()) : [],
-        status: "approved",
-        type: "buyer_added"
+        website: data.website,
+        description: data.description,
+        status: "approved"
       });
     },
     onSuccess: () => {

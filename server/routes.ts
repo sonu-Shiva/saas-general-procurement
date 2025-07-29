@@ -200,12 +200,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       ];
 
-      // Filter results based on query
-      const filteredVendors = mockVendors.filter(vendor => 
-        vendor.name.toLowerCase().includes(query.toLowerCase()) ||
-        vendor.category.toLowerCase().includes(query.toLowerCase()) ||
-        vendor.description.toLowerCase().includes(query.toLowerCase())
-      );
+      // Filter results based on query - more flexible matching
+      let filteredVendors = mockVendors;
+      
+      if (query) {
+        const searchTerm = query.toLowerCase();
+        filteredVendors = filteredVendors.filter(vendor => 
+          vendor.name.toLowerCase().includes(searchTerm) ||
+          vendor.category.toLowerCase().includes(searchTerm) ||
+          vendor.description.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      if (location && location !== "all") {
+        filteredVendors = filteredVendors.filter(vendor => 
+          vendor.location.toLowerCase().includes(location.toLowerCase())
+        );
+      }
+      
+      if (category && category !== "all") {
+        filteredVendors = filteredVendors.filter(vendor => 
+          vendor.category.toLowerCase().includes(category.toLowerCase())
+        );
+      }
 
       res.json(filteredVendors);
     } catch (error) {
