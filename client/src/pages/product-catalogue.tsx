@@ -822,7 +822,12 @@ export default function ProductCatalogue() {
             </div>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={(e) => {
+              console.log("=== FORM SUBMIT EVENT ===");
+              console.log("Form submit triggered");
+              console.log("Event:", e);
+              form.handleSubmit(onSubmit)(e);
+            }} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -933,6 +938,12 @@ export default function ProductCatalogue() {
                 <Button 
                   type="submit" 
                   disabled={createProductMutation.isPending}
+                  onClick={(e) => {
+                    console.log("=== BUTTON CLICKED DIRECTLY ===");
+                    console.log("Button clicked, form will submit");
+                    console.log("Form values:", form.getValues());
+                    console.log("Form errors:", form.formState.errors);
+                  }}
                 >
                   {createProductMutation.isPending ? "Creating..." : "Create Product"}
                 </Button>
