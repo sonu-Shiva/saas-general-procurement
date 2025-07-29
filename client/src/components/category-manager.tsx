@@ -188,6 +188,11 @@ export default function CategoryManager({
   console.log("Dialog state:", isCreateDialogOpen);
   console.log("Component rendering at:", new Date().toISOString());
   
+  // Alert for immediate feedback
+  if (typeof window !== 'undefined') {
+    console.log("CategoryManager is definitely rendering! Window exists.");
+  }
+  
   // Force dialog open for testing
   useEffect(() => {
     console.log("CategoryManager useEffect - setting up test");
