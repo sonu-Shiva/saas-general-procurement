@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useDjangoAuth } from "@/hooks/useDjangoAuth";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -23,7 +23,7 @@ import {
 import { isUnauthorizedError } from "@/lib/authUtils";
 
 export default function Dashboard() {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated } = useDjangoAuth();
   const { toast } = useToast();
 
   // Redirect to home if not authenticated
@@ -34,9 +34,7 @@ export default function Dashboard() {
         description: "You are logged out. Logging in again...",
         variant: "destructive",
       });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
+      // User will be redirected to login form automatically by the App component
       return;
     }
   }, [isAuthenticated, isLoading, toast]);

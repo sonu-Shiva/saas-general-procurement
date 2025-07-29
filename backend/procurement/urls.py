@@ -8,12 +8,23 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from procurement.apps.users.authentication import (
+    get_current_user, update_user_role, login_user, logout_user, dashboard_stats
+)
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Authentication
+    # Authentication - JWT tokens
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # Authentication - compatibility with frontend
+    path('api/auth/user', get_current_user, name='current_user'),
+    path('api/auth/user/role', update_user_role, name='update_user_role'),
+    path('api/auth/login', login_user, name='login'),
+    path('api/auth/logout', logout_user, name='logout'),
+    path('api/dashboard/stats', dashboard_stats, name='dashboard_stats'),
     
     # App URLs
     path('api/users/', include('procurement.apps.users.urls')),

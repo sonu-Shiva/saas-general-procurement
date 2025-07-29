@@ -1,8 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Users, TrendingUp, Shield, Zap, Globe } from "lucide-react";
+import { useState } from "react";
+import LoginForm from "@/components/login-form";
 
 export default function Landing() {
+  const [showLogin, setShowLogin] = useState(false);
+
+  if (showLogin) {
+    return <LoginForm />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
       {/* Header */}
@@ -16,7 +24,7 @@ export default function Landing() {
               <span className="ml-3 text-xl font-bold text-foreground">SCLEN Procurement</span>
             </div>
             <Button 
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => setShowLogin(true)}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Sign In
@@ -42,7 +50,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg"
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => setShowLogin(true)}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Get Started

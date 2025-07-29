@@ -1,9 +1,8 @@
-from django.contrib.auth.models import AbstractUser
 from django.db import models
 import uuid
 
 
-class User(AbstractUser):
+class User(models.Model):
     """Custom user model for the procurement platform"""
     
     ROLE_CHOICES = [
@@ -24,12 +23,15 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Override username to use email
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['first_name', 'last_name']
-    
     class Meta:
         db_table = 'users'
+        
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} ({self.email})"
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
 
 
 class Organization(models.Model):

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useDjangoAuth } from "@/hooks/useDjangoAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,7 +15,7 @@ import { ShoppingCart, Search, Bot, Bell, Moon, Sun, ChevronDown, User, Settings
 import RoleSelector from "@/components/role-selector";
 
 export default function Header() {
-  const { user } = useAuth();
+  const { user, logout } = useDjangoAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isRoleSelectorOpen, setIsRoleSelectorOpen] = useState(false);
 
@@ -75,14 +75,14 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 p-2">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || "User"} />
+                    <AvatarImage src={user?.profile_image_url || ""} alt={user?.first_name || "User"} />
                     <AvatarFallback>
-                      {user?.firstName?.[0]?.toUpperCase() || "U"}
+                      {user?.first_name?.[0]?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block">
                     <span className="text-sm font-medium">
-                      {user?.firstName || "User"}
+                      {user?.first_name || "User"}
                     </span>
                     {user?.role && (
                       <Badge variant="secondary" className="text-xs ml-2">
@@ -106,7 +106,7 @@ export default function Header() {
                   Change Role
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.location.href = '/api/logout'}>
+                <DropdownMenuItem onClick={logout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </DropdownMenuItem>
