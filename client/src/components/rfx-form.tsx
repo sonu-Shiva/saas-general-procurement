@@ -46,7 +46,7 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
     defaultValues: {
       title: "",
       description: "",
-      type: "RFQ",
+      type: "RFI",
       deadline: "",
       budget: "",
       selectedVendors: [],
@@ -127,34 +127,34 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* RFQ Option */}
+                {/* RFI Option */}
                 <label className={`relative cursor-pointer rounded-lg border-2 p-6 focus:outline-none ${
-                  selectedType === "RFQ" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  selectedType === "RFI" 
+                    ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20" 
                     : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                 }`}>
                   <input
                     type="radio"
-                    value="RFQ"
+                    value="RFI"
                     {...form.register("type")}
                     className="sr-only"
                   />
                   <div className="text-center">
-                    <div className="text-3xl mb-3">💰</div>
+                    <div className="text-3xl mb-3">ℹ️</div>
                     <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                      Request for Quote (RFQ)
+                      Request for Information (RFI)
                     </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Get price quotes for specific products or services with detailed specifications
+                      Gather information about vendors, capabilities, or market research
                     </p>
                     <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                      • Price-focused
-                      • Detailed specifications
-                      • BOM integration
+                      • Information-focused
+                      • Market research
+                      • Vendor capabilities
                     </div>
                   </div>
-                  {selectedType === "RFQ" && (
-                    <div className="absolute top-3 right-3 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                  {selectedType === "RFI" && (
+                    <div className="absolute top-3 right-3 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
                       <div className="w-2 h-2 bg-white rounded-full"></div>
                     </div>
                   )}
@@ -193,34 +193,34 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                   )}
                 </label>
 
-                {/* RFI Option */}
+                {/* RFQ Option */}
                 <label className={`relative cursor-pointer rounded-lg border-2 p-6 focus:outline-none ${
-                  selectedType === "RFI" 
-                    ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20" 
+                  selectedType === "RFQ" 
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
                     : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                 }`}>
                   <input
                     type="radio"
-                    value="RFI"
+                    value="RFQ"
                     {...form.register("type")}
                     className="sr-only"
                   />
                   <div className="text-center">
-                    <div className="text-3xl mb-3">ℹ️</div>
+                    <div className="text-3xl mb-3">💰</div>
                     <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                      Request for Information (RFI)
+                      Request for Quote (RFQ)
                     </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Gather information about vendors, capabilities, or market research
+                      Get price quotes for specific products or services with detailed specifications
                     </p>
                     <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                      • Information-focused
-                      • Market research
-                      • Vendor capabilities
+                      • Price-focused
+                      • Detailed specifications
+                      • BOM integration
                     </div>
                   </div>
-                  {selectedType === "RFI" && (
-                    <div className="absolute top-3 right-3 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                  {selectedType === "RFQ" && (
+                    <div className="absolute top-3 right-3 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                       <div className="w-2 h-2 bg-white rounded-full"></div>
                     </div>
                   )}
@@ -229,14 +229,14 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
 
               {/* Type-specific description */}
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                {selectedType === "RFQ" && (
+                {selectedType === "RFI" && (
                   <div>
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">RFQ Best Practices:</h5>
+                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">RFI Best Practices:</h5>
                     <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>• Provide detailed specifications and quantities</li>
-                      <li>• Include delivery requirements and timelines</li>
-                      <li>• Specify evaluation criteria (price, quality, delivery)</li>
-                      <li>• Attach BOM items for accurate quoting</li>
+                      <li>• Ask specific, focused questions</li>
+                      <li>• Research vendor capabilities and experience</li>
+                      <li>• Gather market intelligence and benchmarks</li>
+                      <li>• Use insights to inform future RFQ/RFP processes</li>
                     </ul>
                   </div>
                 )}
@@ -251,14 +251,14 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                     </ul>
                   </div>
                 )}
-                {selectedType === "RFI" && (
+                {selectedType === "RFQ" && (
                   <div>
-                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">RFI Best Practices:</h5>
+                    <h5 className="font-medium text-gray-900 dark:text-white mb-2">RFQ Best Practices:</h5>
                     <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                      <li>• Ask specific, focused questions</li>
-                      <li>• Research vendor capabilities and experience</li>
-                      <li>• Gather market intelligence and benchmarks</li>
-                      <li>• Use insights to inform future RFQ/RFP processes</li>
+                      <li>• Provide detailed specifications and quantities</li>
+                      <li>• Include delivery requirements and timelines</li>
+                      <li>• Specify evaluation criteria (price, quality, delivery)</li>
+                      <li>• Attach BOM items for accurate quoting</li>
                     </ul>
                   </div>
                 )}

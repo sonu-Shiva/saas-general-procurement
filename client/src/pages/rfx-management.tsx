@@ -100,9 +100,9 @@ export default function RfxManagement() {
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="all">All Types</option>
-              <option value="RFQ">RFQ</option>
-              <option value="RFP">RFP</option>
               <option value="RFI">RFI</option>
+              <option value="RFP">RFP</option>
+              <option value="RFQ">RFQ</option>
             </select>
           </div>
         </div>
