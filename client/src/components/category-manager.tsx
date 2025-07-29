@@ -443,17 +443,23 @@ export default function CategoryManager({
         <ScrollArea className="h-[400px]">
           <div className="p-4 space-y-1">
             {categoryHierarchy.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-500" style={{ position: 'relative', zIndex: 10 }}>
                 <FolderTree className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No categories created yet.</p>
                 {canManageCategories && (
                   <Button 
                     variant="outline" 
                     className="mt-4"
+                    style={{ 
+                      position: 'relative', 
+                      zIndex: 20, 
+                      pointerEvents: 'auto',
+                      border: '2px solid red' // Temporary visual indicator
+                    }}
                     onClick={(e) => {
+                      console.log("=== BUTTON CLICK DETECTED ===");
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log("=== CREATE FIRST CATEGORY BUTTON CLICKED ===");
                       console.log("Event object:", e);
                       console.log("Button element:", e.target);
                       console.log("canManageCategories:", canManageCategories);
@@ -466,6 +472,8 @@ export default function CategoryManager({
                         console.error("ERROR in handleCreateCategory:", error);
                       }
                     }}
+                    onMouseDown={() => console.log("Button mousedown detected")}
+                    onMouseUp={() => console.log("Button mouseup detected")}
                     type="button"
                   >
                     Create your first category
