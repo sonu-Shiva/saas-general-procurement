@@ -181,6 +181,8 @@ export default function CategoryManager({
                               (user as any)?.role === 'sourcing_manager';
   
   console.log("CategoryManager - user role:", (user as any)?.role, "canManageCategories:", canManageCategories);
+  console.log("CategoryManager - user object:", user);
+  console.log("CategoryManager - dialog state:", isCreateDialogOpen);
 
   const { data: categoryHierarchy = [], isLoading } = useQuery<CategoryNode[]>({
     queryKey: ["/api/product-categories/hierarchy"],
@@ -301,14 +303,17 @@ export default function CategoryManager({
 
   const handleCreateCategory = (parentCat?: ProductCategory) => {
     console.log("handleCreateCategory called", { parentCat, canManageCategories, user: (user as any)?.role });
+    console.log("About to open create dialog...");
     setParentCategory(parentCat || null);
     setIsCreateDialogOpen(true);
+    console.log("Dialog state set to open:", true);
     form.reset({
       name: "",
       description: "",
       parentId: parentCat?.id || "",
       sortOrder: 0,
     });
+    console.log("Form reset completed");
   };
 
   const handleEditCategory = (category: ProductCategory) => {
@@ -367,7 +372,10 @@ export default function CategoryManager({
               <CardTitle>Product Categories</CardTitle>
             </div>
             {canManageCategories && (
-              <Button onClick={() => handleCreateCategory()}>
+              <Button onClick={() => {
+                console.log("Add Category button clicked!");
+                handleCreateCategory();
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Category
               </Button>
