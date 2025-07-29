@@ -184,6 +184,7 @@ export default function CategoryManager({
   console.log("CategoryManager - user role:", (user as any)?.role, "canManageCategories:", canManageCategories);
   console.log("CategoryManager - user object:", user);
   console.log("CategoryManager - dialog state:", isCreateDialogOpen);
+  console.log("CategoryManager component mounted and rendering...");
 
   const { data: categoryHierarchy = [], isLoading } = useQuery<CategoryNode[]>({
     queryKey: ["/api/product-categories/hierarchy"],
@@ -373,10 +374,22 @@ export default function CategoryManager({
               <CardTitle>Product Categories</CardTitle>
             </div>
             {canManageCategories && (
-              <Button onClick={() => {
-                console.log("Add Category button clicked!");
-                handleCreateCategory();
-              }}>
+              <Button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("Add Category button clicked! Event:", e);
+                  console.log("canManageCategories:", canManageCategories);
+                  console.log("Current state - isCreateDialogOpen:", isCreateDialogOpen);
+                  try {
+                    handleCreateCategory();
+                    console.log("handleCreateCategory called successfully");
+                  } catch (error) {
+                    console.error("Error in handleCreateCategory:", error);
+                  }
+                }}
+                type="button"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Category
               </Button>
@@ -396,7 +409,12 @@ export default function CategoryManager({
                   <Button 
                     variant="outline" 
                     className="mt-4"
-                    onClick={() => handleCreateCategory()}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log("Create first category button clicked!");
+                      handleCreateCategory();
+                    }}
+                    type="button"
                   >
                     Create your first category
                   </Button>
@@ -423,7 +441,13 @@ export default function CategoryManager({
       </CardContent>
 
       {/* Create Category Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog 
+        open={isCreateDialogOpen} 
+        onOpenChange={(open) => {
+          console.log("Dialog onOpenChange called with:", open);
+          setIsCreateDialogOpen(open);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
