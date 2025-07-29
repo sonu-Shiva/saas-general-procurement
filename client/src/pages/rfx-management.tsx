@@ -42,6 +42,53 @@ export default function RfxManagement() {
     retry: false,
   });
 
+  console.log("RfxManagement render - rfxEvents:", rfxEvents, "isLoading:", isLoading);
+  
+  // Simplified debug version to test rendering
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">RFx Management</h1>
+        
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Debug Information</h2>
+          <div className="space-y-2">
+            <p><strong>Authentication:</strong> {isLoading ? "Loading..." : "Working"}</p>
+            <p><strong>RFx Events Count:</strong> {rfxEvents.length}</p>
+            <p><strong>Loading State:</strong> {isLoading.toString()}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Create RFx Test</h2>
+            <button 
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            >
+              Create RFx
+            </button>
+          </div>
+          
+          {isCreateDialogOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-lg max-w-md w-full mx-4">
+                <h3 className="text-lg font-semibold mb-4">Create RFx Dialog</h3>
+                <p className="mb-4">This is a simple test dialog to verify functionality.</p>
+                <button 
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const filteredRfxEvents = rfxEvents.filter((rfx: RfxEvent) => {
     const matchesSearch = rfx.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          rfx.referenceNo?.toLowerCase().includes(searchQuery.toLowerCase());

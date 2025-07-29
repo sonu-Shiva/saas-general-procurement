@@ -12,6 +12,7 @@ import VendorDiscovery from "@/pages/vendor-discovery";
 import ProductCatalogue from "@/pages/product-catalogue";
 import BomManagement from "@/pages/bom-management";
 import RfxManagement from "@/pages/rfx-management";
+
 import AuctionCenter from "@/pages/auction-center";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Analytics from "@/pages/analytics";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/product-catalogue" component={ProductCatalogue} />
       <Route path="/boms" component={BomManagement} />
       <Route path="/rfx" component={RfxManagement} />
+
       <Route path="/auctions" component={AuctionCenter} />
       <Route path="/purchase-orders" component={PurchaseOrders} />
       <Route path="/analytics" component={Analytics} />
