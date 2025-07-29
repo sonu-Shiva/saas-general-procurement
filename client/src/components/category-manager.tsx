@@ -335,11 +335,16 @@ export default function CategoryManager({
   });
 
   const handleCreateCategory = (parentCat?: ProductCategory) => {
-    console.log("handleCreateCategory called", { parentCat, canManageCategories, user: (user as any)?.role });
+    console.log("=== handleCreateCategory CALLED ===");
+    console.log("Arguments:", { parentCat, canManageCategories, user: (user as any)?.role });
+    console.log("Current dialog state BEFORE:", isCreateDialogOpen);
     console.log("About to open create dialog...");
+    
     setParentCategory(parentCat || null);
     setIsCreateDialogOpen(true);
-    console.log("Dialog state set to open:", true);
+    
+    console.log("setState calls completed - dialog should open now");
+    console.log("Form reset starting...");
     form.reset({
       name: "",
       description: "",
@@ -347,6 +352,11 @@ export default function CategoryManager({
       sortOrder: 0,
     });
     console.log("Form reset completed");
+    
+    // Check state after a moment
+    setTimeout(() => {
+      console.log("Dialog state after 100ms:", isCreateDialogOpen);
+    }, 100);
   };
 
   const handleEditCategory = (category: ProductCategory) => {
