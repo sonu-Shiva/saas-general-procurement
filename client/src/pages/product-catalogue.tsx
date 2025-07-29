@@ -172,7 +172,18 @@ export default function ProductCatalogue() {
   });
 
   const onSubmit = (data: any) => {
-    createProductMutation.mutate(data);
+    // Add the selected category ID to the form data
+    const productData = {
+      ...data,
+      categoryId: selectedCategory?.id || undefined,
+      // Keep legacy category fields for backward compatibility
+      category: selectedCategory?.name || data.category,
+    };
+    
+    console.log("Creating product with data:", productData);
+    console.log("Selected category:", selectedCategory);
+    
+    createProductMutation.mutate(productData);
   };
 
   const onEditSubmit = (data: any) => {
@@ -284,13 +295,26 @@ export default function ProductCatalogue() {
                               <p>{selectedCategory.sortOrder}</p>
                             </div>
                           </div>
-                          <div className="pt-4">
+                          <div className="pt-4 space-y-2">
                             <Button 
                               onClick={() => setActiveTab("products")}
                               className="w-full"
+                              variant="outline"
                             >
                               View Products in this Category
                             </Button>
+                            {isVendor && (
+                              <Button 
+                                onClick={() => {
+                                  setActiveTab("products");
+                                  setIsCreateDialogOpen(true);
+                                }}
+                                className="w-full"
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Product to "{selectedCategory.name}"
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -323,20 +347,29 @@ export default function ProductCatalogue() {
                         </div>
                       )}
                     </div>
-                    <div className="flex space-x-3">
-                      {isVendor && (
-                        <>
-                          <Button variant="outline">
-                            <Tag className="w-4 h-4 mr-2" />
-                            Import
-                          </Button>
-                          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                            <DialogTrigger asChild>
-                              <Button className="bg-primary hover:bg-primary/90">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Product
-                              </Button>
-                            </DialogTrigger>
+                    <div className="flex flex-col space-y-2">
+                      {!selectedCategory && isVendor && (
+                        <p className="text-xs text-muted-foreground text-right">
+                          Select a category first to add products
+                        </p>
+                      )}
+                      <div className="flex space-x-3">
+                        {isVendor && (
+                          <>
+                            <Button variant="outline">
+                              <Tag className="w-4 h-4 mr-2" />
+                              Import
+                            </Button>
+                            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  className="bg-primary hover:bg-primary/90"
+                                  disabled={!selectedCategory}
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  {selectedCategory ? `Add Product to "${selectedCategory.name}"` : "Select Category First"}
+                                </Button>
+                              </DialogTrigger>
                             <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>Add New Product</DialogTitle>
@@ -605,6 +638,7 @@ export default function ProductCatalogue() {
                     </div>
                   )}
                 </div>
+              </div>
               </TabsContent>
             </Tabs>
           </div>
