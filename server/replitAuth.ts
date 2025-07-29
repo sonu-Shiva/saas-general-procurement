@@ -31,8 +31,8 @@ export function getSession() {
     console.log("Using memory store for sessions in development");
     return session({
       secret: process.env.SESSION_SECRET || "dev-session-secret-key-for-sclen-procurement",
-      resave: false, // Don't save session if unmodified
-      saveUninitialized: false, // Don't create session until something stored
+      resave: true, // Save session on each request to maintain state
+      saveUninitialized: true, // Create session even if nothing stored
       rolling: true, // Extend session on each request
       name: 'connect.sid', // Use standard session name
       cookie: {
@@ -56,8 +56,8 @@ export function getSession() {
   return session({
     secret: process.env.SESSION_SECRET || nanoid(32),
     store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     rolling: true, // Extend session on each request
     name: 'connect.sid', // Use standard session name
     cookie: {

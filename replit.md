@@ -10,13 +10,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### RFx Management TypeScript Fixes (January 2025)
+### Session Persistence & RFx Management Fixes (January 2025)
+- **Session Persistence Improved**: Enhanced session configuration to maintain login state across page refreshes
+- **Memory Store Optimization**: Configured development environment with persistent session management
+- **Database Connection Stability**: Resolved WebSocket connection issues with Neon PostgreSQL
 - **Fixed Create RFx Functionality**: Resolved TypeScript errors that were preventing RFx creation
 - **Type Safety Improvements**: Properly typed `rfxEvents` query as `RfxEvent[]` instead of `{}`
 - **Array Method Support**: Fixed filter, length, and other array operations on RFx data
 - **Form Validation Ready**: RFx form component properly structured with Zod schema validation
 - **Backend Integration**: Confirmed RFx storage implementation and API routes are functional
-- **Authentication Required**: RFx creation requires user authentication (working as designed)
+- **Crash Recovery**: Application restart process improved with proper session handling
 
 ### Product Catalogue Access Restriction (January 2025)
 - **Major Architecture Change**: Product Catalogue is now vendor-only access
