@@ -389,7 +389,12 @@ export class DatabaseStorage implements IStorage {
 
   // Product Category operations
   async createProductCategory(category: InsertProductCategory): Promise<ProductCategory> {
-    const [newCategory] = await db.insert(productCategories).values([category]).returning();
+    // Ensure required fields are provided
+    const categoryData = {
+      ...category,
+      code: category.code || `CAT-${Date.now()}`, // Auto-generate code if not provided
+    };
+    const [newCategory] = await db.insert(productCategories).values(categoryData).returning();
     return newCategory;
   }
 

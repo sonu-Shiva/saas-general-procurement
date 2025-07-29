@@ -110,13 +110,18 @@ export default function ProductCatalogue() {
 
   const createProductMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Creating product with data:", data);
       if (selectedCategory) {
         data.categoryId = selectedCategory.id;
         data.category = selectedCategory.name; // Backward compatibility
       }
-      return await apiRequest("POST", "/api/products", data);
+      console.log("Final product data being sent:", data);
+      const result = await apiRequest("POST", "/api/products", data);
+      console.log("Product creation API response:", result);
+      return result;
     },
     onSuccess: () => {
+      console.log("Product created successfully!");
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
@@ -126,6 +131,7 @@ export default function ProductCatalogue() {
       form.reset();
     },
     onError: (error) => {
+      console.error("Product creation error:", error);
       if (isUnauthorizedError(error as Error)) {
         toast({
           title: "Unauthorized",
@@ -139,7 +145,7 @@ export default function ProductCatalogue() {
       }
       toast({
         title: "Error",
-        description: "Failed to create product",
+        description: `Failed to create product: ${(error as Error).message || 'Unknown error'}`,
         variant: "destructive",
       });
     },
@@ -179,6 +185,10 @@ export default function ProductCatalogue() {
   });
 
   const onSubmit = (data: any) => {
+    console.log("=== FORM SUBMIT ===");
+    console.log("Form data:", data);
+    console.log("Selected category:", selectedCategory);
+    
     // Validate required fields
     if (!data.itemName || data.itemName.trim() === "") {
       toast({
@@ -197,6 +207,8 @@ export default function ProductCatalogue() {
       category: selectedCategory?.name || data.category,
     };
     
+    console.log("Final product data:", productData);
+    console.log("Submitting to API...");
     createProductMutation.mutate(productData);
   };
 
