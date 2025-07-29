@@ -811,8 +811,21 @@ export default function ProductCatalogue() {
       </Dialog>
 
       {/* Add Product Dialog - Moved outside all tabs and conditions */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+        console.log("Dialog onOpenChange triggered with:", open);
+        setIsCreateDialogOpen(open);
+      }}>
+        <DialogContent 
+          className="max-w-2xl max-h-[80vh] overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            console.log("Pointer down outside dialog");
+            e.preventDefault(); // Prevent closing on outside click during debugging
+          }}
+          onEscapeKeyDown={(e) => {
+            console.log("Escape key pressed");
+            e.preventDefault(); // Prevent closing on escape during debugging
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Add New Product</DialogTitle>
             <div className="text-sm text-muted-foreground">
@@ -826,6 +839,7 @@ export default function ProductCatalogue() {
             <form onSubmit={(e) => {
               console.log("=== FORM SUBMIT EVENT ===");
               console.log("Form submit triggered");
+              e.preventDefault(); // Prevent default form submission
               console.log("Event:", e);
               form.handleSubmit(onSubmit)(e);
             }} className="space-y-4">
@@ -948,6 +962,8 @@ export default function ProductCatalogue() {
                   disabled={createProductMutation.isPending}
                   onClick={(e) => {
                     console.log("=== BUTTON CLICKED DIRECTLY ===");
+                    e.preventDefault();
+                    e.stopPropagation();
                     console.log("Button clicked!");
                     console.log("Form values:", form.getValues());
                     console.log("Form errors:", form.formState.errors);
