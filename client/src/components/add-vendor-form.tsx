@@ -57,7 +57,7 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
   // Create manual vendor mutation
   const createVendorMutation = useMutation({
     mutationFn: async (data: ManualVendorData) => {
-      return await apiRequest("/api/vendors", "POST", {
+      return await apiRequest("POST", "/api/vendors", {
         companyName: data.companyName,
         contactPerson: data.contactPerson,
         email: data.email,
@@ -89,7 +89,8 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
   // AI vendor discovery mutation
   const discoverVendorsMutation = useMutation({
     mutationFn: async (searchData: { query: string; location?: string; category?: string }) => {
-      return await apiRequest("/api/vendors/discover", "POST", searchData);
+      const response = await apiRequest("POST", "/api/vendors/discover", searchData);
+      return await response.json();
     },
     onSuccess: (data: any) => {
       setDiscoveredVendors(Array.isArray(data) ? data : []);
@@ -123,7 +124,7 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
 
   const addDiscoveredVendor = async (vendor: any) => {
     try {
-      await apiRequest("/api/vendors", "POST", {
+      await apiRequest("POST", "/api/vendors", {
         companyName: vendor.name,
         contactPerson: "Contact Person",
         email: vendor.email,
