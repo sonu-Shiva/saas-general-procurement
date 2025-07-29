@@ -169,39 +169,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { query, location, category } = req.body;
       
-      // Mock AI discovery for now - in production, this would call an AI service
-      const mockVendors = [
+      // Comprehensive vendor database for testing - will be replaced with Perplexity API later
+      const testVendors = [
+        // Electronics & Technology
         {
-          name: "TechSupply Solutions",
-          category: category || "Electronics",
-          email: "contact@techsupply.com",
-          phone: "+91 98765 43210",
-          location: location || "Mumbai, India",
-          website: "https://techsupply.com",
-          description: "Leading supplier of electronic components and IT hardware with 15+ years experience.",
+          name: "TechFlow Electronics",
+          category: "Electronics",
+          email: "sales@techflow.co.in",
+          phone: "+91-9876543210",
+          location: "Mumbai, Maharashtra",
+          website: "www.techflow.co.in",
+          description: "Leading supplier of semiconductors, PCBs, and electronic components with ISO 9001 certification.",
         },
         {
-          name: "Global Manufacturing Co",
-          category: category || "Manufacturing", 
-          email: "sales@globalmanuf.com",
-          phone: "+91 87654 32109",
-          location: location || "Chennai, India",
-          website: "https://globalmanuf.com",
-          description: "Specialized in precision manufacturing and industrial equipment supply.",
+          name: "Digital Components Hub",
+          category: "Electronics",
+          email: "info@digitalcomponents.in",
+          phone: "+91-8765432109",
+          location: "Bangalore, Karnataka",
+          website: "www.digitalcomponents.in",
+          description: "Specialized in microcontrollers, sensors, and IoT components for industrial applications.",
+        },
+        // Manufacturing & Industrial
+        {
+          name: "Precision Manufacturing Ltd",
+          category: "Manufacturing",
+          email: "orders@precisionmfg.com",
+          phone: "+91-9123456789",
+          location: "Chennai, Tamil Nadu",
+          website: "www.precisionmfg.com",
+          description: "Automotive parts manufacturer with TS 16949 certification and 20+ years experience.",
         },
         {
-          name: "ServiceFirst Ltd",
-          category: category || "Services",
-          email: "info@servicefirst.com",
-          phone: "+91 76543 21098",
-          location: location || "Bangalore, India", 
-          website: "https://servicefirst.com",
-          description: "Professional services company offering consulting, maintenance, and support solutions.",
+          name: "Industrial Systems Co",
+          category: "Manufacturing",
+          email: "contact@industrialsystems.in",
+          phone: "+91-7654321098",
+          location: "Pune, Maharashtra",
+          website: "www.industrialsystems.in",
+          description: "Heavy machinery and industrial equipment supplier for construction and mining sectors.",
+        },
+        // Services & Consulting
+        {
+          name: "Business Solutions Inc",
+          category: "Services",
+          email: "hello@businesssolutions.co.in",
+          phone: "+91-6543210987",
+          location: "Delhi, NCR",
+          website: "www.businesssolutions.co.in",
+          description: "IT consulting, digital transformation, and business process outsourcing services.",
+        },
+        {
+          name: "Professional Services Group",
+          category: "Services",
+          email: "info@proservices.in",
+          phone: "+91-5432109876",
+          location: "Hyderabad, Telangana",
+          website: "www.proservices.in",
+          description: "Financial consulting, legal services, and compliance management for enterprises.",
+        },
+        // Additional categories
+        {
+          name: "Green Energy Solutions",
+          category: "Energy",
+          email: "sales@greenenergy.co.in",
+          phone: "+91-4321098765",
+          location: "Ahmedabad, Gujarat",
+          website: "www.greenenergy.co.in",
+          description: "Solar panels, wind energy systems, and renewable energy solutions provider.",
+        },
+        {
+          name: "LogiTech Supply Chain",
+          category: "Logistics",
+          email: "operations@logitechsc.com",
+          phone: "+91-3210987654",
+          location: "Kolkata, West Bengal",
+          website: "www.logitechsc.com",
+          description: "End-to-end supply chain management, warehousing, and transportation services.",
         }
       ];
 
       // Filter results based on query - more flexible matching
-      let filteredVendors = mockVendors;
+      let filteredVendors = testVendors;
       
       if (query) {
         const searchTerm = query.toLowerCase();
