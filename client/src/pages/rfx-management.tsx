@@ -90,8 +90,8 @@ export default function RfxManagement() {
             {/* Page Header */}
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">RFx Management</h1>
-                <p className="text-muted-foreground">Manage Request for Information, Proposals, and Quotations</p>
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white">RFx Management</h1>
+                <p className="text-slate-600 dark:text-slate-300">Manage Request for Information, Proposals, and Quotations</p>
               </div>
               <div className="flex space-x-3">
                 <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
@@ -388,18 +388,18 @@ export default function RfxManagement() {
                     </table>
                   </div>
                 ) : (
-                  <div className="p-12 text-center">
+                  <div className="p-12 text-center bg-white dark:bg-slate-800">
                     <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-foreground mb-2">No RFx events found</h3>
                     <p className="text-muted-foreground mb-6">
                       {searchQuery || typeFilter !== "all" || statusFilter !== "all"
                         ? "Try adjusting your search criteria or filters"
-                        : "Start by creating your first RFx event"
+                        : "Start by creating your first RFx event to get started with procurement requests"
                       }
                     </p>
                     {!searchQuery && typeFilter === "all" && statusFilter === "all" && (
                       <div className="flex justify-center space-x-3">
-                        <Button onClick={() => setIsCreateDialogOpen(true)}>
+                        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-primary hover:bg-primary/90">
                           <Plus className="w-4 h-4 mr-2" />
                           Create RFx
                         </Button>
