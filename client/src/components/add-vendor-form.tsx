@@ -161,11 +161,11 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="manual" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Manual Entry
+            Direct Registration
           </TabsTrigger>
           <TabsTrigger value="ai" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
-            AI Discovery
+            AI Vendor Discovery
           </TabsTrigger>
         </TabsList>
 
@@ -173,7 +173,7 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
         <TabsContent value="manual" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Add Vendor Manually</CardTitle>
+              <CardTitle>Register Vendor Directly</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={form.handleSubmit(onManualSubmit)} className="space-y-4">

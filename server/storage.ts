@@ -68,6 +68,7 @@ export interface IStorage {
   getVendor(id: string): Promise<Vendor | undefined>;
   getVendors(filters?: { status?: string; category?: string; search?: string }): Promise<Vendor[]>;
   updateVendor(id: string, updates: Partial<InsertVendor>): Promise<Vendor>;
+  deleteVendor(id: string): Promise<boolean>;
   
   // Product Category operations
   createProductCategory(category: InsertProductCategory): Promise<ProductCategory>;
@@ -218,6 +219,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(vendors.id, id))
       .returning();
     return vendor;
+  }
+
+  async deleteVendor(id: string): Promise<boolean> {
+    const result = await db.delete(vendors).where(eq(vendors.id, id));
+    return result.rowCount > 0;
   }
   
   // Product operations

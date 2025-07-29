@@ -163,7 +163,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Removed duplicate - vendor creation is handled above with proper validation
+  // Delete vendor endpoint
+  app.delete("/api/vendors/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const success = await storage.deleteVendor(id);
+      if (!success) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+
+      res.json({ message: "Vendor deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      res.status(500).json({ message: "Failed to delete vendor" });
+    }
+  });
 
   app.post("/api/vendors/discover", isAuthenticated, async (req, res) => {
     try {

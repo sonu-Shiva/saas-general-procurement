@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
@@ -9,12 +11,18 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Plus, Building2, Mail, Phone, MapPin, Globe, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Search, Plus, Building2, Mail, Phone, MapPin, Globe, MoreVertical, Trash2, UserX } from "lucide-react";
 
 export default function VendorManagement() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
+  const [vendorToDelete, setVendorToDelete] = useState<string | null>(null);
+  const [vendorToDisengage, setVendorToDisengage] = useState<string | null>(null);
 
   // Fetch vendors
   const { data: vendors = [], isLoading, error } = useQuery({
@@ -45,12 +53,58 @@ export default function VendorManagement() {
 
   const getTypeBadge = (type: string) => {
     const typeConfig = {
-      buyer_added: { variant: "default" as const, label: "Manual" },
+      buyer_added: { variant: "default" as const, label: "Direct Entry" },
       ai_discovered: { variant: "secondary" as const, label: "AI Discovered" },
       self_registered: { variant: "outline" as const, label: "Self Registered" },
     };
     return typeConfig[type as keyof typeof typeConfig] || typeConfig.buyer_added;
   };
+
+  // Delete vendor mutation
+  const deleteVendorMutation = useMutation({
+    mutationFn: async (vendorId: string) => {
+      return await apiRequest("DELETE", `/api/vendors/${vendorId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
+      toast({
+        title: "Vendor Deleted",
+        description: "The vendor has been successfully removed from your network.",
+      });
+      setVendorToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete vendor. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Disengage vendor mutation (change status to inactive)
+  const disengageVendorMutation = useMutation({
+    mutationFn: async (vendorId: string) => {
+      return await apiRequest("PATCH", `/api/vendors/${vendorId}`, {
+        status: "inactive"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
+      toast({
+        title: "Vendor Disengaged",
+        description: "The vendor has been marked as inactive.",
+      });
+      setVendorToDisengage(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to disengage vendor. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="flex h-screen bg-background">
@@ -133,9 +187,30 @@ export default function VendorManagement() {
                             <Badge {...getTypeBadge(vendor.type)}>{getTypeBadge(vendor.type).label}</Badge>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setVendorToDisengage(vendor.id)}
+                              className="text-orange-600 hover:text-orange-700"
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Disengage Vendor
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setVendorToDelete(vendor.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Vendor
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -211,6 +286,48 @@ export default function VendorManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Vendor Confirmation Dialog */}
+      <AlertDialog open={!!vendorToDelete} onOpenChange={() => setVendorToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Vendor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this vendor? This action cannot be undone and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => vendorToDelete && deleteVendorMutation.mutate(vendorToDelete)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Vendor
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Disengage Vendor Confirmation Dialog */}
+      <AlertDialog open={!!vendorToDisengage} onOpenChange={() => setVendorToDisengage(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disengage Vendor</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the vendor as inactive in your network. You can reactivate them later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => vendorToDisengage && disengageVendorMutation.mutate(vendorToDisengage)}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Disengage Vendor
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
