@@ -100,41 +100,43 @@ function CategoryTreeItem({
             <Badge variant="secondary" className="text-xs">{category.code}</Badge>
           </div>
           
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddChild(category);
-              }}
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(category);
-              }}
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-red-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(category);
-              }}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
+          {isVendor && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddChild(category);
+                }}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(category);
+                }}
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-red-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(category);
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       
@@ -172,8 +174,11 @@ export default function CategoryManager({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if user is a vendor (can create/manage categories)
-  const isVendor = (user as any)?.role === 'vendor';
+  // Check if user can create/manage categories (both vendors and buyers can create categories)
+  const canManageCategories = (user as any)?.role === 'vendor' || 
+                              (user as any)?.role === 'buyer_admin' || 
+                              (user as any)?.role === 'buyer_user' || 
+                              (user as any)?.role === 'sourcing_manager';
 
   const { data: categoryHierarchy = [], isLoading } = useQuery<CategoryNode[]>({
     queryKey: ["/api/product-categories/hierarchy"],
@@ -349,10 +354,12 @@ export default function CategoryManager({
               <FolderTree className="h-5 w-5" />
               <CardTitle>Product Categories</CardTitle>
             </div>
-            <Button onClick={() => handleCreateCategory()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Category
-            </Button>
+            {canManageCategories && (
+              <Button onClick={() => handleCreateCategory()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Category
+              </Button>
+            )}
           </div>
         </CardHeader>
       )}
@@ -364,13 +371,15 @@ export default function CategoryManager({
               <div className="text-center py-8 text-gray-500">
                 <FolderTree className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No categories created yet.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => handleCreateCategory()}
-                >
-                  Create your first category
-                </Button>
+                {canManageCategories && (
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => handleCreateCategory()}
+                  >
+                    Create your first category
+                  </Button>
+                )}
               </div>
             ) : (
               categoryHierarchy.map((category) => (
@@ -383,7 +392,7 @@ export default function CategoryManager({
                     onAddChild={handleCreateCategory}
                     onSelect={onCategorySelect}
                     selectedCategoryId={selectedCategoryId}
-                    isVendor={true}
+                    isVendor={canManageCategories}
                   />
                 </div>
               ))
