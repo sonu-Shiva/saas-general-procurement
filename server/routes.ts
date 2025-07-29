@@ -179,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Build search prompt based on user input
-      let searchPrompt = "Find me professional vendors and suppliers";
+      let searchPrompt = "Find professional vendors and suppliers";
       
       if (query && query.trim()) {
         searchPrompt += ` specializing in ${query.trim()}`;
@@ -191,9 +191,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (location && location !== "all" && location.trim()) {
         searchPrompt += ` located in ${location}`;
+      } else {
+        searchPrompt += " in India";
       }
       
-      searchPrompt += ". For each vendor, provide: company name, contact email, phone number, full address, website, business category, and detailed description of their services/products. Focus on established businesses with good reputation.";
+      searchPrompt += `. Please format the response as follows for each vendor:
+
+**[Company Name]**
+- Contact Email: [email address]  
+- Phone Number: [phone number]
+- Address: [full address]
+- Website: [website URL]
+- Description: [brief description of services/products]
+
+Focus on established businesses with verifiable contact information.`;
 
       console.log("Perplexity search prompt:", searchPrompt);
 
@@ -274,59 +285,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const vendors = [];
     
     try {
-      // Try to extract vendor information from the AI response
-      // This is a simplified parser - in production, you'd want more robust parsing
-      const lines = aiResponse.split('\n');
-      let currentVendor: any = {};
+      console.log("Parsing AI response...");
       
-      for (const line of lines) {
-        const trimmedLine = line.trim();
+      // Look for table format or structured vendor information
+      const lines = aiResponse.split('\n');
+      let currentVendor: any = null;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
         
-        // Look for company names (usually start with numbers or bullets)
-        if (trimmedLine.match(/^\d+\.|^[-*]\s*/) && trimmedLine.length > 10) {
-          if (currentVendor.name) {
+        // Look for vendor names in markdown format like **VendorName** or ### VendorName
+        const nameMatch = line.match(/^\*\*([^*]+)\*\*|^###?\s*(.+)|^\d+\.\s*\*\*([^*]+)\*\*/);
+        if (nameMatch) {
+          // If we have a current vendor, save it before starting a new one
+          if (currentVendor && currentVendor.name && currentVendor.name !== "Company Name") {
             vendors.push(currentVendor);
           }
-          currentVendor = {
-            name: trimmedLine.replace(/^\d+\.|^[-*]\s*/, '').trim(),
-            category: "Business",
-            email: "contact@example.com",
-            phone: "+91-XXXXXXXXXX",
-            location: "India",
-            website: "www.example.com",
-            description: "Professional services provider"
-          };
+          
+          const vendorName = (nameMatch[1] || nameMatch[2] || nameMatch[3]).trim();
+          if (vendorName && vendorName !== "Company Name" && vendorName.length > 2) {
+            currentVendor = {
+              name: vendorName,
+              category: "Business Services",
+              email: "",
+              phone: "",
+              location: "",
+              website: "",
+              description: ""
+            };
+          }
         }
         
-        // Extract email addresses
-        const emailMatch = trimmedLine.match(/[\w\.-]+@[\w\.-]+\.\w+/);
-        if (emailMatch && currentVendor.name) {
-          currentVendor.email = emailMatch[0];
-        }
-        
-        // Extract phone numbers
-        const phoneMatch = trimmedLine.match(/[\+]?[\d\s\-\(\)]{10,}/);
-        if (phoneMatch && currentVendor.name) {
-          currentVendor.phone = phoneMatch[0].trim();
-        }
-        
-        // Extract websites
-        const websiteMatch = trimmedLine.match(/(?:www\.|https?:\/\/)[\w\.-]+\.\w+/);
-        if (websiteMatch && currentVendor.name) {
-          currentVendor.website = websiteMatch[0];
+        if (currentVendor) {
+          // Extract specific information patterns
+          if (line.includes("Contact Email:") || line.includes("Email:")) {
+            const emailMatch = line.match(/[\w\.-]+@[\w\.-]+\.\w+/);
+            if (emailMatch) {
+              currentVendor.email = emailMatch[0];
+            }
+          }
+          
+          if (line.includes("Phone:") || line.includes("Phone Number:")) {
+            const phoneMatch = line.match(/[\+]?[\d\s\-\(\)]{8,}/);
+            if (phoneMatch) {
+              currentVendor.phone = phoneMatch[0].trim();
+            }
+          }
+          
+          if (line.includes("Address:") || line.includes("Location:")) {
+            const addressMatch = line.match(/(?:Address:|Location:)\s*(.+)/);
+            if (addressMatch) {
+              currentVendor.location = addressMatch[1].trim();
+            }
+          }
+          
+          if (line.includes("Website:") || line.includes("www.") || line.includes("http")) {
+            const websiteMatch = line.match(/(?:www\.|https?:\/\/)[\w\.-]+\.\w+(?:\/[\w\.-]*)?/);
+            if (websiteMatch) {
+              currentVendor.website = websiteMatch[0];
+            }
+          }
+          
+          if (line.includes("Description:") || (line.length > 50 && !line.includes("|") && !line.includes("**"))) {
+            if (line.includes("Description:")) {
+              const descMatch = line.match(/Description:\s*(.+)/);
+              if (descMatch) {
+                currentVendor.description = descMatch[1].trim();
+              }
+            } else if (line.length > 50 && currentVendor.description.length < 20) {
+              currentVendor.description = line;
+            }
+          }
         }
       }
       
-      // Add the last vendor
-      if (currentVendor.name) {
+      // Add the last vendor if it exists
+      if (currentVendor && currentVendor.name && currentVendor.name !== "Company Name") {
         vendors.push(currentVendor);
       }
       
+      // Clean up vendors with missing critical information
+      const validVendors = vendors.filter(vendor => {
+        return vendor.name && 
+               vendor.name.length > 2 && 
+               vendor.name !== "Company Name" &&
+               !vendor.name.includes("Contact Email");
+      }).map(vendor => ({
+        ...vendor,
+        email: vendor.email || "info@company.com",
+        phone: vendor.phone || "+91-XXXXXXXXXX", 
+        location: vendor.location || "India",
+        website: vendor.website || "www.company.com",
+        description: vendor.description || `Professional ${vendor.category.toLowerCase()} provider`,
+        category: vendor.category || "Business Services"
+      }));
+      
+      console.log(`Parsed ${validVendors.length} valid vendors`);
+      return validVendors.slice(0, 8);
+      
     } catch (error) {
       console.error("Error parsing AI response:", error);
+      return [];
     }
-    
-    return vendors.slice(0, 10); // Limit to 10 results
   }
 
   // Product routes - Only vendors can create products
