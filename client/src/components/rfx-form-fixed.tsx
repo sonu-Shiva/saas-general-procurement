@@ -118,9 +118,13 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* RFI Option */}
-              <Card className={`cursor-pointer ${selectedType === "RFI" ? "ring-2 ring-primary" : ""}`}>
+              <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                selectedType === "RFI" 
+                  ? "ring-2 ring-primary bg-primary/5 border-primary" 
+                  : "hover:border-primary/50"
+              }`}>
                 <CardContent className="p-6">
-                  <label className="cursor-pointer">
+                  <label className="cursor-pointer block">
                     <input
                       type="radio"
                       value="RFI"
@@ -129,7 +133,9 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                     />
                     <div className="text-center space-y-3">
                       <div className="text-3xl">ℹ️</div>
-                      <h4 className="text-lg font-medium text-foreground">
+                      <h4 className={`text-lg font-semibold ${
+                        selectedType === "RFI" ? "text-primary" : "text-foreground"
+                      }`}>
                         Request for Information (RFI)
                       </h4>
                       <p className="text-sm text-muted-foreground">
@@ -141,9 +147,13 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
               </Card>
 
               {/* RFP Option */}
-              <Card className={`cursor-pointer ${selectedType === "RFP" ? "ring-2 ring-primary" : ""}`}>
+              <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                selectedType === "RFP" 
+                  ? "ring-2 ring-primary bg-primary/5 border-primary" 
+                  : "hover:border-primary/50"
+              }`}>
                 <CardContent className="p-6">
-                  <label className="cursor-pointer">
+                  <label className="cursor-pointer block">
                     <input
                       type="radio"
                       value="RFP"
@@ -152,7 +162,9 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                     />
                     <div className="text-center space-y-3">
                       <div className="text-3xl">📋</div>
-                      <h4 className="text-lg font-medium text-foreground">
+                      <h4 className={`text-lg font-semibold ${
+                        selectedType === "RFP" ? "text-primary" : "text-foreground"
+                      }`}>
                         Request for Proposal (RFP)
                       </h4>
                       <p className="text-sm text-muted-foreground">
@@ -164,9 +176,13 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
               </Card>
 
               {/* RFQ Option */}
-              <Card className={`cursor-pointer ${selectedType === "RFQ" ? "ring-2 ring-primary" : ""}`}>
+              <Card className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                selectedType === "RFQ" 
+                  ? "ring-2 ring-primary bg-primary/5 border-primary" 
+                  : "hover:border-primary/50"
+              }`}>
                 <CardContent className="p-6">
-                  <label className="cursor-pointer">
+                  <label className="cursor-pointer block">
                     <input
                       type="radio"
                       value="RFQ"
@@ -175,7 +191,9 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                     />
                     <div className="text-center space-y-3">
                       <div className="text-3xl">💰</div>
-                      <h4 className="text-lg font-medium text-foreground">
+                      <h4 className={`text-lg font-semibold ${
+                        selectedType === "RFQ" ? "text-primary" : "text-foreground"
+                      }`}>
                         Request for Quote (RFQ)
                       </h4>
                       <p className="text-sm text-muted-foreground">
