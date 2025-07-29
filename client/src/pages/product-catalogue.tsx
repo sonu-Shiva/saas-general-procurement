@@ -244,6 +244,14 @@ export default function ProductCatalogue() {
                 <h1 className="text-3xl font-bold text-foreground">Product Catalogue</h1>
                 <p className="text-muted-foreground">Manage your centralized product and service catalogue with hierarchical categories</p>
               </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Your Role</p>
+                  <Badge variant={isVendor ? "default" : "secondary"} className="text-sm">
+                    {isVendor ? "Vendor" : isBuyer ? "Buyer" : "Unknown"}
+                  </Badge>
+                </div>
+              </div>
             </div>
 
             {/* Tabs for Category Management and Product Listing */}
@@ -315,6 +323,13 @@ export default function ProductCatalogue() {
                                 Add Product to "{selectedCategory.name}"
                               </Button>
                             )}
+                            {isBuyer && (
+                              <div className="text-center text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
+                                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>You're viewing as a buyer. Only vendors can add products to categories.</p>
+                                <p className="text-xs mt-1">Contact vendors to populate this category with products.</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -348,6 +363,12 @@ export default function ProductCatalogue() {
                       )}
                     </div>
                     <div className="flex flex-col space-y-2">
+                      {/* Role-based messaging */}
+                      {isBuyer && (
+                        <p className="text-xs text-muted-foreground text-right">
+                          Viewing as buyer - contact vendors to add products
+                        </p>
+                      )}
                       {!selectedCategory && isVendor && (
                         <p className="text-xs text-muted-foreground text-right">
                           Select a category first to add products
@@ -635,6 +656,23 @@ export default function ProductCatalogue() {
                           </CardContent>
                         </Card>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Show message for buyers when no products */}
+                  {isBuyer && filteredProducts.length === 0 && (
+                    <div className="text-center py-12">
+                      <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No products found</h3>
+                      <p className="text-muted-foreground mb-4">
+                        {selectedCategory 
+                          ? `No products available in "${selectedCategory.name}" category yet.` 
+                          : "No products available yet. Products will appear here once vendors add them."
+                        }
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Contact your vendors to add products to the catalog.
+                      </p>
                     </div>
                   )}
                 </div>
