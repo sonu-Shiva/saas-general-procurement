@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 const manualVendorSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
   email: z.string().email("Valid email is required"),
-  phone: z.string().min(1, "Phone number is required"),
+  phone: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
   contactPerson: z.string().min(1, "Contact person is required"),
   address: z.string().optional(),
   categories: z.string().optional(),
@@ -70,6 +70,7 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
         address: data.address,
         categories: data.categories ? data.categories.split(',').map(c => c.trim()) : [],
         website: data.website,
+        logoUrl: data.logoUrl,
         description: data.description,
         status: "approved"
       });
@@ -220,11 +221,13 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Label htmlFor="phone">Phone Number * (10 digits only)</Label>
                     <Input
                       id="phone"
                       {...form.register("phone")}
-                      placeholder="+91 98765 43210"
+                      placeholder="9876543210"
+                      maxLength={10}
+                      type="tel"
                     />
                     {form.formState.errors.phone && (
                       <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
@@ -253,12 +256,56 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="logoUrl">Company Logo URL (Optional)</Label>
-                  <Input
-                    id="logoUrl"
-                    {...form.register("logoUrl")}
-                    placeholder="https://company.com/logo.png"
-                  />
+                  <Label htmlFor="logoFile">Company Logo (Optional)</Label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                    <Input
+                      id="logoFile"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const result = event.target?.result as string;
+                            form.setValue("logoUrl", result);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => document.getElementById("logoFile")?.click()}
+                    >
+                      {form.watch("logoUrl") ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <img 
+                            src={form.watch("logoUrl")} 
+                            alt="Company logo preview"
+                            className="w-16 h-16 object-cover rounded-lg border-2 border-border"
+                          />
+                          <p className="text-sm text-foreground font-medium">
+                            Logo uploaded successfully
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Click to change image
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <Building2 className="h-8 w-8 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            Click to upload company logo
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            PNG, JPG, GIF up to 5MB
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
