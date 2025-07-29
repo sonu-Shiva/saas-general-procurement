@@ -266,6 +266,16 @@ export default function AddVendorForm({ onClose, onSuccess }: AddVendorFormProps
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          // Check file size (5MB limit)
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast({
+                              title: "File too large",
+                              description: "Please select an image smaller than 5MB",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          
                           const reader = new FileReader();
                           reader.onload = (event) => {
                             const result = event.target?.result as string;

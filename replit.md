@@ -24,6 +24,9 @@ Preferred communication style: Simple, everyday language.
 - **Manual Vendor Entry**: Complete form with company name, contact person, email, phone, address, website, description, and categories
 - **Enhanced AI Vendor Discovery**: Advanced search with comprehensive test database covering Electronics, Manufacturing, Services, Energy, and Logistics sectors
 - **Vendor Management Page**: Complete vendor listing with search, filtering, and detailed vendor cards showing proper company names
+- **Professional Logo Support**: Added company logo upload with file chooser, image preview, and database storage
+- **Phone Number Validation**: Enforced exactly 10-digit phone number format (no country codes)
+- **File Upload System**: Professional drag-and-drop file upload with 5MB limit and size validation
 - **Consistent UI Styling**: Applied 2px borders across all form elements for visual consistency
 - **API Endpoints**: Added POST /api/vendors and POST /api/vendors/discover endpoints for vendor operations
 - **Removed Duplication**: Eliminated standalone vendor discovery page to avoid confusion and streamline user experience
