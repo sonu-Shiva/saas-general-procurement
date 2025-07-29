@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
-import RfxForm from "@/components/rfx-form";
+import RfxForm from "@/components/rfx-form-fixed";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,14 +99,19 @@ export default function RfxManagement() {
                       Create RFx
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
+                  <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+                    <DialogHeader className="flex-shrink-0">
                       <DialogTitle>Create New RFx Request</DialogTitle>
                     </DialogHeader>
-                    <RfxForm onSuccess={() => {
-                      setIsCreateDialogOpen(false);
-                      queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
-                    }} />
+                    <div className="flex-1 overflow-y-auto pr-2">
+                      <RfxForm 
+                        onClose={() => setIsCreateDialogOpen(false)}
+                        onSuccess={() => {
+                          setIsCreateDialogOpen(false);
+                          queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+                        }} 
+                      />
+                    </div>
                   </DialogContent>
                 </Dialog>
                 <Button variant="outline" onClick={() => setIsAiDialogOpen(true)}>

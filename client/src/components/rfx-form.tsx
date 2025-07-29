@@ -82,40 +82,26 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {currentTab === "type" ? "Create RFx" : `Create ${selectedType}`}
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              ✕
-            </button>
-          </div>
-          
-          {/* Tab Navigation */}
-          <div className="flex space-x-1 mt-4">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setCurrentTab(tab.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  currentTab === tab.id
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="w-full">
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 mb-6 border-b border-border pb-4">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setCurrentTab(tab.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              currentTab === tab.id
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="p-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Type Selection Tab */}
           {currentTab === "type" && (
             <div className="space-y-6">
@@ -270,74 +256,60 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
 
           {/* Basic Info Tab */}
           {currentTab === "basic" && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
                   Title *
                 </label>
                 <input
                   type="text"
                   {...form.register("title")}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Enter RFx title"
                 />
                 {form.formState.errors.title && (
-                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+                  <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Type *
-                </label>
-                <select
-                  {...form.register("type")}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="RFQ">Request for Quote (RFQ)</option>
-                  <option value="RFP">Request for Proposal (RFP)</option>
-                  <option value="RFI">Request for Information (RFI)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
                   Description *
                 </label>
                 <textarea
                   {...form.register("description")}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Describe the RFx requirements"
                 />
                 {form.formState.errors.description && (
-                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+                  <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
                     Deadline *
                   </label>
                   <input
                     type="datetime-local"
                     {...form.register("deadline")}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   {form.formState.errors.deadline && (
-                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.deadline.message}</p>
+                    <p className="text-sm text-destructive">{form.formState.errors.deadline.message}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
                     Budget (Optional)
                   </label>
                   <input
                     type="text"
                     {...form.register("budget")}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="₹ Budget range"
                   />
                 </div>
@@ -515,7 +487,6 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
             </div>
           </div>
         </form>
-      </div>
     </div>
   );
 }
