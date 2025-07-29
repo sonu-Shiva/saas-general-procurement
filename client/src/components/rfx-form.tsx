@@ -86,7 +86,9 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
       <div className="bg-white dark:bg-slate-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create RFx</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {currentTab === "type" ? "Create RFx" : `Create ${selectedType}`}
+            </h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -508,7 +510,7 @@ export default function RfxForm({ onClose, onSuccess }: RfxFormProps) {
                 disabled={createRfxMutation.isPending}
                 className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {createRfxMutation.isPending ? "Creating..." : "Create RFx"}
+                {createRfxMutation.isPending ? "Creating..." : `Create ${selectedType}`}
               </button>
             </div>
           </div>

@@ -27,6 +27,13 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced role-based restrictions**: Clear access control with informative redirect messages
 - **Improved user experience**: Buyers guided to appropriate sections (BOM Management, Vendor Discovery)
 
+### Dynamic RFx Form Interface (January 2025)
+- **Updated RFx Creation Workflow**: Form now dynamically updates based on selected type
+- **Type-Specific Labels**: Header and buttons change to "Create RFI", "Create RFP", or "Create RFQ"
+- **Improved User Experience**: Clear indication of what type of request is being created
+- **Logical Type Ordering**: Reordered to RFI → RFP → RFQ following procurement progression
+- **Adaptive Form Content**: Fields, placeholders, and help text adapt to the selected request type
+
 ### Role-Based Access Control (December 2024)
 - Implemented comprehensive role-based differentiation:
   - **Vendors/Sellers**: Full product catalogue access - create categories and products

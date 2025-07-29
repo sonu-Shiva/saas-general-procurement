@@ -41,7 +41,7 @@ export default function RfxManagement() {
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
           >
             <span>+</span>
-            <span>Create RFx</span>
+            <span>Create Request</span>
           </button>
         </div>
 
@@ -128,7 +128,7 @@ export default function RfxManagement() {
                 onClick={() => setIsCreateDialogOpen(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
               >
-                Create First RFx
+                Create First Request
               </button>
             </div>
           ) : (
