@@ -2,13 +2,21 @@
 
 ## Overview
 
-This is a modern, full-stack procurement management platform built with React and Express.js. The application provides comprehensive tools for managing vendors, products, RFx processes, auctions, and purchase orders with AI-powered features and real-time capabilities.
+This is a modern, full-stack procurement management platform with a React frontend and Django REST API backend. The application provides comprehensive tools for managing vendors, products, RFx processes, auctions, and purchase orders with AI-powered features and real-time capabilities.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
+
+### Backend Migration to Django (July 2025)
+- **Complete Backend Migration**: Successfully migrated from Node.js/Express to Python 3.12 with Django REST Framework
+- **Django Project Structure**: Created modular Django apps for users, vendors, products, boms, rfx, auctions, purchase_orders, approvals, and notifications
+- **Database Migration**: Seamlessly migrated existing PostgreSQL schema using Django's fake migration system
+- **API Endpoints**: All procurement API endpoints converted to Django REST Framework with proper authentication
+- **Maintained Functionality**: All existing features preserved during migration including role-based access and business logic
+- **Authentication Integration**: Django REST Framework JWT authentication ready for frontend integration
 
 ### Major Session & RFx Fixes (January 2025)
 - **Session Persistence Completely Fixed**: Implemented proper memorystore-based session management
@@ -64,11 +72,13 @@ Preferred communication style: Simple, everyday language.
 - **Build Tool**: Vite for development and production builds
 
 ### Backend Architecture
-- **Runtime**: Node.js with Express.js framework
-- **Language**: TypeScript with ES modules
-- **API Design**: RESTful API with session-based authentication
-- **Real-time**: WebSocket support for live auction features
-- **Middleware**: Express middleware for logging, error handling, and authentication
+- **Runtime**: Python 3.12 with Django framework
+- **API Framework**: Django REST Framework for comprehensive API development
+- **Language**: Python with object-oriented design patterns
+- **API Design**: RESTful API with token-based authentication (JWT)
+- **Database ORM**: Django ORM for robust data modeling and migrations
+- **Apps Structure**: Modular Django apps (users, vendors, products, boms, rfx, auctions, purchase_orders, approvals, notifications)
+- **Middleware**: Django middleware for CORS, authentication, and error handling
 
 ### Authentication System
 - **Provider**: Replit OpenID Connect (OIDC) authentication
