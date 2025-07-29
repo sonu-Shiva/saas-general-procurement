@@ -493,6 +493,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // BOM copy route - Only buyers can copy BOMs
+  app.post('/api/boms/:id/copy', isAuthenticated, isBuyer, async (req: any, res) => {
+    try {
+      const bomId = req.params.id;
+      const userId = req.user.claims.sub;
+      const { name, version } = req.body;
+      
+      if (!name || !version) {
+        return res.status(400).json({ message: "Both name and version are required for copying BOM" });
+      }
+      
+      const copiedBom = await storage.copyBom(bomId, name, version, userId);
+      res.json(copiedBom);
+    } catch (error) {
+      console.error("Error copying BOM:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: "Failed to copy BOM" });
+      }
+    }
+  });
+
+  // BOM duplicate check route
+  app.get('/api/boms/check-duplicate', isAuthenticated, async (req, res) => {
+    try {
+      const { name, version } = req.query;
+      
+      if (!name || !version) {
+        return res.status(400).json({ message: "Both name and version are required for duplicate check" });
+      }
+      
+      const exists = await storage.checkBomExists(name as string, version as string);
+      res.json({ exists });
+    } catch (error) {
+      console.error("Error checking BOM duplicate:", error);
+      res.status(500).json({ message: "Failed to check BOM duplicate" });
+    }
+  });
+
   // RFx routes
   app.post('/api/rfx', isAuthenticated, async (req: any, res) => {
     try {

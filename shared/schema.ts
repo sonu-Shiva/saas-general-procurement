@@ -11,6 +11,7 @@ import {
   boolean,
   uuid,
   primaryKey,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -126,7 +127,9 @@ export const boms = pgTable("boms", {
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  uniqueNameVersion: unique("unique_bom_name_version").on(table.name, table.version),
+}));
 
 export const bomItems = pgTable("bom_items", {
   id: uuid("id").primaryKey().defaultRandom(),

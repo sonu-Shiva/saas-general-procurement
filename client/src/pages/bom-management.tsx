@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, 
   Search, 
@@ -36,9 +37,13 @@ export default function BomManagement() {
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [editingBom, setEditingBom] = useState<Bom | null>(null);
   const [viewingBom, setViewingBom] = useState<Bom | null>(null);
+  const [copyingBom, setCopyingBom] = useState<Bom | null>(null);
+  const [copyForm, setCopyForm] = useState({ name: '', version: '' });
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Check if user is a buyer (can create BOMs)
   const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
@@ -62,7 +67,7 @@ export default function BomManagement() {
 
   // Debug logging for filtered BOMs
   console.log("BOM Management - Filtered boms:", filteredBoms);
-  console.log("BOM Management - Active BOMs count:", boms?.filter((b: Bom) => b.isActive).length);
+  console.log("BOM Management - Active BOMs count:", (boms as Bom[])?.filter((b: Bom) => b.isActive).length);
 
   const handleEditBom = (bom: Bom) => {
     setEditingBom(bom);
@@ -85,20 +90,63 @@ export default function BomManagement() {
   };
 
   const handleCopyBom = (bom: Bom) => {
-    // Create a copy of the BOM with modified name and reset dates
-    const bomCopy = {
-      ...bom,
-      name: `${bom.name} (Copy)`,
-      version: "1.0",
-      isActive: false, // Start as draft
-      validFrom: null,
-      validTo: null,
-    };
-    setEditingBom(bomCopy);
-    setIsCreateDialogOpen(true);
-    toast({
-      title: "BOM Copied",
-      description: "BOM has been copied. You can now modify and save it.",
+    setCopyingBom(bom);
+    setCopyForm({ 
+      name: `${bom.name} (Copy)`, 
+      version: "1.0" 
+    });
+    setIsCopyDialogOpen(true);
+  };
+
+  const copyBomMutation = useMutation({
+    mutationFn: async ({ bomId, name, version }: { bomId: string; name: string; version: string }) => {
+      const response = await apiRequest("POST", `/api/boms/${bomId}/copy`, { name, version });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/boms"] });
+      setIsCopyDialogOpen(false);
+      setCopyingBom(null);
+      setCopyForm({ name: '', version: '' });
+      toast({
+        title: "Success",
+        description: "BOM copied successfully",
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to copy BOM",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmitCopy = () => {
+    if (!copyingBom || !copyForm.name || !copyForm.version) {
+      toast({
+        title: "Error", 
+        description: "Please enter both name and version",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    copyBomMutation.mutate({ 
+      bomId: copyingBom.id, 
+      name: copyForm.name, 
+      version: copyForm.version 
     });
   };
 
@@ -478,6 +526,44 @@ export default function BomManagement() {
           </div>
         </main>
       </div>
+
+      {/* Copy BOM Dialog */}
+      <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Copy BOM</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">New BOM Name</label>
+              <Input
+                value={copyForm.name}
+                onChange={(e) => setCopyForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter BOM name"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Version</label>
+              <Input
+                value={copyForm.version}
+                onChange={(e) => setCopyForm(prev => ({ ...prev, version: e.target.value }))}
+                placeholder="Enter version"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsCopyDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmitCopy}
+                disabled={copyBomMutation.isPending}
+              >
+                {copyBomMutation.isPending ? "Copying..." : "Copy BOM"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

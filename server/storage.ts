@@ -87,6 +87,8 @@ export interface IStorage {
   createBom(bom: InsertBom): Promise<Bom>;
   getBom(id: string): Promise<Bom | undefined>;
   getBoms(createdBy?: string): Promise<Bom[]>;
+  checkBomExists(name: string, version: string): Promise<boolean>;
+  copyBom(bomId: string, newName: string, newVersion: string, createdBy: string): Promise<Bom>;
   createBomItem(bomItem: InsertBomItem): Promise<BomItem>;
   getBomItems(bomId: string): Promise<BomItem[]>;
   
@@ -277,6 +279,14 @@ export class DatabaseStorage implements IStorage {
   
   // BOM operations
   async createBom(bom: InsertBom): Promise<Bom> {
+    // Check if BOM with same name and version already exists
+    if (bom.name && bom.version) {
+      const exists = await this.checkBomExists(bom.name, bom.version);
+      if (exists) {
+        throw new Error(`BOM with name "${bom.name}" and version "${bom.version}" already exists`);
+      }
+    }
+    
     const [newBom] = await db.insert(boms).values(bom).returning();
     return newBom;
   }
@@ -314,6 +324,67 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBomItems(bomId: string): Promise<void> {
     await db.delete(bomItems).where(eq(bomItems.bomId, bomId));
+  }
+
+  async checkBomExists(name: string, version: string): Promise<boolean> {
+    const [existingBom] = await db
+      .select({ id: boms.id })
+      .from(boms)
+      .where(and(eq(boms.name, name), eq(boms.version, version)))
+      .limit(1);
+    return !!existingBom;
+  }
+
+  async copyBom(bomId: string, newName: string, newVersion: string, createdBy: string): Promise<Bom> {
+    // Check if the new BOM name+version combination already exists
+    const exists = await this.checkBomExists(newName, newVersion);
+    if (exists) {
+      throw new Error(`BOM with name "${newName}" and version "${newVersion}" already exists`);
+    }
+
+    // Get the original BOM
+    const originalBom = await this.getBom(bomId);
+    if (!originalBom) {
+      throw new Error(`BOM with ID "${bomId}" not found`);
+    }
+
+    // Get original BOM items
+    const originalItems = await this.getBomItems(bomId);
+
+    // Create new BOM
+    const newBomData: InsertBom = {
+      name: newName,
+      version: newVersion,
+      description: originalBom.description || undefined,
+      category: originalBom.category || undefined,
+      validFrom: originalBom.validFrom || undefined,
+      validTo: originalBom.validTo || undefined,
+      tags: originalBom.tags || undefined,
+      isActive: originalBom.isActive,
+      createdBy: createdBy,
+    };
+
+    const newBom = await this.createBom(newBomData);
+
+    // Copy all BOM items
+    for (const item of originalItems) {
+      const newItemData: InsertBomItem = {
+        bomId: newBom.id,
+        productId: item.productId || undefined,
+        itemName: item.itemName,
+        itemCode: item.itemCode || undefined,
+        description: item.description || undefined,
+        category: item.category || undefined,
+        quantity: item.quantity,
+        uom: item.uom || undefined,
+        unitPrice: item.unitPrice || undefined,
+        totalPrice: item.totalPrice || undefined,
+        specifications: item.specifications || undefined,
+      };
+      await this.createBomItem(newItemData);
+    }
+
+    return newBom;
   }
 
   // Product Category operations
