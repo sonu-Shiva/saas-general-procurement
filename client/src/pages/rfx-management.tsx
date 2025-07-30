@@ -6,6 +6,7 @@ import Sidebar from "@/components/layout/sidebar";
 import SinglePageRfxForm from "@/components/single-page-rfx-form";
 import TestRfxForm from "@/components/test-rfx-form";
 import SimpleRfxForm from "@/components/simple-rfx-form";
+import EnhancedRfxForm from "@/components/enhanced-rfx-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,7 +174,7 @@ export default function RfxManagement() {
                       <DialogTitle>Create New RFx Request</DialogTitle>
                     </DialogHeader>
                     <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-                      <SimpleRfxForm 
+                      <EnhancedRfxForm 
                         onClose={() => setIsCreateDialogOpen(false)}
                         onSuccess={() => {
                           setIsCreateDialogOpen(false);

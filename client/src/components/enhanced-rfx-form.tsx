@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,179 +25,107 @@ const rfxFormSchema = z.object({
 
 type RfxFormData = z.infer<typeof rfxFormSchema>;
 
-interface SinglePageRfxFormProps {
+interface EnhancedRfxFormProps {
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxFormProps) {
-  console.log("SinglePageRfxForm component rendering...");
-  
-  // Simple test first - no queries
-  try {
-    const queryClient = useQueryClient();
-    console.log("QueryClient initialized successfully");
-    
-    // Test queries step by step
-    console.log("About to initialize vendors query...");
-    const vendorsQuery = useQuery({
-      queryKey: ["/api/vendors"],
-      retry: false,
-    });
-    console.log("Vendors query initialized:", vendorsQuery.isLoading, vendorsQuery.error);
-    
-    console.log("About to initialize BOMs query...");
-    const bomsQuery = useQuery({
-      queryKey: ["/api/boms"],
-      retry: false,
-    });
-    console.log("BOMs query initialized:", bomsQuery.isLoading, bomsQuery.error);
-    
-    const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError } = vendorsQuery;
-    const { data: boms = [], isLoading: bomsLoading, error: bomsError } = bomsQuery;
+export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormProps) {
+  const queryClient = useQueryClient();
 
-    console.log("About to initialize form...");
-    const form = useForm<RfxFormData>({
-      resolver: zodResolver(rfxFormSchema),
-      defaultValues: {
-        title: "",
-        scope: "",
-        type: "rfi",
-        dueDate: "",
-        budget: "",
-        bomId: "",
-        selectedVendors: [],
-        criteria: "",
-        evaluationParameters: "",
-      },
-    });
-    console.log("Form initialized successfully");
+  // Fetch vendors and BOMs
+  const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
+    queryKey: ["/api/vendors"],
+    retry: false,
+  });
 
-    console.log("About to watch form type...");
-    const selectedType = form.watch("type");
-    console.log("Form type watch initialized:", selectedType);
+  const { data: boms = [] } = useQuery({
+    queryKey: ["/api/boms"],
+    retry: false,
+  });
 
-    const createRfxMutation = useMutation({
+  const form = useForm<RfxFormData>({
+    resolver: zodResolver(rfxFormSchema),
+    defaultValues: {
+      title: "",
+      scope: "",
+      type: "rfi",
+      dueDate: "",
+      budget: "",
+      bomId: "",
+      selectedVendors: [],
+      criteria: "",
+      evaluationParameters: "",
+    },
+  });
+
+  const selectedType = form.watch("type");
+
+  const createRfxMutation = useMutation({
     mutationFn: async (data: RfxFormData) => {
-      // First create the RFx event
-      const rfxPayload = {
-        title: data.title,
-        scope: data.scope,
-        type: data.type,
-        dueDate: data.dueDate,
-        budget: data.budget || undefined,
-        bomId: data.bomId || undefined,
-        criteria: data.criteria || undefined,
-        evaluationParameters: data.evaluationParameters || undefined,
-        status: "draft",
-      };
-      
-      console.log("RFx payload before API call:", rfxPayload);
-      console.log("Selected vendors:", data.selectedVendors);
-      
       const response = await fetch("/api/rfx", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(rfxPayload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          scope: data.scope,
+          type: data.type,
+          dueDate: data.dueDate,
+          budget: data.budget || undefined,
+          bomId: data.bomId || undefined,
+          criteria: data.criteria || undefined,
+          evaluationParameters: data.evaluationParameters || undefined,
+          status: "draft",
+        }),
         credentials: "include",
       });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error Response:", errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-      
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const rfxEvent = await response.json();
-      console.log("RFx event created:", rfxEvent);
-      
+
       // Create vendor invitations
-      if (data.selectedVendors && data.selectedVendors.length > 0) {
-        const invitePromises = data.selectedVendors.map(async (vendorId) => {
-          const inviteResponse = await fetch("/api/rfx/invitations", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              rfxId: rfxEvent.id,
-              vendorId: vendorId,
-            }),
-            credentials: "include",
-          });
-          
-          if (!inviteResponse.ok) {
-            console.error(`Failed to invite vendor ${vendorId}`);
-          }
-          
-          return inviteResponse.json();
-        });
-        
-        await Promise.all(invitePromises);
-        console.log("Vendor invitations sent");
+      if (data.selectedVendors?.length) {
+        await Promise.all(
+          data.selectedVendors.map(vendorId =>
+            fetch("/api/rfx/invitations", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ rfxId: rfxEvent.id, vendorId }),
+              credentials: "include",
+            })
+          )
+        );
       }
-      
+
       return rfxEvent;
     },
     onSuccess: () => {
-      console.log("RFx created successfully!");
       queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
       onSuccess();
-      onClose();
     },
-    onError: (error: any) => {
-      console.error("Error creating RFx:", error);
-      console.error("Error details:", error.message);
-    },
-    });
+  });
 
-    const onSubmit = (data: RfxFormData) => {
-      console.log("Form submission data:", data);
-      console.log("Form errors:", form.formState.errors);
-      createRfxMutation.mutate(data);
-    };
+  const onSubmit = (data: RfxFormData) => {
+    createRfxMutation.mutate(data);
+  };
 
-  if (vendorsLoading || bomsLoading) {
-    console.log("Showing loading state...");
+  if (vendorsLoading) {
     return (
-      <div className="w-full p-6 space-y-6 bg-white">
+      <div className="w-full p-6 bg-background">
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading RFx form...</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Vendors: {vendorsLoading ? 'Loading...' : 'Loaded'} | 
-            BOMs: {bomsLoading ? 'Loading...' : 'Loaded'}
-          </p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading vendors and BOMs...</p>
         </div>
       </div>
     );
   }
 
-  if (vendorsError || bomsError) {
-    console.log("Showing error state...", { vendorsError, bomsError });
-    return (
-      <div className="w-full p-6 space-y-6 bg-white">
-        <div className="text-center py-8">
-          <p className="text-red-600">Error loading form data</p>
-          <p className="text-sm text-gray-500 mt-2">
-            {vendorsError && `Vendors: ${vendorsError.message}`}
-            {bomsError && `BOMs: ${bomsError.message}`}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  console.log("Rendering main form...");
   return (
-    <div className="w-full p-4 space-y-6 bg-white min-h-[500px] border border-gray-300">
-      <div className="bg-blue-50 p-4 border border-blue-200 rounded">
-        <h2 className="text-2xl font-bold text-gray-900">
+    <div className="w-full p-6 space-y-6 bg-background">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">
           Create {selectedType.toUpperCase()} Request
         </h2>
-        <p className="text-gray-600 mt-2">Form is now visible!</p>
         <p className="text-muted-foreground">
           {selectedType === "rfi" 
             ? "Request information from vendors to understand their capabilities"
@@ -208,13 +135,13 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
         </p>
       </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Type Selection */}
         <Card className="p-6 border-2 border-border">
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-medium text-foreground">Request Type</h3>
-              <p className="text-sm text-muted-foreground">Choose the type of request you want to create</p>
+              <p className="text-sm text-muted-foreground">Choose the type of request</p>
             </div>
             <div className="flex gap-3">
               {[
@@ -246,16 +173,14 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-medium text-foreground">Basic Information</h3>
-              <p className="text-sm text-muted-foreground">Provide the essential details for your request</p>
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Title *</Label>
                 <Input
                   id="title"
                   {...form.register("title")}
-                  placeholder={`Enter ${selectedType.toUpperCase()} title`}
+                  placeholder="Enter request title"
                   className="border-2 border-border focus:border-primary"
                 />
                 {form.formState.errors.title && (
@@ -267,7 +192,7 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
                 <Label htmlFor="dueDate">Due Date *</Label>
                 <Input
                   id="dueDate"
-                  type="datetime-local"
+                  type="date"
                   {...form.register("dueDate")}
                   className="border-2 border-border focus:border-primary"
                 />
@@ -278,18 +203,12 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="scope">Scope/Description *</Label>
+              <Label htmlFor="scope">Scope *</Label>
               <Textarea
                 id="scope"
                 {...form.register("scope")}
-                rows={4}
-                placeholder={
-                  selectedType === "rfi" 
-                    ? "Describe what information you need from vendors"
-                    : selectedType === "rfp"
-                    ? "Describe the project requirements and objectives"
-                    : "Describe the products or services you need quotes for"
-                }
+                rows={3}
+                placeholder="Describe the scope and requirements"
                 className="border-2 border-border focus:border-primary"
               />
               {form.formState.errors.scope && (
@@ -297,15 +216,17 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="budget">Budget (Optional)</Label>
-              <Input
-                id="budget"
-                {...form.register("budget")}
-                placeholder="₹ Budget range or maximum amount"
-                className="border-2 border-border focus:border-primary"
-              />
-            </div>
+            {selectedType !== "rfi" && (
+              <div className="space-y-2">
+                <Label htmlFor="budget">Budget (Optional)</Label>
+                <Input
+                  id="budget"
+                  {...form.register("budget")}
+                  placeholder="e.g., ₹50,000 - ₹100,000"
+                  className="border-2 border-border focus:border-primary"
+                />
+              </div>
+            )}
           </div>
         </Card>
 
@@ -313,29 +234,24 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
         <Card className="p-6 border-2 border-border">
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium text-foreground">BOM Connection (Optional)</h3>
+              <h3 className="text-lg font-medium text-foreground">BOM Integration (Optional)</h3>
               <p className="text-sm text-muted-foreground">
-                Link this {selectedType.toUpperCase()} to a specific Bill of Materials (BOM) for structured procurement.
+                Link this request to a specific Bill of Materials for structured procurement
               </p>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="bomId">Select BOM</Label>
-              <Select
-                value={form.watch("bomId") || ""}
-                onValueChange={(value) => form.setValue("bomId", value || "")}
-              >
+              <Select onValueChange={(value) => form.setValue("bomId", value)}>
                 <SelectTrigger className="border-2 border-border focus:border-primary">
                   <SelectValue placeholder="Choose a BOM (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No BOM - General Request</SelectItem>
                   {Array.isArray(boms) && boms.map((bom: any) => (
                     <SelectItem key={bom.id} value={bom.id}>
                       <div>
                         <div className="font-medium">{bom.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          v{bom.version} • {bom.category || 'General'}
+                          v{bom.version} • {bom.category}
                         </div>
                       </div>
                     </SelectItem>
@@ -359,30 +275,20 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
             <div>
               <h3 className="text-lg font-medium text-foreground">Vendor Selection</h3>
               <p className="text-sm text-muted-foreground">
-                Choose vendors to send this {selectedType.toUpperCase()} to. At least one vendor must be selected.
+                Choose vendors to send this {selectedType.toUpperCase()} to
               </p>
             </div>
             
-            {vendorsLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading vendors...</p>
-              </div>
-            ) : (vendors as any[]).length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No vendors available for selection.</p>
-                <p className="text-sm text-muted-foreground mt-2">Add some vendors first to create RFx requests.</p>
-              </div>
-            ) : (
+            {Array.isArray(vendors) && vendors.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto">
-                {(vendors as any[]).map((vendor: any) => (
+                {vendors.map((vendor: any) => (
                   <Card key={vendor.id} className="p-4 border-2 border-border hover:border-primary/50 transition-colors cursor-pointer">
                     <label className="flex items-start space-x-3 cursor-pointer">
                       <input
                         type="checkbox"
                         value={vendor.id}
                         {...form.register("selectedVendors")}
-                        className="h-4 w-4 mt-1 rounded border-2 border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+                        className="h-4 w-4 mt-1 rounded border-2 border-border text-primary focus:ring-2 focus:ring-primary"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-foreground">{vendor.companyName || vendor.name}</div>
@@ -397,6 +303,10 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
                     </label>
                   </Card>
                 ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No vendors available for selection.</p>
               </div>
             )}
             
@@ -413,11 +323,6 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
               <h3 className="text-lg font-medium text-foreground">
                 {selectedType === "rfi" ? "Information Requirements" : "Requirements & Criteria"}
               </h3>
-              <p className="text-sm text-muted-foreground">
-                {selectedType === "rfi" 
-                  ? "Specify what information you need from vendors"
-                  : "Define your requirements and evaluation criteria"}
-              </p>
             </div>
 
             <div className="space-y-4">
@@ -431,7 +336,7 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
                   rows={4}
                   placeholder={
                     selectedType === "rfi" 
-                      ? "What specific information do you need from vendors? (e.g., company capabilities, certifications, experience)"
+                      ? "What specific information do you need from vendors?"
                       : "Detailed requirements and specifications"
                   }
                   className="border-2 border-border focus:border-primary"
@@ -469,17 +374,5 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
         </div>
       </form>
     </div>
-    );
-  } catch (error) {
-    console.error("Error rendering RFx form:", error);
-    return (
-      <div className="w-full p-6 space-y-6 bg-white">
-        <div className="text-center py-8">
-          <p className="text-red-600">Error rendering form</p>
-          <p className="text-sm text-gray-500 mt-2">{(error as Error).message}</p>
-          <Button onClick={onClose} className="mt-4">Close</Button>
-        </div>
-      </div>
-    );
-  }
+  );
 }
