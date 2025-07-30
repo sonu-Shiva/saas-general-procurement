@@ -880,224 +880,100 @@ function AuctionCard({ auction, onViewLive, onEdit, onViewResults }: any) {
 }
 
 function LiveBiddingInterface({ auction, ws, onClose }: any) {
-  const [currentBids, setCurrentBids] = useState<any[]>([]);
-  const [rankings, setRankings] = useState<any[]>([]);
   const [newBidAmount, setNewBidAmount] = useState('');
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Temporarily disable the bids query to test if this is causing the blank page
-  const { data: bids = [], isError, error } = useQuery({
-    queryKey: ["/api/auctions", auction?.id, "bids"],
-    enabled: !!auction?.id, // Only fetch if auction ID exists
-    refetchInterval: 2000,
-    retry: false, // Don't retry on error to see the issue faster
-  });
+  console.log("LiveBiddingInterface: Component rendered");
+  console.log("LiveBiddingInterface: Auction data:", auction);
+  console.log("LiveBiddingInterface: User data:", user);
 
-  // Add error logging
-  useEffect(() => {
-    if (isError) {
-      console.error("Bids query error:", error);
-    }
-  }, [isError, error]);
+  // Simplified version - start with static content to ensure dialog works
+  if (!auction) {
+    console.log("LiveBiddingInterface: No auction data");
+    return <div>Loading auction data...</div>;
+  }
 
-  useEffect(() => {
-    console.log("LiveBiddingInterface rendered with auction:", auction?.id);
-    console.log("Bids data:", bids);
-    
-    if (Array.isArray(bids)) {
-      setCurrentBids(bids);
-      
-      // Calculate rankings
-      const vendorBids = bids.reduce((acc: any, bid: any) => {
-        if (!acc[bid.vendorId] || bid.amount < acc[bid.vendorId].amount) {
-          acc[bid.vendorId] = bid;
-        }
-        return acc;
-      }, {});
 
-      const ranked = Object.values(vendorBids)
-        .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount))
-        .map((bid: any, index: number) => ({
-          ...bid,
-          rank: index + 1,
-          rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`
-        }));
 
-      setRankings(ranked);
-    }
-  }, [bids, auction?.id]);
 
-  const handleSubmitBid = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newBidAmount || parseFloat(newBidAmount) <= 0) {
-      toast({
-        title: "Invalid Bid",
-        description: "Please enter a valid bid amount",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (parseFloat(newBidAmount) > parseFloat(auction.reservePrice)) {
-      toast({
-        title: "Bid Too High",
-        description: `Bid cannot exceed ceiling price of ₹${auction.reservePrice}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/bids", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          auctionId: auction.id,
-          amount: newBidAmount,
-        }),
-        credentials: "include",
-      });
-
-      if (!response.ok) throw new Error("Failed to submit bid");
-
-      toast({
-        title: "Bid Submitted",
-        description: "Your bid has been placed successfully",
-      });
-
-      setNewBidAmount('');
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit bid",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Auction Info & Bidding */}
-        <div className="space-y-6">
+    <div className="space-y-6 p-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-green-600">🔴 LIVE AUCTION</h2>
+        <h3 className="text-xl font-semibold mt-2">{auction.name}</h3>
+        <p className="text-gray-600 mt-1">{auction.description}</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Auction Info */}
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Trophy className="w-5 h-5" />
+              <span>Auction Details</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Ceiling Price</p>
+                <p className="text-2xl font-bold text-green-600">₹{auction.reservePrice}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Status</p>
+                <Badge className="bg-green-100 text-green-800">LIVE</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bidding Form for Vendors */}
+        {(user as any)?.role === 'vendor' && (
           <Card className="border-2">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Trophy className="w-5 h-5" />
-                <span>Auction Details</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Ceiling Price</p>
-                  <p className="text-2xl font-bold text-green-600">₹{auction.reservePrice}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge className="bg-green-100 text-green-800">LIVE</Badge>
-                </div>
-              </div>
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-2">Description</p>
-                <p className="text-sm">{auction.description}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bidding Form */}
-          {(user as any)?.role === 'vendor' && (
-            <Card className="border-2">
-              <CardHeader>
-                <CardTitle>Place Your Bid</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmitBid} className="space-y-4">
-                  <div>
-                    <Label htmlFor="bidAmount">Bid Amount (₹)</Label>
-                    <Input
-                      id="bidAmount"
-                      type="number"
-                      value={newBidAmount}
-                      onChange={(e) => setNewBidAmount(e.target.value)}
-                      placeholder="Enter your bid"
-                      className="text-lg h-11 border-2"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" size="lg">
-                    Submit Bid
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Right Column - Live Rankings */}
-        <div className="space-y-6">
-          <Card className="border-2">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Trophy className="w-5 h-5" />
-                <span>Live Rankings</span>
-              </CardTitle>
+              <CardTitle>Place Your Bid</CardTitle>
             </CardHeader>
             <CardContent>
-              {rankings.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Trophy className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No bids yet</p>
+              <form onSubmit={handleSubmitBid} className="space-y-4">
+                <div>
+                  <Label htmlFor="bidAmount">Bid Amount (₹)</Label>
+                  <Input
+                    id="bidAmount"
+                    type="number"
+                    value={newBidAmount}
+                    onChange={(e) => setNewBidAmount(e.target.value)}
+                    placeholder="Enter your bid"
+                    className="text-lg h-11 border-2"
+                  />
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {rankings.map((bid: any, index: number) => (
-                    <div
-                      key={bid.id}
-                      className={`p-4 rounded-lg border-2 ${
-                        index === 0
-                          ? 'bg-green-50 border-green-200'
-                          : index === 1
-                          ? 'bg-blue-50 border-blue-200'
-                          : index === 2
-                          ? 'bg-orange-50 border-orange-200'
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-3">
-                          <Badge
-                            className={
-                              index === 0
-                                ? 'bg-green-500'
-                                : index === 1
-                                ? 'bg-blue-500'
-                                : index === 2
-                                ? 'bg-orange-500'
-                                : 'bg-gray-500'
-                            }
-                          >
-                            {bid.rankLabel}
-                          </Badge>
-                          <div>
-                            <p className="font-medium">Vendor {bid.vendorId.slice(0, 8)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(bid.timestamp).toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold">₹{bid.amount}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                <Button type="submit" className="w-full" size="lg">
+                  Submit Bid
+                </Button>
+              </form>
             </CardContent>
           </Card>
-        </div>
+        )}
+      </div>
+
+      {/* Simple Rankings Placeholder */}
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle>Live Rankings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">
+            <Trophy className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No bids yet - Be the first to bid!</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" onClick={onClose}>
+          Close
+        </Button>
       </div>
     </div>
   );
