@@ -7,6 +7,7 @@ import SinglePageRfxForm from "@/components/single-page-rfx-form";
 import TestRfxForm from "@/components/test-rfx-form";
 import SimpleRfxForm from "@/components/simple-rfx-form";
 import EnhancedRfxForm from "@/components/enhanced-rfx-form";
+import ConvertRfxForm from "@/components/convert-rfx-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,8 @@ export default function RfxManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [convertSourceRfx, setConvertSourceRfx] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -146,6 +149,11 @@ export default function RfxManagement() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleConvertRfx = (sourceRfx: any) => {
+    setConvertSourceRfx(sourceRfx);
+    setIsConvertDialogOpen(true);
   };
   
   return (
@@ -401,6 +409,17 @@ export default function RfxManagement() {
                                 Create {rfx.type === 'rfi' ? 'RFP' : 'RFQ'}
                               </Button>
                             )}
+                            {(rfx.type === 'rfi' || rfx.type === 'rfp') && (rfx.status === 'active' || rfx.status === 'closed') && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleConvertRfx(rfx)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <TrendingUp className="w-4 h-4 mr-1" />
+                                Convert
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -409,6 +428,27 @@ export default function RfxManagement() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Convert RFx Dialog */}
+            <Dialog open={isConvertDialogOpen} onOpenChange={setIsConvertDialogOpen}>
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+                <DialogHeader>
+                  <DialogTitle>Convert RFx Request</DialogTitle>
+                </DialogHeader>
+                <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+                  {convertSourceRfx && (
+                    <ConvertRfxForm 
+                      sourceRfx={convertSourceRfx}
+                      onClose={() => setIsConvertDialogOpen(false)}
+                      onSuccess={() => {
+                        setIsConvertDialogOpen(false);
+                        queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+                      }} 
+                    />
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* AI Assistant Dialog */}
             <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
