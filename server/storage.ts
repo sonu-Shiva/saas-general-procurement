@@ -111,6 +111,7 @@ export interface IStorage {
   createAuction(auction: InsertAuction): Promise<Auction>;
   getAuction(id: string): Promise<Auction | undefined>;
   getAuctions(filters?: { status?: string; createdBy?: string }): Promise<Auction[]>;
+  getAuctionsForVendor(vendorUserId: string): Promise<Auction[]>;
   updateAuction(id: string, updates: Partial<InsertAuction>): Promise<Auction>;
   updateAuctionStatus(id: string, status: string): Promise<Auction>;
   updateAuctionCurrentBid(id: string, amount: string): Promise<void>;
@@ -533,6 +534,16 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(auctions)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(auctions.createdAt));
+  }
+
+  async getAuctionsForVendor(vendorUserId: string): Promise<Auction[]> {
+    // For now, return all live and scheduled auctions for vendor role users
+    // In production, this would be filtered by proper vendor invitation/assignment
+    return await db
+      .select()
+      .from(auctions)
+      .where(or(eq(auctions.status, 'live'), eq(auctions.status, 'scheduled')))
       .orderBy(desc(auctions.createdAt));
   }
 

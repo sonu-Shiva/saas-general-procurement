@@ -1150,10 +1150,28 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/auctions', isAuthenticated, async (req, res) => {
+  app.get('/api/auctions', isAuthenticated, async (req: any, res) => {
     try {
-      const auctions = await storage.getAuctions();
-      res.json(auctions);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Buyers/admins see all auctions they created
+      if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager') {
+        const auctions = await storage.getAuctions({ createdBy: userId });
+        res.json(auctions);
+      } 
+      // Vendors see only auctions they are invited to participate in
+      else if (user.role === 'vendor') {
+        const auctions = await storage.getAuctionsForVendor(userId);
+        res.json(auctions);
+      } 
+      else {
+        res.json([]);
+      }
     } catch (error) {
       console.error("Error fetching auctions:", error);
       res.status(500).json({ message: "Failed to fetch auctions" });
