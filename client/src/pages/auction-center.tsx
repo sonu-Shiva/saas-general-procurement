@@ -399,6 +399,7 @@ function AuctionCard({ auction, onStart, onViewLive, isLive }: any) {
 // Create Auction Form Component
 function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -412,27 +413,58 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
 
   const { data: bomLineItems = [], isLoading: isLoadingItems, error: itemsError } = useQuery({
     queryKey: ["/api/bom-items", formData.bomId],
-    queryFn: async () => {
-      if (!formData.bomId) return [];
-      try {
-        const response = await fetch(`/api/bom-items/${formData.bomId}`, {
-          credentials: "include",
-        });
-        if (!response.ok) {
-          console.error(`BOM items API error: ${response.status}`);
-          return []; // Return empty array instead of throwing
-        }
-        const data = await response.json();
-        console.log("BOM items loaded:", data);
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error("Error fetching BOM items:", error);
-        return []; // Return empty array on error
-      }
-    },
-    enabled: !!formData.bomId,
+    enabled: false, // Disable automatic query
     retry: false,
   });
+
+  // Manual query trigger with better error handling
+  const loadBomItems = async (bomId: string) => {
+    if (!bomId) return;
+    try {
+      console.log('Loading BOM items for:', bomId);
+      const response = await fetch(`/api/bom-items/${bomId}`, {
+        credentials: "include",
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('BOM items response:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            title: "Authentication Error",
+            description: "Please refresh the page and try again",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log("BOM items loaded successfully:", data.length, "items");
+      
+      // Force update the query data
+      queryClient.setQueryData(["/api/bom-items", bomId], Array.isArray(data) ? data : []);
+      
+    } catch (error) {
+      console.error("Error loading BOM items:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load BOM items. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Trigger BOM items load when BOM changes
+  useEffect(() => {
+    if (formData.bomId) {
+      loadBomItems(formData.bomId);
+    }
+  }, [formData.bomId]);
 
   const createAuctionMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -530,59 +562,27 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="bomId">BOM Selection</Label>
-          <Select 
-            value={formData.bomId} 
-            onValueChange={(value) => setFormData({ ...formData, bomId: value, bomLineItemId: '' })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select BOM" />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.isArray(boms) && boms.map((bom: any) => (
-                <SelectItem key={bom.id} value={bom.id}>
-                  {bom.name} (v{bom.version})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {formData.bomId && (
-          <div className="space-y-2">
-            <Label htmlFor="bomLineItemId">Line Item</Label>
-            <Select 
-              value={formData.bomLineItemId} 
-              onValueChange={(value) => setFormData({ ...formData, bomLineItemId: value })}
-              disabled={!formData.bomId || isLoadingItems}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={
-                  isLoadingItems ? "Loading items..." : 
-                  !formData.bomId ? "Select BOM first" : 
-                  "Select line item"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {isLoadingItems ? (
-                  <SelectItem value="" disabled>Loading line items...</SelectItem>
-                ) : !bomLineItems || bomLineItems.length === 0 ? (
-                  <SelectItem value="" disabled>
-                    {formData.bomId ? "No line items found" : "Select BOM first"}
-                  </SelectItem>
-                ) : (
-                  bomLineItems.map((item: any) => (
-                    <SelectItem key={item.id || Math.random()} value={item.id || ''}>
-                      {(item.itemName || item.productName || 'Unknown Item')} - Qty: {item.quantity || 0} - ₹{item.unitPrice || 'N/A'}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      <div className="space-y-2">
+        <Label htmlFor="bomId">BOM Selection (Optional)</Label>
+        <Select 
+          value={formData.bomId} 
+          onValueChange={(value) => setFormData({ ...formData, bomId: value, bomLineItemId: '' })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select BOM (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">No BOM (General Auction)</SelectItem>
+            {Array.isArray(boms) && boms.map((bom: any) => (
+              <SelectItem key={bom.id} value={bom.id}>
+                {bom.name} (v{bom.version})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-muted-foreground">
+          Link to a specific BOM for targeted procurement or leave blank for general auction
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

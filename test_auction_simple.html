@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auction Form</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; }
+        select, input { width: 200px; padding: 5px; }
+        button { padding: 10px 20px; margin: 10px 5px; }
+    </style>
+</head>
+<body>
+    <h1>Simple Auction Form Test</h1>
+    <form id="auctionForm">
+        <div class="form-group">
+            <label>BOM Selection:</label>
+            <select id="bomSelect">
+                <option value="">Select BOM</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Line Item:</label>
+            <select id="lineItemSelect" disabled>
+                <option value="">Select line item</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Auction Name:</label>
+            <input type="text" id="auctionName" required>
+        </div>
+        <div class="form-group">
+            <label>Ceiling Price:</label>
+            <input type="number" id="ceilingPrice" required>
+        </div>
+        <button type="submit">Create Auction</button>
+    </form>
+
+    <script>
+        // Load BOMs
+        fetch('/api/boms', { credentials: 'include' })
+            .then(res => res.json())
+            .then(boms => {
+                const bomSelect = document.getElementById('bomSelect');
+                boms.forEach(bom => {
+                    const option = document.createElement('option');
+                    option.value = bom.id;
+                    option.textContent = `${bom.name} (v${bom.version})`;
+                    bomSelect.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Error loading BOMs:', err));
+
+        // Handle BOM selection
+        document.getElementById('bomSelect').addEventListener('change', function(e) {
+            const bomId = e.target.value;
+            const lineItemSelect = document.getElementById('lineItemSelect');
+            
+            lineItemSelect.innerHTML = '<option value="">Loading...</option>';
+            lineItemSelect.disabled = !bomId;
+            
+            if (bomId) {
+                fetch(`/api/bom-items/${bomId}`, { credentials: 'include' })
+                    .then(res => {
+                        console.log('BOM items response status:', res.status);
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        return res.json();
+                    })
+                    .then(items => {
+                        console.log('BOM items loaded:', items);
+                        lineItemSelect.innerHTML = '<option value="">Select line item</option>';
+                        items.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = `${item.itemName || item.productName} - Qty: ${item.quantity}`;
+                            lineItemSelect.appendChild(option);
+                        });
+                    })
+                    .catch(err => {
+                        console.error('Error loading BOM items:', err);
+                        lineItemSelect.innerHTML = '<option value="">Error loading items</option>';
+                    });
+            } else {
+                lineItemSelect.innerHTML = '<option value="">Select BOM first</option>';
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('auctionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submitted successfully - no crash!');
+            alert('Form works! The crash must be in the React component.');
+        });
+    </script>
+</body>
+</html>
