@@ -134,16 +134,15 @@ export default function AuctionCenter() {
               <DialogTitle>Create New Reverse Auction</DialogTitle>
             </DialogHeader>
             <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-              <div className="p-6">
-                <div className="text-center space-y-4">
-                  <p>Testing auction form dialog...</p>
-                  <p>BOMs loaded: {Array.isArray(boms) ? boms.length : 'Loading'}</p>
-                  <p>Vendors loaded: {Array.isArray(vendors) ? vendors.length : 'Loading'}</p>
-                  <Button onClick={() => setIsCreateDialogOpen(false)}>
-                    Close Test
-                  </Button>
-                </div>
-              </div>
+              <CreateAuctionForm 
+                onClose={() => setIsCreateDialogOpen(false)}
+                onSuccess={() => {
+                  setIsCreateDialogOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
+                }}
+                boms={boms}
+                vendors={vendors}
+              />
             </div>
           </DialogContent>
         </Dialog>
@@ -152,7 +151,7 @@ export default function AuctionCenter() {
       {/* Auction Grid */}
       {isLoadingAuctions ? (
         <div className="text-center py-8">Loading auctions...</div>
-      ) : auctions.length === 0 ? (
+      ) : Array.isArray(auctions) && auctions.length === 0 ? (
         <Card className="p-8 text-center">
           <div className="text-muted-foreground mb-4">
             <Trophy className="w-12 h-12 mx-auto mb-2" />
@@ -162,7 +161,7 @@ export default function AuctionCenter() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {auctions.map((auction: any) => (
+          {Array.isArray(auctions) && auctions.map((auction: any) => (
             <AuctionCard 
               key={auction.id} 
               auction={auction}
