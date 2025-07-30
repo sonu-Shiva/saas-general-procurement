@@ -1234,29 +1234,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.patch('/api/auctions/:id/start', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const auction = await storage.getAuction(req.params.id);
-      
-      if (!auction) {
-        return res.status(404).json({ message: "Auction not found" });
-      }
-      
-      if (auction.createdBy !== userId) {
-        return res.status(403).json({ message: "You can only start your own auctions" });
-      }
-      
-      const updatedAuction = await storage.updateAuctionStatus(req.params.id, 'live');
-      
-      // Note: WebSocket notifications will be handled after server setup
-      
-      res.json(updatedAuction);
-    } catch (error) {
-      console.error("Error starting auction:", error);
-      res.status(500).json({ message: "Failed to start auction" });
-    }
-  });
+
 
   // Auction Participants
   app.post('/api/auction-participants', isAuthenticated, async (req, res) => {

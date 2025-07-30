@@ -105,31 +105,7 @@ export default function AuctionCenter() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleStartAuction = async (auctionId: string) => {
-    try {
-      const response = await fetch(`/api/auctions/${auctionId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "live" }),
-        credentials: "include",
-      });
 
-      if (!response.ok) throw new Error("Failed to start auction");
-
-      toast({
-        title: "Success",
-        description: "Auction started successfully",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start auction",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleViewLiveAuction = (auction: any) => {
     setSelectedAuction(auction);
@@ -415,7 +391,6 @@ export default function AuctionCenter() {
                   <AuctionCard 
                     key={auction.id} 
                     auction={auction}
-                    onStart={() => handleStartAuction(auction.id)}
                     onViewLive={() => handleViewLiveAuction(auction)}
                     onEdit={() => handleEditAuction(auction)}
                   />
@@ -552,7 +527,7 @@ export default function AuctionCenter() {
   );
 }
 
-function AuctionCard({ auction, onStart, onViewLive, onEdit }: any) {
+function AuctionCard({ auction, onViewLive, onEdit }: any) {
   const formatDateTime = (dateTime: string) => {
     try {
       const date = new Date(dateTime);
@@ -645,20 +620,19 @@ function AuctionCard({ auction, onStart, onViewLive, onEdit }: any) {
               <Clock className="w-4 h-4" />
               <span>{getRemainingTime(auction.endTime)}</span>
             </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-right">
+              {auction.status === 'scheduled' && '⏱️ Auto-starts'}
+              {auction.status === 'live' && '🔴 Live'}
+              {auction.status === 'closed' && '✅ Ended'}
+            </div>
           </div>
 
           <div className="flex space-x-2 pt-2">
             {auction.status === 'scheduled' && (
-              <>
-                <Button variant="outline" size="sm" onClick={onEdit} className="flex-1 border-2">
-                  <Edit className="w-4 h-4 mr-1" />
-                  Edit
-                </Button>
-                <Button variant="default" size="sm" onClick={onStart} className="flex-1 bg-blue-600 hover:bg-blue-700">
-                  <Play className="w-4 h-4 mr-1" />
-                  Start
-                </Button>
-              </>
+              <Button variant="outline" size="sm" onClick={onEdit} className="flex-1 border-2">
+                <Edit className="w-4 h-4 mr-1" />
+                Edit
+              </Button>
             )}
             {auction.status === 'live' && (
               <Button variant="default" size="sm" onClick={onViewLive} className="flex-1 bg-green-600 hover:bg-green-700">

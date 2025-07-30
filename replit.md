@@ -27,6 +27,10 @@ Preferred communication style: Simple, everyday language.
 - **Auction Editing System**: Added complete auction editing functionality for scheduled auctions with proper security validation
 - **Indian Time Format**: Implemented proper DD/MM/YYYY, 12-hour time format display for all auction times
 - **DateTime Conversion Helpers**: Added toLocalDateTimeString() and toISOString() functions for proper timezone handling between UI and database
+- **AUTOMATIC AUCTION LIFECYCLE**: Replaced manual start/end buttons with fully automatic time-based auction management system
+- **Background Auction Scheduler**: Implemented auctionScheduler.ts service that automatically transitions auctions from scheduled → live → closed based on start/end times
+- **Database DateTime Fix**: Fixed backend ORM conversion issue where ISO strings needed to be converted to Date objects for database operations
+- **Removed Manual Controls**: Eliminated illogical manual start buttons - auctions now operate like proper automated systems
 
 ### Backend Migration to Django (July 2025)
 - **Complete Backend Migration**: Successfully migrated from Node.js/Express to Python 3.12 with Django REST Framework
