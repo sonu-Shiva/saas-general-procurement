@@ -176,25 +176,30 @@ export default function AuctionCenter() {
               <div className="flex space-x-3">
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
+                    <Button 
+                      className="bg-primary hover:bg-primary/90"
+                      onClick={() => {
+                        console.log("Create Auction button clicked");
+                        setIsCreateDialogOpen(true);
+                      }}
+                    >
                       <Plus className="w-4 h-4 mr-2" />
                       Create Auction
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                  <DialogContent className="max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>Create New Reverse Auction</DialogTitle>
                     </DialogHeader>
-                    <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-                      <CreateAuctionForm 
-                        onClose={() => setIsCreateDialogOpen(false)}
-                        onSuccess={() => {
-                          setIsCreateDialogOpen(false);
-                          queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
-                        }}
-                        boms={boms}
-                        vendors={vendors}
-                      />
+                    <div className="p-4">
+                      <p className="text-center text-muted-foreground">
+                        Dialog is working! Form will be added here.
+                      </p>
+                      <div className="flex justify-center mt-4">
+                        <Button onClick={() => setIsCreateDialogOpen(false)}>
+                          Close
+                        </Button>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
