@@ -894,7 +894,54 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
     return <div>Loading auction data...</div>;
   }
 
+  const handleSubmitBid = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newBidAmount || parseFloat(newBidAmount) <= 0) {
+      toast({
+        title: "Invalid Bid",
+        description: "Please enter a valid bid amount",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    if (parseFloat(newBidAmount) > parseFloat(auction.reservePrice)) {
+      toast({
+        title: "Bid Too High", 
+        description: `Bid cannot exceed ceiling price of ₹${auction.reservePrice}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/bids", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auctionId: auction.id,
+          amount: newBidAmount,
+        }),
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error("Failed to submit bid");
+
+      toast({
+        title: "Bid Submitted",
+        description: "Your bid has been placed successfully",
+      });
+
+      setNewBidAmount('');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit bid",
+        variant: "destructive",
+      });
+    }
+  };
 
 
 
