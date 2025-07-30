@@ -187,19 +187,20 @@ export default function AuctionCenter() {
                       Create Auction
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
                     <DialogHeader>
                       <DialogTitle>Create New Reverse Auction</DialogTitle>
                     </DialogHeader>
-                    <div className="p-4">
-                      <p className="text-center text-muted-foreground">
-                        Dialog is working! Form will be added here.
-                      </p>
-                      <div className="flex justify-center mt-4">
-                        <Button onClick={() => setIsCreateDialogOpen(false)}>
-                          Close
-                        </Button>
-                      </div>
+                    <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+                      <CreateAuctionForm 
+                        onClose={() => setIsCreateDialogOpen(false)}
+                        onSuccess={() => {
+                          setIsCreateDialogOpen(false);
+                          queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
+                        }}
+                        boms={boms}
+                        vendors={vendors}
+                      />
                     </div>
                   </DialogContent>
                 </Dialog>
