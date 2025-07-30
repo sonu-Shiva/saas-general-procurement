@@ -14,6 +14,7 @@ import {
   insertRfxInvitationSchema,
   insertRfxResponseSchema,
   insertAuctionSchema,
+  insertAuctionParticipantSchema,
   insertBidSchema,
   insertPurchaseOrderSchema,
   insertPoLineItemSchema,
@@ -1130,14 +1131,9 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/auctions', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auctions', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const { status } = req.query;
-      const auctions = await storage.getAuctions({
-        status: status as string,
-        createdBy: userId,
-      });
+      const auctions = await storage.getAuctions();
       res.json(auctions);
     } catch (error) {
       console.error("Error fetching auctions:", error);
@@ -1151,25 +1147,129 @@ Focus on established businesses with verifiable contact information.`;
       if (!auction) {
         return res.status(404).json({ message: "Auction not found" });
       }
-      const participants = await storage.getAuctionParticipants(req.params.id);
-      const bids = await storage.getBids(req.params.id);
-      res.json({ ...auction, participants, bids });
+      res.json(auction);
     } catch (error) {
       console.error("Error fetching auction:", error);
       res.status(500).json({ message: "Failed to fetch auction" });
     }
   });
 
-  app.post('/api/auctions/:id/participants', isAuthenticated, async (req, res) => {
+  app.patch('/api/auctions/:id/start', isAuthenticated, async (req: any, res) => {
     try {
-      const participant = await storage.addAuctionParticipant({
-        auctionId: req.params.id,
-        vendorId: req.body.vendorId,
-      });
+      const userId = req.user.claims.sub;
+      const auction = await storage.getAuction(req.params.id);
+      
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+      
+      if (auction.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only start your own auctions" });
+      }
+      
+      const updatedAuction = await storage.updateAuctionStatus(req.params.id, 'live');
+      
+      // Note: WebSocket notifications will be handled after server setup
+      
+      res.json(updatedAuction);
+    } catch (error) {
+      console.error("Error starting auction:", error);
+      res.status(500).json({ message: "Failed to start auction" });
+    }
+  });
+
+  // Auction Participants
+  app.post('/api/auction-participants', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertAuctionParticipantSchema.parse(req.body);
+      const participant = await storage.createAuctionParticipant(validatedData);
       res.json(participant);
     } catch (error) {
-      console.error("Error adding auction participant:", error);
-      res.status(400).json({ message: "Failed to add auction participant" });
+      console.error("Error registering auction participant:", error);
+      res.status(400).json({ message: "Failed to register participant" });
+    }
+  });
+
+  // Bidding routes
+  app.post('/api/bids', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get user to find vendor ID
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'vendor') {
+        return res.status(403).json({ message: "Only vendors can place bids" });
+      }
+      
+      // Find vendor by user
+      const vendors = await storage.getVendors({});
+      const vendor = vendors.find((v: any) => v.contactPerson === user.email || v.email === user.email);
+      if (!vendor) {
+        return res.status(403).json({ message: "Vendor profile not found" });
+      }
+      
+      const validatedData = insertBidSchema.parse({
+        ...req.body,
+        vendorId: vendor.id,
+      });
+      
+      // Validate bid against auction rules
+      const auction = await storage.getAuction(validatedData.auctionId);
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+      
+      if (auction.status !== 'live') {
+        return res.status(400).json({ message: "Auction is not active" });
+      }
+      
+      if (parseFloat(validatedData.amount) >= parseFloat(auction.reservePrice || '0')) {
+        return res.status(400).json({ message: "Bid must be below ceiling price" });
+      }
+      
+      const bid = await storage.createBid(validatedData);
+      
+      // Update auction current bid if this is the lowest
+      const allBids = await storage.getAuctionBids(validatedData.auctionId);
+      const lowestBid = allBids.reduce((lowest: any, current: any) => 
+        parseFloat(current.amount) < parseFloat(lowest.amount) ? current : lowest, bid);
+        
+      if (bid.id === lowestBid.id) {
+        await storage.updateAuctionCurrentBid(validatedData.auctionId, validatedData.amount);
+      }
+      
+      // Calculate real-time rankings
+      const vendorBids = allBids.reduce((acc: any, b: any) => {
+        if (!acc[b.vendorId] || parseFloat(b.amount) < parseFloat(acc[b.vendorId].amount)) {
+          acc[b.vendorId] = b;
+        }
+        return acc;
+      }, {});
+      
+      const rankings = Object.values(vendorBids)
+        .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount))
+        .map((b: any, index: number) => ({
+          ...b,
+          rank: index + 1,
+          rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`
+        }));
+      
+      // Note: WebSocket broadcasts will be handled after server setup
+      
+      res.json({ bid, rankings });
+    } catch (error) {
+      console.error("Error placing bid:", error);
+      res.status(400).json({ message: "Failed to place bid" });
+    }
+  });
+
+  app.get('/api/auctions/:id/bids', isAuthenticated, async (req, res) => {
+    try {
+      const bids = await storage.getAuctionBids(req.params.id);
+      res.json(bids);
+    } catch (error) {
+      console.error("Error fetching auction bids:", error);
+      res.status(500).json({ message: "Failed to fetch bids" });
     }
   });
 

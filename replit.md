@@ -10,6 +10,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Live Reverse Auction System Implementation (January 2025)
+- **Complete Auction Backend**: Implemented full auction system with schema, API endpoints, and storage methods
+- **Real-time Bidding Engine**: Added live bidding with ceiling price enforcement and automatic vendor ranking (L1/L2/L3)
+- **WebSocket Integration**: Implemented WebSocket server for real-time auction updates, bid notifications, and live rankings
+- **Auction Management**: Created comprehensive auction creation, participant management, and bid tracking system
+- **BOM-Linked Auctions**: Enabled auctions to be created against specific BOM line items with ceiling prices
+- **Vendor Role Integration**: Auction bidding restricted to vendor users with proper authentication and validation
+- **Live Auction UI**: Built auction center interface with live bidding controls, real-time updates, and auction status management
+- **Auction Status Workflow**: Implemented draft → live → closed auction lifecycle with proper authorization controls
+- **Database Schema**: Added auctions, auction_participants, and bids tables with proper relationships and constraints
+- **API Endpoints**: Added comprehensive REST API for auction CRUD, bidding, participant management, and status updates
+
 ### Backend Migration to Django (July 2025)
 - **Complete Backend Migration**: Successfully migrated from Node.js/Express to Python 3.12 with Django REST Framework
 - **Django Project Structure**: Created modular Django apps for users, vendors, products, boms, rfx, auctions, purchase_orders, approvals, and notifications
