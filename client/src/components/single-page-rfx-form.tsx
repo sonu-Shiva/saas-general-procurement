@@ -32,18 +32,30 @@ interface SinglePageRfxFormProps {
 }
 
 export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxFormProps) {
+  console.log("SinglePageRfxForm component rendering...");
   const queryClient = useQueryClient();
 
   // Fetch vendors for selection
-  const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
+  const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError } = useQuery({
     queryKey: ["/api/vendors"],
     retry: false,
   });
 
   // Fetch BOMs for RFQ
-  const { data: boms = [] } = useQuery({
+  const { data: boms = [], isLoading: bomsLoading, error: bomsError } = useQuery({
     queryKey: ["/api/boms"],
     retry: false,
+  });
+
+  console.log("Component state:", {
+    vendors: vendors,
+    vendorsLoading,
+    vendorsError,
+    boms: boms,
+    bomsLoading,
+    bomsError,
+    vendorsLength: Array.isArray(vendors) ? vendors.length : 'not array',
+    bomsLength: Array.isArray(boms) ? boms.length : 'not array'
   });
 
   const form = useForm<RfxFormData>({
@@ -145,27 +157,45 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
     createRfxMutation.mutate(data);
   };
 
-  console.log("Vendors data:", vendors);
-  console.log("Vendors loading:", vendorsLoading);
-  console.log("BOMs data:", boms);
-
-  if (vendorsLoading) {
+  if (vendorsLoading || bomsLoading) {
+    console.log("Showing loading state...");
     return (
-      <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
+      <div className="w-full p-6 space-y-6 bg-white">
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading RFx form...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading RFx form...</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Vendors: {vendorsLoading ? 'Loading...' : 'Loaded'} | 
+            BOMs: {bomsLoading ? 'Loading...' : 'Loaded'}
+          </p>
         </div>
       </div>
     );
   }
 
+  if (vendorsError || bomsError) {
+    console.log("Showing error state...", { vendorsError, bomsError });
+    return (
+      <div className="w-full p-6 space-y-6 bg-white">
+        <div className="text-center py-8">
+          <p className="text-red-600">Error loading form data</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {vendorsError && `Vendors: ${vendorsError.message}`}
+            {bomsError && `BOMs: ${bomsError.message}`}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("Rendering main form...");
   return (
-    <div className="w-full p-4 space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">
+    <div className="w-full p-4 space-y-6 bg-white min-h-[500px] border border-gray-300">
+      <div className="bg-blue-50 p-4 border border-blue-200 rounded">
+        <h2 className="text-2xl font-bold text-gray-900">
           Create {selectedType.toUpperCase()} Request
         </h2>
+        <p className="text-gray-600 mt-2">Form is now visible!</p>
         <p className="text-muted-foreground">
           {selectedType === "rfi" 
             ? "Request information from vendors to understand their capabilities"
