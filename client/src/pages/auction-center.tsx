@@ -410,15 +410,25 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
     selectedVendors: [] as string[],
   });
 
-  const { data: bomLineItems = [] } = useQuery({
+  const { data: bomLineItems = [], isLoading: isLoadingItems, error: itemsError } = useQuery({
     queryKey: ["/api/bom-items", formData.bomId],
     queryFn: async () => {
       if (!formData.bomId) return [];
-      const response = await fetch(`/api/bom-items/${formData.bomId}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
+      try {
+        const response = await fetch(`/api/bom-items/${formData.bomId}`, {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          console.error(`BOM items API error: ${response.status}`);
+          return []; // Return empty array instead of throwing
+        }
+        const data = await response.json();
+        console.log("BOM items loaded:", data);
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error("Error fetching BOM items:", error);
+        return []; // Return empty array on error
+      }
     },
     enabled: !!formData.bomId,
     retry: false,
@@ -546,19 +556,29 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
             <Select 
               value={formData.bomLineItemId} 
               onValueChange={(value) => setFormData({ ...formData, bomLineItemId: value })}
+              disabled={!formData.bomId || isLoadingItems}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select line item" />
+                <SelectValue placeholder={
+                  isLoadingItems ? "Loading items..." : 
+                  !formData.bomId ? "Select BOM first" : 
+                  "Select line item"
+                } />
               </SelectTrigger>
               <SelectContent>
-                {bomLineItems.length === 0 && formData.bomId && (
-                  <SelectItem value="" disabled>No line items found</SelectItem>
-                )}
-                {Array.isArray(bomLineItems) && bomLineItems.map((item: any) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.itemName || item.productName} - Qty: {item.quantity} - ₹{item.unitPrice || 'N/A'}
+                {isLoadingItems ? (
+                  <SelectItem value="" disabled>Loading line items...</SelectItem>
+                ) : !bomLineItems || bomLineItems.length === 0 ? (
+                  <SelectItem value="" disabled>
+                    {formData.bomId ? "No line items found" : "Select BOM first"}
                   </SelectItem>
-                ))}
+                ) : (
+                  bomLineItems.map((item: any) => (
+                    <SelectItem key={item.id || Math.random()} value={item.id || ''}>
+                      {(item.itemName || item.productName || 'Unknown Item')} - Qty: {item.quantity || 0} - ₹{item.unitPrice || 'N/A'}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
