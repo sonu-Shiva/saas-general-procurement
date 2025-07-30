@@ -179,7 +179,7 @@ export default function AuctionCenter() {
                   </p>
                 </div>
                 {/* Only buyers can create auctions - vendors cannot create */}
-                {user?.role !== 'vendor' && (
+                {(user as any)?.role !== 'vendor' && (
                   <div className="mt-4 sm:mt-0">
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                       <DialogTrigger asChild>
@@ -376,7 +376,7 @@ export default function AuctionCenter() {
                   <h3 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300">
                     {searchQuery || statusFilter !== "all" 
                       ? "No matching auctions" 
-                      : user?.role === 'vendor' 
+                      : (user as any)?.role === 'vendor' 
                         ? "No auctions available" 
                         : "No auctions yet"
                     }
@@ -384,12 +384,12 @@ export default function AuctionCenter() {
                   <p className="text-gray-500 mb-6">
                     {searchQuery || statusFilter !== "all" 
                       ? "Try adjusting your search or filter criteria" 
-                      : user?.role === 'vendor' 
+                      : (user as any)?.role === 'vendor' 
                         ? "No auctions available for participation yet"
                         : "Create your first reverse auction to start competitive bidding"
                     }
                   </p>
-                  {(!searchQuery && statusFilter === "all" && user?.role !== 'vendor') && (
+                  {(!searchQuery && statusFilter === "all" && (user as any)?.role !== 'vendor') && (
                     <Button 
                       onClick={() => setIsCreateDialogOpen(true)}
                       size="lg"
@@ -854,7 +854,7 @@ function AuctionCard({ auction, onViewLive, onEdit, onViewResults }: any) {
 
           <div className="flex space-x-2 pt-2">
             {/* Only buyers can edit auctions - vendors cannot edit */}
-            {auction.status === 'scheduled' && user?.role !== 'vendor' && (
+            {auction.status === 'scheduled' && (user as any)?.role !== 'vendor' && (
               <Button variant="outline" size="sm" onClick={onEdit} className="flex-1 border-2">
                 <Edit className="w-4 h-4 mr-1" />
                 Edit
