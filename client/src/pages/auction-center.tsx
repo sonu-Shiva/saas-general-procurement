@@ -150,8 +150,8 @@ export default function AuctionCenter() {
         description: formData.get('description') as string,
         bomId: formData.get('bomId') as string || null,
         reservePrice: formData.get('ceilingPrice') as string,
-        startTime: toISOString(formData.get('startTime') as string),
-        endTime: toISOString(formData.get('endTime') as string),
+        startTime: new Date(formData.get('startTime') as string).toISOString(),
+        endTime: new Date(formData.get('endTime') as string).toISOString(),
       };
 
       const response = await fetch(`/api/auctions/${editingAuction.id}`, {
@@ -217,8 +217,8 @@ export default function AuctionCenter() {
                             description: formData.get('description') as string,
                             bomId: formData.get('bomId') as string || null,
                             reservePrice: formData.get('ceilingPrice') as string,
-                            startTime: toISOString(formData.get('startTime') as string),
-                            endTime: toISOString(formData.get('endTime') as string),
+                            startTime: new Date(formData.get('startTime') as string).toISOString(),
+                            endTime: new Date(formData.get('endTime') as string).toISOString(),
                             status: 'scheduled'
                           };
                           

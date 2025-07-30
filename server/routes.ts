@@ -1131,10 +1131,17 @@ Focus on established businesses with verifiable contact information.`;
   app.post('/api/auctions', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const validatedData = insertAuctionSchema.parse({
-        ...req.body,
-        createdBy: userId,
-      });
+      const auctionData = { ...req.body, createdBy: userId };
+      
+      // Convert ISO string dates to Date objects for database
+      if (auctionData.startTime) {
+        auctionData.startTime = new Date(auctionData.startTime);
+      }
+      if (auctionData.endTime) {
+        auctionData.endTime = new Date(auctionData.endTime);
+      }
+      
+      const validatedData = insertAuctionSchema.parse(auctionData);
       const auction = await storage.createAuction(validatedData);
       res.json(auction);
     } catch (error) {
@@ -1185,6 +1192,15 @@ Focus on established businesses with verifiable contact information.`;
       }
       
       const updates = req.body;
+      
+      // Convert ISO string dates to Date objects for database
+      if (updates.startTime) {
+        updates.startTime = new Date(updates.startTime);
+      }
+      if (updates.endTime) {
+        updates.endTime = new Date(updates.endTime);
+      }
+      
       const updatedAuction = await storage.updateAuction(auctionId, updates);
       res.json(updatedAuction);
     } catch (error) {
