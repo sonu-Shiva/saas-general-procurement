@@ -33,49 +33,52 @@ interface SinglePageRfxFormProps {
 
 export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxFormProps) {
   console.log("SinglePageRfxForm component rendering...");
-  const queryClient = useQueryClient();
+  
+  // Simple test first - no queries
+  try {
+    const queryClient = useQueryClient();
+    console.log("QueryClient initialized successfully");
+    
+    // Test queries step by step
+    console.log("About to initialize vendors query...");
+    const vendorsQuery = useQuery({
+      queryKey: ["/api/vendors"],
+      retry: false,
+    });
+    console.log("Vendors query initialized:", vendorsQuery.isLoading, vendorsQuery.error);
+    
+    console.log("About to initialize BOMs query...");
+    const bomsQuery = useQuery({
+      queryKey: ["/api/boms"],
+      retry: false,
+    });
+    console.log("BOMs query initialized:", bomsQuery.isLoading, bomsQuery.error);
+    
+    const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError } = vendorsQuery;
+    const { data: boms = [], isLoading: bomsLoading, error: bomsError } = bomsQuery;
 
-  // Fetch vendors for selection
-  const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError } = useQuery({
-    queryKey: ["/api/vendors"],
-    retry: false,
-  });
+    console.log("About to initialize form...");
+    const form = useForm<RfxFormData>({
+      resolver: zodResolver(rfxFormSchema),
+      defaultValues: {
+        title: "",
+        scope: "",
+        type: "rfi",
+        dueDate: "",
+        budget: "",
+        bomId: "",
+        selectedVendors: [],
+        criteria: "",
+        evaluationParameters: "",
+      },
+    });
+    console.log("Form initialized successfully");
 
-  // Fetch BOMs for RFQ
-  const { data: boms = [], isLoading: bomsLoading, error: bomsError } = useQuery({
-    queryKey: ["/api/boms"],
-    retry: false,
-  });
+    console.log("About to watch form type...");
+    const selectedType = form.watch("type");
+    console.log("Form type watch initialized:", selectedType);
 
-  console.log("Component state:", {
-    vendors: vendors,
-    vendorsLoading,
-    vendorsError,
-    boms: boms,
-    bomsLoading,
-    bomsError,
-    vendorsLength: Array.isArray(vendors) ? vendors.length : 'not array',
-    bomsLength: Array.isArray(boms) ? boms.length : 'not array'
-  });
-
-  const form = useForm<RfxFormData>({
-    resolver: zodResolver(rfxFormSchema),
-    defaultValues: {
-      title: "",
-      scope: "",
-      type: "rfi",
-      dueDate: "",
-      budget: "",
-      bomId: "",
-      selectedVendors: [],
-      criteria: "",
-      evaluationParameters: "",
-    },
-  });
-
-  const selectedType = form.watch("type");
-
-  const createRfxMutation = useMutation({
+    const createRfxMutation = useMutation({
     mutationFn: async (data: RfxFormData) => {
       // First create the RFx event
       const rfxPayload = {
@@ -149,13 +152,13 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
       console.error("Error creating RFx:", error);
       console.error("Error details:", error.message);
     },
-  });
+    });
 
-  const onSubmit = (data: RfxFormData) => {
-    console.log("Form submission data:", data);
-    console.log("Form errors:", form.formState.errors);
-    createRfxMutation.mutate(data);
-  };
+    const onSubmit = (data: RfxFormData) => {
+      console.log("Form submission data:", data);
+      console.log("Form errors:", form.formState.errors);
+      createRfxMutation.mutate(data);
+    };
 
   if (vendorsLoading || bomsLoading) {
     console.log("Showing loading state...");
@@ -466,5 +469,17 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
         </div>
       </form>
     </div>
-  );
+    );
+  } catch (error) {
+    console.error("Error rendering RFx form:", error);
+    return (
+      <div className="w-full p-6 space-y-6 bg-white">
+        <div className="text-center py-8">
+          <p className="text-red-600">Error rendering form</p>
+          <p className="text-sm text-gray-500 mt-2">{error.message}</p>
+          <Button onClick={onClose} className="mt-4">Close</Button>
+        </div>
+      </div>
+    );
+  }
 }

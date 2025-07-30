@@ -172,7 +172,7 @@ export default function RfxManagement() {
                       <DialogTitle>Create New RFx Request</DialogTitle>
                     </DialogHeader>
                     <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-                      <TestRfxForm 
+                      <SinglePageRfxForm 
                         onClose={() => setIsCreateDialogOpen(false)}
                         onSuccess={() => {
                           setIsCreateDialogOpen(false);
