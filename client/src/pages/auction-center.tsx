@@ -180,19 +180,18 @@ export default function AuctionCenter() {
 
                 <div className="space-y-2">
                   <Label htmlFor="bomId">BOM Selection (Optional)</Label>
-                  <Select name="bomId">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select BOM (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No BOM (General Auction)</SelectItem>
-                      {Array.isArray(boms) && boms.map((bom: any) => (
-                        <SelectItem key={bom.id} value={bom.id}>
-                          {bom.name} (v{bom.version})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select 
+                    id="bomId" 
+                    name="bomId"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">No BOM (General Auction)</option>
+                    {Array.isArray(boms) && boms.map((bom: any) => (
+                      <option key={bom.id} value={bom.id}>
+                        {bom.name} (v{bom.version})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
