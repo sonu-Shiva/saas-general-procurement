@@ -147,9 +147,21 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
 
   console.log("Vendors data:", vendors);
   console.log("Vendors loading:", vendorsLoading);
+  console.log("BOMs data:", boms);
+
+  if (vendorsLoading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading RFx form...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
+    <div className="w-full p-4 space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground">
           Create {selectedType.toUpperCase()} Request

@@ -166,11 +166,11 @@ export default function RfxManagement() {
                       Create RFx
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
-                    <DialogHeader className="flex-shrink-0">
+                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
                       <DialogTitle>Create New RFx Request</DialogTitle>
                     </DialogHeader>
-                    <div className="flex-1 overflow-y-auto pr-2">
+                    <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
                       <SinglePageRfxForm 
                         onClose={() => setIsCreateDialogOpen(false)}
                         onSuccess={() => {
