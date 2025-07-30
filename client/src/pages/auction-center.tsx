@@ -397,6 +397,14 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
 
   const { data: bomLineItems = [] } = useQuery({
     queryKey: ["/api/bom-items", formData.bomId],
+    queryFn: async () => {
+      if (!formData.bomId) return [];
+      const response = await fetch(`/api/bom-items/${formData.bomId}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    },
     enabled: !!formData.bomId,
     retry: false,
   });
@@ -500,7 +508,10 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="bomId">BOM Selection</Label>
-          <Select onValueChange={(value) => setFormData({ ...formData, bomId: value })}>
+          <Select 
+            value={formData.bomId} 
+            onValueChange={(value) => setFormData({ ...formData, bomId: value, bomLineItemId: '' })}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select BOM" />
             </SelectTrigger>
@@ -517,7 +528,10 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         {formData.bomId && (
           <div className="space-y-2">
             <Label htmlFor="bomLineItemId">Line Item</Label>
-            <Select onValueChange={(value) => setFormData({ ...formData, bomLineItemId: value })}>
+            <Select 
+              value={formData.bomLineItemId} 
+              onValueChange={(value) => setFormData({ ...formData, bomLineItemId: value })}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select line item" />
               </SelectTrigger>
