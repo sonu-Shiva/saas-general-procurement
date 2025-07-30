@@ -404,67 +404,14 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
     name: '',
     description: '',
     bomId: '',
-    bomLineItemId: '',
+
     ceilingPrice: '',
     startTime: '',
     endTime: '',
     selectedVendors: [] as string[],
   });
 
-  const { data: bomLineItems = [], isLoading: isLoadingItems, error: itemsError } = useQuery({
-    queryKey: ["/api/bom-items", formData.bomId],
-    enabled: false, // Disable automatic query
-    retry: false,
-  });
-
-  // Manual query trigger with better error handling
-  const loadBomItems = async (bomId: string) => {
-    if (!bomId) return;
-    try {
-      console.log('Loading BOM items for:', bomId);
-      const response = await fetch(`/api/bom-items/${bomId}`, {
-        credentials: "include",
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-      console.log('BOM items response:', response.status, response.statusText);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          toast({
-            title: "Authentication Error",
-            description: "Please refresh the page and try again",
-            variant: "destructive",
-          });
-          return;
-        }
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log("BOM items loaded successfully:", data.length, "items");
-      
-      // Force update the query data
-      queryClient.setQueryData(["/api/bom-items", bomId], Array.isArray(data) ? data : []);
-      
-    } catch (error) {
-      console.error("Error loading BOM items:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load BOM items. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Trigger BOM items load when BOM changes
-  useEffect(() => {
-    if (formData.bomId) {
-      loadBomItems(formData.bomId);
-    }
-  }, [formData.bomId]);
+  // Remove BOM items query - no longer needed since we simplified to BOM-only selection
 
   const createAuctionMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -475,7 +422,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           name: data.name,
           description: data.description,
           bomId: data.bomId || null,
-          bomLineItemId: data.bomLineItemId || null,
+          bomLineItemId: null,
           reservePrice: data.ceilingPrice,
           startTime: data.startTime ? new Date(data.startTime).toISOString() : null,
           endTime: data.endTime ? new Date(data.endTime).toISOString() : null,
@@ -566,7 +513,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         <Label htmlFor="bomId">BOM Selection (Optional)</Label>
         <Select 
           value={formData.bomId} 
-          onValueChange={(value) => setFormData({ ...formData, bomId: value, bomLineItemId: '' })}
+          onValueChange={(value) => setFormData({ ...formData, bomId: value })}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select BOM (optional)" />
