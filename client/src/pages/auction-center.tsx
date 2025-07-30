@@ -886,12 +886,25 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const { data: bids = [] } = useQuery({
-    queryKey: ["/api/auctions", auction.id, "bids"],
-    refetchInterval: 2000, // Refresh every 2 seconds
+  // Temporarily disable the bids query to test if this is causing the blank page
+  const { data: bids = [], isError, error } = useQuery({
+    queryKey: ["/api/auctions", auction?.id, "bids"],
+    enabled: !!auction?.id, // Only fetch if auction ID exists
+    refetchInterval: 2000,
+    retry: false, // Don't retry on error to see the issue faster
   });
 
+  // Add error logging
   useEffect(() => {
+    if (isError) {
+      console.error("Bids query error:", error);
+    }
+  }, [isError, error]);
+
+  useEffect(() => {
+    console.log("LiveBiddingInterface rendered with auction:", auction?.id);
+    console.log("Bids data:", bids);
+    
     if (Array.isArray(bids)) {
       setCurrentBids(bids);
       
@@ -913,7 +926,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
 
       setRankings(ranked);
     }
-  }, [bids]);
+  }, [bids, auction?.id]);
 
   const handleSubmitBid = async (e: React.FormEvent) => {
     e.preventDefault();
