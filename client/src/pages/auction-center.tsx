@@ -133,16 +133,88 @@ export default function AuctionCenter() {
             <DialogHeader>
               <DialogTitle>Create New Reverse Auction</DialogTitle>
             </DialogHeader>
-            <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-              <CreateAuctionForm 
-                onClose={() => setIsCreateDialogOpen(false)}
-                onSuccess={() => {
-                  setIsCreateDialogOpen(false);
-                  queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
-                }}
-                boms={boms}
-                vendors={vendors}
-              />
+            <div className="overflow-y-auto max-h-[calc(90vh-100px)] p-6">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                const data = {
+                  name: formData.get('name') as string,
+                  description: formData.get('description') as string,
+                  bomId: formData.get('bomId') as string,
+                  reservePrice: formData.get('ceilingPrice') as string,
+                  startTime: formData.get('startTime') as string,
+                  endTime: formData.get('endTime') as string,
+                  status: 'scheduled'
+                };
+                
+                fetch('/api/auctions', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(data),
+                  credentials: 'include'
+                }).then(response => {
+                  if (response.ok) {
+                    toast({ title: 'Success', description: 'Auction created successfully' });
+                    setIsCreateDialogOpen(false);
+                    queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
+                  } else {
+                    toast({ title: 'Error', description: 'Failed to create auction', variant: 'destructive' });
+                  }
+                });
+              }} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Auction Name *</Label>
+                    <Input id="name" name="name" placeholder="Enter auction name" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ceilingPrice">Ceiling Price (₹) *</Label>
+                    <Input id="ceilingPrice" name="ceilingPrice" type="number" placeholder="Maximum price" required />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" name="description" placeholder="Auction description" rows={3} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bomId">BOM Selection (Optional)</Label>
+                  <Select name="bomId">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select BOM (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No BOM (General Auction)</SelectItem>
+                      {Array.isArray(boms) && boms.map((bom: any) => (
+                        <SelectItem key={bom.id} value={bom.id}>
+                          {bom.name} (v{bom.version})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startTime">Start Time *</Label>
+                    <Input id="startTime" name="startTime" type="datetime-local" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endTime">End Time *</Label>
+                    <Input id="endTime" name="endTime" type="datetime-local" required />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    Create Auction
+                  </Button>
+                </div>
+              </form>
             </div>
           </DialogContent>
         </Dialog>
@@ -273,222 +345,7 @@ function AuctionCard({ auction, onStart, onViewLive }: any) {
   );
 }
 
-function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '', 
-    bomId: '',
-    ceilingPrice: '',
-    startTime: '',
-    endTime: '',
-    selectedVendors: [] as string[],
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.ceilingPrice || !formData.startTime || !formData.endTime) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    
-    try {
-      const response = await fetch("/api/auctions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          bomId: formData.bomId || null,
-          bomLineItemId: null,
-          reservePrice: formData.ceilingPrice,
-          startTime: formData.startTime ? new Date(formData.startTime).toISOString() : null,
-          endTime: formData.endTime ? new Date(formData.endTime).toISOString() : null,
-          status: 'scheduled',
-        }),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}`);
-      }
-      
-      const auction = await response.json();
-      
-      // Register selected vendors for the auction
-      if (formData.selectedVendors.length > 0) {
-        await Promise.all(
-          formData.selectedVendors.map(vendorId =>
-            fetch("/api/auction-participants", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                auctionId: auction.id,
-                vendorId: vendorId,
-              }),
-              credentials: "include",
-            })
-          )
-        );
-      }
-      
-      toast({
-        title: "Success",
-        description: "Auction created successfully",
-      });
-      onSuccess();
-      
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create auction",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-1">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Auction Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter auction name"
-            required
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="ceilingPrice">Ceiling Price (₹) *</Label>
-          <Input
-            id="ceilingPrice"
-            type="number"
-            value={formData.ceilingPrice}
-            onChange={(e) => setFormData({ ...formData, ceilingPrice: e.target.value })}
-            placeholder="Maximum price"
-            required
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Auction description and requirements"
-          rows={3}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="bomId">BOM Selection (Optional)</Label>
-        <Select 
-          value={formData.bomId} 
-          onValueChange={(value) => setFormData({ ...formData, bomId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select BOM (optional)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">No BOM (General Auction)</SelectItem>
-            {Array.isArray(boms) && boms.map((bom: any) => (
-              <SelectItem key={bom.id} value={bom.id}>
-                {bom.name} (v{bom.version})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-sm text-muted-foreground">
-          Link to a specific BOM for targeted procurement or leave blank for general auction
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="startTime">Start Time *</Label>
-          <Input
-            id="startTime"
-            type="datetime-local"
-            value={formData.startTime}
-            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="endTime">End Time *</Label>
-          <Input
-            id="endTime"
-            type="datetime-local"
-            value={formData.endTime}
-            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-            required
-          />
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <Label>Select Vendors for Auction</Label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto">
-          {Array.isArray(vendors) && vendors.map((vendor: any) => (
-            <Card key={vendor.id} className="p-4 cursor-pointer hover:border-primary/50">
-              <label className="flex items-start space-x-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  value={vendor.id}
-                  checked={formData.selectedVendors.includes(vendor.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setFormData({ 
-                        ...formData, 
-                        selectedVendors: [...formData.selectedVendors, vendor.id] 
-                      });
-                    } else {
-                      setFormData({ 
-                        ...formData, 
-                        selectedVendors: formData.selectedVendors.filter(id => id !== vendor.id) 
-                      });
-                    }
-                  }}
-                  className="h-4 w-4 mt-1"
-                />
-                <div className="flex-1">
-                  <div className="font-medium">{vendor.companyName || vendor.name}</div>
-                  <div className="text-sm text-muted-foreground">{vendor.categories}</div>
-                </div>
-              </label>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Auction"}
-        </Button>
-      </div>
-    </form>
-  );
-}
 
 function LiveBiddingInterface({ auction, ws, onClose }: any) {
   const [currentBids, setCurrentBids] = useState<any[]>([]);
