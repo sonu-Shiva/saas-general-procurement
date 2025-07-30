@@ -28,6 +28,24 @@ import {
   Edit
 } from "lucide-react";
 
+// Helper function to convert UTC date to local datetime-local format
+function toLocalDateTimeString(utcDateString: string): string {
+  const date = new Date(utcDateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Helper function to convert local datetime-local format to proper ISO string
+function toISOString(localDateTimeString: string): string {
+  // The datetime-local input gives us local time, we need to convert it to ISO
+  const date = new Date(localDateTimeString);
+  return date.toISOString();
+}
+
 export default function AuctionCenter() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -132,8 +150,8 @@ export default function AuctionCenter() {
         description: formData.get('description') as string,
         bomId: formData.get('bomId') as string || null,
         reservePrice: formData.get('ceilingPrice') as string,
-        startTime: formData.get('startTime') as string,
-        endTime: formData.get('endTime') as string,
+        startTime: toISOString(formData.get('startTime') as string),
+        endTime: toISOString(formData.get('endTime') as string),
       };
 
       const response = await fetch(`/api/auctions/${editingAuction.id}`, {
@@ -199,8 +217,8 @@ export default function AuctionCenter() {
                             description: formData.get('description') as string,
                             bomId: formData.get('bomId') as string || null,
                             reservePrice: formData.get('ceilingPrice') as string,
-                            startTime: formData.get('startTime') as string,
-                            endTime: formData.get('endTime') as string,
+                            startTime: toISOString(formData.get('startTime') as string),
+                            endTime: toISOString(formData.get('endTime') as string),
                             status: 'scheduled'
                           };
                           
@@ -499,7 +517,7 @@ export default function AuctionCenter() {
                       id="edit-startTime" 
                       name="startTime" 
                       type="datetime-local" 
-                      defaultValue={editingAuction.startTime ? new Date(editingAuction.startTime).toISOString().slice(0, 16) : ''}
+                      defaultValue={editingAuction.startTime ? toLocalDateTimeString(editingAuction.startTime) : ''}
                       required 
                       className="h-11 border-2" 
                     />
@@ -510,7 +528,7 @@ export default function AuctionCenter() {
                       id="edit-endTime" 
                       name="endTime" 
                       type="datetime-local" 
-                      defaultValue={editingAuction.endTime ? new Date(editingAuction.endTime).toISOString().slice(0, 16) : ''}
+                      defaultValue={editingAuction.endTime ? toLocalDateTimeString(editingAuction.endTime) : ''}
                       required 
                       className="h-11 border-2" 
                     />

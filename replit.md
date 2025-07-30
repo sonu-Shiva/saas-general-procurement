@@ -23,6 +23,10 @@ Preferred communication style: Simple, everyday language.
 - **Database Schema**: Added auctions, auction_participants, and bids tables with proper relationships and constraints
 - **API Endpoints**: Added comprehensive REST API for auction CRUD, bidding, participant management, and status updates
 - **Form Stability Issues Resolved**: Fixed blank screen crashes by using simplified HTML form elements instead of complex React components
+- **CRITICAL TIMEZONE BUG FIX**: Fixed major datetime timezone conversion issue where selected times displayed incorrectly (e.g., 4:43 PM showing as 10:13 PM)
+- **Auction Editing System**: Added complete auction editing functionality for scheduled auctions with proper security validation
+- **Indian Time Format**: Implemented proper DD/MM/YYYY, 12-hour time format display for all auction times
+- **DateTime Conversion Helpers**: Added toLocalDateTimeString() and toISOString() functions for proper timezone handling between UI and database
 
 ### Backend Migration to Django (July 2025)
 - **Complete Backend Migration**: Successfully migrated from Node.js/Express to Python 3.12 with Django REST Framework
