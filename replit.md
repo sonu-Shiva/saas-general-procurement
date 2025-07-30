@@ -17,6 +17,8 @@ Preferred communication style: Simple, everyday language.
 - **VENDOR MODULE RESTRICTIONS**: Completely removed Vendor Management and BOM Management modules from vendor user interface
 - **ROUTE-LEVEL PROTECTION**: Added page-level access guards preventing vendors from directly accessing restricted modules
 - **NAVIGATION FILTERING**: Sidebar dynamically hides restricted sections based on user role with proper authentication context
+- **AUCTION EDIT RESTRICTIONS**: Vendors can no longer edit auctions - Edit buttons and Create Auction functionality hidden from vendor users
+- **UI ACCESS CONTROL**: Create Auction button, Edit auction actions, and auction creation dialogs restricted to buyer roles only
 - **DATABASE QUERY OPTIMIZATION**: Implemented getRfxEventsForVendor() and getAuctionsForVendor() methods for secure data access
 - **TEST DATA INTEGRATION**: Added proper RFx invitations and auction participants for role-switching testing
 - **COMPLETE ACCESS CONTROL**: Vendors can only access Product Catalog, RFx Management (invited), Auction Center (invited), Purchase Orders, and Analytics

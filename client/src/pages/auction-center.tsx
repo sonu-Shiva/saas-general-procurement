@@ -178,14 +178,16 @@ export default function AuctionCenter() {
                     Manage reverse auctions and competitive bidding processes
                   </p>
                 </div>
-                <div className="mt-4 sm:mt-0">
-                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                        <Plus className="w-5 h-5 mr-2" />
-                        Create Auction
-                      </Button>
-                    </DialogTrigger>
+                {/* Only buyers can create auctions - vendors cannot create */}
+                {user?.role !== 'vendor' && (
+                  <div className="mt-4 sm:mt-0">
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                          <Plus className="w-5 h-5 mr-2" />
+                          Create Auction
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent className="max-w-4xl">
                       <DialogHeader>
                         <DialogTitle className="text-2xl">Create New Reverse Auction</DialogTitle>
@@ -274,7 +276,8 @@ export default function AuctionCenter() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Stats Cards */}
@@ -371,15 +374,22 @@ export default function AuctionCenter() {
                 <div className="text-gray-500 dark:text-gray-400">
                   <Trophy className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                   <h3 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                    {searchQuery || statusFilter !== "all" ? "No matching auctions" : "No auctions yet"}
+                    {searchQuery || statusFilter !== "all" 
+                      ? "No matching auctions" 
+                      : user?.role === 'vendor' 
+                        ? "No auctions available" 
+                        : "No auctions yet"
+                    }
                   </h3>
                   <p className="text-gray-500 mb-6">
                     {searchQuery || statusFilter !== "all" 
                       ? "Try adjusting your search or filter criteria" 
-                      : "Create your first reverse auction to start competitive bidding"
+                      : user?.role === 'vendor' 
+                        ? "No auctions available for participation yet"
+                        : "Create your first reverse auction to start competitive bidding"
                     }
                   </p>
-                  {(!searchQuery && statusFilter === "all") && (
+                  {(!searchQuery && statusFilter === "all" && user?.role !== 'vendor') && (
                     <Button 
                       onClick={() => setIsCreateDialogOpen(true)}
                       size="lg"
@@ -742,6 +752,7 @@ function AuctionResults({ auction, onClose }: any) {
 }
 
 function AuctionCard({ auction, onViewLive, onEdit, onViewResults }: any) {
+  const { user } = useAuth();
   const formatDateTime = (dateTime: string) => {
     try {
       const date = new Date(dateTime);
@@ -842,7 +853,8 @@ function AuctionCard({ auction, onViewLive, onEdit, onViewResults }: any) {
           </div>
 
           <div className="flex space-x-2 pt-2">
-            {auction.status === 'scheduled' && (
+            {/* Only buyers can edit auctions - vendors cannot edit */}
+            {auction.status === 'scheduled' && user?.role !== 'vendor' && (
               <Button variant="outline" size="sm" onClick={onEdit} className="flex-1 border-2">
                 <Edit className="w-4 h-4 mr-1" />
                 Edit
