@@ -399,6 +399,7 @@ export default function AuctionCenter() {
                     auction={auction}
                     onViewLive={() => handleViewLiveAuction(auction)}
                     onEdit={() => handleEditAuction(auction)}
+                    onViewResults={() => handleViewResults(auction)}
                   />
                 ))}
               </div>
@@ -575,7 +576,7 @@ function AuctionResults({ auction, onClose }: any) {
     const ranked = Object.values(vendorBids)
       .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount))
       .map((bid: any, index: number) => {
-        const vendor = vendors.find((v: any) => v.id === bid.vendorId);
+        const vendor = Array.isArray(vendors) ? vendors.find((v: any) => v.id === bid.vendorId) : null;
         return {
           ...bid,
           rank: index + 1,
@@ -604,8 +605,8 @@ function AuctionResults({ auction, onClose }: any) {
     }
   };
 
-  const totalBids = bids.length;
-  const uniqueVendors = new Set(bids.map((bid: any) => bid.vendorId)).size;
+  const totalBids = Array.isArray(bids) ? bids.length : 0;
+  const uniqueVendors = Array.isArray(bids) ? new Set(bids.map((bid: any) => bid.vendorId)).size : 0;
   const winner = finalRankings[0];
   const totalSavings = winner ? winner.savings : 0;
 
@@ -740,7 +741,7 @@ function AuctionResults({ auction, onClose }: any) {
   );
 }
 
-function AuctionCard({ auction, onViewLive, onEdit }: any) {
+function AuctionCard({ auction, onViewLive, onEdit, onViewResults }: any) {
   const formatDateTime = (dateTime: string) => {
     try {
       const date = new Date(dateTime);
@@ -854,7 +855,7 @@ function AuctionCard({ auction, onViewLive, onEdit }: any) {
               </Button>
             )}
             {auction.status === 'closed' && (
-              <Button variant="ghost" size="sm" onClick={() => handleViewResults(auction)} className="flex-1 border-2">
+              <Button variant="ghost" size="sm" onClick={onViewResults} className="flex-1 border-2">
                 <Trophy className="w-4 h-4 mr-1" />
                 Results
               </Button>
