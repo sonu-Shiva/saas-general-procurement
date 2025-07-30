@@ -1,25 +1,23 @@
-import { useState } from "react";
+import React from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 
-const simpleRfxSchema = z.object({
+const rfxSchema = z.object({
   title: z.string().min(1, "Title is required"),
   scope: z.string().min(1, "Scope is required"),
   type: z.enum(["rfi", "rfp", "rfq"]),
   dueDate: z.string().min(1, "Due date is required"),
   selectedVendors: z.array(z.string()).min(1, "At least one vendor must be selected"),
-  criteria: z.string().optional().or(z.literal("")),
 });
 
-type SimpleRfxData = z.infer<typeof simpleRfxSchema>;
+type RfxData = z.infer<typeof rfxSchema>;
 
 interface SimpleRfxFormProps {
   onClose: () => void;
@@ -27,181 +25,159 @@ interface SimpleRfxFormProps {
 }
 
 export default function SimpleRfxForm({ onClose, onSuccess }: SimpleRfxFormProps) {
+  console.log("SimpleRfxForm rendering");
+  
   const queryClient = useQueryClient();
-
-  // Fetch vendors
-  const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
+  
+  const { data: vendors = [], isLoading } = useQuery({
     queryKey: ["/api/vendors"],
     retry: false,
   });
 
-  const form = useForm<SimpleRfxData>({
-    resolver: zodResolver(simpleRfxSchema),
+  const form = useForm<RfxData>({
+    resolver: zodResolver(rfxSchema),
     defaultValues: {
       title: "",
       scope: "",
       type: "rfi",
       dueDate: "",
       selectedVendors: [],
-      criteria: "",
     },
   });
 
-  const createRfxMutation = useMutation({
-    mutationFn: async (data: SimpleRfxData) => {
-      const payload = {
-        ...data,
-        dueDate: new Date(data.dueDate),
-        budget: undefined,
-        bomId: undefined,
-        evaluationParameters: undefined,
-      };
+  const createMutation = useMutation({
+    mutationFn: async (data: RfxData) => {
+      const response = await fetch("/api/rfx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          scope: data.scope,
+          type: data.type,
+          dueDate: data.dueDate,
+          status: "draft",
+        }),
+        credentials: "include",
+      });
       
-      console.log("Simple RFx payload:", payload);
-      return await apiRequest("/api/rfx", "POST", payload);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
       onSuccess();
-      onClose();
-    },
-    onError: (error: any) => {
-      console.error("Error creating RFx:", error);
     },
   });
 
-  const onSubmit = (data: SimpleRfxData) => {
-    console.log("Simple form data:", data);
-    createRfxMutation.mutate(data);
+  const onSubmit = (data: RfxData) => {
+    console.log("Submitting:", data);
+    createMutation.mutate(data);
   };
 
-  console.log("Simple RFx Vendors:", vendors);
+  if (isLoading) {
+    return (
+      <div className="p-6 bg-white">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("Vendors:", vendors);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Create RFx Request</h2>
-        <p className="text-muted-foreground">Create a simple RFx request</p>
-      </div>
-
+    <div className="p-6 bg-white min-h-[400px]">
+      <h2 className="text-xl font-bold mb-6">Create RFx Request</h2>
+      
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Type Selection */}
-        <div className="space-y-2">
-          <Label>Request Type</Label>
-          <div className="flex gap-2">
-            {["rfi", "rfp", "rfq"].map((type) => (
-              <Button
-                key={type}
-                type="button"
-                variant={form.watch("type") === type ? "default" : "outline"}
-                onClick={() => form.setValue("type", type as any)}
+        <Card className="p-4">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                {...form.register("title")}
+                placeholder="Enter RFx title"
+              />
+              {form.formState.errors.title && (
+                <p className="text-red-500 text-sm">{form.formState.errors.title.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="scope">Scope</Label>
+              <Textarea
+                id="scope"
+                {...form.register("scope")}
+                placeholder="Describe the scope"
+                rows={3}
+              />
+              {form.formState.errors.scope && (
+                <p className="text-red-500 text-sm">{form.formState.errors.scope.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="type">Type</Label>
+              <select
+                id="type"
+                {...form.register("type")}
+                className="w-full p-2 border rounded"
               >
-                {type.toUpperCase()}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Basic Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              {...form.register("title")}
-              placeholder="Enter RFx title"
-            />
-            {form.formState.errors.title && (
-              <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="dueDate">Due Date *</Label>
-            <Input
-              id="dueDate"
-              type="datetime-local"
-              {...form.register("dueDate")}
-            />
-            {form.formState.errors.dueDate && (
-              <p className="text-sm text-destructive">{form.formState.errors.dueDate.message}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="scope">Scope *</Label>
-          <Textarea
-            id="scope"
-            {...form.register("scope")}
-            rows={4}
-            placeholder="Describe the scope of this request"
-          />
-          {form.formState.errors.scope && (
-            <p className="text-sm text-destructive">{form.formState.errors.scope.message}</p>
-          )}
-        </div>
-
-        {/* Vendor Selection */}
-        <div className="space-y-4">
-          <div>
-            <Label>Select Vendors *</Label>
-            <p className="text-sm text-muted-foreground">Choose vendors to send this RFx to</p>
-          </div>
-
-          {vendorsLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading vendors...</p>
+                <option value="rfi">RFI - Request for Information</option>
+                <option value="rfp">RFP - Request for Proposal</option>
+                <option value="rfq">RFQ - Request for Quote</option>
+              </select>
             </div>
-          ) : (vendors as any[]).length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No vendors found. Add some vendors first.</p>
+
+            <div>
+              <Label htmlFor="dueDate">Due Date</Label>
+              <Input
+                id="dueDate"
+                type="date"
+                {...form.register("dueDate")}
+              />
+              {form.formState.errors.dueDate && (
+                <p className="text-red-500 text-sm">{form.formState.errors.dueDate.message}</p>
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto">
-              {(vendors as any[]).map((vendor: any) => (
-                <Card key={vendor.id} className="p-3">
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      value={vendor.id}
-                      {...form.register("selectedVendors")}
-                      className="h-4 w-4"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium">{vendor.companyName || vendor.name}</div>
-                      <div className="text-sm text-muted-foreground">{vendor.categories || vendor.category}</div>
-                    </div>
-                  </label>
-                </Card>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-medium mb-3">Select Vendors</h3>
+          {Array.isArray(vendors) && vendors.length > 0 ? (
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {vendors.map((vendor: any) => (
+                <label key={vendor.id} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    value={vendor.id}
+                    {...form.register("selectedVendors")}
+                  />
+                  <span>{vendor.companyName || vendor.name}</span>
+                </label>
               ))}
             </div>
+          ) : (
+            <p className="text-gray-500">No vendors available</p>
           )}
-
           {form.formState.errors.selectedVendors && (
-            <p className="text-sm text-destructive">{form.formState.errors.selectedVendors.message}</p>
+            <p className="text-red-500 text-sm mt-2">{form.formState.errors.selectedVendors.message}</p>
           )}
-        </div>
+        </Card>
 
-        {/* Optional Criteria */}
-        <div className="space-y-2">
-          <Label htmlFor="criteria">Additional Information (Optional)</Label>
-          <Textarea
-            id="criteria"
-            {...form.register("criteria")}
-            rows={3}
-            placeholder="Any additional requirements or criteria"
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-between">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={createRfxMutation.isPending}>
-            {createRfxMutation.isPending ? "Creating..." : `Create ${form.watch("type").toUpperCase()}`}
+          <Button type="submit" disabled={createMutation.isPending}>
+            {createMutation.isPending ? "Creating..." : "Create RFx"}
           </Button>
         </div>
       </form>
