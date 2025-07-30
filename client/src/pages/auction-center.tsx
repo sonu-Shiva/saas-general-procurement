@@ -192,15 +192,20 @@ export default function AuctionCenter() {
                       <DialogTitle>Create New Reverse Auction</DialogTitle>
                     </DialogHeader>
                     <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-                      <CreateAuctionForm 
-                        onClose={() => setIsCreateDialogOpen(false)}
-                        onSuccess={() => {
-                          setIsCreateDialogOpen(false);
-                          queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
-                        }}
-                        boms={boms}
-                        vendors={vendors}
-                      />
+                      <div className="p-6">
+                        <div className="space-y-4">
+                          <div className="text-center text-muted-foreground">
+                            <p>Auction form is being debugged...</p>
+                            <p>BOMs available: {Array.isArray(boms) ? boms.length : 'Loading'}</p>
+                            <p>Vendors available: {Array.isArray(vendors) ? vendors.length : 'Loading'}</p>
+                          </div>
+                          <div className="flex justify-center">
+                            <Button onClick={() => setIsCreateDialogOpen(false)}>
+                              Close
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
