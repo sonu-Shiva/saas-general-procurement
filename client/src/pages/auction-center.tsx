@@ -140,7 +140,11 @@ export default function AuctionCenter() {
           description: "Live bidding is now active",
         });
         queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
-        setLiveAuctions(prev => new Set([...prev, auctionId]));
+        setLiveAuctions(prev => {
+          const newSet = new Set(Array.from(prev));
+          newSet.add(auctionId);
+          return newSet;
+        });
       }
     } catch (error) {
       toast({
@@ -324,6 +328,16 @@ function AuctionCard({ auction, onStart, onViewLive, isLive }: any) {
     return `${hours}h ${minutes}m remaining`;
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'live': return 'bg-green-100 text-green-700 border-green-200';
+      case 'completed': return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
   return (
     <div className="p-6 hover:bg-muted/50 transition-colors">
       <div className="flex justify-between items-start">
@@ -384,6 +398,7 @@ function AuctionCard({ auction, onStart, onViewLive, isLive }: any) {
 
 // Create Auction Form Component
 function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
