@@ -32,6 +32,17 @@ Preferred communication style: Simple, everyday language.
 - **Removed Duplication**: Eliminated standalone vendor discovery page to avoid confusion and streamline user experience
 - **Real AI Integration**: Fully integrated Perplexity API for live vendor discovery with fallback to test data for reliability
 
+### RFx-BOM Integration & Complete Workflow (July 2025)
+- **BOM-RFx Integration**: Added complete Bill of Materials integration to RFx creation workflow
+- **Optional BOM Linking**: Users can create RFI/RFP/RFQ with or without linking to specific BOMs
+- **BOM Selection UI**: Intuitive BOM selection dropdown in RFx form with BOM details (name, version, category)
+- **Status Workflow Implementation**: Complete draft → active → closed status workflow with action buttons
+- **View/Edit/Publish Actions**: Implemented view, edit (draft only), publish (draft to active), and close (active) functionality
+- **BOM Visual Indicators**: RFx list shows "BOM Linked" badges for requests connected to specific BOMs
+- **Structured Procurement**: BOM connection enables structured procurement workflows tied to specific material requirements
+- **API Endpoints**: Added PATCH /api/rfx/:id/status endpoint for status management with proper authorization
+- **Role-Based Actions**: Different action buttons shown based on RFx status and user permissions
+
 ### Major Session & RFx Fixes (January 2025)
 - **Session Persistence Completely Fixed**: Implemented PostgreSQL-backed session management for persistent login across server restarts
 - **Refresh Issue Resolved**: Page refreshes now maintain login state without redirecting to sign-in using database sessions

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const rfxFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -17,6 +18,7 @@ const rfxFormSchema = z.object({
   type: z.enum(["rfi", "rfp", "rfq"]),
   dueDate: z.string().min(1, "Due date is required"),
   budget: z.string().optional(),
+  bomId: z.string().optional(),
   selectedVendors: z.array(z.string()).min(1, "At least one vendor must be selected"),
   criteria: z.string().optional(),
   evaluationParameters: z.string().optional(),
@@ -52,6 +54,7 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
       type: "rfi",
       dueDate: "",
       budget: "",
+      bomId: "",
       selectedVendors: [],
       criteria: "",
       evaluationParameters: "",
@@ -69,7 +72,7 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
         type: data.type,
         dueDate: data.dueDate,
         budget: data.budget || undefined,
-        bomId: undefined,
+        bomId: data.bomId || undefined,
         criteria: data.criteria || undefined,
         evaluationParameters: data.evaluationParameters || undefined,
         status: "draft",
@@ -257,6 +260,50 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
                 placeholder="₹ Budget range or maximum amount"
                 className="border-2 border-border focus:border-primary"
               />
+            </div>
+          </div>
+        </Card>
+
+        {/* BOM Selection */}
+        <Card className="p-6 border-2 border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-foreground">BOM Connection (Optional)</h3>
+              <p className="text-sm text-muted-foreground">
+                Link this {selectedType.toUpperCase()} to a specific Bill of Materials (BOM) for structured procurement.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="bomId">Select BOM</Label>
+              <Select
+                value={form.watch("bomId") || ""}
+                onValueChange={(value) => form.setValue("bomId", value || "")}
+              >
+                <SelectTrigger className="border-2 border-border focus:border-primary">
+                  <SelectValue placeholder="Choose a BOM (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No BOM - General Request</SelectItem>
+                  {Array.isArray(boms) && boms.map((bom: any) => (
+                    <SelectItem key={bom.id} value={bom.id}>
+                      <div>
+                        <div className="font-medium">{bom.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          v{bom.version} • {bom.category || 'General'}
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.watch("bomId") && Array.isArray(boms) && (
+                <div className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-xs">
+                    BOM Linked: {boms.find((b: any) => b.id === form.watch("bomId"))?.name || 'Selected BOM'}
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
         </Card>

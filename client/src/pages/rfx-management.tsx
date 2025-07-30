@@ -341,6 +341,12 @@ export default function RfxManagement() {
                                 <TrendingUp className="w-4 h-4" />
                                 <span>Budget: {rfx.budget ? `₹${rfx.budget}` : 'Not specified'}</span>
                               </div>
+                              {rfx.bomId && (
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  <FileText className="w-3 h-3 mr-1" />
+                                  BOM Linked
+                                </Badge>
+                              )}
                               {rfx.parentRfxId && (
                                 <Badge variant="outline" className="text-xs">
                                   Workflow continuation
