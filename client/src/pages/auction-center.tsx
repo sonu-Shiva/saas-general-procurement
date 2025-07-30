@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import Header from "@/components/layout/header";
+import Sidebar from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,14 +10,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { Plus, Play, Pause, Trophy, Eye, Clock } from "lucide-react";
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Play, 
+  Pause, 
+  Trophy, 
+  Eye, 
+  Clock,
+  Users,
+  Target,
+  TrendingUp,
+  DollarSign
+} from "lucide-react";
 
 export default function AuctionCenter() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [selectedAuction, setSelectedAuction] = useState<any>(null);
@@ -23,14 +41,17 @@ export default function AuctionCenter() {
   // Fetch data
   const { data: auctions = [], isLoading: isLoadingAuctions } = useQuery({
     queryKey: ["/api/auctions"],
+    retry: false,
   });
 
   const { data: boms = [] } = useQuery({
     queryKey: ["/api/boms"],
+    retry: false,
   });
 
   const { data: vendors = [] } = useQuery({
     queryKey: ["/api/vendors"],
+    retry: false,
   });
 
   // WebSocket connection
@@ -54,31 +75,14 @@ export default function AuctionCenter() {
     };
   }, []);
 
-  const formatDateTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleString();
-  };
-
-  const getRemainingTime = (endTime: string) => {
-    const now = new Date().getTime();
-    const end = new Date(endTime).getTime();
-    const diff = end - now;
-    
-    if (diff <= 0) return "Ended";
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m`;
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'scheduled': return 'bg-blue-100 text-blue-800';
-      case 'live': return 'bg-green-100 text-green-800';
-      case 'closed': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Filter auctions
+  const auctionsArray = Array.isArray(auctions) ? auctions : [];
+  const filteredAuctions = auctionsArray.filter((auction: any) => {
+    const matchesSearch = auction.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         auction.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || auction.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleStartAuction = async (auctionId: string) => {
     try {
@@ -111,227 +115,244 @@ export default function AuctionCenter() {
     setIsLiveBiddingOpen(true);
   };
 
+  // Stats calculations
+  const totalAuctions = auctionsArray.length;
+  const liveAuctions = auctionsArray.filter((a: any) => a.status === 'live').length;
+  const scheduledAuctions = auctionsArray.filter((a: any) => a.status === 'scheduled').length;
+  const totalVendors = Array.isArray(vendors) ? vendors.length : 0;
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Left Sidebar */}
-      <div className="w-64 bg-white dark:bg-gray-800 shadow-lg">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Auction Center</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Competitive Bidding</p>
-        </div>
-        
-        <nav className="p-4 space-y-2">
-          <div className="space-y-1">
-            <div className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-white bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
-              📊 Dashboard
-            </div>
-            <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
-              🔴 Live Auctions
-            </div>
-            <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
-              📅 Scheduled
-            </div>
-            <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
-              ✅ Completed
-            </div>
-            <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
-              👥 Participants
-            </div>
-            <div className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
-              📈 Analytics
-            </div>
-          </div>
-        </nav>
-      </div>
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+          <div className="container mx-auto px-6 py-8">
+            {/* Header Section */}
+            <div className="mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Auction Center</h1>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400">
+                    Manage reverse auctions and competitive bidding processes
+                  </p>
+                </div>
+                <div className="mt-4 sm:mt-0">
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="w-5 h-5 mr-2" />
+                        Create Auction
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl">
+                      <DialogHeader>
+                        <DialogTitle className="text-2xl">Create New Reverse Auction</DialogTitle>
+                      </DialogHeader>
+                      <div className="overflow-y-auto max-h-[calc(90vh-100px)] p-6">
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.target as HTMLFormElement);
+                          const data = {
+                            name: formData.get('name') as string,
+                            description: formData.get('description') as string,
+                            bomId: formData.get('bomId') as string || null,
+                            reservePrice: formData.get('ceilingPrice') as string,
+                            startTime: formData.get('startTime') as string,
+                            endTime: formData.get('endTime') as string,
+                            status: 'scheduled'
+                          };
+                          
+                          fetch('/api/auctions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data),
+                            credentials: 'include'
+                          }).then(response => {
+                            if (response.ok) {
+                              toast({ title: 'Success', description: 'Auction created successfully' });
+                              setIsCreateDialogOpen(false);
+                              queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
+                            } else {
+                              toast({ title: 'Error', description: 'Failed to create auction', variant: 'destructive' });
+                            }
+                          });
+                        }} className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <Label htmlFor="name" className="text-sm font-medium">Auction Name *</Label>
+                              <Input id="name" name="name" placeholder="Enter auction name" required className="h-11 border-2" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="ceilingPrice" className="text-sm font-medium">Ceiling Price (₹) *</Label>
+                              <Input id="ceilingPrice" name="ceilingPrice" type="number" placeholder="Maximum price" required className="h-11 border-2" />
+                            </div>
+                          </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          {/* Header with Stats */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Auction Dashboard</h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Monitor and manage your reverse auctions
-                </p>
+                          <div className="space-y-2">
+                            <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+                            <Textarea id="description" name="description" placeholder="Auction description and requirements" rows={4} className="border-2" />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="bomId" className="text-sm font-medium">BOM Selection (Optional)</Label>
+                            <select 
+                              id="bomId" 
+                              name="bomId"
+                              className="flex h-11 w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <option value="">No BOM (General Auction)</option>
+                              {Array.isArray(boms) && boms.map((bom: any) => (
+                                <option key={bom.id} value={bom.id}>
+                                  {bom.name} (v{bom.version})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <Label htmlFor="startTime" className="text-sm font-medium">Start Time *</Label>
+                              <Input id="startTime" name="startTime" type="datetime-local" required className="h-11 border-2" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="endTime" className="text-sm font-medium">End Time *</Label>
+                              <Input id="endTime" name="endTime" type="datetime-local" required className="h-11 border-2" />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-6 border-t">
+                            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} size="lg">
+                              Cancel
+                            </Button>
+                            <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700">
+                              Create Auction
+                            </Button>
+                          </div>
+                        </form>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="w-5 h-5 mr-2" />
-                    Create New Auction
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl">Create New Reverse Auction</DialogTitle>
-                  </DialogHeader>
-                  <div className="overflow-y-auto max-h-[calc(90vh-100px)] p-6">
-                    <form onSubmit={(e) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.target as HTMLFormElement);
-                      const data = {
-                        name: formData.get('name') as string,
-                        description: formData.get('description') as string,
-                        bomId: formData.get('bomId') as string || null,
-                        reservePrice: formData.get('ceilingPrice') as string,
-                        startTime: formData.get('startTime') as string,
-                        endTime: formData.get('endTime') as string,
-                        status: 'scheduled'
-                      };
-                      
-                      fetch('/api/auctions', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data),
-                        credentials: 'include'
-                      }).then(response => {
-                        if (response.ok) {
-                          toast({ title: 'Success', description: 'Auction created successfully' });
-                          setIsCreateDialogOpen(false);
-                          queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
-                        } else {
-                          toast({ title: 'Error', description: 'Failed to create auction', variant: 'destructive' });
-                        }
-                      });
-                    }} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="name" className="text-sm font-medium">Auction Name *</Label>
-                          <Input id="name" name="name" placeholder="Enter auction name" required className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="ceilingPrice" className="text-sm font-medium">Ceiling Price (₹) *</Label>
-                          <Input id="ceilingPrice" name="ceilingPrice" type="number" placeholder="Maximum price" required className="h-11" />
-                        </div>
-                      </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="description" className="text-sm font-medium">Description</Label>
-                        <Textarea id="description" name="description" placeholder="Auction description and requirements" rows={4} />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="bomId" className="text-sm font-medium">BOM Selection (Optional)</Label>
-                        <select 
-                          id="bomId" 
-                          name="bomId"
-                          className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="">No BOM (General Auction)</option>
-                          {Array.isArray(boms) && boms.map((bom: any) => (
-                            <option key={bom.id} value={bom.id}>
-                              {bom.name} (v{bom.version})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="startTime" className="text-sm font-medium">Start Time *</Label>
-                          <Input id="startTime" name="startTime" type="datetime-local" required className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="endTime" className="text-sm font-medium">End Time *</Label>
-                          <Input id="endTime" name="endTime" type="datetime-local" required className="h-11" />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center pt-6 border-t">
-                        <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} size="lg">
-                          Cancel
-                        </Button>
-                        <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700">
-                          Create Auction
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium text-blue-100">Total Auctions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <p className="text-3xl font-bold">{totalAuctions}</p>
+                      <Trophy className="h-8 w-8 text-blue-200" />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white border-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium text-green-100">Live Auctions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <p className="text-3xl font-bold">{liveAuctions}</p>
+                      <Play className="h-8 w-8 text-green-200" />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white border-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium text-orange-100">Scheduled</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <p className="text-3xl font-bold">{scheduledAuctions}</p>
+                      <Clock className="h-8 w-8 text-orange-200" />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium text-purple-100">Vendors</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <p className="text-3xl font-bold">{totalVendors}</p>
+                      <Users className="h-8 w-8 text-purple-200" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100 text-sm font-medium">Total Auctions</p>
-                      <p className="text-3xl font-bold">{Array.isArray(auctions) ? auctions.length : 0}</p>
-                    </div>
-                    <Trophy className="h-8 w-8 text-blue-200" />
+            {/* Search and Filter Section */}
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      placeholder="Search auctions..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 h-11 border-2"
+                    />
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100 text-sm font-medium">Live Auctions</p>
-                      <p className="text-3xl font-bold">{Array.isArray(auctions) ? auctions.filter((a: any) => a.status === 'live').length : 0}</p>
-                    </div>
-                    <Play className="h-8 w-8 text-green-200" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-orange-100 text-sm font-medium">Scheduled</p>
-                      <p className="text-3xl font-bold">{Array.isArray(auctions) ? auctions.filter((a: any) => a.status === 'scheduled').length : 0}</p>
-                    </div>
-                    <Clock className="h-8 w-8 text-orange-200" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-purple-100 text-sm font-medium">Vendors</p>
-                      <p className="text-3xl font-bold">{Array.isArray(vendors) ? vendors.length : 0}</p>
-                    </div>
-                    <Eye className="h-8 w-8 text-purple-200" />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="flex gap-2">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-48 h-11 border-2">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="live">Live</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Auction Grid */}
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Auctions</h2>
+            {/* Auction Grid */}
             {isLoadingAuctions ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600 dark:text-gray-400">Loading auctions...</p>
               </div>
-            ) : Array.isArray(auctions) && auctions.length === 0 ? (
-              <Card className="p-12 text-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+            ) : filteredAuctions.length === 0 ? (
+              <Card className="p-12 text-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-2">
                 <div className="text-gray-500 dark:text-gray-400">
                   <Trophy className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300">No auctions yet</h3>
-                  <p className="text-gray-500 mb-6">Create your first reverse auction to start competitive bidding</p>
-                  <Button 
-                    onClick={() => setIsCreateDialogOpen(true)}
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Create Your First Auction
-                  </Button>
+                  <h3 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                    {searchQuery || statusFilter !== "all" ? "No matching auctions" : "No auctions yet"}
+                  </h3>
+                  <p className="text-gray-500 mb-6">
+                    {searchQuery || statusFilter !== "all" 
+                      ? "Try adjusting your search or filter criteria" 
+                      : "Create your first reverse auction to start competitive bidding"
+                    }
+                  </p>
+                  {(!searchQuery && statusFilter === "all") && (
+                    <Button 
+                      onClick={() => setIsCreateDialogOpen(true)}
+                      size="lg"
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
+                      Create Your First Auction
+                    </Button>
+                  )}
                 </div>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {Array.isArray(auctions) && auctions.map((auction: any) => (
+                {filteredAuctions.map((auction: any) => (
                   <AuctionCard 
                     key={auction.id} 
                     auction={auction}
@@ -342,7 +363,7 @@ export default function AuctionCenter() {
               </div>
             )}
           </div>
-        </div>
+        </main>
       </div>
 
       {/* Live Bidding Dialog */}
@@ -392,7 +413,7 @@ function AuctionCard({ auction, onStart, onViewLive }: any) {
   };
 
   return (
-    <Card className="hover:shadow-xl transition-all duration-300 border-l-4 border-l-blue-500 bg-white dark:bg-gray-800">
+    <Card className="hover:shadow-xl transition-all duration-300 border-2 bg-white dark:bg-gray-800">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div className="flex-1">
@@ -406,7 +427,7 @@ function AuctionCard({ auction, onStart, onViewLive }: any) {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-2">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ceiling Price:</span>
             <span className="text-xl font-bold text-blue-600 dark:text-blue-400">₹{auction.reservePrice}</span>
           </div>
@@ -431,7 +452,7 @@ function AuctionCard({ auction, onStart, onViewLive }: any) {
 
           <div className="flex space-x-2 pt-2">
             {auction.status === 'scheduled' && (
-              <Button variant="outline" size="sm" onClick={onStart} className="flex-1">
+              <Button variant="outline" size="sm" onClick={onStart} className="flex-1 border-2">
                 <Play className="w-4 h-4 mr-1" />
                 Start
               </Button>
@@ -442,7 +463,7 @@ function AuctionCard({ auction, onStart, onViewLive }: any) {
                 View Live
               </Button>
             )}
-            <Button variant="ghost" size="sm" className="flex-1">
+            <Button variant="ghost" size="sm" className="flex-1 border-2">
               <Trophy className="w-4 h-4 mr-1" />
               Results
             </Button>
@@ -543,7 +564,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Auction Info & Bidding */}
         <div className="space-y-6">
-          <Card>
+          <Card className="border-2">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Trophy className="w-5 h-5" />
@@ -570,7 +591,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
 
           {/* Bidding Form */}
           {user?.role === 'vendor' && (
-            <Card>
+            <Card className="border-2">
               <CardHeader>
                 <CardTitle>Place Your Bid</CardTitle>
               </CardHeader>
@@ -584,7 +605,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                       value={newBidAmount}
                       onChange={(e) => setNewBidAmount(e.target.value)}
                       placeholder="Enter your bid"
-                      className="text-lg"
+                      className="text-lg h-11 border-2"
                     />
                   </div>
                   <Button type="submit" className="w-full" size="lg">
@@ -598,7 +619,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
 
         {/* Right Column - Live Rankings */}
         <div className="space-y-6">
-          <Card>
+          <Card className="border-2">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Trophy className="w-5 h-5" />
@@ -616,7 +637,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                   {rankings.map((bid: any, index: number) => (
                     <div
                       key={bid.id}
-                      className={`p-4 rounded-lg border ${
+                      className={`p-4 rounded-lg border-2 ${
                         index === 0
                           ? 'bg-green-50 border-green-200'
                           : index === 1
