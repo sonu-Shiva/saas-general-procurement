@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
@@ -58,6 +58,7 @@ export default function AuctionCenter() {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [selectedAuction, setSelectedAuction] = useState<any>(null);
   const [isLiveBiddingOpen, setIsLiveBiddingOpen] = useState(false);
+  const [isResultsOpen, setIsResultsOpen] = useState(false);
 
   // Fetch data
   const { data: auctions = [], isLoading: isLoadingAuctions } = useQuery({
@@ -115,6 +116,11 @@ export default function AuctionCenter() {
   const handleEditAuction = (auction: any) => {
     setEditingAuction(auction);
     setIsEditDialogOpen(true);
+  };
+
+  const handleViewResults = (auction: any) => {
+    setSelectedAuction(auction);
+    setIsResultsOpen(true);
   };
 
   const handleUpdateAuction = async (formData: FormData) => {
@@ -523,6 +529,213 @@ export default function AuctionCenter() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Auction Results Dialog */}
+      {selectedAuction && (
+        <Dialog open={isResultsOpen} onOpenChange={setIsResultsOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Auction Results: {selectedAuction.name}</DialogTitle>
+            </DialogHeader>
+            <AuctionResults 
+              auction={selectedAuction}
+              onClose={() => setIsResultsOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+function AuctionResults({ auction, onClose }: any) {
+  const { data: bids = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "bids"],
+    retry: false,
+  });
+
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["/api/vendors"],
+    retry: false,
+  });
+
+  // Calculate final rankings from all bids
+  const finalRankings = useMemo(() => {
+    if (!Array.isArray(bids)) return [];
+    
+    // Get the best (lowest) bid for each vendor
+    const vendorBids = bids.reduce((acc: any, bid: any) => {
+      if (!acc[bid.vendorId] || bid.amount < acc[bid.vendorId].amount) {
+        acc[bid.vendorId] = bid;
+      }
+      return acc;
+    }, {});
+
+    // Sort by amount and create rankings
+    const ranked = Object.values(vendorBids)
+      .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount))
+      .map((bid: any, index: number) => {
+        const vendor = vendors.find((v: any) => v.id === bid.vendorId);
+        return {
+          ...bid,
+          rank: index + 1,
+          rankLabel: index === 0 ? 'L1 (Winner)' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`,
+          vendorName: vendor?.companyName || 'Unknown Vendor',
+          savings: parseFloat(auction.reservePrice) - parseFloat(bid.amount)
+        };
+      });
+
+    return ranked;
+  }, [bids, vendors, auction.reservePrice]);
+
+  const formatDateTime = (dateTime: string) => {
+    try {
+      const date = new Date(dateTime);
+      return date.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  const totalBids = bids.length;
+  const uniqueVendors = new Set(bids.map((bid: any) => bid.vendorId)).size;
+  const winner = finalRankings[0];
+  const totalSavings = winner ? winner.savings : 0;
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Auction Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-2">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">₹{auction.reservePrice}</div>
+            <div className="text-sm text-gray-600">Ceiling Price</div>
+          </CardContent>
+        </Card>
+        <Card className="border-2">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{totalBids}</div>
+            <div className="text-sm text-gray-600">Total Bids</div>
+          </CardContent>
+        </Card>
+        <Card className="border-2">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-orange-600">{uniqueVendors}</div>
+            <div className="text-sm text-gray-600">Participating Vendors</div>
+          </CardContent>
+        </Card>
+        <Card className="border-2">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-purple-600">₹{totalSavings.toFixed(2)}</div>
+            <div className="text-sm text-gray-600">Total Savings</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Winner Announcement */}
+      {winner && (
+        <Card className="border-2 border-green-200 bg-green-50 dark:bg-green-900/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-green-800 dark:text-green-300">🎉 Auction Winner</h3>
+                <p className="text-lg font-semibold text-green-700 dark:text-green-400">{winner.vendorName}</p>
+                <p className="text-green-600 dark:text-green-500">Winning Bid: ₹{winner.amount}</p>
+              </div>
+              <Badge className="bg-green-600 text-white text-lg px-4 py-2">L1 Winner</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rankings Table */}
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle>Final Rankings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {finalRankings.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b-2">
+                    <th className="text-left p-3 font-semibold">Rank</th>
+                    <th className="text-left p-3 font-semibold">Vendor</th>
+                    <th className="text-right p-3 font-semibold">Best Bid (₹)</th>
+                    <th className="text-right p-3 font-semibold">Savings (₹)</th>
+                    <th className="text-right p-3 font-semibold">Bid Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {finalRankings.map((ranking: any, index: number) => (
+                    <tr key={ranking.vendorId} className={`border-b ${index === 0 ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
+                      <td className="p-3">
+                        <Badge className={
+                          index === 0 ? 'bg-green-600 text-white' :
+                          index === 1 ? 'bg-blue-600 text-white' :
+                          index === 2 ? 'bg-orange-600 text-white' :
+                          'bg-gray-600 text-white'
+                        }>
+                          {ranking.rankLabel}
+                        </Badge>
+                      </td>
+                      <td className="p-3 font-medium">{ranking.vendorName}</td>
+                      <td className="p-3 text-right font-bold">₹{ranking.amount}</td>
+                      <td className="p-3 text-right text-green-600">₹{ranking.savings.toFixed(2)}</td>
+                      <td className="p-3 text-right text-sm text-gray-600">{formatDateTime(ranking.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No bids were placed in this auction</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Auction Details */}
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle>Auction Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="font-medium">Start Time:</span>
+              <span className="ml-2">{formatDateTime(auction.startTime)}</span>
+            </div>
+            <div>
+              <span className="font-medium">End Time:</span>
+              <span className="ml-2">{formatDateTime(auction.endTime)}</span>
+            </div>
+            <div>
+              <span className="font-medium">Description:</span>
+              <span className="ml-2">{auction.description || 'No description'}</span>
+            </div>
+            <div>
+              <span className="font-medium">Status:</span>
+              <Badge className="ml-2 bg-gray-600 text-white">CLOSED</Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button onClick={onClose} size="lg">
+          Close Results
+        </Button>
+      </div>
     </div>
   );
 }
@@ -641,7 +854,7 @@ function AuctionCard({ auction, onViewLive, onEdit }: any) {
               </Button>
             )}
             {auction.status === 'closed' && (
-              <Button variant="ghost" size="sm" className="flex-1 border-2">
+              <Button variant="ghost" size="sm" onClick={() => handleViewResults(auction)} className="flex-1 border-2">
                 <Trophy className="w-4 h-4 mr-1" />
                 Results
               </Button>
