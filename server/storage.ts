@@ -98,6 +98,7 @@ export interface IStorage {
   createRfxEvent(rfx: InsertRfxEvent): Promise<RfxEvent>;
   getRfxEvent(id: string): Promise<RfxEvent | undefined>;
   getRfxEvents(filters?: { status?: string; type?: string; createdBy?: string }): Promise<RfxEvent[]>;
+  getRfxEventsForVendor(vendorUserId: string): Promise<RfxEvent[]>;
   updateRfxEvent(id: string, updates: Partial<InsertRfxEvent>): Promise<RfxEvent>;
   updateRfxEventStatus(id: string, status: string): Promise<RfxEvent>;
   
@@ -545,6 +546,30 @@ export class DatabaseStorage implements IStorage {
       .from(auctions)
       .where(or(eq(auctions.status, 'live'), eq(auctions.status, 'scheduled')))
       .orderBy(desc(auctions.createdAt));
+  }
+
+  async getRfxEventsForVendor(vendorUserId: string): Promise<RfxEvent[]> {
+    // Get RFx events where the vendor is invited to participate
+    return await db
+      .select({
+        id: rfxEvents.id,
+        title: rfxEvents.title,
+        description: rfxEvents.description,
+        type: rfxEvents.type,
+        status: rfxEvents.status,
+        dueDate: rfxEvents.dueDate,
+        requirements: rfxEvents.requirements,
+        terms: rfxEvents.terms,
+        attachments: rfxEvents.attachments,
+        bomId: rfxEvents.bomId,
+        createdBy: rfxEvents.createdBy,
+        createdAt: rfxEvents.createdAt,
+        updatedAt: rfxEvents.updatedAt,
+      })
+      .from(rfxEvents)
+      .innerJoin(rfxInvitations, eq(rfxEvents.id, rfxInvitations.rfxId))
+      .where(eq(rfxInvitations.vendorId, vendorUserId))
+      .orderBy(desc(rfxEvents.createdAt));
   }
 
   async updateAuction(id: string, updates: Partial<InsertAuction>): Promise<Auction> {

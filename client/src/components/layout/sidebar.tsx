@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   Users,
@@ -17,9 +18,9 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Vendor Management", href: "/vendors", icon: Users },
+  { name: "Vendor Management", href: "/vendors", icon: Users, hiddenForVendors: true },
   { name: "Product Catalogue", href: "/products", icon: Package },
-  { name: "BOM Management", href: "/boms", icon: Layers },
+  { name: "BOM Management", href: "/boms", icon: Layers, hiddenForVendors: true },
   { name: "RFx Management", href: "/rfx", icon: FileText },
   { name: "Auction Center", href: "/auctions", icon: Gavel },
   { name: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart },
@@ -28,12 +29,21 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
 
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-border shadow-sm">
       <div className="p-6">
         <nav className="space-y-2">
-          {navigation.map((item) => {
+          {navigation
+            .filter((item) => {
+              // Hide Vendor Management and BOM Management from vendor users
+              if (user?.role === 'vendor' && item.hiddenForVendors) {
+                return false;
+              }
+              return true;
+            })
+            .map((item) => {
             const isActive = location === item.href;
             return (
               <Link key={item.name} href={item.href}>

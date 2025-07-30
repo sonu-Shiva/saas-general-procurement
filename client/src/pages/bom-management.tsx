@@ -58,6 +58,29 @@ export default function BomManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Restrict access to vendor users
+  if (user?.role === 'vendor') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <main className="flex-1 p-8">
+            <div className="max-w-2xl mx-auto text-center">
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
+              <p className="text-gray-600 mb-6">
+                BOM Management is not available for vendor users. As a vendor, you can access your product catalogue and participate in RFx and auctions.
+              </p>
+              <Button onClick={() => window.history.back()}>
+                Go Back
+              </Button>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   // Check if user is a buyer (can create BOMs)
   const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
   const isVendor = (user as any)?.role === 'vendor';

@@ -982,13 +982,31 @@ Focus on established businesses with verifiable contact information.`;
   app.get('/api/rfx', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
       const { status, type } = req.query;
-      const rfxEvents = await storage.getRfxEvents({
-        status: status as string,
-        type: type as string,
-        createdBy: userId,
-      });
-      res.json(rfxEvents);
+      
+      // Buyers/admins see all RFx they created
+      if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager') {
+        const rfxEvents = await storage.getRfxEvents({
+          status: status as string,
+          type: type as string,
+          createdBy: userId,
+        });
+        res.json(rfxEvents);
+      } 
+      // Vendors see only RFx they are invited to participate in
+      else if (user.role === 'vendor') {
+        const rfxEvents = await storage.getRfxEventsForVendor(userId);
+        res.json(rfxEvents);
+      } 
+      else {
+        res.json([]);
+      }
     } catch (error) {
       console.error("Error fetching RFx events:", error);
       res.status(500).json({ message: "Failed to fetch RFx events" });
