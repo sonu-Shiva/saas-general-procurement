@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import SinglePageRfxForm from "@/components/single-page-rfx-form";
+import TestRfxForm from "@/components/test-rfx-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -171,7 +172,7 @@ export default function RfxManagement() {
                       <DialogTitle>Create New RFx Request</DialogTitle>
                     </DialogHeader>
                     <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-                      <SinglePageRfxForm 
+                      <TestRfxForm 
                         onClose={() => setIsCreateDialogOpen(false)}
                         onSuccess={() => {
                           setIsCreateDialogOpen(false);
