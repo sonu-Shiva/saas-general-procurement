@@ -885,6 +885,18 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Additional endpoint for auction form compatibility
+  app.get('/api/bom-items/:bomId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { bomId } = req.params;
+      const items = await storage.getBomItems(bomId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching BOM items:", error);
+      res.status(500).json({ message: "Failed to fetch BOM items" });
+    }
+  });
+
   // BOM copy route - Only buyers can copy BOMs
   app.post('/api/boms/:id/copy', isAuthenticated, isBuyer, async (req: any, res) => {
     try {

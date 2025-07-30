@@ -593,9 +593,20 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  startingPrice: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  startingPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+    val ? String(val) : undefined
+  ),
+  reservePrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+    val ? String(val) : undefined
+  ),
   currentBid: z.union([z.string(), z.number()]).optional().transform((val) => 
     val ? String(val) : undefined
+  ),
+  startTime: z.union([z.string(), z.date()]).optional().transform((val) => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
+  endTime: z.union([z.string(), z.date()]).optional().transform((val) => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
 });
 

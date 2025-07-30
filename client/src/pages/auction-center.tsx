@@ -396,7 +396,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
   });
 
   const { data: bomLineItems = [] } = useQuery({
-    queryKey: ["/api/boms", formData.bomId, "items"],
+    queryKey: ["/api/bom-items", formData.bomId],
     enabled: !!formData.bomId,
     retry: false,
   });
@@ -409,17 +409,20 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         body: JSON.stringify({
           name: data.name,
           description: data.description,
-          bomId: data.bomId,
-          bomLineItemId: data.bomLineItemId,
+          bomId: data.bomId || null,
+          bomLineItemId: data.bomLineItemId || null,
           reservePrice: data.ceilingPrice,
-          startTime: data.startTime,
-          endTime: data.endTime,
+          startTime: data.startTime ? new Date(data.startTime).toISOString() : null,
+          endTime: data.endTime ? new Date(data.endTime).toISOString() : null,
           status: 'scheduled',
         }),
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
       return response.json();
     },
     onSuccess: (auction) => {
@@ -436,7 +439,18 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           )
         );
       }
+      toast({
+        title: "Success",
+        description: "Auction created successfully",
+      });
       onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create auction",
+        variant: "destructive",
+      });
     },
   });
 
@@ -508,9 +522,12 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                 <SelectValue placeholder="Select line item" />
               </SelectTrigger>
               <SelectContent>
+                {bomLineItems.length === 0 && formData.bomId && (
+                  <SelectItem value="" disabled>No line items found</SelectItem>
+                )}
                 {Array.isArray(bomLineItems) && bomLineItems.map((item: any) => (
                   <SelectItem key={item.id} value={item.id}>
-                    {item.productName} - Qty: {item.quantity}
+                    {item.itemName || item.productName} - Qty: {item.quantity} - ₹{item.unitPrice || 'N/A'}
                   </SelectItem>
                 ))}
               </SelectContent>
