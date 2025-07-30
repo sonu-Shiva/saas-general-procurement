@@ -1166,6 +1166,58 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  app.put('/api/auctions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const auctionId = req.params.id;
+      
+      const auction = await storage.getAuction(auctionId);
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+      
+      if (auction.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only edit your own auctions" });
+      }
+      
+      if (auction.status !== 'scheduled') {
+        return res.status(400).json({ message: "Only scheduled auctions can be edited" });
+      }
+      
+      const updates = req.body;
+      const updatedAuction = await storage.updateAuction(auctionId, updates);
+      res.json(updatedAuction);
+    } catch (error) {
+      console.error("Error updating auction:", error);
+      res.status(500).json({ message: "Failed to update auction" });
+    }
+  });
+
+  app.patch('/api/auctions/:id/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { status } = req.body;
+      const auction = await storage.getAuction(req.params.id);
+      
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+      
+      if (auction.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only modify your own auctions" });
+      }
+      
+      const updatedAuction = await storage.updateAuctionStatus(req.params.id, status);
+      
+      // Note: WebSocket notifications will be handled after server setup
+      
+      res.json(updatedAuction);
+    } catch (error) {
+      console.error("Error updating auction status:", error);
+      res.status(500).json({ message: "Failed to update auction status" });
+    }
+  });
+
   app.patch('/api/auctions/:id/start', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

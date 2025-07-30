@@ -24,7 +24,8 @@ import {
   Users,
   Target,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  Edit
 } from "lucide-react";
 
 export default function AuctionCenter() {
@@ -34,6 +35,8 @@ export default function AuctionCenter() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingAuction, setEditingAuction] = useState<any>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [selectedAuction, setSelectedAuction] = useState<any>(null);
   const [isLiveBiddingOpen, setIsLiveBiddingOpen] = useState(false);
@@ -113,6 +116,44 @@ export default function AuctionCenter() {
   const handleViewLiveAuction = (auction: any) => {
     setSelectedAuction(auction);
     setIsLiveBiddingOpen(true);
+  };
+
+  const handleEditAuction = (auction: any) => {
+    setEditingAuction(auction);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateAuction = async (formData: FormData) => {
+    if (!editingAuction) return;
+
+    try {
+      const data = {
+        name: formData.get('name') as string,
+        description: formData.get('description') as string,
+        bomId: formData.get('bomId') as string || null,
+        reservePrice: formData.get('ceilingPrice') as string,
+        startTime: formData.get('startTime') as string,
+        endTime: formData.get('endTime') as string,
+      };
+
+      const response = await fetch(`/api/auctions/${editingAuction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        toast({ title: 'Success', description: 'Auction updated successfully' });
+        setIsEditDialogOpen(false);
+        setEditingAuction(null);
+        queryClient.invalidateQueries({ queryKey: ['/api/auctions'] });
+      } else {
+        toast({ title: 'Error', description: 'Failed to update auction', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update auction', variant: 'destructive' });
+    }
   };
 
   // Stats calculations
@@ -358,6 +399,7 @@ export default function AuctionCenter() {
                     auction={auction}
                     onStart={() => handleStartAuction(auction.id)}
                     onViewLive={() => handleViewLiveAuction(auction)}
+                    onEdit={() => handleEditAuction(auction)}
                   />
                 ))}
               </div>
@@ -381,26 +423,163 @@ export default function AuctionCenter() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Edit Auction Dialog */}
+      {editingAuction && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Edit Auction: {editingAuction.name}</DialogTitle>
+            </DialogHeader>
+            <div className="overflow-y-auto max-h-[calc(90vh-100px)] p-6">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                handleUpdateAuction(formData);
+              }} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name" className="text-sm font-medium">Auction Name *</Label>
+                    <Input 
+                      id="edit-name" 
+                      name="name" 
+                      placeholder="Enter auction name" 
+                      defaultValue={editingAuction.name}
+                      required 
+                      className="h-11 border-2" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-ceilingPrice" className="text-sm font-medium">Ceiling Price (₹) *</Label>
+                    <Input 
+                      id="edit-ceilingPrice" 
+                      name="ceilingPrice" 
+                      type="number" 
+                      placeholder="Maximum price" 
+                      defaultValue={editingAuction.reservePrice}
+                      required 
+                      className="h-11 border-2" 
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description" className="text-sm font-medium">Description</Label>
+                  <Textarea 
+                    id="edit-description" 
+                    name="description" 
+                    placeholder="Auction description and requirements" 
+                    defaultValue={editingAuction.description}
+                    rows={4} 
+                    className="border-2" 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-bomId" className="text-sm font-medium">BOM Selection (Optional)</Label>
+                  <select 
+                    id="edit-bomId" 
+                    name="bomId"
+                    defaultValue={editingAuction.bomId || ""}
+                    className="flex h-11 w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">No BOM (General Auction)</option>
+                    {Array.isArray(boms) && boms.map((bom: any) => (
+                      <option key={bom.id} value={bom.id}>
+                        {bom.name} (v{bom.version})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-startTime" className="text-sm font-medium">Start Time *</Label>
+                    <Input 
+                      id="edit-startTime" 
+                      name="startTime" 
+                      type="datetime-local" 
+                      defaultValue={editingAuction.startTime ? new Date(editingAuction.startTime).toISOString().slice(0, 16) : ''}
+                      required 
+                      className="h-11 border-2" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-endTime" className="text-sm font-medium">End Time *</Label>
+                    <Input 
+                      id="edit-endTime" 
+                      name="endTime" 
+                      type="datetime-local" 
+                      defaultValue={editingAuction.endTime ? new Date(editingAuction.endTime).toISOString().slice(0, 16) : ''}
+                      required 
+                      className="h-11 border-2" 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-6 border-t">
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} size="lg">
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700">
+                    Update Auction
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
 
-function AuctionCard({ auction, onStart, onViewLive }: any) {
+function AuctionCard({ auction, onStart, onViewLive, onEdit }: any) {
   const formatDateTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleString();
+    try {
+      const date = new Date(dateTime);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
   };
 
   const getRemainingTime = (endTime: string) => {
-    const now = new Date().getTime();
-    const end = new Date(endTime).getTime();
-    const diff = end - now;
-    
-    if (diff <= 0) return "Ended";
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m`;
+    try {
+      const now = new Date().getTime();
+      const end = new Date(endTime).getTime();
+      
+      if (isNaN(end)) return "Invalid Date";
+      
+      const diff = end - now;
+      
+      if (diff <= 0) return "Ended";
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (days > 0) {
+        return `${days}d ${hours}h`;
+      } else if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+      } else {
+        return `${minutes}m`;
+      }
+    } catch (error) {
+      return "Invalid Date";
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -452,10 +631,16 @@ function AuctionCard({ auction, onStart, onViewLive }: any) {
 
           <div className="flex space-x-2 pt-2">
             {auction.status === 'scheduled' && (
-              <Button variant="outline" size="sm" onClick={onStart} className="flex-1 border-2">
-                <Play className="w-4 h-4 mr-1" />
-                Start
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={onEdit} className="flex-1 border-2">
+                  <Edit className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
+                <Button variant="default" size="sm" onClick={onStart} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                  <Play className="w-4 h-4 mr-1" />
+                  Start
+                </Button>
+              </>
             )}
             {auction.status === 'live' && (
               <Button variant="default" size="sm" onClick={onViewLive} className="flex-1 bg-green-600 hover:bg-green-700">
@@ -463,10 +648,12 @@ function AuctionCard({ auction, onStart, onViewLive }: any) {
                 View Live
               </Button>
             )}
-            <Button variant="ghost" size="sm" className="flex-1 border-2">
-              <Trophy className="w-4 h-4 mr-1" />
-              Results
-            </Button>
+            {auction.status === 'closed' && (
+              <Button variant="ghost" size="sm" className="flex-1 border-2">
+                <Trophy className="w-4 h-4 mr-1" />
+                Results
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
@@ -590,7 +777,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
           </Card>
 
           {/* Bidding Form */}
-          {user?.role === 'vendor' && (
+          {(user as any)?.role === 'vendor' && (
             <Card className="border-2">
               <CardHeader>
                 <CardTitle>Place Your Bid</CardTitle>

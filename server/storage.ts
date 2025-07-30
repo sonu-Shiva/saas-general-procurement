@@ -545,6 +545,14 @@ export class DatabaseStorage implements IStorage {
     return auction;
   }
 
+  async updateAuction(id: string, updates: Partial<InsertAuction>): Promise<Auction> {
+    const [result] = await db.update(auctions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(auctions.id, id))
+      .returning();
+    return result;
+  }
+
   async updateAuctionStatus(id: string, status: string): Promise<Auction> {
     const [result] = await db.update(auctions)
       .set({ status, updatedAt: new Date() })
