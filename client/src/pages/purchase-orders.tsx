@@ -623,6 +623,37 @@ export default function PurchaseOrders() {
                         }) : 'Not specified'}
                     </p>
                   </div>
+                  {selectedPODetails.approvedAt && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedPODetails.status === 'approved' ? 'Approved Date' : 
+                         selectedPODetails.status === 'rejected' ? 'Rejected Date' : 'Decision Date'}
+                      </p>
+                      <p className="font-semibold">
+                        {new Date(selectedPODetails.approvedAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: '2-digit', 
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  )}
+                  {selectedPODetails.approvalComments && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-muted-foreground">
+                        {selectedPODetails.status === 'approved' ? 'Approval Comments' : 
+                         selectedPODetails.status === 'rejected' ? 'Rejection Reason' : 'Decision Comments'}
+                      </p>
+                      <p className="font-medium text-sm bg-muted/30 p-3 rounded-lg border">
+                        {selectedPODetails.approvalComments}
+                      </p>
+                      {selectedPODetails.approvedBy && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          By: {selectedPODetails.approvedBy}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
