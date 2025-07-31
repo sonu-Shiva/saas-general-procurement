@@ -71,18 +71,6 @@ export default function PurchaseOrders() {
     queryKey: ["/api/purchase-orders", selectedPO],
     enabled: !!selectedPO,
     retry: false,
-    queryFn: async () => {
-      console.log('Fetching PO details for ID:', selectedPO);
-      const response = await fetch(`/api/purchase-orders/${selectedPO}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      const data = await response.json();
-      console.log('PO details response:', data);
-      return data;
-    }
   });
 
 
@@ -511,7 +499,6 @@ export default function PurchaseOrders() {
                                   variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    console.log('Setting selectedPO to:', po.id);
                                     setSelectedPO(po.id);
                                   }}
                                   className="min-w-[100px]"
@@ -620,7 +607,10 @@ export default function PurchaseOrders() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Vendor</p>
-                    <p className="font-semibold">Vendor {selectedPODetails.vendorId?.slice(-4)}</p>
+                    <p className="font-semibold">
+                      {vendors?.find(v => v.id === selectedPODetails.vendorId)?.companyName || 
+                       `Vendor ${selectedPODetails.vendorId?.slice(-4)}`}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Payment Terms</p>
@@ -629,7 +619,12 @@ export default function PurchaseOrders() {
                   <div>
                     <p className="text-sm text-muted-foreground">Created Date</p>
                     <p className="font-semibold">
-                      {new Date(selectedPODetails.createdAt || '').toLocaleDateString()}
+                      {selectedPODetails.createdAt ? 
+                        new Date(selectedPODetails.createdAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: '2-digit', 
+                          year: 'numeric'
+                        }) : 'Not specified'}
                     </p>
                   </div>
                 </div>
