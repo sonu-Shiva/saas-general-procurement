@@ -750,6 +750,13 @@ export class DatabaseStorage implements IStorage {
     await db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.id, id));
   }
 
+  async deletePurchaseOrder(id: string): Promise<void> {
+    // Delete line items first (due to foreign key constraint)
+    await db.delete(poLineItems).where(eq(poLineItems.poId, id));
+    // Delete the purchase order
+    await db.delete(purchaseOrders).where(eq(purchaseOrders.id, id));
+  }
+
   // Direct Procurement operations
   async createDirectProcurementOrder(order: InsertDirectProcurementOrder): Promise<DirectProcurementOrder> {
     const [created] = await db.insert(directProcurementOrders).values(order).returning();

@@ -37,7 +37,9 @@ import {
   Phone,
   ThumbsUp,
   ThumbsDown,
-  Send
+  Send,
+  XCircle,
+  Trash2
 } from "lucide-react";
 import type { PurchaseOrder, PoLineItem } from "@shared/schema";
 
@@ -153,6 +155,43 @@ export default function PurchaseOrders() {
     });
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: async (poId: string) => {
+      await apiRequest("DELETE", `/api/purchase-orders/${poId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
+      toast({
+        title: "Success",
+        description: "Purchase Order deleted successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete Purchase Order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = (poId: string) => {
+    if (confirm("Are you sure you want to delete this Purchase Order? This action cannot be undone.")) {
+      deleteMutation.mutate(poId);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "draft":
@@ -173,6 +212,8 @@ export default function PurchaseOrders() {
         return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
       case "paid":
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+      case "rejected":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "cancelled":
         return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       default:
@@ -200,6 +241,8 @@ export default function PurchaseOrders() {
         return <div className="w-4 h-4 flex items-center justify-center font-bold text-xs">₹</div>;
       case "paid":
         return <CheckCircle className="w-4 h-4" />;
+      case "rejected":
+        return <XCircle className="w-4 h-4" />;
       case "cancelled":
         return <AlertTriangle className="w-4 h-4" />;
       default:
@@ -218,6 +261,7 @@ export default function PurchaseOrders() {
       case "delivered": return 85;
       case "invoiced": return 95;
       case "paid": return 100;
+      case "rejected": return 0;
       case "cancelled": return 0;
       default: return 0;
     }
@@ -319,9 +363,37 @@ export default function PurchaseOrders() {
               </Card>
             </div>
 
-            {/* Filters and Search */}
+            {/* Role-based Status Tabs and Filters */}
             <Card className="mb-6">
               <CardContent className="p-6">
+                {/* Status Tabs */}
+                <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
+                  <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+                    <TabsTrigger value="all">All Orders</TabsTrigger>
+                    {user?.role === 'sourcing_manager' && (
+                      <>
+                        <TabsTrigger value="pending_approval" className="text-yellow-600">
+                          <Clock className="w-4 h-4 mr-1" />
+                          Pending Approval
+                        </TabsTrigger>
+                        <TabsTrigger value="approved" className="text-green-600">
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Approved
+                        </TabsTrigger>
+                        <TabsTrigger value="rejected" className="text-red-600">
+                          <XCircle className="w-4 h-4 mr-1" />
+                          Rejected
+                        </TabsTrigger>
+                      </>
+                    )}
+                    <TabsTrigger value="issued" className="text-blue-600">
+                      <Send className="w-4 h-4 mr-1" />
+                      Issued
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                {/* Search and Additional Filters */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
                   <div className="flex-1 max-w-md">
                     <div className="relative">
@@ -335,25 +407,6 @@ export default function PurchaseOrders() {
                     </div>
                   </div>
                   <div className="flex space-x-3">
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40">
-                        <Filter className="w-4 h-4 mr-2" />
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="issued">Issued</SelectItem>
-                        <SelectItem value="acknowledged">Acknowledged</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                        <SelectItem value="invoiced">Invoiced</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <Select value={vendorFilter} onValueChange={setVendorFilter}>
                       <SelectTrigger className="w-40">
                         <SelectValue placeholder="Vendor" />
@@ -539,6 +592,25 @@ export default function PurchaseOrders() {
                             >
                               <Send className="w-4 h-4 mr-2" />
                               Issue to Vendor
+                            </Button>
+                          )}
+
+                          {/* Delete Action for Pending/Rejected POs */}
+                          {(
+                            (selectedPODetails.createdBy === user?.id && selectedPODetails.status === 'pending_approval') ||
+                            (user?.role === 'sourcing_manager' && ['pending_approval', 'rejected'].includes(selectedPODetails.status || ''))
+                          ) && (
+                            <Button 
+                              className="w-full bg-red-600 hover:bg-red-700 text-white mt-2"
+                              onClick={() => handleDelete(selectedPODetails.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              {deleteMutation.isPending ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              ) : (
+                                <Trash2 className="w-4 h-4 mr-2" />
+                              )}
+                              Delete PO
                             </Button>
                           )}
 
