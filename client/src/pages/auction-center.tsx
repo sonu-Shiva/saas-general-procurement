@@ -431,7 +431,7 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive }: any) 
               </Button>
               <Button variant="ghost" size="sm" onClick={() => onCreatePO(auction)}>
                 <ShoppingCart className="w-4 h-4 mr-1" />
-                Create PO
+                Create Purchase Order
               </Button>
             </>
           )}

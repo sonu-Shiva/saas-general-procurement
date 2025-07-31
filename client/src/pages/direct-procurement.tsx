@@ -293,7 +293,7 @@ export default function DirectProcurement() {
                 <DialogTrigger asChild>
                   <Button size="lg" className="border-2">
                     <Plus className="w-4 h-4 mr-2" />
-                    Create Direct Order
+                    Create Purchase Order
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -647,7 +647,7 @@ export default function DirectProcurement() {
                             console.log("Form values:", form.getValues());
                           }}
                         >
-                          {createOrderMutation.isPending ? "Creating..." : "Create Order"}
+                          {createOrderMutation.isPending ? "Creating..." : "Create Purchase Order"}
                         </Button>
                       </div>
                     </form>

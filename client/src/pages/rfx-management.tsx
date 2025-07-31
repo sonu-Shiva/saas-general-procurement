@@ -436,7 +436,7 @@ export default function RfxManagement() {
                                 className="text-green-600 hover:text-green-700"
                               >
                                 <ShoppingCart className="w-4 h-4 mr-1" />
-                                Create PO
+                                Create Purchase Order
                               </Button>
                             )}
                           </div>
