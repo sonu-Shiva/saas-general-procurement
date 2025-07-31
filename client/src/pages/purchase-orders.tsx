@@ -7,20 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertPurchaseOrderSchema } from "@shared/schema";
+
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { formatCurrency } from "@/lib/utils";
 import { 
-  Plus, 
   Search, 
   Filter, 
   ShoppingCart, 
@@ -31,7 +26,6 @@ import {
   Clock,
   Truck,
   FileText,
-
   Package,
   Calendar,
   AlertTriangle,
@@ -44,21 +38,12 @@ export default function PurchaseOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [vendorFilter, setVendorFilter] = useState("all");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
   const [selectedPO, setSelectedPO] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm({
-    resolver: zodResolver(insertPurchaseOrderSchema),
-    defaultValues: {
-      vendorId: "",
-      totalAmount: "",
-      termsAndConditions: "",
-      paymentTerms: "",
-      deliverySchedule: {},
-    },
-  });
+
 
   const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ["/api/purchase-orders", { status: statusFilter, vendorId: vendorFilter }],
@@ -76,41 +61,7 @@ export default function PurchaseOrders() {
     retry: false,
   });
 
-  const createPOMutation = useMutation({
-    mutationFn: async (data: any) => {
-      await apiRequest("POST", "/api/purchase-orders", {
-        ...data,
-        totalAmount: parseFloat(data.totalAmount),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
-      toast({
-        title: "Success",
-        description: "Purchase Order created successfully",
-      });
-      setIsCreateDialogOpen(false);
-      form.reset();
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to create Purchase Order",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const updatePOStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -143,9 +94,7 @@ export default function PurchaseOrders() {
     },
   });
 
-  const onSubmit = (data: any) => {
-    createPOMutation.mutate(data);
-  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -223,100 +172,16 @@ export default function PurchaseOrders() {
               <div>
                 <h1 className="text-3xl font-bold text-foreground">Purchase Orders</h1>
                 <p className="text-muted-foreground">Track and manage all purchase orders and fulfillment</p>
+                <p className="text-sm text-blue-600 mt-2">
+                  💡 Create new POs through Direct Procurement, RFx Management, or Auction Center
+                </p>
               </div>
               <div className="flex space-x-3">
                 <Button variant="outline">
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </Button>
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create PO
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Create Purchase Order</DialogTitle>
-                    </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="vendorId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Vendor</FormLabel>
-                              <FormControl>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select vendor" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {vendors?.map((vendor: any) => (
-                                      <SelectItem key={vendor.id} value={vendor.id}>
-                                        {vendor.companyName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="totalAmount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Total Amount</FormLabel>
-                              <FormControl>
-                                <Input type="number" step="0.01" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="paymentTerms"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Payment Terms</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="termsAndConditions"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Terms & Conditions</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div className="flex justify-end space-x-3">
-                          <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={createPOMutation.isPending}>
-                            {createPOMutation.isPending ? "Creating..." : "Create PO"}
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
+
               </div>
             </div>
 
