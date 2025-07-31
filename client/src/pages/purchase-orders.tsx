@@ -68,7 +68,7 @@ export default function PurchaseOrders() {
 
   // Fetch detailed PO data when a PO is selected
   const { data: selectedPODetails, isLoading: isLoadingPODetails } = useQuery<PurchaseOrder & { lineItems: PoLineItem[] }>({
-    queryKey: ["/api/purchase-orders", selectedPO],
+    queryKey: [`/api/purchase-orders/${selectedPO}`],
     enabled: !!selectedPO,
     retry: false,
   });
