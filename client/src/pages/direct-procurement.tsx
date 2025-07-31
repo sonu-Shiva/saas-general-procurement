@@ -745,8 +745,8 @@ export default function DirectProcurement() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
+                  <CardContent className="pb-4">
+                    <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Items:</span>
                         <span className="font-medium">{order.itemCount} items</span>
@@ -765,7 +765,7 @@ export default function DirectProcurement() {
                       </div>
                     </div>
                     
-                    <div className="flex gap-2 mt-4 pt-4 border-t">
+                    <div className="flex gap-2 mt-3 pt-3 border-t">
                       <Button
                         variant="ghost"
                         size="sm"
