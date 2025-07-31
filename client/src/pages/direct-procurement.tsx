@@ -733,13 +733,13 @@ export default function DirectProcurement() {
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {recentOrders.map((order: any) => (
                 <Card key={order.id} className="border-2 hover:shadow-lg transition-shadow">
-                  <CardHeader>
+                  <CardHeader className="pb-4">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">Order #{order.id.slice(0, 8)}</CardTitle>
-                        <p className="text-sm text-gray-600 mt-1">{order.vendorName}</p>
+                      <div className="flex-1 min-w-0 pr-2">
+                        <CardTitle className="text-lg truncate">Order #{order.id.slice(0, 8)}</CardTitle>
+                        <p className="text-sm text-gray-600 mt-1 truncate">{order.vendorName}</p>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-2 flex-shrink-0">
                         {getStatusBadge(order.status)}
                         {getPriorityBadge(order.priority)}
                       </div>
