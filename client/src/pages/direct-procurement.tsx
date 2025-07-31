@@ -97,7 +97,7 @@ export default function DirectProcurement() {
   // Fetch BOM items when BOM is selected
   const selectedBomId = form.watch("bomId");
   const { data: bomItems = [] } = useQuery({
-    queryKey: ["/api/boms", selectedBomId, "items"],
+    queryKey: ["/api/bom-items", selectedBomId],
     enabled: !!selectedBomId,
     retry: false,
   });
