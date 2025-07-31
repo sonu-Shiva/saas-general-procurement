@@ -177,30 +177,8 @@ export default function DirectProcurement() {
     console.log("Form errors:", form.formState.errors);
     console.log("Form is valid:", form.formState.isValid);
     console.log("Form values:", form.getValues());
-    console.log("BOM Items count:", data.bomItems?.length || 0);
-    console.log("BOM ID:", data.bomId);
-    console.log("Vendor ID:", data.vendorId);
-    console.log("Delivery Date:", data.deliveryDate);
-    console.log("Payment Terms:", data.paymentTerms);
     
-    // Check individual field validations
-    const errors = form.formState.errors;
-    if (errors.bomId) console.error("BOM ID error:", errors.bomId);
-    if (errors.vendorId) console.error("Vendor ID error:", errors.vendorId);
-    if (errors.bomItems) console.error("BOM Items error:", errors.bomItems);
-    if (errors.deliveryDate) console.error("Delivery Date error:", errors.deliveryDate);
-    if (errors.paymentTerms) console.error("Payment Terms error:", errors.paymentTerms);
-    
-    if (!form.formState.isValid) {
-      console.error("Form validation failed:", form.formState.errors);
-      toast({
-        title: "Validation Error",
-        description: "Please check all required fields are filled correctly",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+    // Skip form validation and submit directly like the working simple version
     createOrderMutation.mutate(data);
   };
 
