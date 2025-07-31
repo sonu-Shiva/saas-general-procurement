@@ -136,12 +136,17 @@ export default function DirectProcurementSimple() {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log("=== FORM SUBMISSION ===");
-    console.log("Form data:", formData);
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    console.log("=== FORM SUBMISSION START ===");
+    console.log("Form data:", JSON.stringify(formData, null, 2));
+    console.log("BOM Items count:", formData.bomItems.length);
+    console.log("Authentication user:", user);
     
     // Basic validation
     if (!formData.bomId) {
+      console.log("❌ Validation failed: No BOM selected");
       toast({
         title: "Validation Error",
         description: "Please select a BOM",
@@ -151,6 +156,7 @@ export default function DirectProcurementSimple() {
     }
     
     if (!formData.vendorId) {
+      console.log("❌ Validation failed: No vendor selected");
       toast({
         title: "Validation Error",
         description: "Please select a vendor",
@@ -160,6 +166,7 @@ export default function DirectProcurementSimple() {
     }
     
     if (formData.bomItems.length === 0) {
+      console.log("❌ Validation failed: No BOM items added");
       toast({
         title: "Validation Error",
         description: "Please add at least one BOM item",
@@ -169,6 +176,7 @@ export default function DirectProcurementSimple() {
     }
     
     if (!formData.deliveryDate) {
+      console.log("❌ Validation failed: No delivery date");
       toast({
         title: "Validation Error",
         description: "Please select a delivery date",
@@ -177,6 +185,7 @@ export default function DirectProcurementSimple() {
       return;
     }
 
+    console.log("✅ All validations passed, submitting order...");
     createOrderMutation.mutate(formData);
   };
 
