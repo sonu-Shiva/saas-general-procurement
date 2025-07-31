@@ -753,14 +753,18 @@ export default function PurchaseOrders() {
                 id="comments"
                 placeholder={
                   approvalAction === 'approve' ? 'Add approval comments...' :
-                  approvalAction === 'reject' ? 'Please provide reason for rejection...' :
+                  approvalAction === 'reject' ? 'Please provide reason for rejection (mandatory)...' :
                   'Add any notes for vendor...'
                 }
                 value={approvalComments}
                 onChange={(e) => setApprovalComments(e.target.value)}
-                className="mt-1"
+                className={`mt-1 ${approvalAction === 'reject' && !approvalComments.trim() ? 'border-red-500 focus:border-red-500' : ''}`}
                 rows={3}
+                required={approvalAction === 'reject'}
               />
+              {approvalAction === 'reject' && !approvalComments.trim() && (
+                <p className="text-sm text-red-600 mt-1">Rejection reason is required</p>
+              )}
             </div>
             <div className="flex space-x-3">
               <Button 
