@@ -54,14 +54,14 @@ export default function PurchaseOrders() {
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "issue" | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: any };
 
   const { data: purchaseOrders = [], isLoading } = useQuery<PurchaseOrder[]>({
     queryKey: ["/api/purchase-orders"],
     retry: false,
   });
 
-  const { data: vendors = [] } = useQuery({
+  const { data: vendors = [] } = useQuery<any[]>({
     queryKey: ["/api/vendors"],
     retry: false,
   });
@@ -429,12 +429,14 @@ export default function PurchaseOrders() {
                         </div>
                       </div>
                     ) : filteredPOs && filteredPOs.length > 0 ? (
-                      <div className="divide-y">
+                      <div className="space-y-4">
                         {filteredPOs.map((po: PurchaseOrder) => (
                           <div
                             key={po.id}
-                            className={`p-6 cursor-pointer hover:bg-muted/50 ${
-                              selectedPO === po.id ? 'bg-primary/5 border-l-4 border-primary' : ''
+                            className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md hover:bg-muted/30 ${
+                              selectedPO === po.id 
+                                ? 'bg-primary/5 border-primary shadow-lg' 
+                                : 'border-muted-foreground/20 bg-background'
                             }`}
                             onClick={() => setSelectedPO(po.id)}
                           >
@@ -627,32 +629,39 @@ export default function PurchaseOrders() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-3">
-                          {selectedPODetails.lineItems && selectedPODetails.lineItems.length > 0 ? (
-                            selectedPODetails.lineItems.map((item: PoLineItem) => (
-                              <div key={item.id} className="p-3 bg-muted rounded-lg">
-                                <div className="flex justify-between items-start mb-2">
-                                  <p className="font-medium">Product {item.productId?.slice(-4)}</p>
-                                  <Badge variant="outline">{item.status}</Badge>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="space-y-6">
+                          {(selectedPODetails as any).lineItems && (selectedPODetails as any).lineItems.length > 0 ? (
+                            (selectedPODetails as any).lineItems.map((item: PoLineItem, index: number) => (
+                              <div key={item.id} className="p-4 bg-muted rounded-lg border-2 border-muted-foreground/10">
+                                <div className="flex justify-between items-start mb-3">
                                   <div>
-                                    <p className="text-muted-foreground">Quantity</p>
-                                    <p>{item.quantity}</p>
+                                    <p className="font-medium text-lg">
+                                      {item.itemName || `Product ${item.productId?.slice(-4)}`}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">Item #{index + 1}</p>
+                                  </div>
+                                  <Badge variant="outline" className="ml-2">{item.status}</Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                                  <div>
+                                    <p className="text-muted-foreground font-medium">Quantity</p>
+                                    <p className="text-lg font-semibold">{item.quantity}</p>
                                   </div>
                                   <div>
-                                    <p className="text-muted-foreground">Unit Price</p>
-                                    <p>{formatCurrency(item.unitPrice)}</p>
+                                    <p className="text-muted-foreground font-medium">Unit Price</p>
+                                    <p className="text-lg font-semibold">{formatCurrency(item.unitPrice)}</p>
                                   </div>
                                 </div>
-                                <div className="mt-2">
-                                  <p className="text-muted-foreground text-sm">Total</p>
-                                  <p className="font-semibold">{formatCurrency(item.totalPrice)}</p>
+                                <div className="pt-3 border-t border-muted-foreground/20">
+                                  <div className="flex justify-between items-center">
+                                    <p className="text-muted-foreground font-medium">Line Total</p>
+                                    <p className="text-xl font-bold text-primary">{formatCurrency(item.totalPrice)}</p>
+                                  </div>
                                 </div>
                               </div>
                             ))
                           ) : (
-                            <p className="text-muted-foreground text-center py-4">No line items</p>
+                            <p className="text-muted-foreground text-center py-8">No line items</p>
                           )}
                         </div>
                       </CardContent>

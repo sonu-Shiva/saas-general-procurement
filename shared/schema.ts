@@ -235,7 +235,7 @@ export const purchaseOrders = pgTable("purchase_orders", {
   rfxId: uuid("rfx_id").references(() => rfxEvents.id),
   auctionId: uuid("auction_id").references(() => auctions.id),
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-  status: varchar("status", { enum: ["draft", "pending_approval", "approved", "issued", "acknowledged", "shipped", "delivered", "invoiced", "paid", "cancelled"] }).default("pending_approval"),
+  status: varchar("status", { enum: ["draft", "pending_approval", "approved", "rejected", "issued", "acknowledged", "shipped", "delivered", "invoiced", "paid", "cancelled"] }).default("pending_approval"),
   termsAndConditions: text("terms_and_conditions"),
   deliverySchedule: jsonb("delivery_schedule"),
   paymentTerms: text("payment_terms"),
