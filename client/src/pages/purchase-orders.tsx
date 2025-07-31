@@ -375,7 +375,7 @@ export default function PurchaseOrders() {
                 </TabsTrigger>
                 <TabsTrigger value="approved" className="text-green-600">
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Approved ({purchaseOrders.filter(po => po.status === 'approved').length})
+                  Approved and Issued ({purchaseOrders.filter(po => po.status === 'approved').length})
                 </TabsTrigger>
                 <TabsTrigger value="rejected" className="text-red-600">
                   <XCircle className="w-4 h-4 mr-2" />
@@ -423,7 +423,7 @@ export default function PurchaseOrders() {
                 <CardTitle className="flex items-center">
                   <Package className="w-5 h-5 mr-2" />
                   {statusFilter === 'pending_approval' ? 'Pending Approval' : 
-                   statusFilter === 'approved' ? 'Approved Orders' : 'Rejected Orders'}
+                   statusFilter === 'approved' ? 'Approved and Issued' : 'Rejected Orders'}
                   <Badge variant="secondary" className="ml-2">
                     {filteredPOs.length}
                   </Badge>
@@ -456,7 +456,9 @@ export default function PurchaseOrders() {
                                   <h3 className="font-semibold text-lg text-foreground">{po.poNumber}</h3>
                                   <Badge className={getStatusColor(po.status || 'draft')}>
                                     {getStatusIcon(po.status || 'draft')}
-                                    <span className="ml-1 capitalize">{po.status}</span>
+                                    <span className="ml-1 capitalize">
+                                      {po.status === 'approved' ? 'Approved and Issued' : po.status?.replace('_', ' ')}
+                                    </span>
                                   </Badge>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 text-sm mb-3">
@@ -601,7 +603,9 @@ export default function PurchaseOrders() {
                     <p className="text-sm text-muted-foreground">Status</p>
                     <Badge className={getStatusColor(selectedPODetails.status || 'draft')}>
                       {getStatusIcon(selectedPODetails.status || 'draft')}
-                      <span className="ml-1 capitalize">{selectedPODetails.status?.replace('_', ' ')}</span>
+                      <span className="ml-1 capitalize">
+                        {selectedPODetails.status === 'approved' ? 'Approved and Issued' : selectedPODetails.status?.replace('_', ' ')}
+                      </span>
                     </Badge>
                   </div>
                 </div>

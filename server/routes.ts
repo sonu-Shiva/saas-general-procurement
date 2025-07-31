@@ -1444,7 +1444,7 @@ Focus on established businesses with verifiable contact information.`;
 
       const { comments } = req.body;
       const po = await storage.updatePurchaseOrder(req.params.id, {
-        status: 'issued',
+        status: 'approved',
         approvedBy: userId,
         approvedAt: new Date(),
         approvalComments: comments || 'Approved and issued to vendor'
