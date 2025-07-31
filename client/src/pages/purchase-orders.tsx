@@ -116,6 +116,7 @@ export default function PurchaseOrders() {
       setIsApprovalDialogOpen(false);
       setApprovalComments("");
       setApprovalAction(null);
+      setSelectedPO(null); // Close the PO details dialog
       toast({
         title: "Success",
         description: `Purchase Order ${approvalAction}d successfully`,
