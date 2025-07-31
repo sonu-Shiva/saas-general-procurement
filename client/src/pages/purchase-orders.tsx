@@ -71,12 +71,7 @@ export default function PurchaseOrders() {
     queryKey: [`/api/purchase-orders/${selectedPO}`],
     enabled: !!selectedPO,
     retry: false,
-    onSuccess: (data) => {
-      console.log("PO Details API Response:", data);
-    },
-    onError: (error) => {
-      console.error("PO Details API Error:", error);
-    },
+
   });
 
 

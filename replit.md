@@ -21,6 +21,7 @@ Preferred communication style: Simple, everyday language.
 - **AUTOMATIC PO CREATION**: Direct Procurement Orders automatically create corresponding Purchase Orders in "pending_approval" status
 - **SIMPLIFIED WORKFLOW**: Removed separate submission step - orders go directly to pending approval when created
 - **SCHEMA UPDATES**: Updated database schema to support pending_approval status and nullable productId for BOM-based orders
+- **VIEW DETAILS DIALOG FIXED**: Resolved critical data display issues in Purchase Order details dialog - fixed query key format, currency formatting, and line items rendering to show complete PO information including ₹25,000 totals and proper vendor/line item data
 
 ### Direct Procurement Streamlined Design (January 2025)
 - **SIMPLIFIED ORDER DISPLAY**: Direct Procurement now shows only latest 10 orders to prevent screen clutter
