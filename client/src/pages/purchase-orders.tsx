@@ -66,7 +66,12 @@ export default function PurchaseOrders() {
     retry: false,
   });
 
-  const selectedPODetails = purchaseOrders.find((po: PurchaseOrder) => po.id === selectedPO);
+  // Fetch detailed PO data when a PO is selected
+  const { data: selectedPODetails, isLoading: isLoadingPODetails } = useQuery<PurchaseOrder & { lineItems: PoLineItem[] }>({
+    queryKey: ["/api/purchase-orders", selectedPO],
+    enabled: !!selectedPO,
+    retry: false,
+  });
 
 
 
@@ -571,7 +576,12 @@ export default function PurchaseOrders() {
               Purchase Order Details
             </DialogTitle>
           </DialogHeader>
-          {selectedPODetails && (
+          {isLoadingPODetails ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-2">Loading details...</span>
+            </div>
+          ) : selectedPODetails ? (
             <div className="space-y-6">
               {/* PO Summary */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -618,9 +628,9 @@ export default function PurchaseOrders() {
                   <Package className="w-5 h-5 mr-2" />
                   Line Items
                 </h3>
-                {(selectedPODetails as any).lineItems && (selectedPODetails as any).lineItems.length > 0 ? (
+                {selectedPODetails.lineItems && selectedPODetails.lineItems.length > 0 ? (
                   <div className="space-y-4">
-                    {(selectedPODetails as any).lineItems.map((item: PoLineItem, index: number) => (
+                    {selectedPODetails.lineItems.map((item: PoLineItem, index: number) => (
                       <div key={index} className="border rounded-lg p-4 bg-muted/30">
                         <div className="flex justify-between items-start mb-3">
                           <div>
@@ -675,6 +685,10 @@ export default function PurchaseOrders() {
                   </Button>
                 )}
               </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Failed to load purchase order details</p>
             </div>
           )}
         </DialogContent>
