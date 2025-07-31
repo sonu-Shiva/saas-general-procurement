@@ -889,7 +889,14 @@ Focus on established businesses with verifiable contact information.`;
   app.get('/api/bom-items/:bomId', isAuthenticated, async (req: any, res) => {
     try {
       const { bomId } = req.params;
+      console.log("=== FETCHING BOM ITEMS ===");
+      console.log("BOM ID:", bomId);
+      console.log("User ID:", req.user?.claims?.sub);
+      
       const items = await storage.getBomItems(bomId);
+      console.log("Found BOM items:", items.length);
+      console.log("Items:", items);
+      
       res.json(items);
     } catch (error) {
       console.error("Error fetching BOM items:", error);

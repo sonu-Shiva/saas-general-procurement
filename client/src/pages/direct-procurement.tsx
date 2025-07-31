@@ -96,11 +96,16 @@ export default function DirectProcurement() {
 
   // Fetch BOM items when BOM is selected
   const selectedBomId = form.watch("bomId");
-  const { data: bomItems = [] } = useQuery({
-    queryKey: ["/api/bom-items", selectedBomId],
+  const { data: bomItems = [], isError, error } = useQuery({
+    queryKey: [`/api/bom-items/${selectedBomId}`],
     enabled: !!selectedBomId,
     retry: false,
   });
+
+  // Debug logging
+  console.log("Selected BOM ID:", selectedBomId);
+  console.log("BOM Items:", bomItems);
+  console.log("Items error:", isError, error);
 
   // Create direct procurement order mutation
   const createOrderMutation = useMutation({
