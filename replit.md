@@ -10,13 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### Direct Procurement Metrics Implementation (January 2025)
+### Direct Procurement Streamlined Design (January 2025)
+- **SIMPLIFIED ORDER DISPLAY**: Direct Procurement now shows only latest 10 orders to prevent screen clutter
 - **FOCUSED METRICS DASHBOARD**: Added essential overview metrics to Direct Procurement page for order creation context
 - **FOUR KEY METRIC CARDS**: Total Orders, Total Value (₹), Active Orders, Completed Orders for quick overview
 - **INDIAN RUPEE CONSISTENCY**: Fixed DollarSign icon usage, replaced with proper ₹ symbol throughout metrics
 - **RESPONSIVE DESIGN**: Grid layouts that adapt from mobile (1 column) to desktop (4 columns) for optimal viewing
-- **CLEAR SEPARATION**: Detailed order tracking analytics moved to Purchase Orders screen where they belong
+- **CLEAR SEPARATION**: All comprehensive order management (search, filter, sort) moved to Purchase Orders screen
 - **BOM-FOCUSED INTERFACE**: Direct Procurement focuses on creating orders from BOMs, not managing existing orders
+- **PURCHASE ORDERS INTEGRATION**: Added "View All in Purchase Orders" button for complete order management
 
 ### Complete Vendor Access Control & Security Implementation (January 2025)
 - **ROLE-BASED AUCTION ACCESS**: Implemented complete access control where vendors only see auctions they're invited to participate in

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -62,62 +63,21 @@ export default function DirectProcurement() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   
-  // Filtering and search states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [showRecentOnly, setShowRecentOnly] = useState(true);
-  const [sortBy, setSortBy] = useState('recent');
+
 
   // Fetch direct procurement orders
   const { data: ordersData = [], isLoading } = useQuery({
     queryKey: ["/api/direct-procurement"],
     retry: false,
   });
-  let orders = Array.isArray(ordersData) ? ordersData : [];
-
-  // Apply filtering and sorting
-  const filteredOrders = React.useMemo(() => {
-    let filtered = [...orders];
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(order => 
-        order.referenceNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.vendorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.id?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    // Recent orders only (last 30 days)
-    if (showRecentOnly) {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      filtered = filtered.filter(order => new Date(order.createdAt) >= thirtyDaysAgo);
-    }
-
-    // Sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'recent':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'value-high':
-          return parseFloat(b.totalAmount || '0') - parseFloat(a.totalAmount || '0');
-        case 'value-low':
-          return parseFloat(a.totalAmount || '0') - parseFloat(b.totalAmount || '0');
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [orders, searchQuery, statusFilter, showRecentOnly, sortBy]);
+  let allOrders = Array.isArray(ordersData) ? ordersData : [];
+  
+  // Show only latest 10 orders for Direct Procurement screen
+  const recentOrders = React.useMemo(() => {
+    return [...allOrders]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10);
+  }, [allOrders]);
 
   // Fetch vendors for dropdown
   const { data: vendorsData = [] } = useQuery({
@@ -687,7 +647,7 @@ export default function DirectProcurement() {
                   <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{orders.length}</div>
+                  <div className="text-2xl font-bold">{allOrders.length}</div>
                   <p className="text-xs text-muted-foreground">
                     Direct procurement orders
                   </p>
@@ -701,7 +661,7 @@ export default function DirectProcurement() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    ₹{orders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0).toLocaleString('en-IN')}
+                    ₹{allOrders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0).toLocaleString('en-IN')}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Total procurement value
@@ -716,7 +676,7 @@ export default function DirectProcurement() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {orders.filter((order: any) => ['draft', 'submitted', 'approved'].includes(order.status)).length}
+                    {allOrders.filter((order: any) => ['draft', 'submitted', 'approved'].includes(order.status)).length}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Orders in progress
@@ -731,7 +691,7 @@ export default function DirectProcurement() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {orders.filter((order: any) => ['delivered', 'completed'].includes(order.status)).length}
+                    {allOrders.filter((order: any) => ['delivered', 'completed'].includes(order.status)).length}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Delivered orders
@@ -740,120 +700,23 @@ export default function DirectProcurement() {
               </Card>
             </div>
 
-            {/* Filters and Search */}
-            <Card className="border-2 mb-6">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium mb-2">Search Orders</Label>
-                    <Input
-                      placeholder="Search by reference, vendor..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="border-2"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium mb-2">Status</Label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="border-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="issued">Issued</SelectItem>
-                        <SelectItem value="submitted">Submitted</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium mb-2">Sort By</Label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="border-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="recent">Most Recent</SelectItem>
-                        <SelectItem value="oldest">Oldest First</SelectItem>
-                        <SelectItem value="value-high">Value: High to Low</SelectItem>
-                        <SelectItem value="value-low">Value: Low to High</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium mb-2">Time Period</Label>
-                    <Select value={showRecentOnly ? 'recent' : 'all'} onValueChange={(value) => setShowRecentOnly(value === 'recent')}>
-                      <SelectTrigger className="border-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="recent">Last 30 Days</SelectItem>
-                        <SelectItem value="all">All Time</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setStatusFilter('all');
-                        setSortBy('recent');
-                        setShowRecentOnly(true);
-                      }}
-                      className="border-2 h-10"
-                    >
-                      Clear Filters
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                  <div className="flex items-center space-x-4">
-                    <p className="text-sm text-gray-600">
-                      Showing {filteredOrders.length} of {orders.length} orders
-                      {showRecentOnly && " (last 30 days)"}
-                    </p>
-                    {searchQuery && (
-                      <Badge variant="secondary" className="text-xs">
-                        Search: "{searchQuery}"
-                      </Badge>
-                    )}
-                    {statusFilter !== 'all' && (
-                      <Badge variant="secondary" className="text-xs capitalize">
-                        Status: {statusFilter}
-                      </Badge>
-                    )}
-                  </div>
-                  {filteredOrders.length !== orders.length && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setStatusFilter('all');
-                        setShowRecentOnly(false);
-                      }}
-                      className="text-xs"
-                    >
-                      Show All ({orders.length})
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Recent Orders Header */}
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">Recent Orders</h2>
+                <p className="text-sm text-gray-600">Latest 10 direct procurement orders</p>
+              </div>
+              <Link href="/purchase-orders">
+                <Button variant="outline" className="border-2">
+                  <FileText className="w-4 h-4 mr-2" />
+                  View All in Purchase Orders
+                </Button>
+              </Link>
+            </div>
 
             {/* Orders Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredOrders.map((order: any) => (
+              {recentOrders.map((order: any) => (
                 <Card key={order.id} className="border-2 hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -917,18 +780,11 @@ export default function DirectProcurement() {
               ))}
             </div>
 
-            {filteredOrders.length === 0 && !isLoading && (
+            {recentOrders.length === 0 && !isLoading && (
               <div className="text-center py-12">
                 <ShoppingCart className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                  {orders.length === 0 ? "No Direct Procurement Orders" : "No Orders Match Your Filters"}
-                </h3>
-                <p className="text-gray-500 mb-6">
-                  {orders.length === 0 
-                    ? "Create your first direct procurement order to get started."
-                    : "Try adjusting your search criteria or clear filters to see more results."
-                  }
-                </p>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Direct Procurement Orders</h3>
+                <p className="text-gray-500 mb-6">Create your first direct procurement order to get started.</p>
                 <Button onClick={() => setIsCreateDialogOpen(true)} size="lg" className="border-2">
                   <Plus className="w-4 h-4 mr-2" />
                   Create First Order
