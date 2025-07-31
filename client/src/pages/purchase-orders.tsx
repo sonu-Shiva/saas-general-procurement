@@ -625,7 +625,7 @@ export default function PurchaseOrders() {
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <p className="font-medium">
-                              {item.description || `Product ${item.productId?.slice(-4)}`}
+                              {item.itemName || `Product ${item.productId?.slice(-4)}`}
                             </p>
                             <p className="text-sm text-muted-foreground">Item #{index + 1}</p>
                           </div>
@@ -641,7 +641,7 @@ export default function PurchaseOrders() {
                           </div>
                           <div>
                             <p className="text-muted-foreground">Line Total</p>
-                            <p className="font-bold text-primary">{formatCurrency(item.lineTotal)}</p>
+                            <p className="font-bold text-primary">{formatCurrency(item.totalPrice)}</p>
                           </div>
                         </div>
                       </div>
