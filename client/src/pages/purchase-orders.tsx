@@ -45,7 +45,7 @@ import type { PurchaseOrder, PoLineItem } from "@shared/schema";
 
 export default function PurchaseOrders() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending_approval");
   const [vendorFilter, setVendorFilter] = useState("all");
 
   const [selectedPO, setSelectedPO] = useState<string | null>(null);
@@ -56,21 +56,17 @@ export default function PurchaseOrders() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const { data: purchaseOrders, isLoading } = useQuery({
-    queryKey: ["/api/purchase-orders", { status: statusFilter, vendorId: vendorFilter }],
+  const { data: purchaseOrders = [], isLoading } = useQuery<PurchaseOrder[]>({
+    queryKey: ["/api/purchase-orders"],
     retry: false,
   });
 
-  const { data: vendors } = useQuery({
-    queryKey: ["/api/vendors", { status: "approved" }],
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["/api/vendors"],
     retry: false,
   });
 
-  const { data: selectedPODetails } = useQuery({
-    queryKey: ["/api/purchase-orders", selectedPO],
-    enabled: !!selectedPO,
-    retry: false,
-  });
+  const selectedPODetails = purchaseOrders.find((po: PurchaseOrder) => po.id === selectedPO);
 
 
 
@@ -267,9 +263,10 @@ export default function PurchaseOrders() {
     }
   };
 
-  const filteredPOs = purchaseOrders?.filter((po: PurchaseOrder) => {
-    const matchesSearch = po.poNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || po.status === statusFilter;
+  // Filter POs based on current tab and search criteria
+  const filteredPOs = purchaseOrders.filter((po: PurchaseOrder) => {
+    const matchesSearch = po.poNumber?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = po.status === statusFilter;
     const matchesVendor = vendorFilter === "all" || po.vendorId === vendorFilter;
     
     return matchesSearch && matchesStatus && matchesVendor;
@@ -363,37 +360,27 @@ export default function PurchaseOrders() {
               </Card>
             </div>
 
-            {/* Role-based Status Tabs and Filters */}
+            {/* 3-Bucket Status Tabs for Purchase Orders */}
+            <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="pending_approval" className="text-yellow-600">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Pending Approval ({purchaseOrders.filter(po => po.status === 'pending_approval').length})
+                </TabsTrigger>
+                <TabsTrigger value="approved" className="text-green-600">
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approved ({purchaseOrders.filter(po => po.status === 'approved').length})
+                </TabsTrigger>
+                <TabsTrigger value="rejected" className="text-red-600">
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Rejected ({purchaseOrders.filter(po => po.status === 'rejected').length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Search and Filters */}
             <Card className="mb-6">
               <CardContent className="p-6">
-                {/* Status Tabs */}
-                <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-                  <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
-                    <TabsTrigger value="all">All Orders</TabsTrigger>
-                    {user?.role === 'sourcing_manager' && (
-                      <>
-                        <TabsTrigger value="pending_approval" className="text-yellow-600">
-                          <Clock className="w-4 h-4 mr-1" />
-                          Pending Approval
-                        </TabsTrigger>
-                        <TabsTrigger value="approved" className="text-green-600">
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Approved
-                        </TabsTrigger>
-                        <TabsTrigger value="rejected" className="text-red-600">
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Rejected
-                        </TabsTrigger>
-                      </>
-                    )}
-                    <TabsTrigger value="issued" className="text-blue-600">
-                      <Send className="w-4 h-4 mr-1" />
-                      Issued
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-
-                {/* Search and Additional Filters */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
                   <div className="flex-1 max-w-md">
                     <div className="relative">
@@ -413,7 +400,7 @@ export default function PurchaseOrders() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Vendors</SelectItem>
-                        {vendors?.map((vendor: any) => (
+                        {vendors.map((vendor: any) => (
                           <SelectItem key={vendor.id} value={vendor.id}>
                             {vendor.companyName}
                           </SelectItem>
@@ -470,7 +457,7 @@ export default function PurchaseOrders() {
                               <div>
                                 <p className="text-muted-foreground">Amount</p>
                                 <p className="font-semibold">
-                                  {formatCurrency(po.totalAmount)}
+                                  {formatCurrency(po.totalAmount || '0')}
                                 </p>
                               </div>
                               <div>
