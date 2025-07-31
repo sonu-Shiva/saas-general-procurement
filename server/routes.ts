@@ -1824,7 +1824,10 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const rfxId = req.params.id;
-      const { vendorId, responseId, totalAmount, paymentTerms, deliverySchedule, notes } = req.body;
+      const { vendorId, poItems, deliveryDate, paymentTerms, notes, priority, totalAmount } = req.body;
+
+      console.log("=== CREATING PO FROM RFX ===");
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
 
       // Verify RFx exists and user has permission
       const rfx = await storage.getRfxEvent(rfxId);
@@ -1842,12 +1845,9 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(404).json({ message: "Vendor not found" });
       }
 
-      // Get RFx responses for this vendor
-      const responses = await storage.getRfxResponses({ rfxId, vendorId });
-      const selectedResponse = responses.find((r: any) => r.id === responseId) || responses[0];
-      
-      if (!selectedResponse) {
-        return res.status(400).json({ message: "No valid response found for this vendor" });
+      // Validate required fields
+      if (!poItems || !Array.isArray(poItems) || poItems.length === 0) {
+        return res.status(400).json({ message: "At least one PO item is required" });
       }
 
       // Generate PO number
@@ -1858,22 +1858,44 @@ Focus on established businesses with verifiable contact information.`;
         poNumber,
         vendorId,
         rfxId,
-        totalAmount: totalAmount || selectedResponse.quotedPrice || "0",
+        totalAmount: totalAmount || "0",
         status: "pending_approval",
+        priority: priority || "medium",
+        deliveryDate: new Date(deliveryDate),
+        paymentTerms: paymentTerms || "Net 30",
         termsAndConditions: notes || `Purchase Order created from RFx: ${rfx.title}`,
-        deliverySchedule: deliverySchedule || { standard: "As per RFx requirements" },
-        paymentTerms: paymentTerms || selectedResponse.paymentTerms || "Net 30",
         createdBy: userId
       });
+
+      console.log("Created PO:", purchaseOrder);
+
+      // Create line items for each PO item
+      for (const item of poItems) {
+        const lineItemData = {
+          poId: purchaseOrder.id,
+          productId: null, // For RFx-based orders, we allow null productId
+          quantity: item.quantity.toString(),
+          unitPrice: item.unitPrice.toString(),
+          totalPrice: item.totalPrice.toString(),
+          status: "pending",
+          itemName: item.itemName,
+          specifications: item.specifications || '',
+        };
+        
+        console.log("Creating PO line item:", lineItemData);
+        await storage.createPoLineItem(lineItemData);
+      }
+
+      console.log("Successfully created Purchase Order and line items from RFx");
 
       res.json({
         purchaseOrder,
         rfx,
-        rfxResponse: selectedResponse,
         vendor
       });
     } catch (error) {
       console.error("Error creating PO from RFx:", error);
+      console.error("Error stack:", error.stack);
       res.status(500).json({ message: "Failed to create purchase order from RFx" });
     }
   });
