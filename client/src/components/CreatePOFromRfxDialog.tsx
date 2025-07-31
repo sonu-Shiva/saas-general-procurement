@@ -67,15 +67,7 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
     resolver: zodResolver(rfxPOSchema),
     defaultValues: {
       vendorId: "",
-      poItems: hasBom && bomItems.length > 0
-        ? bomItems.map((item: any) => ({
-            itemName: item.productName || item.itemName || "",
-            quantity: item.quantity || 1,
-            unitPrice: item.unitPrice || 0,
-            totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
-            specifications: item.specifications || "",
-          }))
-        : [{ itemName: "", quantity: 1, unitPrice: 0, totalPrice: 0, specifications: "" }],
+      poItems: [{ itemName: "", quantity: 1, unitPrice: 0, totalPrice: 0, specifications: "" }],
       deliveryDate: "",
       paymentTerms: "Net 30",
       priority: "medium",
@@ -90,18 +82,34 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
   });
   const vendors = Array.isArray(vendorsData) ? vendorsData : [];
 
-  // Reset form when BOM items change
+  // Reset form when BOM items are loaded
   React.useEffect(() => {
-    if (hasBom && bomItems.length > 0) {
+    if (hasBom && bomItems && bomItems.length > 0) {
+      const bomFormItems = bomItems.map((item: any) => ({
+        itemName: item.itemName || item.productName || "",
+        quantity: Number(item.quantity) || 1,
+        unitPrice: Number(item.unitPrice) || 0,
+        totalPrice: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
+        specifications: item.specifications || "",
+      }));
+      
       form.reset({
-        ...form.getValues(),
-        poItems: bomItems.map((item: any) => ({
-          itemName: item.productName || item.itemName || "",
-          quantity: item.quantity || 1,
-          unitPrice: item.unitPrice || 0,
-          totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
-          specifications: item.specifications || "",
-        }))
+        vendorId: "",
+        poItems: bomFormItems,
+        deliveryDate: "",
+        paymentTerms: "Net 30",
+        priority: "medium",
+        notes: "",
+      });
+    } else if (!hasBom) {
+      // Reset to single empty item for non-BOM RFx
+      form.reset({
+        vendorId: "",
+        poItems: [{ itemName: "", quantity: 1, unitPrice: 0, totalPrice: 0, specifications: "" }],
+        deliveryDate: "",
+        paymentTerms: "Net 30",
+        priority: "medium",
+        notes: "",
       });
     }
   }, [bomItems, hasBom, form]);
