@@ -1494,11 +1494,36 @@ Focus on established businesses with verifiable contact information.`;
       const userId = req.user.claims.sub;
       const { bomId, vendorId, bomItems, deliveryDate, paymentTerms, notes, priority } = req.body;
       
+      console.log("=== CREATING DIRECT PROCUREMENT ORDER ===");
+      console.log("User ID:", userId);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      console.log("BOM Items:", JSON.stringify(bomItems, null, 2));
+      
+      // Validate required fields
+      if (!bomId) {
+        console.error("Missing bomId");
+        return res.status(400).json({ message: "BOM ID is required" });
+      }
+      if (!vendorId) {
+        console.error("Missing vendorId");
+        return res.status(400).json({ message: "Vendor ID is required" });
+      }
+      if (!bomItems || !Array.isArray(bomItems) || bomItems.length === 0) {
+        console.error("Missing or invalid bomItems");
+        return res.status(400).json({ message: "At least one BOM item is required" });
+      }
+      if (!deliveryDate) {
+        console.error("Missing deliveryDate");
+        return res.status(400).json({ message: "Delivery date is required" });
+      }
+      
       // Calculate total amount from BOM items
       const totalAmount = bomItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
+      console.log("Calculated total amount:", totalAmount);
       
       // Generate reference number
       const referenceNo = `DPO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      console.log("Generated reference number:", referenceNo);
       
       const orderData = {
         referenceNo,
@@ -1506,19 +1531,23 @@ Focus on established businesses with verifiable contact information.`;
         vendorId,
         bomItems,
         totalAmount: totalAmount.toString(),
-        status: "draft",
-        priority: priority || "medium",
+        status: "draft" as const,
+        priority: (priority || "medium") as const,
         deliveryDate: new Date(deliveryDate),
         paymentTerms,
-        notes,
+        notes: notes || null,
         createdBy: userId,
       };
+      
+      console.log("Order data to insert:", JSON.stringify(orderData, null, 2));
 
       const order = await storage.createDirectProcurementOrder(orderData);
+      console.log("Created order:", JSON.stringify(order, null, 2));
       res.json(order);
     } catch (error) {
       console.error("Error creating BOM-based direct procurement order:", error);
-      res.status(500).json({ message: "Failed to create direct procurement order" });
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: "Failed to create direct procurement order", error: error.message });
     }
   });
 
