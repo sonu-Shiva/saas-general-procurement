@@ -440,46 +440,105 @@ export default function PurchaseOrders() {
                             }`}
                             onClick={() => setSelectedPO(po.id)}
                           >
-                            <div className="flex items-center justify-between mb-3">
-                              <h3 className="font-semibold text-foreground">{po.poNumber}</h3>
-                              <Badge className={getStatusColor(po.status || 'draft')}>
-                                {getStatusIcon(po.status || 'draft')}
-                                <span className="ml-1 capitalize">{po.status}</span>
-                              </Badge>
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="font-semibold text-lg text-foreground">{po.poNumber}</h3>
+                                  <Badge className={getStatusColor(po.status || 'draft')}>
+                                    {getStatusIcon(po.status || 'draft')}
+                                    <span className="ml-1 capitalize">{po.status}</span>
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                                  <div>
+                                    <p className="text-muted-foreground">Total Amount</p>
+                                    <p className="font-bold text-lg text-primary">
+                                      {formatCurrency(po.totalAmount || '0')}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground">Created Date</p>
+                                    <p className="font-semibold">
+                                      {new Date(po.createdAt || '').toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <div>
+                                    <p className="text-muted-foreground">Vendor</p>
+                                    <p className="font-semibold">Vendor {po.vendorId?.slice(-4)}</p>
+                                  </div>
+                                  {po.paymentTerms && (
+                                    <div>
+                                      <p className="text-muted-foreground">Payment Terms</p>
+                                      <p className="font-semibold">{po.paymentTerms}</p>
+                                    </div>
+                                  )}
+                                  {po.acknowledgedAt && (
+                                    <div className="flex items-center text-success">
+                                      <CheckCircle className="w-4 h-4 mr-1" />
+                                      <span>Acknowledged {new Date(po.acknowledgedAt).toLocaleDateString()}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Quick Actions */}
+                              <div className="flex flex-col gap-2 ml-4">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedPO(po.id);
+                                  }}
+                                  className="min-w-[100px]"
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Details
+                                </Button>
+                                
+                                {/* Role-based Action Buttons */}
+                                {user?.role === 'sourcing_manager' && po.status === 'pending_approval' && (
+                                  <div className="flex gap-1">
+                                    <Button 
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700 text-white px-3"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleApprovalAction(po, 'approve');
+                                      }}
+                                    >
+                                      <ThumbsUp className="w-4 h-4" />
+                                    </Button>
+                                    <Button 
+                                      size="sm"
+                                      className="bg-red-600 hover:bg-red-700 text-white px-3"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleApprovalAction(po, 'reject');
+                                      }}
+                                    >
+                                      <ThumbsDown className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                )}
+                                
+                                {user?.role === 'sourcing_manager' && po.status === 'approved' && (
+                                  <Button 
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleApprovalAction(po, 'issue');
+                                    }}
+                                  >
+                                    <Send className="w-4 h-4 mr-2" />
+                                    Issue
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                            
-                            <div className="mb-4">
-                              <Progress value={getProgressValue(po.status || 'draft')} className="h-2" />
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {getProgressValue(po.status || 'draft')}% Complete
-                              </p>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <p className="text-muted-foreground">Amount</p>
-                                <p className="font-semibold">
-                                  {formatCurrency(po.totalAmount || '0')}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Vendor</p>
-                                <p className="font-semibold truncate">Vendor {po.vendorId?.slice(-4)}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Created</p>
-                                <p className="font-semibold">
-                                  {new Date(po.createdAt || '').toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-
-                            {po.acknowledgedAt && (
-                              <div className="mt-3 flex items-center text-sm text-success">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Acknowledged on {new Date(po.acknowledgedAt).toLocaleDateString()}
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>
