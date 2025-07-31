@@ -1497,7 +1497,6 @@ Focus on established businesses with verifiable contact information.`;
       console.log("=== CREATING DIRECT PROCUREMENT ORDER ===");
       console.log("User ID:", userId);
       console.log("Request body:", JSON.stringify(req.body, null, 2));
-      console.log("BOM Items:", JSON.stringify(bomItems, null, 2));
       
       // Validate required fields
       if (!bomId) {

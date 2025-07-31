@@ -12,7 +12,7 @@ import BomManagement from "@/pages/bom-management";
 import RfxManagement from "@/pages/rfx-management";
 
 import AuctionCenter from "@/pages/auction-center";
-import DirectProcurement from "@/pages/direct-procurement";
+import DirectProcurement from "@/pages/direct-procurement-simple";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Analytics from "@/pages/analytics";
 
