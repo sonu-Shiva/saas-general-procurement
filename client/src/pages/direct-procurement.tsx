@@ -168,12 +168,14 @@ export default function DirectProcurement() {
   // Add BOM item to procurement list
   const addBomItem = (bomItem: any) => {
     const currentBomItems = form.getValues("bomItems");
+    const unitPrice = Number(bomItem.unitPrice || 0);
+    const quantity = Number(bomItem.quantity || 1);
     const newBomItem = {
       bomItemId: bomItem.id,
       productName: bomItem.itemName || bomItem.item_name || bomItem.name,
-      requestedQuantity: bomItem.quantity || 1,
-      unitPrice: 0,
-      totalPrice: 0,
+      requestedQuantity: quantity,
+      unitPrice: unitPrice,
+      totalPrice: unitPrice * quantity,
       specifications: bomItem.description || bomItem.specifications || "",
     };
     form.setValue("bomItems", [...currentBomItems, newBomItem]);
@@ -321,6 +323,7 @@ export default function DirectProcurement() {
                                     <div className="flex-1">
                                       <h4 className="font-medium">{bomItem.itemName || bomItem.item_name || bomItem.name}</h4>
                                       <p className="text-sm text-gray-600">Required: {bomItem.quantity} {bomItem.uom || ''}</p>
+                                      <p className="text-sm font-medium text-green-600">₹{Number(bomItem.unitPrice || 0).toLocaleString('en-IN')}</p>
                                       {bomItem.description && (
                                         <p className="text-xs text-gray-500 mt-1">{bomItem.description}</p>
                                       )}
