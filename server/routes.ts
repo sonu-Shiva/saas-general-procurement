@@ -1502,6 +1502,39 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  app.delete('/api/purchase-orders/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Get the PO first to check ownership and status
+      const po = await storage.getPurchaseOrder(req.params.id);
+      if (!po) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+
+      // Only allow deletion if:
+      // 1. User created the PO and it's in pending_approval status, OR
+      // 2. User is sourcing manager and PO is in pending_approval or rejected status
+      const canDelete = (
+        (po.createdBy === userId && po.status === 'pending_approval') ||
+        (user?.role === 'sourcing_manager' && ['pending_approval', 'rejected'].includes(po.status))
+      );
+
+      if (!canDelete) {
+        return res.status(403).json({ 
+          message: "Can only delete purchase orders in pending approval or rejected status" 
+        });
+      }
+
+      await storage.deletePurchaseOrder(req.params.id);
+      res.json({ success: true, message: "Purchase order deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting purchase order:", error);
+      res.status(400).json({ message: "Failed to delete purchase order" });
+    }
+  });
+
   // Approval routes
   app.get('/api/approvals', isAuthenticated, async (req: any, res) => {
     try {
