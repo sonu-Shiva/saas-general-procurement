@@ -67,11 +67,13 @@ export default function DirectProcurementSimple() {
 
   // Fetch BOM items when BOM is selected
   const { data: bomItemsData = [] } = useQuery({
-    queryKey: ["/api/bom-items", formData.bomId],
+    queryKey: [`/api/bom-items/${formData.bomId}`],
     enabled: !!formData.bomId,
     retry: false,
   });
   const bomItems = Array.isArray(bomItemsData) ? bomItemsData : [];
+  
+  console.log("BOM Items loaded:", bomItems);
 
   // Create order mutation
   const createOrderMutation = useMutation({
