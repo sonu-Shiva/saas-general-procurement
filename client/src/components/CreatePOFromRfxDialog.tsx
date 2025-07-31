@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,15 +43,32 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
   const { toast } = useToast();
 
   // Check if RFx has BOM linked
-  const hasBom = rfx.bomId && rfx.bomItems && Array.isArray(rfx.bomItems) && rfx.bomItems.length > 0;
+  const hasBom = rfx.bomId;
+  
+  // Fetch BOM items if RFx has BOM linked
+  const { data: bomData, isLoading: isLoadingBomItems } = useQuery({
+    queryKey: ["/api/boms", rfx.bomId],
+    queryFn: async () => {
+      if (!rfx.bomId) return null;
+      const response = await fetch(`/api/boms/${rfx.bomId}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch BOM');
+      return response.json();
+    },
+    enabled: !!rfx.bomId,
+    retry: false,
+  });
+
+  const bomItems = bomData?.items || [];
   
   // Form setup
   const form = useForm<RfxPOForm>({
     resolver: zodResolver(rfxPOSchema),
     defaultValues: {
       vendorId: "",
-      poItems: hasBom 
-        ? rfx.bomItems.map((item: any) => ({
+      poItems: hasBom && bomItems.length > 0
+        ? bomItems.map((item: any) => ({
             itemName: item.productName || item.itemName || "",
             quantity: item.quantity || 1,
             unitPrice: item.unitPrice || 0,
@@ -71,6 +89,22 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
     retry: false,
   });
   const vendors = Array.isArray(vendorsData) ? vendorsData : [];
+
+  // Reset form when BOM items change
+  React.useEffect(() => {
+    if (hasBom && bomItems.length > 0) {
+      form.reset({
+        ...form.getValues(),
+        poItems: bomItems.map((item: any) => ({
+          itemName: item.productName || item.itemName || "",
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || 0,
+          totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
+          specifications: item.specifications || "",
+        }))
+      });
+    }
+  }, [bomItems, hasBom, form]);
 
   // Calculate total amount when items change
   const calculateTotal = () => {
@@ -138,11 +172,11 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
     return vendor ? vendor.companyName : vendorId;
   };
 
-  if (isLoadingVendors) {
+  if (isLoadingVendors || (hasBom && isLoadingBomItems)) {
     return (
       <div className="p-8 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p>Loading vendors...</p>
+        <p>Loading {isLoadingVendors ? 'vendors' : 'BOM items'}...</p>
       </div>
     );
   }
@@ -168,7 +202,7 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
             <div className="col-span-2">
               <span className="text-blue-600 font-medium">BOM Linked:</span>
               <Badge className="ml-2 bg-green-100 text-green-800">
-                {rfx.bomItems?.length || 0} items from BOM
+                {bomItems?.length || 0} items from BOM
               </Badge>
             </div>
           )}
