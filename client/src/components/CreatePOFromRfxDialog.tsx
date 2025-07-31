@@ -41,12 +41,23 @@ interface CreatePOFromRfxDialogProps {
 export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromRfxDialogProps) {
   const { toast } = useToast();
 
+  // Check if RFx has BOM linked
+  const hasBom = rfx.bomId && rfx.bomItems && Array.isArray(rfx.bomItems) && rfx.bomItems.length > 0;
+  
   // Form setup
   const form = useForm<RfxPOForm>({
     resolver: zodResolver(rfxPOSchema),
     defaultValues: {
       vendorId: "",
-      poItems: [{ itemName: "", quantity: 1, unitPrice: 0, totalPrice: 0, specifications: "" }],
+      poItems: hasBom 
+        ? rfx.bomItems.map((item: any) => ({
+            itemName: item.productName || item.itemName || "",
+            quantity: item.quantity || 1,
+            unitPrice: item.unitPrice || 0,
+            totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
+            specifications: item.specifications || "",
+          }))
+        : [{ itemName: "", quantity: 1, unitPrice: 0, totalPrice: 0, specifications: "" }],
       deliveryDate: "",
       paymentTerms: "Net 30",
       priority: "medium",
@@ -153,6 +164,14 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
             <span className="text-blue-600 font-medium">Type:</span>
             <Badge className="ml-2 bg-blue-100 text-blue-800">{rfx.type?.toUpperCase()}</Badge>
           </div>
+          {hasBom && (
+            <div className="col-span-2">
+              <span className="text-blue-600 font-medium">BOM Linked:</span>
+              <Badge className="ml-2 bg-green-100 text-green-800">
+                {rfx.bomItems?.length || 0} items from BOM
+              </Badge>
+            </div>
+          )}
         </div>
       </div>
 
@@ -190,7 +209,19 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
           {/* Purchase Order Items */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <Label className="text-lg font-semibold">Purchase Order Items *</Label>
+              <div>
+                <Label className="text-lg font-semibold">Purchase Order Items *</Label>
+                {hasBom && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Items pre-populated from linked BOM. You can modify quantities and prices.
+                  </p>
+                )}
+                {!hasBom && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    No BOM linked to this RFx. Add items manually.
+                  </p>
+                )}
+              </div>
               <Button type="button" onClick={addItem} size="sm" variant="outline">
                 <Plus className="w-4 h-4 mr-1" />
                 Add Item

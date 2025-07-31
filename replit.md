@@ -1,268 +1,65 @@
 # SCLEN Procurement Platform
 
 ## Overview
-
-This is a modern, full-stack procurement management platform with a React frontend and Django REST API backend. The application provides comprehensive tools for managing vendors, products, RFx processes, auctions, and purchase orders with AI-powered features and real-time capabilities.
+This project is a modern, full-stack procurement management platform designed to streamline and enhance procurement processes. It features a React frontend and a Django REST API backend, offering comprehensive tools for managing vendors, products, RFx processes, auctions, and purchase orders. The platform incorporates AI-powered features and real-time capabilities to provide a complete and efficient solution for procurement needs. The business vision is to provide an innovative platform that simplifies complex procurement workflows, improves transparency, and drives efficiency for businesses, positioning itself as a leader in digital procurement solutions.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
-
-## Recent Changes
-
-### Complete PO Approval Workflow & UI Fixes (January 2025)
-- **3-BUCKET PURCHASE ORDER SYSTEM**: Implemented the requested 3 separate tabs (Pending Approval, Approved, Rejected) for clear PO workflow management
-- **AUCTION PO CREATION**: Verified "Create PO" button exists for completed auctions to enable PO creation from auction results
-- **AUTHENTICATION FIXES**: Resolved Create Order authentication issues by replacing raw fetch calls with proper apiRequest function
-- **TYPESCRIPT ERROR RESOLUTION**: Fixed all LSP diagnostics that were preventing proper UI functionality in Purchase Orders
-- **ROLE-BASED WORKFLOW**: Sourcing managers can approve/reject/issue POs, buyers can create and view POs, proper role separation implemented
-- **STATUS FILTERING**: Each bucket tab shows only relevant POs with proper counts, default view starts with Pending Approval tab
-- **API PARAMETER FIXES**: Corrected API call parameter ordering for proper backend communication
-- **AUTOMATIC PO CREATION**: Direct Procurement Orders automatically create corresponding Purchase Orders in "pending_approval" status
-- **SIMPLIFIED WORKFLOW**: Removed separate submission step - orders go directly to pending approval when created
-- **SCHEMA UPDATES**: Updated database schema to support pending_approval status and nullable productId for BOM-based orders
-- **VIEW DETAILS DIALOG FIXED**: Resolved critical data display issues in Purchase Order details dialog - fixed query key format, currency formatting, and line items rendering to show complete PO information including ₹25,000 totals and proper vendor/line item data
-
-### Direct Procurement Streamlined Design (January 2025)
-- **SIMPLIFIED ORDER DISPLAY**: Direct Procurement now shows only latest 10 orders to prevent screen clutter
-- **FOCUSED METRICS DASHBOARD**: Added essential overview metrics to Direct Procurement page for order creation context
-- **FOUR KEY METRIC CARDS**: Total Orders, Total Value (₹), Active Orders, Completed Orders for quick overview
-- **INDIAN RUPEE CONSISTENCY**: Fixed DollarSign icon usage, replaced with proper ₹ symbol throughout metrics
-- **RESPONSIVE DESIGN**: Grid layouts that adapt from mobile (1 column) to desktop (4 columns) for optimal viewing
-- **CLEAR SEPARATION**: All comprehensive order management (search, filter, sort) moved to Purchase Orders screen
-- **BOM-FOCUSED INTERFACE**: Direct Procurement focuses on creating orders from BOMs, not managing existing orders
-- **PURCHASE ORDERS INTEGRATION**: Added "View All in Purchase Orders" button for complete order management
-
-### Complete Vendor Access Control & Security Implementation (January 2025)
-- **ROLE-BASED AUCTION ACCESS**: Implemented complete access control where vendors only see auctions they're invited to participate in
-- **ROLE-BASED RFX ACCESS**: Vendors now only see RFx events they're invited to participate in, buyers see only RFx they created
-- **API SECURITY FILTERS**: Added role-based filtering to GET /api/auctions and GET /api/rfx endpoints with proper user validation
-- **VENDOR MODULE RESTRICTIONS**: Completely removed Vendor Management and BOM Management modules from vendor user interface
-- **ROUTE-LEVEL PROTECTION**: Added page-level access guards preventing vendors from directly accessing restricted modules
-- **NAVIGATION FILTERING**: Sidebar dynamically hides restricted sections based on user role with proper authentication context
-- **AUCTION EDIT RESTRICTIONS**: Vendors can no longer edit auctions - Edit buttons and Create Auction functionality hidden from vendor users
-- **UI ACCESS CONTROL**: Create Auction button, Edit auction actions, and auction creation dialogs restricted to buyer roles only
-- **DATABASE QUERY OPTIMIZATION**: Implemented getRfxEventsForVendor() and getAuctionsForVendor() methods for secure data access
-- **TEST DATA INTEGRATION**: Added proper RFx invitations and auction participants for role-switching testing
-- **COMPLETE ACCESS CONTROL**: Vendors can only access Product Catalog, RFx Management (invited), Auction Center (invited), Purchase Orders, and Analytics
-
-### Live Reverse Auction System Implementation (January 2025)
-- **Complete Auction Backend**: Implemented full auction system with schema, API endpoints, and storage methods
-- **Working Auction Creation Form**: Simplified form using basic HTML elements with BOM selection and date/time pickers
-- **Real-time Bidding Engine**: Added live bidding with ceiling price enforcement and automatic vendor ranking (L1/L2/L3)
-- **WebSocket Integration**: Implemented WebSocket server for real-time auction updates, bid notifications, and live rankings
-- **Auction Management**: Created comprehensive auction creation, participant management, and bid tracking system
-- **BOM-Linked Auctions**: Enabled auctions to be created against specific BOM line items with ceiling prices
-- **Vendor Role Integration**: Auction bidding restricted to vendor users with proper authentication and validation
-- **Live Auction UI**: Built auction center interface with live bidding controls, real-time updates, and auction status management
-- **Auction Status Workflow**: Implemented draft → live → closed auction lifecycle with proper authorization controls
-- **Database Schema**: Added auctions, auction_participants, and bids tables with proper relationships and constraints
-- **API Endpoints**: Added comprehensive REST API for auction CRUD, bidding, participant management, and status updates
-- **Form Stability Issues Resolved**: Fixed blank screen crashes by using simplified HTML form elements instead of complex React components
-- **CRITICAL TIMEZONE BUG FIX**: Fixed major datetime timezone conversion issue where selected times displayed incorrectly (e.g., 4:43 PM showing as 10:13 PM)
-- **Auction Editing System**: Added complete auction editing functionality for scheduled auctions with proper security validation
-- **Indian Time Format**: Implemented proper DD/MM/YYYY, 12-hour time format display for all auction times
-- **DateTime Conversion Helpers**: Added toLocalDateTimeString() and toISOString() functions for proper timezone handling between UI and database
-- **AUTOMATIC AUCTION LIFECYCLE**: Replaced manual start/end buttons with fully automatic time-based auction management system
-- **Background Auction Scheduler**: Implemented auctionScheduler.ts service that automatically transitions auctions from scheduled → live → closed based on start/end times
-- **Database DateTime Fix**: Fixed backend ORM conversion issue where ISO strings needed to be converted to Date objects for database operations
-- **Removed Manual Controls**: Eliminated illogical manual start buttons - auctions now operate like proper automated systems
-
-### Backend Migration to Django (July 2025)
-- **Complete Backend Migration**: Successfully migrated from Node.js/Express to Python 3.12 with Django REST Framework
-- **Django Project Structure**: Created modular Django apps for users, vendors, products, boms, rfx, auctions, purchase_orders, approvals, and notifications
-- **Database Migration**: Seamlessly migrated existing PostgreSQL schema using Django's fake migration system
-- **API Endpoints**: All procurement API endpoints converted to Django REST Framework with proper authentication
-- **Maintained Functionality**: All existing features preserved during migration including role-based access and business logic
-- **Authentication Integration**: Django REST Framework JWT authentication ready for frontend integration
-
-### Comprehensive Vendor Management System (July 2025)
-- **Unified Vendor Interface**: Consolidated vendor discovery and management into single page for streamlined workflow
-- **Dual Vendor Addition Methods**: Implemented both manual GUI entry and AI vendor discovery within vendor management dialog
-- **Manual Vendor Entry**: Complete form with company name, contact person, email, phone, address, website, description, and categories
-- **Enhanced AI Vendor Discovery**: Advanced search with comprehensive test database covering Electronics, Manufacturing, Services, Energy, and Logistics sectors
-- **Vendor Management Page**: Complete vendor listing with search, filtering, and detailed vendor cards showing proper company names
-- **AI Logo Integration**: Company logos displayed only from AI discovery when available from web sources
-- **Phone Number Validation**: Enforced exactly 10-digit phone number format (no country codes)
-- **Streamlined Manual Entry**: Simplified vendor registration form without logo upload to prevent data issues
-- **Consistent UI Styling**: Applied 2px borders across all form elements for visual consistency
-- **API Endpoints**: Added POST /api/vendors and POST /api/vendors/discover endpoints for vendor operations
-- **Removed Duplication**: Eliminated standalone vendor discovery page to avoid confusion and streamline user experience
-- **Real AI Integration**: Fully integrated Perplexity API for live vendor discovery with fallback to test data for reliability
-
-### RFx-BOM Integration & Complete Workflow (July 2025)
-- **BOM-RFx Integration**: Added complete Bill of Materials integration to RFx creation workflow
-- **Optional BOM Linking**: Users can create RFI/RFP/RFQ with or without linking to specific BOMs
-- **BOM Selection UI**: Intuitive BOM selection dropdown in RFx form with BOM details (name, version, category)
-- **Status Workflow Implementation**: Complete draft → active → closed status workflow with action buttons
-- **View/Edit/Publish Actions**: Implemented view, edit (draft only), publish (draft to active), and close (active) functionality
-- **BOM Visual Indicators**: RFx list shows "BOM Linked" badges for requests connected to specific BOMs
-- **Structured Procurement**: BOM connection enables structured procurement workflows tied to specific material requirements
-- **API Endpoints**: Added PATCH /api/rfx/:id/status endpoint for status management with proper authorization
-- **Role-Based Actions**: Different action buttons shown based on RFx status and user permissions
-
-### Major Session & RFx Fixes (January 2025)
-- **Session Persistence Completely Fixed**: Implemented PostgreSQL-backed session management for persistent login across server restarts
-- **Refresh Issue Resolved**: Page refreshes now maintain login state without redirecting to sign-in using database sessions
-- **Database Crash Prevention**: Enhanced connection stability with proper error handling
-- **RFx TypeScript Errors Fixed**: Resolved all array typing issues preventing form rendering
-- **Create RFx Functionality Working**: Form dialog opens properly with all tabs functional
-- **RFx UI Consistency Fixed**: Implemented uniform 2px borders across all form elements (cards, inputs, textareas, checkboxes)
-- **PostgreSQL Session Store**: Using database-backed sessions for development stability and production readiness
-- **Authentication Stability**: Rolling sessions with proper cookie configuration
-- **Form Validation Ready**: Complete RFx creation workflow with vendor selection and BOM integration
-
-### Product Catalogue Access Restriction (January 2025)
-- **Major Architecture Change**: Product Catalogue is now vendor-only access
-- **Buyers cannot access Product Catalogue directly** - they interact with vendor products only through BOM creation
-- **Workflow**: Buyers find vendors → Browse vendor's product catalogue → Add to BOM
-- **Enhanced role-based restrictions**: Clear access control with informative redirect messages
-- **Improved user experience**: Buyers guided to appropriate sections (BOM Management, Vendor Discovery)
-
-### Dynamic RFx Form Interface (January 2025)
-- **Updated RFx Creation Workflow**: Form now dynamically updates based on selected type
-- **Type-Specific Labels**: Header and buttons change to "Create RFI", "Create RFP", or "Create RFQ"
-- **Improved User Experience**: Clear indication of what type of request is being created
-- **Logical Type Ordering**: Reordered to RFI → RFP → RFQ following procurement progression
-- **Adaptive Form Content**: Fields, placeholders, and help text adapt to the selected request type
-
-### Role-Based Access Control (December 2024)
-- Implemented comprehensive role-based differentiation:
-  - **Vendors/Sellers**: Full product catalogue access - create categories and products
-  - **Buyers** (buyer_admin, buyer_user, sourcing_manager): Access vendor products only via BOMs
-  - Added role selection interface with detailed role descriptions
-  - Added role badges in header with ability to change roles
-  - Fixed all DollarSign icons replaced with Indian Rupee (₹) symbols
-  - Enhanced middleware with `isVendor` and `isBuyer` role validation
-
-### Product CRUD System Completion (January 2025)
-- **Complete Product Management**: Full CRUD operations (Create, Read, Update, Delete) for vendor products
-- **Delete Product Functionality**: Vendors can remove products with confirmation dialog and role-based security
-- **Authentication Issues Resolved**: Fixed session persistence and refresh authentication problems
-- **Role-Based Access Control**: Proper vendor/buyer role validation and access restrictions
-- **Form Validation**: Comprehensive client and server-side validation with error handling
-- **Database Integration**: Full product operations with category assignment and automatic ID generation
-- **UI Polish**: Removed debugging information and cleaned up user interface
 
 ## System Architecture
 
 ### Frontend Architecture
-- **Framework**: React 18 with TypeScript
-- **Routing**: Wouter for client-side routing
-- **State Management**: TanStack React Query for server state management
-- **UI Framework**: Radix UI components with shadcn/ui styling
-- **Styling**: Tailwind CSS with CSS custom properties for theming
-- **Form Handling**: React Hook Form with Zod validation
-- **Build Tool**: Vite for development and production builds
+- **Framework**: React 18 with TypeScript.
+- **Routing**: Wouter for client-side routing.
+- **State Management**: TanStack React Query for server state management.
+- **UI Framework**: Radix UI components with shadcn/ui styling.
+- **Styling**: Tailwind CSS with CSS custom properties for theming.
+- **Form Handling**: React Hook Form with Zod validation.
+- **Build Tool**: Vite for development and production builds.
+- **UI/UX Decisions**: Consistent component library, responsive design with a mobile-first approach, dark mode capability, and WCAG-compliant accessibility. Real-time updates are facilitated via WebSocket integration.
 
 ### Backend Architecture
-- **Runtime**: Python 3.12 with Django framework
-- **API Framework**: Django REST Framework for comprehensive API development
-- **Language**: Python with object-oriented design patterns
-- **API Design**: RESTful API with token-based authentication (JWT)
-- **Database ORM**: Django ORM for robust data modeling and migrations
-- **Apps Structure**: Modular Django apps (users, vendors, products, boms, rfx, auctions, purchase_orders, approvals, notifications)
-- **Middleware**: Django middleware for CORS, authentication, and error handling
+- **Runtime**: Python 3.12 with Django framework.
+- **API Framework**: Django REST Framework for API development.
+- **Language**: Python with object-oriented design patterns.
+- **API Design**: RESTful API with token-based authentication (JWT).
+- **Database ORM**: Django ORM for data modeling and migrations.
+- **Apps Structure**: Modular Django apps for distinct functionalities (users, vendors, products, boms, rfx, auctions, purchase_orders, approvals, notifications).
+- **Middleware**: Django middleware for CORS, authentication, and error handling.
 
 ### Authentication System
-- **Provider**: Replit OpenID Connect (OIDC) authentication
-- **Session Management**: Express sessions with PostgreSQL store
-- **Strategy**: Passport.js with OpenID Connect strategy
-- **Authorization**: Role-based access control (buyer_admin, buyer_user, sourcing_manager, vendor)
-
-## Key Components
+- **Provider**: Replit OpenID Connect (OIDC) authentication.
+- **Session Management**: PostgreSQL-backed session management for persistent login.
+- **Strategy**: Passport.js with OpenID Connect strategy.
+- **Authorization**: Role-based access control (buyer_admin, buyer_user, sourcing_manager, vendor).
 
 ### Database Layer
-- **ORM**: Drizzle ORM with TypeScript-first approach
-- **Database**: PostgreSQL (configured for Neon serverless)
-- **Schema**: Comprehensive procurement domain model including:
-  - User management and organizations
-  - Vendor lifecycle management
-  - Product catalog and BOM (Bill of Materials)
-  - RFx (Request for Quote/Proposal/Information) processes
-  - Auction system with bidding
-  - Purchase order management
-  - Approval workflows and notifications
+- **Database**: PostgreSQL (configured for Neon serverless).
+- **Schema**: Comprehensive procurement domain model including user management, vendor lifecycle, product catalog, BOM, RFx processes, auction system, purchase order management, and approval workflows.
 
 ### Core Modules
-1. **Dashboard**: Executive overview with key metrics and AI chat
-2. **Vendor Management**: Complete vendor lifecycle from discovery to management
-3. **Product Catalog**: Centralized product information management
-4. **BOM Management**: Bill of Materials creation and management
-5. **RFx Management**: Request for Quote/Proposal/Information workflows
-6. **Auction Center**: Real-time bidding system with WebSocket integration
-7. **Purchase Orders**: Order creation, tracking, and fulfillment
-8. **Analytics**: Comprehensive reporting and insights
-
-### UI/UX Features
-- **Design System**: Consistent component library based on Radix UI
-- **Responsive Design**: Mobile-first approach with Tailwind CSS
-- **Dark Mode**: System-wide theme switching capability
-- **Accessibility**: WCAG-compliant components with proper ARIA attributes
-- **Real-time Updates**: WebSocket integration for live auction bidding
-
-## Data Flow
-
-### Authentication Flow
-1. User accesses protected route
-2. Middleware checks session validity
-3. If not authenticated, redirect to Replit OIDC login
-4. Upon successful authentication, user data is stored in session
-5. Subsequent requests use session-based authentication
-
-### API Request Flow
-1. Frontend makes API requests using TanStack React Query
-2. Express middleware handles authentication and authorization
-3. Business logic processes requests using Drizzle ORM
-4. Responses are cached and managed by React Query
-5. Real-time updates pushed via WebSocket for auction features
-
-### Database Operations
-1. Drizzle ORM provides type-safe database operations
-2. Schema validation using Zod for all data inputs
-3. Transactions used for complex operations (e.g., BOM creation)
-4. Connection pooling via Neon serverless PostgreSQL
+- **Dashboard**: Executive overview and AI chat.
+- **Vendor Management**: Complete vendor lifecycle.
+- **Product Catalog**: Centralized product information.
+- **BOM Management**: Bill of Materials creation and management.
+- **RFx Management**: Request for Quote/Proposal/Information workflows.
+- **Auction Center**: Real-time bidding system with WebSocket integration.
+- **Purchase Orders**: Order creation, tracking, and fulfillment.
+- **Analytics**: Comprehensive reporting and insights.
 
 ## External Dependencies
 
 ### Core Dependencies
-- **@neondatabase/serverless**: PostgreSQL database connectivity
-- **drizzle-orm**: Type-safe ORM with PostgreSQL dialect
-- **@tanstack/react-query**: Server state management
-- **@radix-ui/***: Accessible UI components
-- **react-hook-form**: Form state management
-- **zod**: Runtime type validation
-- **passport**: Authentication middleware
-- **openid-client**: OIDC authentication
-
-### Development Tools
-- **TypeScript**: Static type checking
-- **Vite**: Fast development and build tool
-- **Tailwind CSS**: Utility-first CSS framework
-- **ESLint/Prettier**: Code formatting and linting
+- **@neondatabase/serverless**: PostgreSQL database connectivity.
+- **drizzle-orm**: Type-safe ORM (used during migration, now primarily Django ORM).
+- **@tanstack/react-query**: Server state management.
+- **@radix-ui/**: Accessible UI components.
+- **react-hook-form**: Form state management.
+- **zod**: Runtime type validation.
+- **passport**: Authentication middleware.
+- **openid-client**: OIDC authentication.
+- **Perplexity API**: Integrated for AI vendor discovery.
 
 ### Replit Integration
-- **@replit/vite-plugin-cartographer**: Development environment integration
-- **@replit/vite-plugin-runtime-error-modal**: Enhanced error reporting
-
-## Deployment Strategy
-
-### Development Environment
-- **Hot Reload**: Vite development server with HMR
-- **Database**: Neon PostgreSQL with automatic provisioning
-- **Environment Variables**: DATABASE_URL, SESSION_SECRET, REPL_ID
-- **Authentication**: Replit OIDC with development domains
-
-### Production Build
-- **Frontend**: Static assets built with Vite to `dist/public`
-- **Backend**: Compiled TypeScript bundled with esbuild
-- **Process Management**: Node.js process serving both static files and API
-- **Session Storage**: PostgreSQL-backed session store for scalability
-
-### Database Management
-- **Migrations**: Drizzle Kit for schema migrations
-- **Schema**: Shared TypeScript definitions between frontend and backend
-- **Connection**: Serverless PostgreSQL with connection pooling
-- **Backup**: Managed by Neon database service
-
-The architecture emphasizes type safety, developer experience, and scalability while maintaining simplicity in deployment and maintenance. The modular design allows for easy extension of procurement workflows and integration with external systems.
+- **@replit/vite-plugin-cartographer**: Development environment integration.
+- **@replit/vite-plugin-runtime-error-modal**: Enhanced error reporting.
