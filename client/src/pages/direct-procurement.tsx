@@ -174,6 +174,27 @@ export default function DirectProcurement() {
     },
   });
 
+  // Delete order mutation
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/direct-procurement/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Order deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/direct-procurement"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete order",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (data: DirectProcurementForm) => {
     console.log("=== FORM SUBMISSION ===");
     console.log("Form data:", JSON.stringify(data, null, 2));
@@ -766,6 +787,22 @@ export default function DirectProcurement() {
                         >
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Submit
+                        </Button>
+                      )}
+                      {(order.status === 'draft' || order.status === 'pending_approval') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+                              deleteOrderMutation.mutate(order.id);
+                            }
+                          }}
+                          className="border-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={deleteOrderMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
                         </Button>
                       )}
                     </div>

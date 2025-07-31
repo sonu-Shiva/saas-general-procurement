@@ -1682,6 +1682,35 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  app.delete('/api/direct-procurement/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Check if order exists and user has permission to delete
+      const order = await storage.getDirectProcurementOrderById(id);
+      if (!order) {
+        return res.status(404).json({ message: "Direct procurement order not found" });
+      }
+      
+      // Only allow deletion of draft or pending_approval orders
+      if (!['draft', 'pending_approval'].includes(order.status)) {
+        return res.status(400).json({ message: "Cannot delete orders that are not in draft or pending approval status" });
+      }
+      
+      // Only allow creator or admin to delete
+      if (order.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only delete orders you created" });
+      }
+      
+      await storage.deleteDirectProcurementOrder(id);
+      res.json({ message: "Direct procurement order deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting direct procurement order:", error);
+      res.status(500).json({ message: "Failed to delete direct procurement order" });
+    }
+  });
+
   // Create Purchase Order from RFx
   app.post('/api/rfx/:id/create-po', isAuthenticated, async (req: any, res) => {
     try {

@@ -837,6 +837,10 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updated;
   }
+
+  async deleteDirectProcurementOrder(id: string): Promise<void> {
+    await db.delete(directProcurementOrders).where(eq(directProcurementOrders.id, id));
+  }
 }
 
 export const storage = new DatabaseStorage();
