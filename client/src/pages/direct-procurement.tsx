@@ -651,7 +651,7 @@ export default function DirectProcurement() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    ₹{orders.reduce((sum: number, order: any) => sum + (order.totalValue || 0), 0).toLocaleString('en-IN')}
+                    ₹{orders.reduce((sum: number, order: any) => sum + parseFloat(order.totalAmount || '0'), 0).toLocaleString('en-IN')}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Total procurement value
