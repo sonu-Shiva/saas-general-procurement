@@ -412,13 +412,17 @@ export default function PurchaseOrders() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Purchase Orders List */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Purchase Orders</CardTitle>
-                  </CardHeader>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Package className="w-5 h-5 mr-2" />
+                  {statusFilter === 'pending_approval' ? 'Pending Approval' : 
+                   statusFilter === 'approved' ? 'Approved Orders' : 'Rejected Orders'}
+                  <Badge variant="secondary" className="ml-2">
+                    {filteredPOs.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
                   <CardContent className="p-0">
                     {isLoading ? (
                       <div className="p-6">
@@ -500,26 +504,26 @@ export default function PurchaseOrders() {
                                 
                                 {/* Role-based Action Buttons */}
                                 {user?.role === 'sourcing_manager' && po.status === 'pending_approval' && (
-                                  <div className="flex gap-1">
+                                  <div className="flex gap-2">
                                     <Button 
                                       size="sm"
-                                      className="bg-green-600 hover:bg-green-700 text-white px-3"
+                                      className="bg-green-600 hover:bg-green-700 text-white flex-1"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleApprovalAction(po, 'approve');
                                       }}
                                     >
-                                      <ThumbsUp className="w-4 h-4" />
+                                      Approve
                                     </Button>
                                     <Button 
                                       size="sm"
-                                      className="bg-red-600 hover:bg-red-700 text-white px-3"
+                                      className="bg-red-600 hover:bg-red-700 text-white flex-1"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleApprovalAction(po, 'reject');
                                       }}
                                     >
-                                      <ThumbsDown className="w-4 h-4" />
+                                      Reject
                                     </Button>
                                   </div>
                                 )}
@@ -543,154 +547,138 @@ export default function PurchaseOrders() {
                         ))}
                       </div>
                     ) : (
-                      <div className="p-12 text-center">
-                        <ShoppingCart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-foreground mb-2">No purchase orders found</h3>
+                      <div className="text-center py-12">
+                        <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No Purchase Orders</h3>
                         <p className="text-muted-foreground">
-                          {searchQuery || statusFilter !== "all" || vendorFilter !== "all"
-                            ? "Try adjusting your search criteria or filters"
-                            : "Create your first purchase order to get started"
-                          }
+                          {statusFilter === 'pending_approval' ? 'No orders pending approval.' : 
+                           statusFilter === 'approved' ? 'No approved orders yet.' : 'No rejected orders.'}
                         </p>
                       </div>
                     )}
                   </CardContent>
                 </Card>
-              </div>
-
-              {/* PO Details */}
-              <div className="lg:col-span-1">
-                {selectedPO && selectedPODetails ? (
-                  <div className="space-y-6">
-                    {/* PO Summary */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <FileText className="w-5 h-5 mr-2" />
-                          PO Details
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">PO Number</p>
-                            <p className="font-semibold">{selectedPODetails.poNumber}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Total Amount</p>
-                            <p className="text-2xl font-bold text-primary">
-                              {formatCurrency(selectedPODetails.totalAmount)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Payment Terms</p>
-                            <p className="font-medium">{selectedPODetails.paymentTerms || 'Not specified'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Status</p>
-                            <Badge className={getStatusColor(selectedPODetails.status || 'draft')}>
-                              {getStatusIcon(selectedPODetails.status || 'draft')}
-                              <span className="ml-1 capitalize">{selectedPODetails.status}</span>
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Actions */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Actions</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <Button className="w-full" variant="outline">
-                            <Download className="w-4 h-4 mr-2" />
-                            Download PDF
-                          </Button>
-                          <Button className="w-full" variant="outline">
-                            <Mail className="w-4 h-4 mr-2" />
-                            Send to Vendor
-                          </Button>
-                          {selectedPODetails.status === 'issued' && (
-                            <Button 
-                              className="w-full bg-primary hover:bg-primary/90"
-                              onClick={() => updatePOStatusMutation.mutate({ 
-                                id: selectedPO, 
-                                status: 'acknowledged' 
-                              })}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Mark Acknowledged
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Line Items */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <Package className="w-5 h-5 mr-2" />
-                          Line Items
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-6">
-                          {(selectedPODetails as any).lineItems && (selectedPODetails as any).lineItems.length > 0 ? (
-                            (selectedPODetails as any).lineItems.map((item: PoLineItem, index: number) => (
-                              <div key={item.id} className="p-4 bg-muted rounded-lg border-2 border-muted-foreground/10">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div>
-                                    <p className="font-medium text-lg">
-                                      {item.itemName || `Product ${item.productId?.slice(-4)}`}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">Item #{index + 1}</p>
-                                  </div>
-                                  <Badge variant="outline" className="ml-2">{item.status}</Badge>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                                  <div>
-                                    <p className="text-muted-foreground font-medium">Quantity</p>
-                                    <p className="text-lg font-semibold">{item.quantity}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground font-medium">Unit Price</p>
-                                    <p className="text-lg font-semibold">{formatCurrency(item.unitPrice)}</p>
-                                  </div>
-                                </div>
-                                <div className="pt-3 border-t border-muted-foreground/20">
-                                  <div className="flex justify-between items-center">
-                                    <p className="text-muted-foreground font-medium">Line Total</p>
-                                    <p className="text-xl font-bold text-primary">{formatCurrency(item.totalPrice)}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-muted-foreground text-center py-8">No line items</p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-foreground mb-2">Select a Purchase Order</h3>
-                      <p className="text-muted-foreground">
-                        Choose a PO from the list to view details and manage fulfillment
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
           </div>
         </main>
       </div>
+
+      {/* View Details Dialog */}
+      <Dialog open={!!selectedPO} onOpenChange={() => setSelectedPO(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <FileText className="w-5 h-5 mr-2" />
+              Purchase Order Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedPODetails && (
+            <div className="space-y-6">
+              {/* PO Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">PO Number</p>
+                    <p className="font-semibold text-lg">{selectedPODetails.poNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Amount</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {formatCurrency(selectedPODetails.totalAmount)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge className={getStatusColor(selectedPODetails.status || 'draft')}>
+                      {getStatusIcon(selectedPODetails.status || 'draft')}
+                      <span className="ml-1 capitalize">{selectedPODetails.status?.replace('_', ' ')}</span>
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Vendor</p>
+                    <p className="font-semibold">Vendor {selectedPODetails.vendorId?.slice(-4)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Payment Terms</p>
+                    <p className="font-medium">{selectedPODetails.paymentTerms || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Created Date</p>
+                    <p className="font-semibold">
+                      {new Date(selectedPODetails.createdAt || '').toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line Items */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <Package className="w-5 h-5 mr-2" />
+                  Line Items
+                </h3>
+                {(selectedPODetails as any).lineItems && (selectedPODetails as any).lineItems.length > 0 ? (
+                  <div className="space-y-4">
+                    {(selectedPODetails as any).lineItems.map((item: PoLineItem, index: number) => (
+                      <div key={index} className="border rounded-lg p-4 bg-muted/30">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="font-medium">
+                              {item.description || `Product ${item.productId?.slice(-4)}`}
+                            </p>
+                            <p className="text-sm text-muted-foreground">Item #{index + 1}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Quantity</p>
+                            <p className="font-semibold">{item.quantity}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Unit Price</p>
+                            <p className="font-semibold">{formatCurrency(item.unitPrice)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Line Total</p>
+                            <p className="font-bold text-primary">{formatCurrency(item.lineTotal)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No line items</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-3 pt-4 border-t">
+                <Button variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </Button>
+                <Button variant="outline">
+                  <Mail className="w-4 h-4 mr-2" />
+                  Send to Vendor
+                </Button>
+                {selectedPODetails.status === 'issued' && (
+                  <Button 
+                    className="bg-primary hover:bg-primary/90"
+                    onClick={() => updatePOStatusMutation.mutate({ 
+                      id: selectedPO!, 
+                      status: 'acknowledged' 
+                    })}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Mark Acknowledged
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Approval Dialog */}
       <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
