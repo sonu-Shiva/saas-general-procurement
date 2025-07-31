@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -110,7 +110,6 @@ export default function DirectProcurement() {
   const selectedBomId = form.watch("bomId");
   const { data: bomItems = [], isError, error } = useQuery({
     queryKey: ["/api/bom-items", selectedBomId],
-    queryFn: () => selectedBomId ? fetch(`/api/bom-items/${selectedBomId}`).then(res => res.json()) : [],
     enabled: !!selectedBomId,
     retry: false,
   });
@@ -126,20 +125,7 @@ export default function DirectProcurement() {
       console.log("=== CREATING ORDER ===");
       console.log("Order data:", data);
       
-      const response = await fetch("/api/direct-procurement", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Request failed" }));
-        throw new Error(errorData.message || `HTTP ${response.status}`);
-      }
-      
-      return response.json();
+      return await apiRequest("POST", "/api/direct-procurement", data);
     },
     onSuccess: () => {
       toast({
@@ -163,7 +149,7 @@ export default function DirectProcurement() {
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return apiRequest(`/api/direct-procurement/${id}/status`, "PATCH", { status });
+      return apiRequest("PATCH", `/api/direct-procurement/${id}/status`, { status });
     },
     onSuccess: () => {
       toast({
