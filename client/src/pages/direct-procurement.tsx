@@ -124,9 +124,10 @@ export default function DirectProcurement() {
       form.reset();
     },
     onError: (error) => {
+      console.error("Create order mutation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create direct procurement order",
+        description: error?.message || "Failed to create direct procurement order",
         variant: "destructive",
       });
     },
@@ -154,6 +155,21 @@ export default function DirectProcurement() {
   });
 
   const handleSubmit = (data: DirectProcurementForm) => {
+    console.log("=== FORM SUBMISSION ===");
+    console.log("Form data:", JSON.stringify(data, null, 2));
+    console.log("Form errors:", form.formState.errors);
+    console.log("Form is valid:", form.formState.isValid);
+    
+    if (!form.formState.isValid) {
+      console.error("Form validation failed:", form.formState.errors);
+      toast({
+        title: "Validation Error",
+        description: "Please check all required fields are filled correctly",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     createOrderMutation.mutate(data);
   };
 
