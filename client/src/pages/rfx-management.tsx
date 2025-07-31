@@ -483,23 +483,28 @@ export default function RfxManagement() {
 
             {/* Purchase Order Creation Dialog */}
             <Dialog open={isPODialogOpen} onOpenChange={setIsPODialogOpen}>
-              <DialogContent className="max-w-4xl">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
                 <DialogHeader>
-                  <DialogTitle>Create Purchase Order from RFx</DialogTitle>
+                  <DialogTitle className="flex items-center">
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    Create Purchase Order from RFx
+                  </DialogTitle>
                 </DialogHeader>
-                {selectedRfxForPO && (
-                  <CreatePOFromRfxDialog 
-                    rfx={selectedRfxForPO}
-                    onClose={() => setIsPODialogOpen(false)}
-                    onSuccess={() => {
-                      setIsPODialogOpen(false);
-                      toast({
-                        title: "Success",
-                        description: "Purchase Order created successfully",
-                      });
-                    }}
-                  />
-                )}
+                <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+                  {selectedRfxForPO && (
+                    <CreatePOFromRfxDialog 
+                      rfx={selectedRfxForPO}
+                      onClose={() => setIsPODialogOpen(false)}
+                      onSuccess={() => {
+                        setIsPODialogOpen(false);
+                        toast({
+                          title: "Success",
+                          description: "Purchase Order created successfully",
+                        });
+                      }}
+                    />
+                  )}
+                </div>
               </DialogContent>
             </Dialog>
           </div>
