@@ -47,6 +47,8 @@ export default function RfxManagement() {
   const [convertSourceRfx, setConvertSourceRfx] = useState<any>(null);
   const [isPODialogOpen, setIsPODialogOpen] = useState(false);
   const [selectedRfxForPO, setSelectedRfxForPO] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedRfxForView, setSelectedRfxForView] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -90,11 +92,8 @@ export default function RfxManagement() {
   };
 
   const handleViewRfx = (rfx: any) => {
-    toast({
-      title: "View RFx",
-      description: `Viewing ${rfx.type.toUpperCase()}: ${rfx.title}`,
-    });
-    // TODO: Navigate to RFx detail page
+    setSelectedRfxForView(rfx);
+    setIsViewDialogOpen(true);
   };
 
   const handleEditRfx = (rfx: any) => {
@@ -506,6 +505,163 @@ export default function RfxManagement() {
           </div>
         </main>
       </div>
+
+      {/* RFx View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <FileText className="w-5 h-5" />
+              <span>{selectedRfxForView?.type?.toUpperCase()} Details</span>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedRfxForView && (
+            <div className="overflow-y-auto max-h-[calc(90vh-100px)] space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Basic Information</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Title:</span>
+                        <span className="font-medium">{selectedRfxForView.title}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Reference No:</span>
+                        <span className="font-medium">{selectedRfxForView.referenceNo || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Type:</span>
+                        <Badge className="bg-blue-100 text-blue-800">
+                          {selectedRfxForView.type?.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge className={
+                          selectedRfxForView.status === 'active' ? 'bg-green-100 text-green-800' :
+                          selectedRfxForView.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                          selectedRfxForView.status === 'closed' ? 'bg-gray-100 text-gray-800' :
+                          'bg-red-100 text-red-800'
+                        }>
+                          {selectedRfxForView.status?.charAt(0).toUpperCase() + selectedRfxForView.status?.slice(1)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Timeline</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Created Date:</span>
+                        <span className="font-medium">
+                          {selectedRfxForView.createdAt ? 
+                            new Date(selectedRfxForView.createdAt).toLocaleDateString('en-IN') : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Due Date:</span>
+                        <span className="font-medium">
+                          {selectedRfxForView.dueDate ? 
+                            new Date(selectedRfxForView.dueDate).toLocaleDateString('en-IN') : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Budget:</span>
+                        <span className="font-medium">
+                          {selectedRfxForView.budget ? `₹${parseFloat(selectedRfxForView.budget).toLocaleString('en-IN')}` : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description and Scope */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Description</h3>
+                  <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg border">
+                    {selectedRfxForView.description || 'No description provided'}
+                  </p>
+                </div>
+                
+                {selectedRfxForView.scope && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Scope of Work</h3>
+                    <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg border">
+                      {selectedRfxForView.scope}
+                    </p>
+                  </div>
+                )}
+
+                {selectedRfxForView.requirements && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Requirements</h3>
+                    <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg border">
+                      {selectedRfxForView.requirements}
+                    </p>
+                  </div>
+                )}
+
+                {selectedRfxForView.deliverables && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Deliverables</h3>
+                    <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg border">
+                      {selectedRfxForView.deliverables}
+                    </p>
+                  </div>
+                )}
+
+                {selectedRfxForView.evaluationCriteria && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Evaluation Criteria</h3>
+                    <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg border">
+                      {selectedRfxForView.evaluationCriteria}
+                    </p>
+                  </div>
+                )}
+
+                {selectedRfxForView.terms && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Terms & Conditions</h3>
+                    <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg border">
+                      {selectedRfxForView.terms}
+                    </p>
+                  </div>
+                )}
+
+                {selectedRfxForView.additionalInfo && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Additional Information</h3>
+                    <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg border">
+                      {selectedRfxForView.additionalInfo}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* BOM Information if linked */}
+              {selectedRfxForView.bomId && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center">
+                    <Users className="w-4 h-4 mr-2" />
+                    Linked BOM
+                  </h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-blue-800 font-medium">
+                      This RFx is linked to a Bill of Materials (BOM ID: {selectedRfxForView.bomId?.slice(-8)})
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
