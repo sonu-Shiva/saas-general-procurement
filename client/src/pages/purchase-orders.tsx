@@ -605,64 +605,13 @@ export default function PurchaseOrders() {
                       <CardContent>
                         <div className="space-y-3">
                           <Button className="w-full" variant="outline">
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </Button>
-                          <Button className="w-full" variant="outline">
                             <Download className="w-4 h-4 mr-2" />
                             Download PDF
                           </Button>
-                          {/* Approval Actions for Sourcing Managers */}
-                          {user?.role === 'sourcing_manager' && selectedPODetails.status === 'pending_approval' && (
-                            <div className="space-y-2">
-                              <Button 
-                                className="w-full bg-green-600 hover:bg-green-700 text-white"
-                                onClick={() => handleApprovalAction(selectedPODetails, 'approve')}
-                              >
-                                <ThumbsUp className="w-4 h-4 mr-2" />
-                                Approve PO
-                              </Button>
-                              <Button 
-                                className="w-full bg-red-600 hover:bg-red-700 text-white"
-                                onClick={() => handleApprovalAction(selectedPODetails, 'reject')}
-                              >
-                                <ThumbsDown className="w-4 h-4 mr-2" />
-                                Reject PO
-                              </Button>
-                            </div>
-                          )}
-                          
-                          {/* Issue Action for Sourcing Managers */}
-                          {user?.role === 'sourcing_manager' && selectedPODetails.status === 'approved' && (
-                            <Button 
-                              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                              onClick={() => handleApprovalAction(selectedPODetails, 'issue')}
-                            >
-                              <Send className="w-4 h-4 mr-2" />
-                              Issue to Vendor
-                            </Button>
-                          )}
-
-                          {/* Delete Action for Pending/Rejected POs */}
-                          {(
-                            (selectedPODetails.createdBy === user?.id && selectedPODetails.status === 'pending_approval') ||
-                            (user?.role === 'sourcing_manager' && ['pending_approval', 'rejected'].includes(selectedPODetails.status || ''))
-                          ) && (
-                            <Button 
-                              className="w-full bg-red-600 hover:bg-red-700 text-white mt-2"
-                              onClick={() => handleDelete(selectedPODetails.id)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              {deleteMutation.isPending ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              ) : (
-                                <Trash2 className="w-4 h-4 mr-2" />
-                              )}
-                              Delete PO
-                            </Button>
-                          )}
-
-                          {/* Legacy Status Updates */}
+                          <Button className="w-full" variant="outline">
+                            <Mail className="w-4 h-4 mr-2" />
+                            Send to Vendor
+                          </Button>
                           {selectedPODetails.status === 'issued' && (
                             <Button 
                               className="w-full bg-primary hover:bg-primary/90"
