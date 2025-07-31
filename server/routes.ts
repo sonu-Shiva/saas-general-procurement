@@ -1645,6 +1645,53 @@ Focus on established businesses with verifiable contact information.`;
 
       const order = await storage.createDirectProcurementOrder(orderData);
       console.log("Created order:", JSON.stringify(order, null, 2));
+      
+      // Automatically create corresponding Purchase Order for approval workflow
+      try {
+        console.log("=== CREATING PURCHASE ORDER FROM DIRECT PROCUREMENT ===");
+        const poNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+        
+        const poData = {
+          poNumber,
+          bomId,
+          vendorId,
+          totalAmount: totalAmount.toString(),
+          status: "pending_approval",
+          priority: (priority || "medium"),
+          deliveryDate: new Date(deliveryDate),
+          paymentTerms,
+          notes: notes || null,
+          createdBy: userId,
+          directProcurementOrderId: order.id, // Link to original direct procurement order
+        };
+        
+        console.log("PO data to insert:", JSON.stringify(poData, null, 2));
+        const purchaseOrder = await storage.createPurchaseOrder(poData);
+        console.log("Created PO:", JSON.stringify(purchaseOrder, null, 2));
+        
+        // Create line items for the PO from BOM items
+        for (const bomItem of bomItems) {
+          const lineItemData = {
+            poId: purchaseOrder.id,
+            productId: null, // For BOM-based orders, we allow null productId
+            quantity: bomItem.requestedQuantity.toString(),
+            unitPrice: bomItem.unitPrice.toString(),
+            totalPrice: bomItem.totalPrice.toString(),
+            status: "pending",
+            itemName: bomItem.productName, // Store the product name for reference
+          };
+          
+          console.log("Creating PO line item:", JSON.stringify(lineItemData, null, 2));
+          await storage.createPoLineItem(lineItemData);
+        }
+        
+        console.log("Successfully created Purchase Order and line items");
+      } catch (poError) {
+        console.error("Error creating PO from direct procurement order:", poError);
+        // Don't fail the direct procurement order creation if PO creation fails
+        // The direct procurement order is still created successfully
+      }
+      
       res.json(order);
     } catch (error) {
       console.error("Error creating BOM-based direct procurement order:", error);

@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,8 +32,7 @@ import {
   Eye,
   Edit,
   Trash2,
-  Layers,
-  Send
+  Layers
 } from "lucide-react";
 
 // BOM-based Direct Procurement Order Schema
@@ -197,38 +195,7 @@ export default function DirectProcurement() {
     },
   });
 
-  // Convert to Purchase Order mutation
-  const convertToPOMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return apiRequest("POST", `/api/direct-procurement/${id}/create-po`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Order submitted for approval! Check Purchase Orders for approval status.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/direct-procurement"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to submit order for approval",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const handleSubmit = (data: DirectProcurementForm) => {
     console.log("=== FORM SUBMISSION ===");
@@ -831,21 +798,11 @@ export default function DirectProcurement() {
                         </Button>
                       )}
                       
-                      {(order.status === 'draft' || order.status === 'issued') && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (confirm('This will submit your order for approval. Are you sure?')) {
-                              convertToPOMutation.mutate(order.id);
-                            }
-                          }}
-                          className="flex-1 border-2 h-9"
-                          disabled={convertToPOMutation.isPending}
-                        >
-                          <Send className="w-4 h-4 mr-1" />
-                          Submit for Approval
-                        </Button>
+                      {order.status === 'pending_approval' && (
+                        <Badge className="flex-1 text-center bg-yellow-100 text-yellow-800 border-2 h-9 flex items-center justify-center">
+                          <Clock className="w-4 h-4 mr-1" />
+                          Pending Approval
+                        </Badge>
                       )}
                     </div>
                   </CardContent>

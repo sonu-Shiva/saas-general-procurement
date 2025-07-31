@@ -18,6 +18,9 @@ Preferred communication style: Simple, everyday language.
 - **ROLE-BASED WORKFLOW**: Sourcing managers can approve/reject/issue POs, buyers can create and view POs, proper role separation implemented
 - **STATUS FILTERING**: Each bucket tab shows only relevant POs with proper counts, default view starts with Pending Approval tab
 - **API PARAMETER FIXES**: Corrected API call parameter ordering for proper backend communication
+- **AUTOMATIC PO CREATION**: Direct Procurement Orders automatically create corresponding Purchase Orders in "pending_approval" status
+- **SIMPLIFIED WORKFLOW**: Removed separate submission step - orders go directly to pending approval when created
+- **SCHEMA UPDATES**: Updated database schema to support pending_approval status and nullable productId for BOM-based orders
 
 ### Direct Procurement Streamlined Design (January 2025)
 - **SIMPLIFIED ORDER DISPLAY**: Direct Procurement now shows only latest 10 orders to prevent screen clutter

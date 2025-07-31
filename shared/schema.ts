@@ -252,7 +252,8 @@ export const purchaseOrders = pgTable("purchase_orders", {
 export const poLineItems = pgTable("po_line_items", {
   id: uuid("id").primaryKey().defaultRandom(),
   poId: uuid("po_id").references(() => purchaseOrders.id, { onDelete: "cascade" }).notNull(),
-  productId: uuid("product_id").references(() => products.id).notNull(),
+  productId: uuid("product_id").references(() => products.id), // Allow null for BOM-based orders
+  itemName: varchar("item_name", { length: 255 }), // For BOM-based orders where productId is null
   quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
@@ -291,7 +292,7 @@ export const directProcurementOrders = pgTable("direct_procurement_orders", {
   vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
   bomItems: jsonb("bom_items").notNull(), // Array of BOM items with pricing: bomItemId, productName, requestedQuantity, unitPrice, totalPrice, specifications
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-  status: varchar("status", { enum: ["draft", "issued", "submitted", "approved", "rejected", "delivered", "cancelled"] }).default("issued"),
+  status: varchar("status", { enum: ["draft", "pending_approval", "submitted", "approved", "rejected", "delivered", "cancelled"] }).default("pending_approval"),
   priority: varchar("priority", { enum: ["low", "medium", "high", "urgent"] }).default("medium"),
   deliveryDate: timestamp("delivery_date").notNull(),
   paymentTerms: varchar("payment_terms", { length: 100 }).notNull(),
