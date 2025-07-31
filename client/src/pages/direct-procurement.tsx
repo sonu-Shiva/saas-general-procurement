@@ -340,6 +340,9 @@ export default function DirectProcurement() {
                       {selectedBomId && (
                         <div className="space-y-4">
                           <Label className="text-lg font-semibold">Available BOM Items</Label>
+                          <div className="text-sm text-gray-600">
+                            Debug: BOM ID: {selectedBomId}, Items: {bomItems?.length || 0}, Error: {isError ? 'Yes' : 'No'}
+                          </div>
                           {Array.isArray(bomItems) && bomItems.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {bomItems.map((bomItem: any) => (
@@ -373,7 +376,11 @@ export default function DirectProcurement() {
                               ))}
                             </div>
                           ) : (
-                            <p className="text-gray-500 text-sm">No items found in this BOM. Please select a different BOM or add items to this BOM first.</p>
+                            <div className="text-gray-500 text-sm">
+                              <p>No items found in this BOM. Please select a different BOM or add items to this BOM first.</p>
+                              <pre className="mt-2 text-xs">{JSON.stringify(bomItems, null, 2)}</pre>
+                              {error && <p className="text-red-500">Error: {error.message}</p>}
+                            </div>
                           )}
                         </div>
                       )}
