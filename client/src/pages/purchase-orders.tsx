@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -30,7 +34,10 @@ import {
   Calendar,
   AlertTriangle,
   Mail,
-  Phone
+  Phone,
+  ThumbsUp,
+  ThumbsDown,
+  Send
 } from "lucide-react";
 import type { PurchaseOrder, PoLineItem } from "@shared/schema";
 
@@ -40,10 +47,12 @@ export default function PurchaseOrders() {
   const [vendorFilter, setVendorFilter] = useState("all");
 
   const [selectedPO, setSelectedPO] = useState<string | null>(null);
+  const [approvalComments, setApprovalComments] = useState("");
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "issue" | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-
+  const { user } = useAuth();
 
   const { data: purchaseOrders, isLoading } = useQuery({
     queryKey: ["/api/purchase-orders", { status: statusFilter, vendorId: vendorFilter }],
@@ -94,10 +103,64 @@ export default function PurchaseOrders() {
     },
   });
 
+  const approvalMutation = useMutation({
+    mutationFn: async ({ poId, action, comments }: { poId: string; action: string; comments?: string }) => {
+      await apiRequest("PATCH", `/api/purchase-orders/${poId}/${action}`, { comments });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
+      setIsApprovalDialogOpen(false);
+      setApprovalComments("");
+      setApprovalAction(null);
+      toast({
+        title: "Success",
+        description: `Purchase Order ${approvalAction}d successfully`,
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: `Failed to ${approvalAction} Purchase Order`,
+        variant: "destructive",
+      });
+    },
+  });
 
+  const handleApprovalAction = (po: PurchaseOrder, action: "approve" | "reject" | "issue") => {
+    setSelectedPO(po.id);
+    setApprovalAction(action);
+    setIsApprovalDialogOpen(true);
+  };
+
+  const submitApproval = () => {
+    if (!selectedPO || !approvalAction) return;
+    
+    approvalMutation.mutate({
+      poId: selectedPO,
+      action: approvalAction,
+      comments: approvalComments
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "draft":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+      case "pending_approval":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "approved":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "issued":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case "acknowledged":
@@ -119,6 +182,12 @@ export default function PurchaseOrders() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case "draft":
+        return <Edit className="w-4 h-4" />;
+      case "pending_approval":
+        return <Clock className="w-4 h-4" />;
+      case "approved":
+        return <CheckCircle className="w-4 h-4" />;
       case "issued":
         return <FileText className="w-4 h-4" />;
       case "acknowledged":
@@ -140,12 +209,14 @@ export default function PurchaseOrders() {
 
   const getProgressValue = (status: string) => {
     switch (status) {
-      case "draft": return 10;
-      case "issued": return 25;
-      case "acknowledged": return 40;
-      case "shipped": return 60;
-      case "delivered": return 80;
-      case "invoiced": return 90;
+      case "draft": return 5;
+      case "pending_approval": return 15;
+      case "approved": return 25;
+      case "issued": return 35;
+      case "acknowledged": return 50;
+      case "shipped": return 70;
+      case "delivered": return 85;
+      case "invoiced": return 95;
       case "paid": return 100;
       case "cancelled": return 0;
       default: return 0;
@@ -272,6 +343,8 @@ export default function PurchaseOrders() {
                       <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
                         <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
                         <SelectItem value="issued">Issued</SelectItem>
                         <SelectItem value="acknowledged">Acknowledged</SelectItem>
                         <SelectItem value="shipped">Shipped</SelectItem>
@@ -438,21 +511,41 @@ export default function PurchaseOrders() {
                             <Download className="w-4 h-4 mr-2" />
                             Download PDF
                           </Button>
-                          {selectedPODetails.status === 'draft' && (
+                          {/* Approval Actions for Sourcing Managers */}
+                          {user?.role === 'sourcing_manager' && selectedPODetails.status === 'pending_approval' && (
+                            <div className="space-y-2">
+                              <Button 
+                                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => handleApprovalAction(selectedPODetails, 'approve')}
+                              >
+                                <ThumbsUp className="w-4 h-4 mr-2" />
+                                Approve PO
+                              </Button>
+                              <Button 
+                                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                                onClick={() => handleApprovalAction(selectedPODetails, 'reject')}
+                              >
+                                <ThumbsDown className="w-4 h-4 mr-2" />
+                                Reject PO
+                              </Button>
+                            </div>
+                          )}
+                          
+                          {/* Issue Action for Sourcing Managers */}
+                          {user?.role === 'sourcing_manager' && selectedPODetails.status === 'approved' && (
                             <Button 
-                              className="w-full bg-primary hover:bg-primary/90"
-                              onClick={() => updatePOStatusMutation.mutate({ 
-                                id: selectedPO, 
-                                status: 'issued' 
-                              })}
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                              onClick={() => handleApprovalAction(selectedPODetails, 'issue')}
                             >
-                              <Mail className="w-4 h-4 mr-2" />
-                              Issue PO
+                              <Send className="w-4 h-4 mr-2" />
+                              Issue to Vendor
                             </Button>
                           )}
+
+                          {/* Legacy Status Updates */}
                           {selectedPODetails.status === 'issued' && (
                             <Button 
-                              className="w-full bg-success hover:bg-success/90"
+                              className="w-full bg-primary hover:bg-primary/90"
                               onClick={() => updatePOStatusMutation.mutate({ 
                                 id: selectedPO, 
                                 status: 'acknowledged' 
@@ -522,6 +615,68 @@ export default function PurchaseOrders() {
           </div>
         </main>
       </div>
+
+      {/* Approval Dialog */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {approvalAction === 'approve' && 'Approve Purchase Order'}
+              {approvalAction === 'reject' && 'Reject Purchase Order'}  
+              {approvalAction === 'issue' && 'Issue Purchase Order'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="comments">Comments {approvalAction === 'reject' ? '(Required)' : '(Optional)'}</Label>
+              <Textarea
+                id="comments"
+                placeholder={
+                  approvalAction === 'approve' ? 'Add approval comments...' :
+                  approvalAction === 'reject' ? 'Please provide reason for rejection...' :
+                  'Add any notes for vendor...'
+                }
+                value={approvalComments}
+                onChange={(e) => setApprovalComments(e.target.value)}
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+            <div className="flex space-x-3">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setIsApprovalDialogOpen(false)}
+                disabled={approvalMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className={`flex-1 ${
+                  approvalAction === 'approve' ? 'bg-green-600 hover:bg-green-700' :
+                  approvalAction === 'reject' ? 'bg-red-600 hover:bg-red-700' :
+                  'bg-blue-600 hover:bg-blue-700'
+                } text-white`}
+                onClick={submitApproval}
+                disabled={approvalMutation.isPending || (approvalAction === 'reject' && !approvalComments.trim())}
+              >
+                {approvalMutation.isPending ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    {approvalAction === 'approve' && <ThumbsUp className="w-4 h-4 mr-2" />}
+                    {approvalAction === 'reject' && <ThumbsDown className="w-4 h-4 mr-2" />}
+                    {approvalAction === 'issue' && <Send className="w-4 h-4 mr-2" />}
+                    {approvalAction === 'approve' && 'Approve'}
+                    {approvalAction === 'reject' && 'Reject'}
+                    {approvalAction === 'issue' && 'Issue'}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
