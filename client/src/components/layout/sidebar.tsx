@@ -23,7 +23,8 @@ const navigation = [
   { name: "BOM Management", href: "/boms", icon: Layers, hiddenForVendors: true },
   { name: "RFx Management", href: "/rfx", icon: FileText },
   { name: "Auction Center", href: "/auctions", icon: Gavel },
-  { name: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart },
+  { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, hiddenForVendors: true },
+  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 

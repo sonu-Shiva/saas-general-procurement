@@ -1470,6 +1470,73 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Direct Procurement routes
+  app.get('/api/direct-procurement', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const orders = await storage.getDirectProcurementOrders(userId);
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching direct procurement orders:", error);
+      res.status(500).json({ message: "Failed to fetch direct procurement orders" });
+    }
+  });
+
+  app.post('/api/direct-procurement', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Calculate total amount from items
+      const totalAmount = req.body.items.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
+      
+      // Generate reference number
+      const referenceNo = `DP-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      
+      const orderData = {
+        ...req.body,
+        referenceNo,
+        totalAmount: totalAmount.toString(),
+        createdBy: userId,
+        deliveryDate: new Date(req.body.deliveryDate),
+      };
+
+      const order = await storage.createDirectProcurementOrder(orderData);
+      res.json(order);
+    } catch (error) {
+      console.error("Error creating direct procurement order:", error);
+      res.status(500).json({ message: "Failed to create direct procurement order" });
+    }
+  });
+
+  app.get('/api/direct-procurement/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const order = await storage.getDirectProcurementOrderById(id);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Direct procurement order not found" });
+      }
+
+      res.json(order);
+    } catch (error) {
+      console.error("Error fetching direct procurement order:", error);
+      res.status(500).json({ message: "Failed to fetch direct procurement order" });
+    }
+  });
+
+  app.patch('/api/direct-procurement/:id/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const order = await storage.updateDirectProcurementOrderStatus(id, status);
+      res.json(order);
+    } catch (error) {
+      console.error("Error updating direct procurement order status:", error);
+      res.status(500).json({ message: "Failed to update direct procurement order status" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time auction functionality

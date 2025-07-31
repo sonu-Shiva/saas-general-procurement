@@ -13,6 +13,7 @@ import {
   bids,
   purchaseOrders,
   poLineItems,
+  directProcurementOrders,
   approvals,
   notifications,
   organizations,
@@ -44,6 +45,8 @@ import {
   type InsertPurchaseOrder,
   type PoLineItem,
   type InsertPoLineItem,
+  type DirectProcurementOrder,
+  type InsertDirectProcurementOrder,
   type Approval,
   type InsertApproval,
   type Notification,
@@ -717,6 +720,81 @@ export class DatabaseStorage implements IStorage {
 
   async markNotificationAsRead(id: string): Promise<void> {
     await db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.id, id));
+  }
+
+  // Direct Procurement operations
+  async createDirectProcurementOrder(order: InsertDirectProcurementOrder): Promise<DirectProcurementOrder> {
+    const [created] = await db.insert(directProcurementOrders).values(order).returning();
+    return created;
+  }
+
+  async getDirectProcurementOrders(userId?: string): Promise<any[]> {
+    let query = db.select({
+      id: directProcurementOrders.id,
+      referenceNo: directProcurementOrders.referenceNo,
+      vendorId: directProcurementOrders.vendorId,
+      items: directProcurementOrders.items,
+      totalAmount: directProcurementOrders.totalAmount,
+      status: directProcurementOrders.status,
+      priority: directProcurementOrders.priority,
+      deliveryDate: directProcurementOrders.deliveryDate,
+      paymentTerms: directProcurementOrders.paymentTerms,
+      notes: directProcurementOrders.notes,
+      createdBy: directProcurementOrders.createdBy,
+      createdAt: directProcurementOrders.createdAt,
+      updatedAt: directProcurementOrders.updatedAt,
+      vendorName: vendors.companyName,
+    })
+    .from(directProcurementOrders)
+    .leftJoin(vendors, eq(directProcurementOrders.vendorId, vendors.id))
+    .orderBy(desc(directProcurementOrders.createdAt));
+
+    if (userId) {
+      query = query.where(eq(directProcurementOrders.createdBy, userId));
+    }
+
+    const orders = await query;
+    
+    return orders.map(order => ({
+      ...order,
+      itemCount: Array.isArray(order.items) ? order.items.length : 0,
+      totalValue: order.totalAmount,
+    })) as any[];
+  }
+
+  async getDirectProcurementOrderById(id: string): Promise<DirectProcurementOrder | undefined> {
+    const [order] = await db.select({
+      id: directProcurementOrders.id,
+      referenceNo: directProcurementOrders.referenceNo,
+      vendorId: directProcurementOrders.vendorId,
+      items: directProcurementOrders.items,
+      totalAmount: directProcurementOrders.totalAmount,
+      status: directProcurementOrders.status,
+      priority: directProcurementOrders.priority,
+      deliveryDate: directProcurementOrders.deliveryDate,
+      paymentTerms: directProcurementOrders.paymentTerms,
+      notes: directProcurementOrders.notes,
+      createdBy: directProcurementOrders.createdBy,
+      createdAt: directProcurementOrders.createdAt,
+      updatedAt: directProcurementOrders.updatedAt,
+      vendorName: vendors.companyName,
+    })
+    .from(directProcurementOrders)
+    .leftJoin(vendors, eq(directProcurementOrders.vendorId, vendors.id))
+    .where(eq(directProcurementOrders.id, id));
+
+    return order;
+  }
+
+  async updateDirectProcurementOrderStatus(id: string, status: string): Promise<DirectProcurementOrder> {
+    const [updated] = await db.update(directProcurementOrders)
+      .set({ 
+        status: status as any,
+        updatedAt: new Date()
+      })
+      .where(eq(directProcurementOrders.id, id))
+      .returning();
+    return updated;
   }
 }
 

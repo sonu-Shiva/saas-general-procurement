@@ -12,6 +12,7 @@ import BomManagement from "@/pages/bom-management";
 import RfxManagement from "@/pages/rfx-management";
 
 import AuctionCenter from "@/pages/auction-center";
+import DirectProcurement from "@/pages/direct-procurement";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Analytics from "@/pages/analytics";
 
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/rfx" component={RfxManagement} />
 
       <Route path="/auctions" component={AuctionCenter} />
+      <Route path="/direct-procurement" component={DirectProcurement} />
       <Route path="/purchase-orders" component={PurchaseOrders} />
       <Route path="/analytics" component={Analytics} />
       <Route component={NotFound} />

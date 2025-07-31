@@ -280,6 +280,24 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Direct Procurement Orders Table
+export const directProcurementOrders = pgTable("direct_procurement_orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  referenceNo: varchar("reference_no", { length: 100 }).unique(),
+  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  items: jsonb("items").notNull(), // Array of items with name, description, quantity, unitPrice, totalPrice, category
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  status: varchar("status", { enum: ["draft", "submitted", "approved", "rejected", "delivered", "cancelled"] }).default("draft"),
+  priority: varchar("priority", { enum: ["low", "medium", "high", "urgent"] }).default("medium"),
+  deliveryDate: timestamp("delivery_date").notNull(),
+  paymentTerms: varchar("payment_terms", { length: 100 }).notNull(),
+  notes: text("notes"),
+  approvalWorkflow: jsonb("approval_workflow"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   organization: one(organizations, {
@@ -297,6 +315,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdRfxEvents: many(rfxEvents),
   createdAuctions: many(auctions),
   createdPurchaseOrders: many(purchaseOrders),
+  createdDirectProcurementOrders: many(directProcurementOrders),
   approvals: many(approvals),
   notifications: many(notifications),
 }));
@@ -316,6 +335,19 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
   auctionParticipants: many(auctionParticipants),
   bids: many(bids),
   purchaseOrders: many(purchaseOrders),
+  directProcurementOrders: many(directProcurementOrders),
+}));
+
+// Direct Procurement Orders Relations
+export const directProcurementOrdersRelations = relations(directProcurementOrders, ({ one }) => ({
+  vendor: one(vendors, {
+    fields: [directProcurementOrders.vendorId],
+    references: [vendors.id],
+  }),
+  createdBy: one(users, {
+    fields: [directProcurementOrders.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const productCategoriesRelations = relations(productCategories, ({ one, many }) => ({
@@ -650,6 +682,10 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Direct Procurement Order Types
+export type DirectProcurementOrder = typeof directProcurementOrders.$inferSelect;
+export type InsertDirectProcurementOrder = typeof directProcurementOrders.$inferInsert;
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Vendor = typeof vendors.$inferSelect;
