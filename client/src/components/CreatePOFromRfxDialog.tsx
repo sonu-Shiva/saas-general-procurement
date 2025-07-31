@@ -82,37 +82,47 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
   });
   const vendors = Array.isArray(vendorsData) ? vendorsData : [];
 
-  // Reset form when BOM items are loaded
+  // Initialize form once, then update only when BOM items are loaded
+  const [isFormInitialized, setIsFormInitialized] = React.useState(false);
+  
   React.useEffect(() => {
-    if (hasBom && bomItems && bomItems.length > 0) {
-      const bomFormItems = bomItems.map((item: any) => ({
-        itemName: item.itemName || item.productName || "",
-        quantity: Number(item.quantity) || 1,
-        unitPrice: Number(item.unitPrice) || 0,
-        totalPrice: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
-        specifications: item.specifications || "",
-      }));
-      
-      form.reset({
-        vendorId: "",
-        poItems: bomFormItems,
-        deliveryDate: "",
-        paymentTerms: "Net 30",
-        priority: "medium",
-        notes: "",
-      });
-    } else if (!hasBom) {
-      // Reset to single empty item for non-BOM RFx
-      form.reset({
-        vendorId: "",
-        poItems: [{ itemName: "", quantity: 1, unitPrice: 0, totalPrice: 0, specifications: "" }],
-        deliveryDate: "",
-        paymentTerms: "Net 30",
-        priority: "medium",
-        notes: "",
-      });
+    if (!isFormInitialized) {
+      // Initialize form based on whether RFx has BOM
+      if (hasBom) {
+        // Wait for BOM items if this RFx has a BOM
+        if (bomItems && bomItems.length > 0) {
+          const bomFormItems = bomItems.map((item: any) => ({
+            itemName: item.itemName || item.productName || "",
+            quantity: Number(item.quantity) || 1,
+            unitPrice: Number(item.unitPrice) || 0,
+            totalPrice: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
+            specifications: item.specifications || "",
+          }));
+          
+          form.reset({
+            vendorId: "",
+            poItems: bomFormItems,
+            deliveryDate: "",
+            paymentTerms: "Net 30",
+            priority: "medium",
+            notes: "",
+          });
+          setIsFormInitialized(true);
+        }
+      } else {
+        // No BOM, initialize with empty item immediately
+        form.reset({
+          vendorId: "",
+          poItems: [{ itemName: "", quantity: 1, unitPrice: 0, totalPrice: 0, specifications: "" }],
+          deliveryDate: "",
+          paymentTerms: "Net 30",
+          priority: "medium",
+          notes: "",
+        });
+        setIsFormInitialized(true);
+      }
     }
-  }, [bomItems, hasBom, form]);
+  }, [bomItems, hasBom, form, isFormInitialized]);
 
   // Calculate total amount when items change
   const calculateTotal = () => {
@@ -180,11 +190,11 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
     return vendor ? vendor.companyName : vendorId;
   };
 
-  if (isLoadingVendors || (hasBom && isLoadingBomItems)) {
+  if (isLoadingVendors || (hasBom && isLoadingBomItems) || !isFormInitialized) {
     return (
       <div className="p-8 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p>Loading {isLoadingVendors ? 'vendors' : 'BOM items'}...</p>
+        <p>Loading {isLoadingVendors ? 'vendors' : hasBom ? 'BOM items' : 'form'}...</p>
       </div>
     );
   }
