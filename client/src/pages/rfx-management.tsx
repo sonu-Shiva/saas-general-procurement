@@ -428,7 +428,7 @@ export default function RfxManagement() {
                                 Convert
                               </Button>
                             )}
-                            {(rfx.status === 'active' || rfx.status === 'closed') && (
+                            {rfx.type === 'rfq' && (rfx.status === 'active' || rfx.status === 'closed') && (
                               <Button 
                                 variant="ghost" 
                                 size="sm"
