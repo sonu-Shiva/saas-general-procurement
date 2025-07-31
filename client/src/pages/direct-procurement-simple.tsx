@@ -79,7 +79,21 @@ export default function DirectProcurementSimple() {
     mutationFn: async (data: any) => {
       console.log("=== SUBMITTING ORDER ===");
       console.log("Data:", JSON.stringify(data, null, 2));
-      return apiRequest("/api/direct-procurement", "POST", data);
+      
+      const response = await fetch("/api/direct-procurement", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Request failed" }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
