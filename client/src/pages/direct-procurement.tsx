@@ -99,7 +99,8 @@ export default function DirectProcurement() {
   // Fetch BOM items when BOM is selected
   const selectedBomId = form.watch("bomId");
   const { data: bomItems = [], isError, error } = useQuery({
-    queryKey: [`/api/bom-items/${selectedBomId}`],
+    queryKey: ["/api/bom-items", selectedBomId],
+    queryFn: () => selectedBomId ? fetch(`/api/bom-items/${selectedBomId}`).then(res => res.json()) : [],
     enabled: !!selectedBomId,
     retry: false,
   });
@@ -112,7 +113,23 @@ export default function DirectProcurement() {
   // Create direct procurement order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (data: DirectProcurementForm) => {
-      return apiRequest("/api/direct-procurement", "POST", data);
+      console.log("=== CREATING ORDER ===");
+      console.log("Order data:", data);
+      
+      const response = await fetch("/api/direct-procurement", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Request failed" }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
