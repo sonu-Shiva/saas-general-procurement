@@ -583,21 +583,17 @@ export default function PurchaseOrders() {
             </div>
           ) : selectedPODetails ? (
             <div className="space-y-6">
-              {/* DEBUG INFO */}
-              <div className="bg-yellow-100 p-2 text-xs">
-                DEBUG: {JSON.stringify(selectedPODetails, null, 2)}
-              </div>
               {/* PO Summary */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-muted-foreground">PO Number</p>
-                    <p className="font-semibold text-lg">{selectedPODetails.poNumber}</p>
+                    <p className="font-semibold text-lg">{selectedPODetails.poNumber || 'Not available'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Amount</p>
                     <p className="text-2xl font-bold text-primary">
-                      ₹{selectedPODetails.totalAmount ? parseFloat(selectedPODetails.totalAmount).toLocaleString('en-IN') : '0'}
+                      ₹{selectedPODetails.totalAmount ? parseFloat(selectedPODetails.totalAmount.toString()).toLocaleString('en-IN') : '0'}
                     </p>
                   </div>
                   <div>
@@ -613,7 +609,7 @@ export default function PurchaseOrders() {
                     <p className="text-sm text-muted-foreground">Vendor</p>
                     <p className="font-semibold">
                       {vendors?.find(v => v.id === selectedPODetails.vendorId)?.companyName || 
-                       `Vendor ${selectedPODetails.vendorId?.slice(-4)}`}
+                       (selectedPODetails.vendorId ? `Vendor ${selectedPODetails.vendorId.slice(-4)}` : 'Not specified')}
                     </p>
                   </div>
                   <div>
@@ -640,14 +636,14 @@ export default function PurchaseOrders() {
                   <Package className="w-5 h-5 mr-2" />
                   Line Items
                 </h3>
-                {selectedPODetails?.lineItems && selectedPODetails.lineItems.length > 0 ? (
+                {selectedPODetails?.lineItems && Array.isArray(selectedPODetails.lineItems) && selectedPODetails.lineItems.length > 0 ? (
                   <div className="space-y-4">
-                    {selectedPODetails.lineItems.map((item: PoLineItem, index: number) => (
-                      <div key={index} className="border rounded-lg p-4 bg-muted/30">
+                    {selectedPODetails.lineItems.map((item: any, index: number) => (
+                      <div key={item.id || index} className="border rounded-lg p-4 bg-muted/30">
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <p className="font-medium">
-                              {item.itemName || `Product ${item.productId?.slice(-4) || 'Unknown'}`}
+                              {item.itemName || (item.productId ? `Product ${item.productId.slice(-4)}` : 'Unknown Product')}
                             </p>
                             <p className="text-sm text-muted-foreground">Item #{index + 1}</p>
                           </div>
@@ -655,22 +651,29 @@ export default function PurchaseOrders() {
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
                             <p className="text-muted-foreground">Quantity</p>
-                            <p className="font-semibold">{parseFloat(item.quantity || '0')}</p>
+                            <p className="font-semibold">{item.quantity ? parseFloat(item.quantity.toString()) : '0'}</p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">Unit Price</p>
-                            <p className="font-semibold">₹{item.unitPrice ? parseFloat(item.unitPrice).toLocaleString('en-IN') : '0'}</p>
+                            <p className="font-semibold">₹{item.unitPrice ? parseFloat(item.unitPrice.toString()).toLocaleString('en-IN') : '0'}</p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">Line Total</p>
-                            <p className="font-bold text-primary">₹{item.totalPrice ? parseFloat(item.totalPrice).toLocaleString('en-IN') : '0'}</p>
+                            <p className="font-bold text-primary">₹{item.totalPrice ? parseFloat(item.totalPrice.toString()).toLocaleString('en-IN') : '0'}</p>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-center py-8">No line items</p>
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No line items found</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedPODetails?.lineItems ? 
+                        `Found ${selectedPODetails.lineItems.length} items` : 
+                        'lineItems is undefined'}
+                    </p>
+                  </div>
                 )}
               </div>
 
