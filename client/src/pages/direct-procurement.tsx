@@ -165,11 +165,11 @@ export default function DirectProcurement() {
     const currentBomItems = form.getValues("bomItems");
     const newBomItem = {
       bomItemId: bomItem.id,
-      productName: bomItem.productName || bomItem.name,
-      requestedQuantity: bomItem.requiredQuantity || 1,
+      productName: bomItem.itemName || bomItem.item_name || bomItem.name,
+      requestedQuantity: bomItem.quantity || 1,
       unitPrice: 0,
       totalPrice: 0,
-      specifications: bomItem.specifications || "",
+      specifications: bomItem.description || bomItem.specifications || "",
     };
     form.setValue("bomItems", [...currentBomItems, newBomItem]);
   };
@@ -305,33 +305,43 @@ export default function DirectProcurement() {
                       />
 
                       {/* Available BOM Items Section */}
-                      {selectedBomId && bomItems.length > 0 && (
+                      {selectedBomId && (
                         <div className="space-y-4">
                           <Label className="text-lg font-semibold">Available BOM Items</Label>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {bomItems.map((bomItem: any) => (
-                              <Card key={bomItem.id} className="border-2 p-4">
-                                <div className="flex justify-between items-start">
-                                  <div className="flex-1">
-                                    <h4 className="font-medium">{bomItem.productName || bomItem.name}</h4>
-                                    <p className="text-sm text-gray-600">Required: {bomItem.requiredQuantity}</p>
-                                    {bomItem.specifications && (
-                                      <p className="text-xs text-gray-500 mt-1">{bomItem.specifications}</p>
-                                    )}
+                          {Array.isArray(bomItems) && bomItems.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {bomItems.map((bomItem: any) => (
+                                <Card key={bomItem.id} className="border-2 p-4">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <h4 className="font-medium">{bomItem.itemName || bomItem.item_name || bomItem.name}</h4>
+                                      <p className="text-sm text-gray-600">Required: {bomItem.quantity} {bomItem.uom || ''}</p>
+                                      {bomItem.description && (
+                                        <p className="text-xs text-gray-500 mt-1">{bomItem.description}</p>
+                                      )}
+                                      {bomItem.itemCode && (
+                                        <p className="text-xs text-blue-600 mt-1">Code: {bomItem.itemCode}</p>
+                                      )}
+                                      {bomItem.category && (
+                                        <Badge variant="secondary" className="mt-1">{bomItem.category}</Badge>
+                                      )}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={() => addBomItem(bomItem)}
+                                      className="ml-2"
+                                    >
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      Add
+                                    </Button>
                                   </div>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={() => addBomItem(bomItem)}
-                                    className="ml-2"
-                                  >
-                                    <Plus className="w-3 h-3 mr-1" />
-                                    Add
-                                  </Button>
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
+                                </Card>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm">No items found in this BOM. Please select a different BOM or add items to this BOM first.</p>
+                          )}
                         </div>
                       )}
 
