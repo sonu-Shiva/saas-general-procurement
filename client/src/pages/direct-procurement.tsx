@@ -613,7 +613,17 @@ export default function DirectProcurement() {
                         <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                           Cancel
                         </Button>
-                        <Button type="submit" disabled={createOrderMutation.isPending} className="border-2">
+                        <Button 
+                          type="submit" 
+                          disabled={createOrderMutation.isPending} 
+                          className="border-2"
+                          onClick={() => {
+                            console.log("=== BUTTON CLICKED ===");
+                            console.log("Form valid:", form.formState.isValid);
+                            console.log("Form errors:", form.formState.errors);
+                            console.log("Form values:", form.getValues());
+                          }}
+                        >
                           {createOrderMutation.isPending ? "Creating..." : "Create Order"}
                         </Button>
                       </div>
