@@ -22,7 +22,6 @@ import {
   ShoppingCart,
   FileText,
   Calendar,
-  DollarSign,
   User,
   Building,
   Package,
@@ -612,7 +611,7 @@ export default function DirectProcurement() {
               <Card className="border-2">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <h3 className="text-sm font-medium">Total Value</h3>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-lg font-bold text-muted-foreground">₹</span>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
