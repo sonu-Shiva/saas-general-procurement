@@ -63,22 +63,25 @@ export default function DirectProcurement() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   // Fetch direct procurement orders
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: ordersData = [], isLoading } = useQuery({
     queryKey: ["/api/direct-procurement"],
     retry: false,
   });
+  const orders = Array.isArray(ordersData) ? ordersData : [];
 
   // Fetch vendors for dropdown
-  const { data: vendors = [] } = useQuery({
+  const { data: vendorsData = [] } = useQuery({
     queryKey: ["/api/vendors"],
     retry: false,
   });
+  const vendors = Array.isArray(vendorsData) ? vendorsData : [];
 
   // Fetch BOMs for dropdown
-  const { data: boms = [] } = useQuery({
+  const { data: bomsData = [] } = useQuery({
     queryKey: ["/api/boms"],
     retry: false,
   });
+  const boms = Array.isArray(bomsData) ? bomsData : [];
 
   const form = useForm<DirectProcurementForm>({
     resolver: zodResolver(directProcurementSchema),
@@ -598,7 +601,7 @@ export default function DirectProcurement() {
                   <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{orders?.length || 0}</div>
+                  <div className="text-2xl font-bold">{orders.length}</div>
                   <p className="text-xs text-muted-foreground">
                     Direct procurement orders
                   </p>
@@ -612,7 +615,7 @@ export default function DirectProcurement() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    ₹{orders?.reduce((sum: number, order: any) => sum + (order.totalValue || 0), 0).toLocaleString('en-IN') || '0'}
+                    ₹{orders.reduce((sum: number, order: any) => sum + (order.totalValue || 0), 0).toLocaleString('en-IN')}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Total procurement value
@@ -627,7 +630,7 @@ export default function DirectProcurement() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {orders?.filter((order: any) => ['draft', 'submitted', 'approved'].includes(order.status)).length || 0}
+                    {orders.filter((order: any) => ['draft', 'submitted', 'approved'].includes(order.status)).length}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Orders in progress
@@ -642,7 +645,7 @@ export default function DirectProcurement() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {orders?.filter((order: any) => ['delivered', 'completed'].includes(order.status)).length || 0}
+                    {orders.filter((order: any) => ['delivered', 'completed'].includes(order.status)).length}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Delivered orders
