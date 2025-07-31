@@ -280,12 +280,13 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Direct Procurement Orders Table
+// Direct Procurement Orders Table (BOM-based)
 export const directProcurementOrders = pgTable("direct_procurement_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   referenceNo: varchar("reference_no", { length: 100 }).unique(),
+  bomId: uuid("bom_id").references(() => boms.id).notNull(),
   vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
-  items: jsonb("items").notNull(), // Array of items with name, description, quantity, unitPrice, totalPrice, category
+  bomItems: jsonb("bom_items").notNull(), // Array of BOM items with pricing: bomItemId, productName, requestedQuantity, unitPrice, totalPrice, specifications
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
   status: varchar("status", { enum: ["draft", "submitted", "approved", "rejected", "delivered", "cancelled"] }).default("draft"),
   priority: varchar("priority", { enum: ["low", "medium", "high", "urgent"] }).default("medium"),
@@ -340,6 +341,10 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
 
 // Direct Procurement Orders Relations
 export const directProcurementOrdersRelations = relations(directProcurementOrders, ({ one }) => ({
+  bom: one(boms, {
+    fields: [directProcurementOrders.bomId],
+    references: [boms.id],
+  }),
   vendor: one(vendors, {
     fields: [directProcurementOrders.vendorId],
     references: [vendors.id],

@@ -732,8 +732,9 @@ export class DatabaseStorage implements IStorage {
     let query = db.select({
       id: directProcurementOrders.id,
       referenceNo: directProcurementOrders.referenceNo,
+      bomId: directProcurementOrders.bomId,
       vendorId: directProcurementOrders.vendorId,
-      items: directProcurementOrders.items,
+      bomItems: directProcurementOrders.bomItems,
       totalAmount: directProcurementOrders.totalAmount,
       status: directProcurementOrders.status,
       priority: directProcurementOrders.priority,
@@ -744,9 +745,11 @@ export class DatabaseStorage implements IStorage {
       createdAt: directProcurementOrders.createdAt,
       updatedAt: directProcurementOrders.updatedAt,
       vendorName: vendors.companyName,
+      bomName: boms.name,
     })
     .from(directProcurementOrders)
     .leftJoin(vendors, eq(directProcurementOrders.vendorId, vendors.id))
+    .leftJoin(boms, eq(directProcurementOrders.bomId, boms.id))
     .orderBy(desc(directProcurementOrders.createdAt));
 
     if (userId) {
@@ -757,7 +760,7 @@ export class DatabaseStorage implements IStorage {
     
     return orders.map(order => ({
       ...order,
-      itemCount: Array.isArray(order.items) ? order.items.length : 0,
+      itemCount: Array.isArray(order.bomItems) ? order.bomItems.length : 0,
       totalValue: order.totalAmount,
     })) as any[];
   }
@@ -766,8 +769,9 @@ export class DatabaseStorage implements IStorage {
     const [order] = await db.select({
       id: directProcurementOrders.id,
       referenceNo: directProcurementOrders.referenceNo,
+      bomId: directProcurementOrders.bomId,
       vendorId: directProcurementOrders.vendorId,
-      items: directProcurementOrders.items,
+      bomItems: directProcurementOrders.bomItems,
       totalAmount: directProcurementOrders.totalAmount,
       status: directProcurementOrders.status,
       priority: directProcurementOrders.priority,
@@ -778,9 +782,11 @@ export class DatabaseStorage implements IStorage {
       createdAt: directProcurementOrders.createdAt,
       updatedAt: directProcurementOrders.updatedAt,
       vendorName: vendors.companyName,
+      bomName: boms.name,
     })
     .from(directProcurementOrders)
     .leftJoin(vendors, eq(directProcurementOrders.vendorId, vendors.id))
+    .leftJoin(boms, eq(directProcurementOrders.bomId, boms.id))
     .where(eq(directProcurementOrders.id, id));
 
     return order;

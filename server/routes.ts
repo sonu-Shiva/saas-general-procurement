@@ -1485,25 +1485,32 @@ Focus on established businesses with verifiable contact information.`;
   app.post('/api/direct-procurement', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const { bomId, vendorId, bomItems, deliveryDate, paymentTerms, notes, priority } = req.body;
       
-      // Calculate total amount from items
-      const totalAmount = req.body.items.reduce((sum: number, item: any) => sum + item.totalPrice, 0);
+      // Calculate total amount from BOM items
+      const totalAmount = bomItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
       
       // Generate reference number
-      const referenceNo = `DP-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      const referenceNo = `DPO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
       
       const orderData = {
-        ...req.body,
         referenceNo,
+        bomId,
+        vendorId,
+        bomItems,
         totalAmount: totalAmount.toString(),
+        status: "draft",
+        priority: priority || "medium",
+        deliveryDate: new Date(deliveryDate),
+        paymentTerms,
+        notes,
         createdBy: userId,
-        deliveryDate: new Date(req.body.deliveryDate),
       };
 
       const order = await storage.createDirectProcurementOrder(orderData);
       res.json(order);
     } catch (error) {
-      console.error("Error creating direct procurement order:", error);
+      console.error("Error creating BOM-based direct procurement order:", error);
       res.status(500).json({ message: "Failed to create direct procurement order" });
     }
   });

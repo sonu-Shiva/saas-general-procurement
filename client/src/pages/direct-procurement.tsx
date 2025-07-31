@@ -31,20 +31,22 @@ import {
   XCircle,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  Layers
 } from "lucide-react";
 
-// Direct Procurement Order Schema
+// BOM-based Direct Procurement Order Schema
 const directProcurementSchema = z.object({
+  bomId: z.string().min(1, "BOM is required"),
   vendorId: z.string().min(1, "Vendor is required"),
-  items: z.array(z.object({
-    name: z.string().min(1, "Item name is required"),
-    description: z.string().optional(),
-    quantity: z.number().min(1, "Quantity must be at least 1"),
+  bomItems: z.array(z.object({
+    bomItemId: z.string().min(1, "BOM item is required"),
+    productName: z.string().min(1, "Product name is required"),
+    requestedQuantity: z.number().min(1, "Quantity must be at least 1"),
     unitPrice: z.number().min(0, "Unit price must be positive"),
     totalPrice: z.number().min(0, "Total price must be positive"),
-    category: z.string().optional(),
-  })).min(1, "At least one item is required"),
+    specifications: z.string().optional(),
+  })).min(1, "At least one BOM item is required"),
   deliveryDate: z.string().min(1, "Delivery date is required"),
   paymentTerms: z.string().min(1, "Payment terms are required"),
   notes: z.string().optional(),
@@ -73,10 +75,26 @@ export default function DirectProcurement() {
     retry: false,
   });
 
+  // Fetch BOMs for dropdown
+  const { data: boms = [] } = useQuery({
+    queryKey: ["/api/boms"],
+    retry: false,
+  });
+
+  // Fetch BOM items when BOM is selected
+  const selectedBomId = form.watch("bomId");
+  const { data: bomItems = [] } = useQuery({
+    queryKey: ["/api/boms", selectedBomId, "items"],
+    enabled: !!selectedBomId,
+    retry: false,
+  });
+
   const form = useForm<DirectProcurementForm>({
     resolver: zodResolver(directProcurementSchema),
     defaultValues: {
-      items: [{ name: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0, category: "" }],
+      bomId: "",
+      vendorId: "",
+      bomItems: [],
       deliveryDate: "",
       paymentTerms: "Net 30",
       priority: "medium",
@@ -142,19 +160,29 @@ export default function DirectProcurement() {
     return quantity * unitPrice;
   };
 
-  const addItem = () => {
-    const currentItems = form.getValues("items");
-    form.setValue("items", [
-      ...currentItems,
-      { name: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0, category: "" }
-    ]);
+  // Load BOM items when BOM is selected
+  const handleBomSelection = (bomId: string) => {
+    form.setValue("bomId", bomId);
+    form.setValue("bomItems", []); // Reset BOM items when changing BOM
   };
 
-  const removeItem = (index: number) => {
-    const currentItems = form.getValues("items");
-    if (currentItems.length > 1) {
-      form.setValue("items", currentItems.filter((_, i) => i !== index));
-    }
+  // Add BOM item to procurement list
+  const addBomItem = (bomItem: any) => {
+    const currentBomItems = form.getValues("bomItems");
+    const newBomItem = {
+      bomItemId: bomItem.id,
+      productName: bomItem.productName || bomItem.name,
+      requestedQuantity: bomItem.requiredQuantity || 1,
+      unitPrice: 0,
+      totalPrice: 0,
+      specifications: bomItem.specifications || "",
+    };
+    form.setValue("bomItems", [...currentBomItems, newBomItem]);
+  };
+
+  const removeBomItem = (index: number) => {
+    const currentBomItems = form.getValues("bomItems");
+    form.setValue("bomItems", currentBomItems.filter((_, i) => i !== index));
   };
 
   const getStatusBadge = (status: string) => {
@@ -223,6 +251,36 @@ export default function DirectProcurement() {
                   
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                      {/* BOM Selection */}
+                      <FormField
+                        control={form.control}
+                        name="bomId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bill of Materials (BOM) *</FormLabel>
+                            <Select onValueChange={handleBomSelection} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="border-2">
+                                  <SelectValue placeholder="Select BOM to procure against" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {boms.map((bom: any) => (
+                                  <SelectItem key={bom.id} value={bom.id}>
+                                    <div className="flex items-center space-x-2">
+                                      <Layers className="w-4 h-4" />
+                                      <span>{bom.name} (v{bom.version})</span>
+                                      <Badge variant="outline">{bom.category}</Badge>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
                       {/* Vendor Selection */}
                       <FormField
                         control={form.control}
@@ -252,28 +310,58 @@ export default function DirectProcurement() {
                         )}
                       />
 
-                      {/* Items Section */}
+                      {/* Available BOM Items Section */}
+                      {selectedBomId && bomItems.length > 0 && (
+                        <div className="space-y-4">
+                          <Label className="text-lg font-semibold">Available BOM Items</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {bomItems.map((bomItem: any) => (
+                              <Card key={bomItem.id} className="border-2 p-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <h4 className="font-medium">{bomItem.productName || bomItem.name}</h4>
+                                    <p className="text-sm text-gray-600">Required: {bomItem.requiredQuantity}</p>
+                                    {bomItem.specifications && (
+                                      <p className="text-xs text-gray-500 mt-1">{bomItem.specifications}</p>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => addBomItem(bomItem)}
+                                    className="ml-2"
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Add
+                                  </Button>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Selected BOM Items for Procurement */}
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                          <Label className="text-lg font-semibold">Items *</Label>
-                          <Button type="button" variant="outline" onClick={addItem}>
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add Item
-                          </Button>
+                          <Label className="text-lg font-semibold">Items for Procurement *</Label>
+                          {form.watch("bomItems").length === 0 && selectedBomId && (
+                            <p className="text-sm text-gray-500">Select items from the BOM above</p>
+                          )}
                         </div>
                         
-                        {form.watch("items").map((item, index) => (
+                        {form.watch("bomItems").map((item, index) => (
                           <Card key={index} className="border-2">
                             <CardContent className="pt-4">
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <FormField
                                   control={form.control}
-                                  name={`items.${index}.name`}
+                                  name={`bomItems.${index}.productName`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Item Name *</FormLabel>
+                                      <FormLabel>Product Name *</FormLabel>
                                       <FormControl>
-                                        <Input {...field} placeholder="Enter item name" className="border-2" />
+                                        <Input {...field} placeholder="Product name" className="border-2" disabled />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>
@@ -282,7 +370,7 @@ export default function DirectProcurement() {
                                 
                                 <FormField
                                   control={form.control}
-                                  name={`items.${index}.quantity`}
+                                  name={`bomItems.${index}.requestedQuantity`}
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>Quantity *</FormLabel>
@@ -291,13 +379,12 @@ export default function DirectProcurement() {
                                           {...field}
                                           type="number"
                                           min="1"
-                                          placeholder="1"
                                           className="border-2"
                                           onChange={(e) => {
                                             const quantity = parseInt(e.target.value) || 0;
                                             field.onChange(quantity);
-                                            const unitPrice = form.getValues(`items.${index}.unitPrice`);
-                                            form.setValue(`items.${index}.totalPrice`, calculateItemTotal(quantity, unitPrice));
+                                            const unitPrice = form.getValues(`bomItems.${index}.unitPrice`);
+                                            form.setValue(`bomItems.${index}.totalPrice`, calculateItemTotal(quantity, unitPrice));
                                           }}
                                         />
                                       </FormControl>
@@ -308,7 +395,7 @@ export default function DirectProcurement() {
                                 
                                 <FormField
                                   control={form.control}
-                                  name={`items.${index}.unitPrice`}
+                                  name={`bomItems.${index}.unitPrice`}
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>Unit Price (₹) *</FormLabel>
@@ -323,8 +410,8 @@ export default function DirectProcurement() {
                                           onChange={(e) => {
                                             const unitPrice = parseFloat(e.target.value) || 0;
                                             field.onChange(unitPrice);
-                                            const quantity = form.getValues(`items.${index}.quantity`);
-                                            form.setValue(`items.${index}.totalPrice`, calculateItemTotal(quantity, unitPrice));
+                                            const quantity = form.getValues(`bomItems.${index}.requestedQuantity`);
+                                            form.setValue(`bomItems.${index}.totalPrice`, calculateItemTotal(quantity, unitPrice));
                                           }}
                                         />
                                       </FormControl>
@@ -337,47 +424,37 @@ export default function DirectProcurement() {
                                   <div className="flex-1">
                                     <Label>Total Price (₹)</Label>
                                     <Input
-                                      value={`₹${form.watch(`items.${index}.totalPrice`).toFixed(2)}`}
+                                      value={`₹${form.watch(`bomItems.${index}.totalPrice`).toFixed(2)}`}
                                       disabled
                                       className="border-2 bg-gray-50"
                                     />
                                   </div>
-                                  {form.watch("items").length > 1 && (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => removeItem(index)}
-                                      className="border-2"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeBomItem(index)}
+                                    className="border-2"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
                                 </div>
                               </div>
                               
-                              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="mt-4">
                                 <FormField
                                   control={form.control}
-                                  name={`items.${index}.category`}
+                                  name={`bomItems.${index}.specifications`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel>Category</FormLabel>
+                                      <FormLabel>Specifications</FormLabel>
                                       <FormControl>
-                                        <Input {...field} placeholder="Item category" className="border-2" />
-                                      </FormControl>
-                                    </FormItem>
-                                  )}
-                                />
-                                
-                                <FormField
-                                  control={form.control}
-                                  name={`items.${index}.description`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Description</FormLabel>
-                                      <FormControl>
-                                        <Input {...field} placeholder="Item description" className="border-2" />
+                                        <Textarea 
+                                          {...field} 
+                                          placeholder="Technical specifications or requirements" 
+                                          className="border-2" 
+                                          rows={2}
+                                        />
                                       </FormControl>
                                     </FormItem>
                                   )}
@@ -479,8 +556,11 @@ export default function DirectProcurement() {
                           <div className="flex justify-between items-center">
                             <span className="text-lg font-semibold">Total Order Value:</span>
                             <span className="text-2xl font-bold text-blue-600">
-                              ₹{form.watch("items").reduce((sum, item) => sum + (item.totalPrice || 0), 0).toFixed(2)}
+                              ₹{form.watch("bomItems").reduce((sum, item) => sum + (item.totalPrice || 0), 0).toFixed(2)}
                             </span>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-2">
+                            {form.watch("bomItems").length} BOM items selected for procurement
                           </div>
                         </CardContent>
                       </Card>
