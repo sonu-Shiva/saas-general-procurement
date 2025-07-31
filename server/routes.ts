@@ -1444,10 +1444,10 @@ Focus on established businesses with verifiable contact information.`;
 
       const { comments } = req.body;
       const po = await storage.updatePurchaseOrder(req.params.id, {
-        status: 'approved',
+        status: 'issued',
         approvedBy: userId,
         approvedAt: new Date(),
-        approvalComments: comments || 'Approved by Sourcing Manager'
+        approvalComments: comments || 'Approved and issued to vendor'
       });
       res.json(po);
     } catch (error) {
