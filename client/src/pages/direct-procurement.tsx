@@ -81,14 +81,6 @@ export default function DirectProcurement() {
     retry: false,
   });
 
-  // Fetch BOM items when BOM is selected
-  const selectedBomId = form.watch("bomId");
-  const { data: bomItems = [] } = useQuery({
-    queryKey: ["/api/boms", selectedBomId, "items"],
-    enabled: !!selectedBomId,
-    retry: false,
-  });
-
   const form = useForm<DirectProcurementForm>({
     resolver: zodResolver(directProcurementSchema),
     defaultValues: {
@@ -100,6 +92,14 @@ export default function DirectProcurement() {
       priority: "medium",
       notes: "",
     },
+  });
+
+  // Fetch BOM items when BOM is selected
+  const selectedBomId = form.watch("bomId");
+  const { data: bomItems = [] } = useQuery({
+    queryKey: ["/api/boms", selectedBomId, "items"],
+    enabled: !!selectedBomId,
+    retry: false,
   });
 
   // Create direct procurement order mutation
