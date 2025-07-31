@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  Layers
+  Layers,
+  Send
 } from "lucide-react";
 
 // BOM-based Direct Procurement Order Schema
@@ -190,6 +192,39 @@ export default function DirectProcurement() {
       toast({
         title: "Error",
         description: "Failed to delete order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Convert to Purchase Order mutation
+  const convertToPOMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/direct-procurement/${id}/create-po`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Order submitted for approval! Check Purchase Orders for approval status.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/direct-procurement"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to submit order for approval",
         variant: "destructive",
       });
     },
@@ -796,15 +831,20 @@ export default function DirectProcurement() {
                         </Button>
                       )}
                       
-                      {order.status === 'draft' && (
+                      {(order.status === 'draft' || order.status === 'issued') && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => updateStatusMutation.mutate({ id: order.id, status: 'submitted' })}
+                          onClick={() => {
+                            if (confirm('This will submit your order for approval. Are you sure?')) {
+                              convertToPOMutation.mutate(order.id);
+                            }
+                          }}
                           className="flex-1 border-2 h-9"
+                          disabled={convertToPOMutation.isPending}
                         >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Submit
+                          <Send className="w-4 h-4 mr-1" />
+                          Submit for Approval
                         </Button>
                       )}
                     </div>

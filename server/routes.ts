@@ -1711,6 +1711,67 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Convert Direct Procurement Order to Purchase Order
+  app.post('/api/direct-procurement/:id/create-po', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Get the direct procurement order
+      const dpo = await storage.getDirectProcurementOrderById(id);
+      if (!dpo) {
+        return res.status(404).json({ message: "Direct procurement order not found" });
+      }
+      
+      // Check if user has permission (creator or admin)
+      if (dpo.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only convert orders you created" });
+      }
+      
+      // Generate PO number
+      const poNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      
+      // Create purchase order
+      const purchaseOrder = await storage.createPurchaseOrder({
+        poNumber,
+        vendorId: dpo.vendorId,
+        totalAmount: dpo.totalAmount,
+        status: 'pending_approval',
+        paymentTerms: dpo.paymentTerms,
+        deliverySchedule: { deliveryDate: dpo.deliveryDate },
+        termsAndConditions: dpo.notes || '',
+        createdBy: userId,
+      });
+      
+      // Create line items for each BOM item
+      if (dpo.bomItems && Array.isArray(dpo.bomItems)) {
+        for (const item of dpo.bomItems) {
+          await storage.createPoLineItem({
+            poId: purchaseOrder.id,
+            itemName: item.productName,
+            quantity: item.requestedQuantity.toString(),
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            specifications: item.specifications || '',
+          });
+        }
+      }
+      
+      // Update the DPO status to indicate it's been converted
+      await storage.updateDirectProcurementOrderStatus(id, 'submitted');
+      
+      res.json({
+        success: true,
+        message: "Purchase Order created successfully",
+        purchaseOrder,
+        directProcurementOrder: dpo
+      });
+    } catch (error) {
+      console.error("Error creating PO from direct procurement order:", error);
+      res.status(500).json({ message: "Failed to create purchase order from direct procurement order" });
+    }
+  });
+
   // Create Purchase Order from RFx
   app.post('/api/rfx/:id/create-po', isAuthenticated, async (req: any, res) => {
     try {
