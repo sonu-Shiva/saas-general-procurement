@@ -894,34 +894,40 @@ export default function DirectProcurement() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {selectedOrder.items?.map((item: any, index: number) => (
-                      <div key={index} className="p-4 border rounded-lg">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div>
-                            <Label className="text-sm font-medium">Item Name</Label>
-                            <p className="text-sm">{item.name}</p>
+                    {selectedOrder.bomItems && Array.isArray(selectedOrder.bomItems) && selectedOrder.bomItems.length > 0 ? (
+                      selectedOrder.bomItems.map((item: any, index: number) => (
+                        <div key={index} className="p-4 border rounded-lg">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium">Item Name</Label>
+                              <p className="text-sm">{item.productName}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium">Quantity</Label>
+                              <p className="text-sm">{item.requestedQuantity}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium">Unit Price</Label>
+                              <p className="text-sm">₹{Number(item.unitPrice).toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium">Total</Label>
+                              <p className="text-sm font-bold">₹{Number(item.totalPrice).toFixed(2)}</p>
+                            </div>
                           </div>
-                          <div>
-                            <Label className="text-sm font-medium">Quantity</Label>
-                            <p className="text-sm">{item.quantity}</p>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium">Unit Price</Label>
-                            <p className="text-sm">₹{item.unitPrice}</p>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium">Total</Label>
-                            <p className="text-sm font-bold">₹{item.totalPrice}</p>
-                          </div>
+                          {item.specifications && (
+                            <div className="mt-2">
+                              <Label className="text-sm font-medium">Specifications</Label>
+                              <p className="text-sm text-gray-600">{item.specifications}</p>
+                            </div>
+                          )}
                         </div>
-                        {item.description && (
-                          <div className="mt-2">
-                            <Label className="text-sm font-medium">Description</Label>
-                            <p className="text-sm text-gray-600">{item.description}</p>
-                          </div>
-                        )}
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>No items found for this order</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>
