@@ -31,10 +31,7 @@ import {
   Eye,
   Edit,
   Trash2,
-  Layers,
-  TrendingUp,
-  AlertCircle,
-  Truck
+  Layers
 } from "lucide-react";
 
 // BOM-based Direct Procurement Order Schema
@@ -654,115 +651,7 @@ export default function DirectProcurement() {
               </Card>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <TrendingUp className="w-5 h-5 mr-2" />
-                    Order Status Distribution
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {['draft', 'submitted', 'approved', 'processing', 'shipped', 'delivered'].map((status) => {
-                      const count = orders?.filter((order: any) => order.status === status).length || 0;
-                      const percentage = orders?.length ? Math.round((count / orders.length) * 100) : 0;
-                      return (
-                        <div key={status} className="flex justify-between items-center">
-                          <span className="capitalize text-sm">{status}</span>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium">{count}</span>
-                            <span className="text-xs text-gray-500">({percentage}%)</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
 
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <AlertCircle className="w-5 h-5 mr-2" />
-                    Priority Breakdown
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {['urgent', 'high', 'medium', 'low'].map((priority) => {
-                      const count = orders?.filter((order: any) => order.priority === priority).length || 0;
-                      const percentage = orders?.length ? Math.round((count / orders.length) * 100) : 0;
-                      return (
-                        <div key={priority} className="flex justify-between items-center">
-                          <span className="capitalize text-sm flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${
-                              priority === 'urgent' ? 'bg-red-500' :
-                              priority === 'high' ? 'bg-orange-500' :
-                              priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                            }`} />
-                            {priority}
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium">{count}</span>
-                            <span className="text-xs text-gray-500">({percentage}%)</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <Truck className="w-5 h-5 mr-2" />
-                    Delivery Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Due This Week</span>
-                      <span className="text-sm font-medium">
-                        {orders?.filter((order: any) => {
-                          if (!order.deliveryDate) return false;
-                          const deliveryDate = new Date(order.deliveryDate);
-                          const nextWeek = new Date();
-                          nextWeek.setDate(nextWeek.getDate() + 7);
-                          return deliveryDate <= nextWeek;
-                        }).length || 0}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Due This Month</span>
-                      <span className="text-sm font-medium">
-                        {orders?.filter((order: any) => {
-                          if (!order.deliveryDate) return false;
-                          const deliveryDate = new Date(order.deliveryDate);
-                          const nextMonth = new Date();
-                          nextMonth.setMonth(nextMonth.getMonth() + 1);
-                          return deliveryDate <= nextMonth;
-                        }).length || 0}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Overdue</span>
-                      <span className="text-sm font-medium text-red-600">
-                        {orders?.filter((order: any) => {
-                          if (!order.deliveryDate || ['delivered', 'completed'].includes(order.status)) return false;
-                          const deliveryDate = new Date(order.deliveryDate);
-                          const today = new Date();
-                          return deliveryDate < today;
-                        }).length || 0}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
 
             {/* Orders Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">

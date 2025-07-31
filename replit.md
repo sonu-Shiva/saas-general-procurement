@@ -10,15 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### Direct Procurement Metrics Dashboard Implementation (January 2025)
-- **COMPREHENSIVE METRICS DASHBOARD**: Added complete analytics dashboard to Direct Procurement page matching RFx and Auction pages
-- **FOUR KEY METRIC CARDS**: Total Orders, Total Value (₹), Active Orders, Completed Orders with proper calculations
-- **THREE ANALYTICS SECTIONS**: Order Status Distribution, Priority Breakdown, Delivery Overview with percentage calculations
-- **SMART DELIVERY TRACKING**: Due this week, due this month, and overdue order tracking with date-based filtering
+### Direct Procurement Metrics Implementation (January 2025)
+- **FOCUSED METRICS DASHBOARD**: Added essential overview metrics to Direct Procurement page for order creation context
+- **FOUR KEY METRIC CARDS**: Total Orders, Total Value (₹), Active Orders, Completed Orders for quick overview
 - **INDIAN RUPEE CONSISTENCY**: Fixed DollarSign icon usage, replaced with proper ₹ symbol throughout metrics
 - **RESPONSIVE DESIGN**: Grid layouts that adapt from mobile (1 column) to desktop (4 columns) for optimal viewing
-- **REAL-TIME CALCULATIONS**: Dynamic percentage breakdowns, status filtering, and priority analysis based on actual order data
-- **VISUAL INDICATORS**: Color-coded priority dots (red=urgent, orange=high, yellow=medium, green=low) for better UX
+- **CLEAR SEPARATION**: Detailed order tracking analytics moved to Purchase Orders screen where they belong
+- **BOM-FOCUSED INTERFACE**: Direct Procurement focuses on creating orders from BOMs, not managing existing orders
 
 ### Complete Vendor Access Control & Security Implementation (January 2025)
 - **ROLE-BASED AUCTION ACCESS**: Implemented complete access control where vendors only see auctions they're invited to participate in
