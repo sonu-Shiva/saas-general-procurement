@@ -71,6 +71,18 @@ export default function PurchaseOrders() {
     queryKey: ["/api/purchase-orders", selectedPO],
     enabled: !!selectedPO,
     retry: false,
+    queryFn: async () => {
+      console.log('Fetching PO details for ID:', selectedPO);
+      const response = await fetch(`/api/purchase-orders/${selectedPO}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      console.log('PO details response:', data);
+      return data;
+    }
   });
 
 
@@ -499,6 +511,7 @@ export default function PurchaseOrders() {
                                   variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    console.log('Setting selectedPO to:', po.id);
                                     setSelectedPO(po.id);
                                   }}
                                   className="min-w-[100px]"
