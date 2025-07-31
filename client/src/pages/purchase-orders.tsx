@@ -478,7 +478,10 @@ export default function PurchaseOrders() {
                                 <div className="flex items-center gap-4 text-sm">
                                   <div>
                                     <p className="text-muted-foreground">Vendor</p>
-                                    <p className="font-semibold">Vendor {po.vendorId?.slice(-4)}</p>
+                                    <p className="font-semibold">
+                                      {vendors?.find(v => v.id === po.vendorId)?.companyName || 
+                                       (po.vendorId ? `Vendor ${po.vendorId.slice(-4)}` : 'Not specified')}
+                                    </p>
                                   </div>
                                   {po.paymentTerms && (
                                     <div>
