@@ -573,7 +573,7 @@ export default function PurchaseOrders() {
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <FileText className="w-5 h-5 mr-2" />
-              Purchase Order Details
+              Purchase Order Details - {selectedPO}
             </DialogTitle>
           </DialogHeader>
           {isLoadingPODetails ? (
