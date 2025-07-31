@@ -1530,7 +1530,7 @@ Focus on established businesses with verifiable contact information.`;
         vendorId,
         bomItems,
         totalAmount: totalAmount.toString(),
-        status: "draft" as const,
+        status: "issued" as const, // Direct procurement orders are automatically issued as POs
         priority: (priority || "medium") as const,
         deliveryDate: new Date(deliveryDate),
         paymentTerms,

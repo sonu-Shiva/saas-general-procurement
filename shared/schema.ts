@@ -288,7 +288,7 @@ export const directProcurementOrders = pgTable("direct_procurement_orders", {
   vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
   bomItems: jsonb("bom_items").notNull(), // Array of BOM items with pricing: bomItemId, productName, requestedQuantity, unitPrice, totalPrice, specifications
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-  status: varchar("status", { enum: ["draft", "submitted", "approved", "rejected", "delivered", "cancelled"] }).default("draft"),
+  status: varchar("status", { enum: ["draft", "issued", "submitted", "approved", "rejected", "delivered", "cancelled"] }).default("issued"),
   priority: varchar("priority", { enum: ["low", "medium", "high", "urgent"] }).default("medium"),
   deliveryDate: timestamp("delivery_date").notNull(),
   paymentTerms: varchar("payment_terms", { length: 100 }).notNull(),
