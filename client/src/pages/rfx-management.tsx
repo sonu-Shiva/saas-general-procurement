@@ -8,6 +8,7 @@ import TestRfxForm from "@/components/test-rfx-form";
 import SimpleRfxForm from "@/components/simple-rfx-form";
 import EnhancedRfxForm from "@/components/enhanced-rfx-form";
 import ConvertRfxForm from "@/components/convert-rfx-form";
+import { CreatePOFromRfxDialog } from "@/components/CreatePOFromRfxDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,8 @@ import {
   MessageSquare,
   Target,
   TrendingUp,
-  X
+  X,
+  ShoppingCart
 } from "lucide-react";
 
 export default function RfxManagement() {
@@ -43,6 +45,8 @@ export default function RfxManagement() {
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [convertSourceRfx, setConvertSourceRfx] = useState<any>(null);
+  const [isPODialogOpen, setIsPODialogOpen] = useState(false);
+  const [selectedRfxForPO, setSelectedRfxForPO] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -154,6 +158,11 @@ export default function RfxManagement() {
   const handleConvertRfx = (sourceRfx: any) => {
     setConvertSourceRfx(sourceRfx);
     setIsConvertDialogOpen(true);
+  };
+
+  const handleCreatePOFromRfx = (rfx: any) => {
+    setSelectedRfxForPO(rfx);
+    setIsPODialogOpen(true);
   };
   
   return (
@@ -420,6 +429,17 @@ export default function RfxManagement() {
                                 Convert
                               </Button>
                             )}
+                            {rfx.type === 'rfq' && rfx.status === 'closed' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleCreatePOFromRfx(rfx)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <ShoppingCart className="w-4 h-4 mr-1" />
+                                Create PO
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -459,6 +479,28 @@ export default function RfxManagement() {
                 <div className="p-4">
                   <p className="text-muted-foreground">AI-powered assistance for RFx management coming soon...</p>
                 </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Purchase Order Creation Dialog */}
+            <Dialog open={isPODialogOpen} onOpenChange={setIsPODialogOpen}>
+              <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle>Create Purchase Order from RFx</DialogTitle>
+                </DialogHeader>
+                {selectedRfxForPO && (
+                  <CreatePOFromRfxDialog 
+                    rfx={selectedRfxForPO}
+                    onClose={() => setIsPODialogOpen(false)}
+                    onSuccess={() => {
+                      setIsPODialogOpen(false);
+                      toast({
+                        title: "Success",
+                        description: "Purchase Order created successfully",
+                      });
+                    }}
+                  />
+                )}
               </DialogContent>
             </Dialog>
           </div>

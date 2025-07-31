@@ -1579,6 +1579,133 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Create Purchase Order from RFx
+  app.post('/api/rfx/:id/create-po', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const rfxId = req.params.id;
+      const { vendorId, responseId, totalAmount, paymentTerms, deliverySchedule, notes } = req.body;
+
+      // Verify RFx exists and user has permission
+      const rfx = await storage.getRfxEvent(rfxId);
+      if (!rfx) {
+        return res.status(404).json({ message: "RFx not found" });
+      }
+
+      if (rfx.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only create POs for your own RFx" });
+      }
+
+      // Get vendor details
+      const vendor = await storage.getVendor(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+
+      // Get RFx responses for this vendor
+      const responses = await storage.getRfxResponses({ rfxId, vendorId });
+      const selectedResponse = responses.find((r: any) => r.id === responseId) || responses[0];
+      
+      if (!selectedResponse) {
+        return res.status(400).json({ message: "No valid response found for this vendor" });
+      }
+
+      // Generate PO number
+      const poNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+      // Create Purchase Order
+      const purchaseOrder = await storage.createPurchaseOrder({
+        poNumber,
+        vendorId,
+        rfxId,
+        totalAmount: totalAmount || selectedResponse.quotedPrice || "0",
+        status: "draft",
+        termsAndConditions: notes || `Purchase Order created from RFx: ${rfx.title}`,
+        deliverySchedule: deliverySchedule || { standard: "As per RFx requirements" },
+        paymentTerms: paymentTerms || selectedResponse.paymentTerms || "Net 30",
+        createdBy: userId
+      });
+
+      res.json({
+        purchaseOrder,
+        rfx,
+        rfxResponse: selectedResponse,
+        vendor
+      });
+    } catch (error) {
+      console.error("Error creating PO from RFx:", error);
+      res.status(500).json({ message: "Failed to create purchase order from RFx" });
+    }
+  });
+
+  // Create Purchase Order from Auction
+  app.post('/api/auctions/:id/create-po', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const auctionId = req.params.id;
+      const { vendorId, bidAmount, paymentTerms, deliverySchedule, notes } = req.body;
+
+      // Verify auction exists and user has permission
+      const auction = await storage.getAuction(auctionId);
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+
+      if (auction.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only create POs for your own auctions" });
+      }
+
+      // Get vendor details
+      const vendor = await storage.getVendor(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+
+      // Get bids for this vendor
+      const bids = await storage.getBids({ auctionId, vendorId });
+      const winningBid = bids.find((bid: any) => bid.isWinning) || bids.sort((a: any, b: any) => Number(a.amount) - Number(b.amount))[0];
+      
+      if (!winningBid) {
+        return res.status(400).json({ message: "No valid bid found for this vendor" });
+      }
+
+      // Generate PO number
+      const poNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+      // Create Purchase Order
+      const purchaseOrder = await storage.createPurchaseOrder({
+        poNumber,
+        vendorId,
+        auctionId,
+        totalAmount: bidAmount || winningBid.amount || "0",
+        status: "draft",
+        termsAndConditions: notes || `Purchase Order created from Auction: ${auction.name}`,
+        deliverySchedule: deliverySchedule || { standard: "As per auction requirements" },
+        paymentTerms: paymentTerms || "Net 30",
+        createdBy: userId
+      });
+
+      // Update auction winner if this is the winning bid
+      if (winningBid.isWinning && !auction.winnerId) {
+        await storage.updateAuction(auctionId, {
+          winnerId: vendorId,
+          winningBid: winningBid.amount,
+          status: 'completed'
+        });
+      }
+
+      res.json({
+        purchaseOrder,
+        auction,
+        winningBid,
+        vendor
+      });
+    } catch (error) {
+      console.error("Error creating PO from auction:", error);
+      res.status(500).json({ message: "Failed to create purchase order from auction" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time auction functionality

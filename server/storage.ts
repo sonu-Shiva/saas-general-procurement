@@ -109,7 +109,7 @@ export interface IStorage {
   getRfxInvitations(rfxId: string): Promise<RfxInvitation[]>;
   
   createRfxResponse(response: InsertRfxResponse): Promise<RfxResponse>;
-  getRfxResponses(rfxId: string): Promise<RfxResponse[]>;
+  getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]>;
   
   // Auction operations
   createAuction(auction: InsertAuction): Promise<Auction>;
@@ -124,7 +124,7 @@ export interface IStorage {
   getAuctionParticipants(auctionId: string): Promise<AuctionParticipant[]>;
   
   createBid(bid: InsertBid): Promise<Bid>;
-  getBids(auctionId: string): Promise<Bid[]>;
+  getBids(filters?: { auctionId?: string; vendorId?: string }): Promise<Bid[]>;
   getAuctionBids(auctionId: string): Promise<Bid[]>;
   getLatestBid(auctionId: string): Promise<Bid | undefined>;
   
@@ -500,8 +500,22 @@ export class DatabaseStorage implements IStorage {
     return newResponse;
   }
 
-  async getRfxResponses(rfxId: string): Promise<RfxResponse[]> {
-    return await db.select().from(rfxResponses).where(eq(rfxResponses.rfxId, rfxId));
+  async getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]> {
+    const conditions = [];
+    
+    if (filters?.rfxId) {
+      conditions.push(eq(rfxResponses.rfxId, filters.rfxId));
+    }
+    
+    if (filters?.vendorId) {
+      conditions.push(eq(rfxResponses.vendorId, filters.vendorId));
+    }
+    
+    return await db
+      .select()
+      .from(rfxResponses)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(rfxResponses.submittedAt));
   }
 
   async getChildRfxEvents(parentRfxId: string): Promise<RfxEvent[]> {
@@ -620,8 +634,22 @@ export class DatabaseStorage implements IStorage {
     return newBid;
   }
 
-  async getBids(auctionId: string): Promise<Bid[]> {
-    return await db.select().from(bids).where(eq(bids.auctionId, auctionId)).orderBy(desc(bids.timestamp));
+  async getBids(filters?: { auctionId?: string; vendorId?: string }): Promise<Bid[]> {
+    const conditions = [];
+    
+    if (filters?.auctionId) {
+      conditions.push(eq(bids.auctionId, filters.auctionId));
+    }
+    
+    if (filters?.vendorId) {
+      conditions.push(eq(bids.vendorId, filters.vendorId));
+    }
+    
+    return await db
+      .select()
+      .from(bids)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(bids.timestamp));
   }
 
   async getAuctionBids(auctionId: string): Promise<Bid[]> {
