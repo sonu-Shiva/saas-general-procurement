@@ -573,7 +573,7 @@ export default function PurchaseOrders() {
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <FileText className="w-5 h-5 mr-2" />
-              Purchase Order Details - {selectedPO}
+              Purchase Order Details
             </DialogTitle>
           </DialogHeader>
           {isLoadingPODetails ? (
@@ -593,7 +593,7 @@ export default function PurchaseOrders() {
                   <div>
                     <p className="text-sm text-muted-foreground">Total Amount</p>
                     <p className="text-2xl font-bold text-primary">
-                      {formatCurrency(selectedPODetails.totalAmount)}
+                      ₹{selectedPODetails.totalAmount ? parseFloat(selectedPODetails.totalAmount).toLocaleString('en-IN') : '0'}
                     </p>
                   </div>
                   <div>
@@ -636,14 +636,14 @@ export default function PurchaseOrders() {
                   <Package className="w-5 h-5 mr-2" />
                   Line Items
                 </h3>
-                {selectedPODetails.lineItems && selectedPODetails.lineItems.length > 0 ? (
+                {selectedPODetails?.lineItems && selectedPODetails.lineItems.length > 0 ? (
                   <div className="space-y-4">
                     {selectedPODetails.lineItems.map((item: PoLineItem, index: number) => (
                       <div key={index} className="border rounded-lg p-4 bg-muted/30">
                         <div className="flex justify-between items-start mb-3">
                           <div>
                             <p className="font-medium">
-                              {item.itemName || `Product ${item.productId?.slice(-4)}`}
+                              {item.itemName || `Product ${item.productId?.slice(-4) || 'Unknown'}`}
                             </p>
                             <p className="text-sm text-muted-foreground">Item #{index + 1}</p>
                           </div>
@@ -651,15 +651,15 @@ export default function PurchaseOrders() {
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
                             <p className="text-muted-foreground">Quantity</p>
-                            <p className="font-semibold">{item.quantity}</p>
+                            <p className="font-semibold">{parseFloat(item.quantity || '0')}</p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">Unit Price</p>
-                            <p className="font-semibold">{formatCurrency(item.unitPrice)}</p>
+                            <p className="font-semibold">₹{item.unitPrice ? parseFloat(item.unitPrice).toLocaleString('en-IN') : '0'}</p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">Line Total</p>
-                            <p className="font-bold text-primary">{formatCurrency(item.totalPrice)}</p>
+                            <p className="font-bold text-primary">₹{item.totalPrice ? parseFloat(item.totalPrice).toLocaleString('en-IN') : '0'}</p>
                           </div>
                         </div>
                       </div>
