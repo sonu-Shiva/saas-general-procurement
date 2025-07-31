@@ -105,10 +105,7 @@ export default function DirectProcurement() {
   // Create direct procurement order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (data: DirectProcurementForm) => {
-      return apiRequest("/api/direct-procurement", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("/api/direct-procurement", "POST", data);
     },
     onSuccess: () => {
       toast({
@@ -131,10 +128,7 @@ export default function DirectProcurement() {
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return apiRequest(`/api/direct-procurement/${id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      });
+      return apiRequest(`/api/direct-procurement/${id}/status`, "PATCH", { status });
     },
     onSuccess: () => {
       toast({
