@@ -423,7 +423,7 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive }: any) 
               View Live
             </Button>
           )}
-          {auction.status === 'completed' && (
+          {(auction.status === 'live' || auction.status === 'completed') && (
             <>
               <Button variant="ghost" size="sm">
                 <Trophy className="w-4 h-4 mr-1" />
