@@ -765,7 +765,7 @@ export default function DirectProcurement() {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t">
+                    <div className="flex gap-2 mt-4 pt-4 border-t">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -773,23 +773,11 @@ export default function DirectProcurement() {
                           setSelectedOrder(order);
                           setIsViewDialogOpen(true);
                         }}
-                        className="border-2 h-9"
+                        className="flex-1 border-2 h-9"
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         View
                       </Button>
-                      
-                      {order.status === 'draft' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => updateStatusMutation.mutate({ id: order.id, status: 'submitted' })}
-                          className="border-2 h-9"
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Submit
-                        </Button>
-                      )}
                       
                       {(order.status === 'draft' || order.status === 'pending_approval') && (
                         <Button
@@ -800,11 +788,23 @@ export default function DirectProcurement() {
                               deleteOrderMutation.mutate(order.id);
                             }
                           }}
-                          className={`border-2 h-9 text-red-600 hover:text-red-700 hover:bg-red-50 ${order.status === 'draft' ? 'col-span-1' : 'col-span-2'}`}
+                          className="flex-1 border-2 h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
                           disabled={deleteOrderMutation.isPending}
                         >
                           <Trash2 className="w-4 h-4 mr-1" />
                           Delete
+                        </Button>
+                      )}
+                      
+                      {order.status === 'draft' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => updateStatusMutation.mutate({ id: order.id, status: 'submitted' })}
+                          className="flex-1 border-2 h-9"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Submit
                         </Button>
                       )}
                     </div>
