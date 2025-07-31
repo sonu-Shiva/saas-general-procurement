@@ -1432,6 +1432,76 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // PO Approval routes
+  app.patch('/api/purchase-orders/:id/approve', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'sourcing_manager') {
+        return res.status(403).json({ message: "Only Sourcing Managers can approve purchase orders" });
+      }
+
+      const { comments } = req.body;
+      const po = await storage.updatePurchaseOrder(req.params.id, {
+        status: 'approved',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        approvalComments: comments || 'Approved by Sourcing Manager'
+      });
+      res.json(po);
+    } catch (error) {
+      console.error("Error approving purchase order:", error);
+      res.status(400).json({ message: "Failed to approve purchase order" });
+    }
+  });
+
+  app.patch('/api/purchase-orders/:id/reject', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'sourcing_manager') {
+        return res.status(403).json({ message: "Only Sourcing Managers can reject purchase orders" });
+      }
+
+      const { comments } = req.body;
+      if (!comments || comments.trim() === '') {
+        return res.status(400).json({ message: "Comments are required for rejection" });
+      }
+
+      const po = await storage.updatePurchaseOrder(req.params.id, {
+        status: 'rejected',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        approvalComments: comments
+      });
+      res.json(po);
+    } catch (error) {
+      console.error("Error rejecting purchase order:", error);
+      res.status(400).json({ message: "Failed to reject purchase order" });
+    }
+  });
+
+  app.patch('/api/purchase-orders/:id/issue', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'sourcing_manager') {
+        return res.status(403).json({ message: "Only Sourcing Managers can issue purchase orders" });
+      }
+
+      const po = await storage.updatePurchaseOrder(req.params.id, {
+        status: 'issued'
+      });
+      res.json(po);
+    } catch (error) {
+      console.error("Error issuing purchase order:", error);
+      res.status(400).json({ message: "Failed to issue purchase order" });
+    }
+  });
+
   // Approval routes
   app.get('/api/approvals', isAuthenticated, async (req: any, res) => {
     try {
@@ -1530,7 +1600,7 @@ Focus on established businesses with verifiable contact information.`;
         vendorId,
         bomItems,
         totalAmount: totalAmount.toString(),
-        status: "issued" as const, // Direct procurement orders are automatically issued as POs
+        status: "pending_approval", // All POs go through approval workflow
         priority: (priority || "medium") as const,
         deliveryDate: new Date(deliveryDate),
         paymentTerms,
