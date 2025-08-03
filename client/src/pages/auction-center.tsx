@@ -570,10 +570,21 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate required fields
     if (!formData.name || !formData.description) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate Terms & Conditions upload
+    if (!formData.termsUrl) {
+      toast({
+        title: "Error", 
+        description: "Please upload Terms & Conditions before creating the auction",
         variant: "destructive",
       });
       return;
@@ -650,7 +661,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" data-testid="auction-form">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="name">Auction Name *</Label>
@@ -658,6 +669,12 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
             id="name"
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+              }
+            }}
+            data-testid="input-auction-name"
           />
         </div>
         <div>
@@ -698,6 +715,11 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
             onChange={(e) => setFormData(prev => ({ ...prev, ceilingPrice: e.target.value }))}
             disabled={formData.selectedBomItems.length > 0}
             className={formData.selectedBomItems.length > 0 ? "bg-gray-100" : ""}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+              }
+            }}
           />
           {formData.selectedBomItems.length > 0 && (
             <p className="text-xs text-muted-foreground mt-1">Auto-calculated from selected BOM items</p>
@@ -710,6 +732,11 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
             type="datetime-local"
             value={formData.startTime}
             onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+              }
+            }}
           />
         </div>
         <div>
@@ -719,6 +746,11 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
             type="datetime-local"
             value={formData.endTime}
             onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+              }
+            }}
           />
         </div>
       </div>
@@ -858,6 +890,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         <Button 
           type="submit" 
           disabled={createAuctionMutation.isPending || !formData.termsUrl}
+          data-testid="button-create-auction"
         >
           {createAuctionMutation.isPending ? "Creating..." : "Create Auction"}
         </Button>
