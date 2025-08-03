@@ -46,25 +46,22 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
     return <div className="text-center py-4">Loading results...</div>;
   }
 
-  // Ensure bids is always an array and filter out invalid bids
+  // Ensure bids is always an array
   const bidsArray = Array.isArray(bids) ? bids : [];
   
-  // Debug: Log the raw bids data to understand structure
-  console.log('Raw bids data:', bidsArray);
+  // Debug logging
+  console.log('AuctionResults - Raw bids data:', bidsArray);
+  console.log('AuctionResults - Bids array length:', bidsArray.length);
   
-  // More flexible validation for different bid data structures
-  const validBids = bidsArray.filter((bid: any) => {
-    if (!bid) return false;
-    
-    // Check if amount exists and is a valid number
-    const amount = bid.amount || bid.bidAmount || bid.price;
-    if (!amount) return false;
-    
-    const numericAmount = parseFloat(amount);
-    return !isNaN(numericAmount) && numericAmount > 0;
-  });
-
-  console.log('Valid bids after filtering:', validBids);
+  if (bidsArray.length > 0) {
+    console.log('AuctionResults - First bid structure:', bidsArray[0]);
+    console.log('AuctionResults - First bid keys:', Object.keys(bidsArray[0]));
+  }
+  
+  // Simple validation - if we have bids array with items, show them
+  const validBids = bidsArray.filter((bid: any) => bid && bid.id);
+  
+  console.log('AuctionResults - Valid bids count:', validBids.length);
 
   if (validBids.length === 0) {
     return (
@@ -79,8 +76,8 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
   }
 
   const sortedBids = [...validBids].sort((a: any, b: any) => {
-    const amountA = parseFloat(a.amount || a.bidAmount || a.price);
-    const amountB = parseFloat(b.amount || b.bidAmount || b.price);
+    const amountA = parseFloat(a.amount || a.bidAmount || a.price || '0');
+    const amountB = parseFloat(b.amount || b.bidAmount || b.price || '0');
     return amountA - amountB;
   });
 
@@ -129,7 +126,7 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-semibold">₹{parseFloat(bid.amount || bid.bidAmount || bid.price).toFixed(2)}</div>
+                    <div className="text-lg font-semibold">₹{parseFloat(bid.amount || bid.bidAmount || bid.price || '0').toFixed(2)}</div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
                       index === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
