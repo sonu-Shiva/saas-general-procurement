@@ -1,41 +1,51 @@
-import { ReactNode, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthWrapperProps {
-  children: ReactNode;
-  fallback?: ReactNode;
+  children: React.ReactNode;
 }
 
-export function AuthWrapper({ children, fallback }: AuthWrapperProps) {
-  const { isAuthenticated, isLoading, error } = useAuth();
-  const [location, navigate] = useLocation();
+export default function AuthWrapper({ children }: AuthWrapperProps) {
+  const { user, isLoading, error } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // If user is not authenticated and tries to access protected routes
-    if (!isLoading && !isAuthenticated && location !== '/') {
-      console.log("Redirecting unauthenticated user to home");
-      navigate('/');
+    if (error && !isLoading) {
+      console.log("Auth error detected:", error);
+      toast({
+        title: "Authentication Required",
+        description: "Redirecting to login...",
+        variant: "destructive",
+      });
+      // Small delay to prevent flickering
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 1500);
     }
-  }, [isAuthenticated, isLoading, location, navigate]);
+  }, [error, isLoading, toast]);
 
-  // Show loading while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Checking authentication...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Authenticating...</p>
         </div>
       </div>
     );
   }
 
-  // Show fallback if not authenticated
-  if (!isAuthenticated) {
-    return fallback || null;
+  if (error || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Render children if authenticated
   return <>{children}</>;
 }

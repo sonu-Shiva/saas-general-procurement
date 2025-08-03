@@ -1,52 +1,62 @@
 import { QueryClient } from "@tanstack/react-query";
-
-// Use Express backend on current origin (Replit forwards port 5000 to 80/443)
-const API_BASE_URL = window.location.origin;
-
-async function fetchApi(url: string, options: RequestInit = {}) {
-  const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-
-  try {
-    const response = await fetch(fullUrl, {
-      credentials: "include",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      // Handle 401 specifically for authentication issues
-      if (response.status === 401) {
-        console.log('Authentication required, redirecting to login');
-        window.location.href = '/api/login';
-        return;
-      }
-      
-      const errorText = await response.text();
-      const error = new Error(`${response.status}: ${errorText}`);
-      throw error;
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error('API request failed:', error);
-    throw error;
-  }
-}
-
-// Export apiRequest for mutations
-export async function apiRequest(url: string, options: RequestInit = {}) {
-  return fetchApi(url, options);
-}
+import { isUnauthorizedError } from "./authUtils";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: ({ queryKey }) => fetchApi(queryKey[0] as string),
-      retry: 1,
+      queryFn: async ({ queryKey, signal }) => {
+        try {
+          const [url, params] = queryKey as [string, any?];
+
+          let fullUrl = url;
+          if (params) {
+            const searchParams = new URLSearchParams();
+            Object.entries(params).forEach(([key, value]) => {
+              if (value !== undefined && value !== null) {
+                searchParams.append(key, String(value));
+              }
+            });
+            const queryString = searchParams.toString();
+            if (queryString) {
+              fullUrl += `?${queryString}`;
+            }
+          }
+
+          const response = await fetch(fullUrl, { 
+            signal,
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          if (!response.ok) {
+            if (isUnauthorizedError(response.status)) {
+              // Let the auth wrapper handle this
+              throw new Error('Unauthorized');
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          return response.json();
+        } catch (error) {
+          // Properly handle and rethrow errors
+          if (error instanceof Error) {
+            throw error;
+          }
+          throw new Error('Unknown error occurred');
+        }
+      },
+      retry: (failureCount, error) => {
+        // Don't retry on auth errors
+        if (error instanceof Error && error.message === 'Unauthorized') {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      staleTime: 1000 * 60 * 5, // 5 minutes
       refetchOnWindowFocus: false,
+      refetchOnMount: true,
     },
   },
 });
