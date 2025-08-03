@@ -277,7 +277,7 @@ Focus on established businesses with verifiable contact information.`;
       let fallbackVendors = [];
       
       // Provide relevant fallback based on search query
-      if (query && query.toLowerCase().includes("office")) {
+      if ((query as string) && (query as string).toLowerCase().includes("office")) {
         fallbackVendors = [
           {
             name: "Office Point India",
@@ -298,7 +298,7 @@ Focus on established businesses with verifiable contact information.`;
             description: "Bulk office supplies distributor with online ordering and next-day delivery",
           }
         ];
-      } else if (query && query.toLowerCase().includes("print")) {
+      } else if ((query as string) && (query as string).toLowerCase().includes("print")) {
         fallbackVendors = [
           {
             name: "Printwell Graphics",
@@ -1563,7 +1563,7 @@ Focus on established businesses with verifiable contact information.`;
       // 2. User is sourcing manager and PO is in pending_approval or rejected status
       const canDelete = (
         (po.createdBy === userId && po.status === 'pending_approval') ||
-        (user?.role === 'sourcing_manager' && ['pending_approval', 'rejected'].includes(po.status))
+        (user?.role === 'sourcing_manager' && ['pending_approval', 'rejected'].includes(po.status || ''))
       );
 
       if (!canDelete) {
@@ -1679,7 +1679,7 @@ Focus on established businesses with verifiable contact information.`;
         bomItems,
         totalAmount: totalAmount.toString(),
         status: "pending_approval", // All POs go through approval workflow
-        priority: (priority || "medium") as const,
+        priority: (priority || "medium"),
         deliveryDate: new Date(deliveryDate),
         paymentTerms,
         notes: notes || null,
@@ -1723,6 +1723,7 @@ Focus on established businesses with verifiable contact information.`;
             unitPrice: bomItem.unitPrice.toString(),
             totalPrice: bomItem.totalPrice.toString(),
             status: "pending",
+            lineTotal: bomItem.totalPrice.toString(),
             itemName: bomItem.productName, // Store the product name for reference
           };
           
@@ -1738,7 +1739,7 @@ Focus on established businesses with verifiable contact information.`;
       }
       
       res.json(order);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating BOM-based direct procurement order:", error);
       console.error("Error stack:", error.stack);
       res.status(500).json({ message: "Failed to create direct procurement order", error: error.message });
