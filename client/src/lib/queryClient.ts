@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 
-// Use Express backend on port 5000 (not Django)
-const API_BASE_URL = "http://localhost:5000";
+// Use Express backend on current origin (Replit forwards port 5000 to 80/443)
+const API_BASE_URL = window.location.origin;
 
 async function fetchApi(url: string, options: RequestInit = {}) {
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
