@@ -487,6 +487,7 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
       case 'scheduled': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'live': return 'bg-green-100 text-green-700 border-green-200';
       case 'completed': return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'closed': return 'bg-gray-100 text-gray-700 border-gray-200';
       case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -546,7 +547,7 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
               {isVendor ? "Bid Now" : "View Live"}
             </Button>
           )}
-          {(auction.status === 'live' || auction.status === 'completed') && (
+          {(auction.status === 'live' || auction.status === 'completed' || auction.status === 'closed') && (
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="sm" data-testid="button-view-results">
@@ -562,7 +563,7 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
               </DialogContent>
             </Dialog>
           )}
-          {!isVendor && auction.status === 'completed' && (
+          {!isVendor && (auction.status === 'completed' || auction.status === 'closed') && (
             <Button variant="ghost" size="sm" onClick={() => onCreatePO(auction)} data-testid="button-create-po">
               <ShoppingCart className="w-4 h-4 mr-1" />
               Create Purchase Order
