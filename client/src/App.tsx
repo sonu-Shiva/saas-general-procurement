@@ -1,71 +1,68 @@
 import { Switch, Route } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthWrapper } from "@/components/auth-wrapper";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/useAuth";
-import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
-import Dashboard from "@/pages/dashboard";
-import VendorManagement from "@/pages/vendor-management";
-// Removed VendorDiscovery - functionality moved to Vendor Management
-import ProductCatalogue from "@/pages/product-catalogue";
-import BomManagement from "@/pages/bom-management";
-import RfxManagement from "@/pages/rfx-management";
 
-import AuctionCenter from "@/pages/auction-center";
-import DirectProcurement from "@/pages/direct-procurement";
-import PurchaseOrders from "@/pages/purchase-orders";
-import Analytics from "@/pages/analytics";
-import VendorPortal from "@/pages/vendor-portal";
+// Import all pages
+import Dashboard from "./pages/dashboard";
+import VendorManagement from "./pages/vendor-management";
+import VendorDiscovery from "./pages/vendor-discovery";
+import ProductCatalogue from "./pages/product-catalogue";
+import BomManagement from "./pages/bom-management";
+import DirectProcurement from "./pages/direct-procurement";
+import RfxManagement from "./pages/rfx-management";
+import AuctionCenter from "./pages/auction-center";
+import PurchaseOrders from "./pages/purchase-orders";
+import Analytics from "./pages/analytics";
+import VendorPortal from "./pages/vendor-portal";
+import Landing from "./pages/landing";
+import NotFound from "./pages/not-found";
 
+function App() {
+  const { user, isLoading, isAuthenticated } = useAuth();
 
-function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
-  // If not authenticated, show landing page for ALL routes
+  // If not authenticated, show landing page
   if (!isAuthenticated) {
-    return <Landing />;
+    return (
+      <TooltipProvider>
+        <Switch>
+          <Route path="/vendor-portal" component={VendorPortal} />
+          <Route component={Landing} />
+        </Switch>
+        <Toaster />
+      </TooltipProvider>
+    );
   }
 
-  // If authenticated, show the router with protected routes
-  return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/vendors" component={VendorManagement} />
-      {/* Vendor Discovery functionality moved to Vendor Management */}
-      <Route path="/products" component={ProductCatalogue} />
-      <Route path="/product-catalogue" component={ProductCatalogue} />
-      <Route path="/boms" component={BomManagement} />
-      <Route path="/rfx" component={RfxManagement} />
-
-      <Route path="/auctions" component={AuctionCenter} />
-      <Route path="/direct-procurement" component={DirectProcurement} />
-      <Route path="/purchase-orders" component={PurchaseOrders} />
-      <Route path="/analytics" component={Analytics} />
-      <Route path="/vendor-portal" component={VendorPortal} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
-function App() {
   return (
     <TooltipProvider>
+      <AuthWrapper>
+        <Switch>
+          <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/vendor-management" component={VendorManagement} />
+          <Route path="/vendor-discovery" component={VendorDiscovery} />
+          <Route path="/product-catalogue" component={ProductCatalogue} />
+          <Route path="/bom-management" component={BomManagement} />
+          <Route path="/direct-procurement" component={DirectProcurement} />
+          <Route path="/rfx-management" component={RfxManagement} />
+          <Route path="/auction-center" component={AuctionCenter} />
+          <Route path="/purchase-orders" component={PurchaseOrders} />
+          <Route path="/analytics" component={Analytics} />
+          <Route path="/vendor-portal" component={VendorPortal} />
+          <Route component={NotFound} />
+        </Switch>
+      </AuthWrapper>
       <Toaster />
-      <Router />
     </TooltipProvider>
   );
 }
-
-export default App;
