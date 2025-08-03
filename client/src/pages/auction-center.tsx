@@ -445,6 +445,9 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
   // Fetch BOM items when a BOM is selected
   const { data: bomItems = [] } = useQuery({
     queryKey: ["/api/bom-items", formData.bomId],
+    queryFn: () => formData.bomId && formData.bomId !== 'none' 
+      ? apiRequest(`/api/bom-items/${formData.bomId}`)
+      : Promise.resolve([]),
     enabled: !!formData.bomId && formData.bomId !== 'none',
     retry: false,
   });
