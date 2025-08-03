@@ -67,11 +67,10 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
 
 
 
-  // Sort bids by amount (ascending - lowest first)
+  // Sort bids by amount (ascending - lowest first)  
   const sortedBids = [...validBids].sort((a: any, b: any) => {
-    // Convert decimal amount strings to numbers for proper comparison
-    const amountA = Number(a.amount) || 0;
-    const amountB = Number(b.amount) || 0;
+    const amountA = parseFloat(a.amount) || 999999;
+    const amountB = parseFloat(b.amount) || 999999;
     return amountA - amountB;
   });
 
@@ -121,7 +120,7 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold">
-                      ₹{Number(bid.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{bid.amount ? Number(bid.amount).toFixed(2) : '0.00'}
                     </div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
