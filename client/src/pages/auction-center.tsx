@@ -42,9 +42,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
     retry: false,
   });
 
-  console.log('AuctionResults - auctionId:', auctionId);
-  console.log('AuctionResults - bids:', bids);
-  console.log('AuctionResults - bids[0] details:', bids[0]);
+
 
   if (isLoading) {
     return <div className="text-center py-4">Loading results...</div>;
@@ -73,8 +71,8 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
   // Sort bids by amount (ascending - lowest first)  
   const sortedBids = [...validBids].sort((a: any, b: any) => {
-    const amountA = parseFloat(a.amount) || 999999;
-    const amountB = parseFloat(b.amount) || 999999;
+    const amountA = Number(a.amount) || 999999;
+    const amountB = Number(b.amount) || 999999;
     return amountA - amountB;
   });
 
@@ -124,8 +122,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold">
-                      {console.log('Bid amount raw:', bid.amount, 'type:', typeof bid.amount)}
-                      ₹{bid.amount && !isNaN(parseFloat(bid.amount)) ? parseFloat(bid.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : 'N/A'}
+                      ₹{bid.amount ? Number(bid.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                     </div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
