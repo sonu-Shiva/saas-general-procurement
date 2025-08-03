@@ -69,7 +69,7 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+args = "cd backend && python manage.py migrate --fake-initial && python manage.py runserver 0.0.0.0:8000"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
