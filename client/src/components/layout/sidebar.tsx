@@ -20,13 +20,13 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Vendor Management", href: "/vendors", icon: Users, hiddenForVendors: true },
   { name: "Vendor Portal", href: "/vendor-portal", icon: MessageSquare, onlyForVendors: true },
-  { name: "Product Catalogue", href: "/products", icon: Package },
+  { name: "Product Catalogue", href: "/products", icon: Package, hiddenForVendors: true },
   { name: "BOM Management", href: "/boms", icon: Layers, hiddenForVendors: true },
-  { name: "RFx Management", href: "/rfx", icon: FileText },
-  { name: "Auction Center", href: "/auctions", icon: Gavel },
+  { name: "RFx Management", href: "/rfx", icon: FileText, hiddenForVendors: true },
+  { name: "Auction Center", href: "/auctions", icon: Gavel, hiddenForVendors: true },
   { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, hiddenForVendors: true },
-  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, hiddenForVendors: true },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, hiddenForVendors: true },
 ];
 
 export default function Sidebar() {

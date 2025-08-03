@@ -463,25 +463,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRfxEvents(filters?: { status?: string; type?: string; createdBy?: string }): Promise<RfxEvent[]> {
-    const conditions = [];
+    let query = db.select().from(rfxEvents);
     
-    if (filters?.status) {
-      conditions.push(eq(rfxEvents.status, filters.status as any));
+    if (filters) {
+      const conditions = [];
+      
+      if (filters.status) {
+        conditions.push(eq(rfxEvents.status, filters.status as any));
+      }
+      
+      if (filters.type) {
+        conditions.push(eq(rfxEvents.type, filters.type as any));
+      }
+      
+      if (filters.createdBy) {
+        conditions.push(eq(rfxEvents.createdBy, filters.createdBy));
+      }
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
     }
     
-    if (filters?.type) {
-      conditions.push(eq(rfxEvents.type, filters.type as any));
-    }
-    
-    if (filters?.createdBy) {
-      conditions.push(eq(rfxEvents.createdBy, filters.createdBy));
-    }
-    
-    return await db
-      .select()
-      .from(rfxEvents)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(rfxEvents.createdAt));
+    return await query.orderBy(desc(rfxEvents.createdAt));
   }
 
   async updateRfxEvent(id: string, updates: Partial<InsertRfxEvent>): Promise<RfxEvent> {
@@ -636,21 +640,7 @@ export class DatabaseStorage implements IStorage {
   async getRfxEventsForVendor(vendorUserId: string): Promise<RfxEvent[]> {
     // Get RFx events where the vendor is invited to participate
     return await db
-      .select({
-        id: rfxEvents.id,
-        title: rfxEvents.title,
-        description: rfxEvents.description,
-        type: rfxEvents.type,
-        status: rfxEvents.status,
-        dueDate: rfxEvents.dueDate,
-        requirements: rfxEvents.requirements,
-        terms: rfxEvents.terms,
-        attachments: rfxEvents.attachments,
-        bomId: rfxEvents.bomId,
-        createdBy: rfxEvents.createdBy,
-        createdAt: rfxEvents.createdAt,
-        updatedAt: rfxEvents.updatedAt,
-      })
+      .select()
       .from(rfxEvents)
       .innerJoin(rfxInvitations, eq(rfxEvents.id, rfxInvitations.rfxId))
       .where(eq(rfxInvitations.vendorId, vendorUserId))

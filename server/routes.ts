@@ -1010,8 +1010,14 @@ Focus on established businesses with verifiable contact information.`;
       } 
       // Vendors see only RFx they are invited to participate in
       else if (user.role === 'vendor') {
-        const rfxEvents = await storage.getRfxEventsForVendor(userId);
-        res.json(rfxEvents);
+        // Find the vendor record for this user
+        const vendor = await storage.getVendorByUserId(userId);
+        if (vendor) {
+          const rfxEvents = await storage.getRfxEventsForVendor(vendor.id);
+          res.json(rfxEvents);
+        } else {
+          res.json([]);
+        }
       } 
       else {
         res.json([]);
