@@ -165,6 +165,8 @@ export const rfxEvents = pgTable("rfx_events", {
   contactPerson: varchar("contact_person", { length: 255 }),
   budget: decimal("budget", { precision: 12, scale: 2 }),
   parentRfxId: uuid("parent_rfx_id"),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
+  termsAndConditionsRequired: boolean("terms_and_conditions_required").default(false),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -206,6 +208,8 @@ export const auctions = pgTable("auctions", {
   status: varchar("status", { enum: ["scheduled", "live", "completed", "cancelled"] }).default("scheduled"),
   winnerId: uuid("winner_id").references(() => vendors.id),
   winningBid: decimal("winning_bid", { precision: 12, scale: 2 }),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
+  termsAndConditionsRequired: boolean("terms_and_conditions_required").default(false),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -237,6 +241,7 @@ export const purchaseOrders = pgTable("purchase_orders", {
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
   status: varchar("status", { enum: ["draft", "pending_approval", "approved", "rejected", "issued", "acknowledged", "shipped", "delivered", "invoiced", "paid", "cancelled"] }).default("pending_approval"),
   termsAndConditions: text("terms_and_conditions"),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
   deliverySchedule: jsonb("delivery_schedule"),
   paymentTerms: text("payment_terms"),
   attachments: text("attachments").array(),
@@ -297,11 +302,26 @@ export const directProcurementOrders = pgTable("direct_procurement_orders", {
   deliveryDate: timestamp("delivery_date").notNull(),
   paymentTerms: varchar("payment_terms", { length: 100 }).notNull(),
   notes: text("notes"),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
   approvalWorkflow: jsonb("approval_workflow"),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Terms & Conditions Acceptance Tracking
+export const termsAcceptance = pgTable("terms_acceptance", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  entityType: varchar("entity_type", { enum: ["rfx", "auction", "purchase_order", "direct_procurement"] }).notNull(),
+  entityId: uuid("entity_id").notNull(),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }).notNull(),
+  acceptedAt: timestamp("accepted_at").defaultNow(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+}, (table) => ({
+  uniqueAcceptance: unique("unique_vendor_entity_acceptance").on(table.vendorId, table.entityType, table.entityId),
+}));
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -694,6 +714,11 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+export const insertTermsAcceptanceSchema = createInsertSchema(termsAcceptance).omit({
+  id: true,
+  acceptedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -733,3 +758,5 @@ export type Approval = typeof approvals.$inferSelect;
 export type InsertApproval = z.infer<typeof insertApprovalSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type TermsAcceptance = typeof termsAcceptance.$inferSelect;
+export type InsertTermsAcceptance = z.infer<typeof insertTermsAcceptanceSchema>;

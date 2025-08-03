@@ -20,7 +20,9 @@ import {
   insertPoLineItemSchema,
   insertApprovalSchema,
   insertNotificationSchema,
+  insertTermsAcceptanceSchema,
 } from "@shared/schema";
+import { ObjectStorageService } from "./objectStorage";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -2071,6 +2073,114 @@ Focus on established businesses with verifiable contact information.`;
     } catch (error) {
       console.error("Error issuing PO:", error);
       res.status(500).json({ message: "Failed to issue purchase order" });
+    }
+  });
+
+  // Terms & Conditions routes
+  const objectStorageService = new ObjectStorageService();
+
+  // Upload T&C document
+  app.post('/api/objects/upload', isAuthenticated, async (req: any, res) => {
+    try {
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  // Set T&C file path and ACL for entity
+  app.put('/api/terms/:entityType/:entityId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const { termsAndConditionsURL } = req.body;
+      const userId = req.user.claims.sub;
+
+      if (!termsAndConditionsURL) {
+        return res.status(400).json({ error: "termsAndConditionsURL is required" });
+      }
+
+      // Set ACL for the uploaded T&C file
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        termsAndConditionsURL,
+        {
+          owner: userId,
+          visibility: "public", // T&C documents should be accessible to vendors
+        }
+      );
+
+      res.json({ objectPath });
+    } catch (error) {
+      console.error("Error setting T&C file:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Record terms acceptance by vendor
+  app.post('/api/terms/accept', isVendor, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { entityType, entityId, termsAndConditionsPath } = req.body;
+
+      // Get vendor ID for the current user
+      const vendors = await storage.getVendors();
+      const vendor = vendors.find(v => v.userId === userId);
+      
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor profile not found" });
+      }
+
+      // Record acceptance
+      const acceptance = await storage.recordTermsAcceptance({
+        vendorId: vendor.id,
+        entityType: entityType as any,
+        entityId,
+        termsAndConditionsPath,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent') || '',
+      });
+
+      res.json(acceptance);
+    } catch (error) {
+      console.error("Error recording terms acceptance:", error);
+      res.status(500).json({ error: "Failed to record terms acceptance" });
+    }
+  });
+
+  // Check if vendor has accepted terms for an entity
+  app.get('/api/terms/check/:entityType/:entityId', isVendor, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { entityType, entityId } = req.params;
+
+      // Get vendor ID for the current user
+      const vendors = await storage.getVendors();
+      const vendor = vendors.find(v => v.userId === userId);
+      
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor profile not found" });
+      }
+
+      const acceptance = await storage.checkTermsAcceptance(vendor.id, entityType, entityId);
+      res.json({ hasAccepted: !!acceptance, acceptance });
+    } catch (error) {
+      console.error("Error checking terms acceptance:", error);
+      res.status(500).json({ error: "Failed to check terms acceptance" });
+    }
+  });
+
+  // Serve T&C documents (public access)
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error serving T&C document:", error);
+      if (error.message === "Object not found") {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
     }
   });
 

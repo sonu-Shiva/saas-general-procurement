@@ -9,6 +9,7 @@ import SimpleRfxForm from "@/components/simple-rfx-form";
 import EnhancedRfxForm from "@/components/enhanced-rfx-form";
 import ConvertRfxForm from "@/components/convert-rfx-form";
 import { CreatePOFromRfxDialog } from "@/components/CreatePOFromRfxDialog";
+import { TermsUploader } from "@/components/TermsUploader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

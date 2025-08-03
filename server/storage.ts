@@ -17,6 +17,7 @@ import {
   approvals,
   notifications,
   organizations,
+  termsAcceptance,
   type User,
   type UpsertUser,
   type Vendor,
@@ -53,6 +54,8 @@ import {
   type InsertNotification,
   type Organization,
   type InsertOrganization,
+  type TermsAcceptance,
+  type InsertTermsAcceptance,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, like, inArray, isNull, or } from "drizzle-orm";
@@ -146,6 +149,11 @@ export interface IStorage {
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotifications(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<void>;
+  
+  // Terms & Conditions operations
+  recordTermsAcceptance(acceptance: InsertTermsAcceptance): Promise<TermsAcceptance>;
+  checkTermsAcceptance(vendorId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined>;
+  getTermsAcceptances(vendorId: string): Promise<TermsAcceptance[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -840,6 +848,45 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDirectProcurementOrder(id: string): Promise<void> {
     await db.delete(directProcurementOrders).where(eq(directProcurementOrders.id, id));
+  }
+
+  // Terms & Conditions operations
+  async recordTermsAcceptance(acceptance: InsertTermsAcceptance): Promise<TermsAcceptance> {
+    const [newAcceptance] = await db
+      .insert(termsAcceptance)
+      .values(acceptance)
+      .onConflictDoUpdate({
+        target: [termsAcceptance.vendorId, termsAcceptance.entityType, termsAcceptance.entityId],
+        set: {
+          acceptedAt: new Date(),
+          ipAddress: acceptance.ipAddress,
+          userAgent: acceptance.userAgent,
+        },
+      })
+      .returning();
+    return newAcceptance;
+  }
+
+  async checkTermsAcceptance(vendorId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined> {
+    const [acceptance] = await db
+      .select()
+      .from(termsAcceptance)
+      .where(
+        and(
+          eq(termsAcceptance.vendorId, vendorId),
+          eq(termsAcceptance.entityType, entityType as any),
+          eq(termsAcceptance.entityId, entityId)
+        )
+      );
+    return acceptance;
+  }
+
+  async getTermsAcceptances(vendorId: string): Promise<TermsAcceptance[]> {
+    return await db
+      .select()
+      .from(termsAcceptance)
+      .where(eq(termsAcceptance.vendorId, vendorId))
+      .orderBy(desc(termsAcceptance.acceptedAt));
   }
 }
 
