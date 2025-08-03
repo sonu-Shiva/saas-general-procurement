@@ -756,8 +756,13 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                           {item.itemCode && (
                             <p className="text-xs text-muted-foreground">Code: {item.itemCode}</p>
                           )}
-                          {item.specifications && (
+                          {item.specifications && typeof item.specifications === 'string' && (
                             <p className="text-xs text-muted-foreground mt-1">{item.specifications}</p>
+                          )}
+                          {item.specifications && typeof item.specifications === 'object' && Object.keys(item.specifications).length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {Object.entries(item.specifications).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                            </p>
                           )}
                         </div>
                       </div>
