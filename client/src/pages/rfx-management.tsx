@@ -62,6 +62,13 @@ export default function RfxManagement() {
     retry: false,
   });
 
+  // For vendors, also fetch response data to show counts
+  const { data: vendorResponses = [] } = useQuery({
+    queryKey: ["/api/vendor/rfx-responses"],
+    enabled: isVendor,
+    retry: false,
+  });
+
   console.log("RfxManagement render - rfxEvents:", rfxEvents, "isLoading:", isLoading);
   
   // Ensure rfxEvents is always an array and define filteredRfxEvents
@@ -127,6 +134,22 @@ export default function RfxManagement() {
               : "Manage Request for Quotes, Proposals, and Information"
             }
           </p>
+          {isVendor && (
+            <div className="flex space-x-4 mt-4">
+              <Badge variant="outline" className="text-sm">
+                <Target className="w-4 h-4 mr-1" />
+                {rfxEventsArray.length} Invitations
+              </Badge>
+              <Badge variant="outline" className="text-sm">
+                <MessageSquare className="w-4 h-4 mr-1" />
+                {vendorResponses.length} Responses
+              </Badge>
+              <Badge variant="outline" className="text-sm">
+                <Clock className="w-4 h-4 mr-1" />
+                {rfxEventsArray.filter((rfx: any) => rfx.status === 'open').length} Active
+              </Badge>
+            </div>
+          )}
         </div>
         {!isVendor && (
           <div className="flex space-x-3">

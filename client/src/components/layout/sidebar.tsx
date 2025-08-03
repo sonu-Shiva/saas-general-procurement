@@ -44,10 +44,6 @@ export default function Sidebar() {
               if (isVendor && item.buyerOnly) {
                 return false;
               }
-              // Hide vendor-only items from buyers
-              if (!isVendor && item.vendorOnly) {
-                return false;
-              }
               return true;
             })
             .map((item) => {
