@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TermsUploader } from "@/components/TermsUploader";
 
 const rfxFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -21,6 +22,7 @@ const rfxFormSchema = z.object({
   selectedVendors: z.array(z.string()).min(1, "At least one vendor must be selected"),
   criteria: z.string().optional(),
   evaluationParameters: z.string().optional(),
+  termsAndConditionsPath: z.string().optional(),
 });
 
 type RfxFormData = z.infer<typeof rfxFormSchema>;
@@ -31,6 +33,7 @@ interface EnhancedRfxFormProps {
 }
 
 export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormProps) {
+  const [termsAndConditionsPath, setTermsAndConditionsPath] = useState<string>("");
   const queryClient = useQueryClient();
 
   // Fetch vendors and BOMs
@@ -56,6 +59,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
       selectedVendors: [],
       criteria: "",
       evaluationParameters: "",
+      termsAndConditionsPath: "",
     },
   });
 
@@ -73,6 +77,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
           dueDate: data.dueDate,
           budget: data.budget || undefined,
           bomId: data.bomId || undefined,
+          termsAndConditionsPath: termsAndConditionsPath || undefined,
           criteria: data.criteria || undefined,
           evaluationParameters: data.evaluationParameters || undefined,
           status: "draft",
@@ -356,6 +361,26 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
                 </div>
               )}
             </div>
+          </div>
+        </Card>
+
+        {/* Terms & Conditions Upload */}
+        <Card className="p-6 border-2 border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-foreground">Terms & Conditions (Optional)</h3>
+              <p className="text-sm text-muted-foreground">
+                Upload terms and conditions that vendors must accept before participating in this {selectedType.toUpperCase()}
+              </p>
+            </div>
+            
+            <TermsUploader
+              onUploadComplete={(filePath: string) => {
+                setTermsAndConditionsPath(filePath);
+                form.setValue("termsAndConditionsPath", filePath);
+              }}
+              currentFilePath={termsAndConditionsPath}
+            />
           </div>
         </Card>
 
