@@ -668,6 +668,17 @@ export class DatabaseStorage implements IStorage {
 
   async getAuction(id: string): Promise<Auction | undefined> {
     const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+    
+    if (auction) {
+      // Get the latest bid to update current bid information
+      const latestBid = await this.getLatestBid(id);
+      if (latestBid) {
+        // Update the auction's current bid with the latest bid amount
+        auction.currentBid = latestBid.amount;
+        auction.leadingVendorId = latestBid.vendorId;
+      }
+    }
+    
     return auction;
   }
 
@@ -682,21 +693,43 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(auctions.createdBy, filters.createdBy));
     }
     
-    return await db
+    const auctionList = await db
       .select()
       .from(auctions)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(auctions.createdAt));
+    
+    // Update each auction with latest bid information
+    for (const auction of auctionList) {
+      const latestBid = await this.getLatestBid(auction.id);
+      if (latestBid) {
+        auction.currentBid = latestBid.amount;
+        auction.leadingVendorId = latestBid.vendorId;
+      }
+    }
+    
+    return auctionList;
   }
 
   async getAuctionsForVendor(vendorUserId: string): Promise<Auction[]> {
     // For now, return all live and scheduled auctions for vendor role users
     // In production, this would be filtered by proper vendor invitation/assignment
-    return await db
+    const auctionList = await db
       .select()
       .from(auctions)
       .where(or(eq(auctions.status, 'live'), eq(auctions.status, 'scheduled')))
       .orderBy(desc(auctions.createdAt));
+    
+    // Update each auction with latest bid information
+    for (const auction of auctionList) {
+      const latestBid = await this.getLatestBid(auction.id);
+      if (latestBid) {
+        auction.currentBid = latestBid.amount;
+        auction.leadingVendorId = latestBid.vendorId;
+      }
+    }
+    
+    return auctionList;
   }
 
   async getRfxEventsForVendor(vendorUserId: string): Promise<RfxEvent[]> {

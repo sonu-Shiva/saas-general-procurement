@@ -1232,6 +1232,13 @@ Focus on established businesses with verifiable contact information.`;
       // Clean up frontend-specific fields that aren't in the database schema
       const { bomId, selectedBomItems, selectedVendors, termsUrl, ceilingPrice, ...dbData } = auctionData;
       
+      // Remove undefined values to avoid Zod validation issues
+      Object.keys(dbData).forEach(key => {
+        if (dbData[key] === undefined || dbData[key] === null || dbData[key] === '') {
+          delete dbData[key];
+        }
+      });
+      
       // Map ceilingPrice to reservePrice for database
       if (ceilingPrice) {
         dbData.reservePrice = ceilingPrice;
@@ -1309,10 +1316,42 @@ Focus on established businesses with verifiable contact information.`;
       if (!auction) {
         return res.status(404).json({ message: "Auction not found" });
       }
-      res.json(auction);
+      
+      // Get auction bids for additional context
+      const bids = await storage.getAuctionBids(req.params.id);
+      
+      res.json({
+        ...auction,
+        bids: bids,
+        bidCount: bids.length,
+        lowestBid: bids.length > 0 ? Math.min(...bids.map(b => parseFloat(b.amount))) : null
+      });
     } catch (error) {
       console.error("Error fetching auction:", error);
       res.status(500).json({ message: "Failed to fetch auction" });
+    }
+  });
+
+  // Get auction bids
+  app.get('/api/auctions/:id/bids', isAuthenticated, async (req, res) => {
+    try {
+      const bids = await storage.getAuctionBids(req.params.id);
+      
+      // Include vendor information with bids
+      const bidsWithVendors = await Promise.all(
+        bids.map(async (bid) => {
+          const vendor = await storage.getVendor(bid.vendorId);
+          return {
+            ...bid,
+            vendorName: vendor?.companyName || 'Unknown Vendor'
+          };
+        })
+      );
+      
+      res.json(bidsWithVendors);
+    } catch (error) {
+      console.error("Error fetching auction bids:", error);
+      res.status(500).json({ message: "Failed to fetch auction bids" });
     }
   });
 

@@ -669,11 +669,11 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
   currentBid: z.union([z.string(), z.number()]).optional().transform((val) => 
     val ? String(val) : undefined
   ),
-  startTime: z.union([z.string(), z.date()]).transform((val) => 
-    typeof val === 'string' ? new Date(val) : val
+  startTime: z.union([z.string(), z.date()]).optional().transform((val) => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
-  endTime: z.union([z.string(), z.date()]).transform((val) => 
-    typeof val === 'string' ? new Date(val) : val
+  endTime: z.union([z.string(), z.date()]).optional().transform((val) => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
   bomId: z.string().nullable().optional(),
   selectedBomItems: z.array(z.string()).optional(),
