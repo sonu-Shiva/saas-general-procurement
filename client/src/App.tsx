@@ -62,7 +62,7 @@ function Router() {
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/vendors" component={VendorManagement} />
           <Route path="/products" component={ProductCatalogue} />
-          <Route path="/bom" component={BomManagement} />
+          <Route path="/boms" component={BomManagement} />
           <Route path="/rfx" component={RfxManagement} />
           <Route path="/auctions" component={AuctionCenter} />
           <Route path="/purchase-orders" component={PurchaseOrders} />
