@@ -660,7 +660,7 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  startingPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+  ceilingPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
     val ? String(val) : undefined
   ),
   reservePrice: z.union([z.string(), z.number()]).optional().transform((val) => 
@@ -669,12 +669,16 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
   currentBid: z.union([z.string(), z.number()]).optional().transform((val) => 
     val ? String(val) : undefined
   ),
-  startTime: z.union([z.string(), z.date()]).optional().transform((val) => 
-    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  startTime: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
   ),
-  endTime: z.union([z.string(), z.date()]).optional().transform((val) => 
-    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  endTime: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
   ),
+  bomId: z.string().nullable().optional(),
+  selectedBomItems: z.array(z.string()).optional(),
+  selectedVendors: z.array(z.string()).optional(),
+  termsUrl: z.string().optional(),
 });
 
 export const insertAuctionParticipantSchema = createInsertSchema(auctionParticipants).omit({

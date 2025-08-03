@@ -41,6 +41,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Object storage routes for Terms & Conditions upload
+  app.post('/api/objects/upload', isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  app.get('/objects/:objectPath(*)', async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error downloading object:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
   // Update user role - only for first-time setup or admin use
   app.patch('/api/auth/user/role', isAuthenticated, async (req: any, res) => {
     try {
@@ -1203,16 +1229,45 @@ Focus on established businesses with verifiable contact information.`;
       const userId = req.user.claims.sub;
       const auctionData = { ...req.body, createdBy: userId };
       
-      // Convert ISO string dates to Date objects for database
-      if (auctionData.startTime) {
-        auctionData.startTime = new Date(auctionData.startTime);
-      }
-      if (auctionData.endTime) {
-        auctionData.endTime = new Date(auctionData.endTime);
+      // Clean up frontend-specific fields that aren't in the database schema
+      const { bomId, selectedBomItems, selectedVendors, termsUrl, ceilingPrice, ...dbData } = auctionData;
+      
+      // Map ceilingPrice to reservePrice for database
+      if (ceilingPrice) {
+        dbData.reservePrice = ceilingPrice;
       }
       
-      const validatedData = insertAuctionSchema.parse(auctionData);
+      // Map termsUrl to termsAndConditionsPath
+      if (termsUrl) {
+        dbData.termsAndConditionsPath = termsUrl;
+        dbData.termsAndConditionsRequired = true;
+      }
+      
+      // Convert ISO string dates to Date objects for database
+      if (dbData.startTime) {
+        dbData.startTime = new Date(dbData.startTime);
+      }
+      if (dbData.endTime) {
+        dbData.endTime = new Date(dbData.endTime);
+      }
+      
+      const validatedData = insertAuctionSchema.parse(dbData);
       const auction = await storage.createAuction(validatedData);
+      
+      // If vendors were selected, invite them to the auction
+      if (selectedVendors && Array.isArray(selectedVendors)) {
+        for (const vendorId of selectedVendors) {
+          try {
+            await storage.createAuctionParticipant({
+              auctionId: auction.id,
+              vendorId: vendorId,
+            });
+          } catch (error) {
+            console.error(`Error inviting vendor ${vendorId}:`, error);
+          }
+        }
+      }
+      
       res.json(auction);
     } catch (error) {
       console.error("Error creating auction:", error);
