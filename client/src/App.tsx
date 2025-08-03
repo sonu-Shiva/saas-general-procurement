@@ -17,6 +17,7 @@ import VendorDiscovery from "@/pages/vendor-discovery";
 import VendorPortal from "@/pages/vendor-portal";
 import SimpleLogin from "@/pages/simple-login";
 import Sidebar from "@/components/layout/sidebar";
+import Header from "@/components/layout/header";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -51,9 +52,11 @@ function Router() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
+    <div className="h-screen bg-gray-100 dark:bg-gray-900">
+      <Header />
+      <div className="flex h-[calc(100vh-4rem)]">
+        <Sidebar />
+        <main className="flex-1 overflow-auto">
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
@@ -74,6 +77,7 @@ function Router() {
           </Route>
         </Switch>
       </main>
+      </div>
     </div>
   );
 }
