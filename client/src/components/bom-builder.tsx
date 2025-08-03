@@ -92,8 +92,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       const fetchBomItems = async () => {
         try {
           console.log("BOM Builder - Loading items for existing BOM:", existingBom.id);
-          const rawResponse = await apiRequest("GET", `/api/boms/${existingBom.id}`);
-          const response = await rawResponse.json();
+          const response = await apiRequest(`/api/boms/${existingBom.id}`);
           console.log("BOM Builder - API response:", response);
           console.log("BOM Builder - Items from response:", response?.items);
           if (response?.items) {
@@ -145,11 +144,15 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       
       console.log("BOM payload:", bomPayload);
       
-      const bomRawResponse = isEditing 
-        ? await apiRequest("PUT", `/api/boms/${existingBom.id}`, bomPayload)
-        : await apiRequest("POST", "/api/boms", bomPayload);
-      
-      const bomResponse = await bomRawResponse.json();
+      const bomResponse = isEditing 
+        ? await apiRequest(`/api/boms/${existingBom.id}`, {
+            method: "PUT",
+            body: JSON.stringify(bomPayload),
+          })
+        : await apiRequest("/api/boms", {
+            method: "POST",
+            body: JSON.stringify(bomPayload),
+          });
       console.log("BOM response:", bomResponse);
       
       const bomId = bomResponse ? bomResponse.id || existingBom?.id : null;
@@ -162,7 +165,9 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
         if (isEditing) {
           // Clear existing items first
           try {
-            await apiRequest("DELETE", `/api/boms/${bomId}/items`);
+            await apiRequest(`/api/boms/${bomId}/items`, {
+              method: "DELETE",
+            });
           } catch (error) {
             // Ignore if endpoint doesn't exist, we'll handle this by creating new items
             console.log("Could not clear existing items, adding new ones");
@@ -188,8 +193,10 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
           console.log("ProductId:", item.productId);
           
           try {
-            const itemRawResponse = await apiRequest("POST", `/api/boms/${bomId}/items`, itemPayload);
-            const itemResponse = await itemRawResponse.json();
+            const itemResponse = await apiRequest(`/api/boms/${bomId}/items`, {
+              method: "POST",
+              body: JSON.stringify(itemPayload),
+            });
             console.log("BOM item added successfully:", itemResponse);
           } catch (itemError) {
             console.error("Failed to add BOM item:", itemError);
