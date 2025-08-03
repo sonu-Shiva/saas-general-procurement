@@ -42,7 +42,9 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
     retry: false,
   });
 
-  const sortedBids = [...bids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
+  // Ensure bids is always an array
+  const bidsArray = Array.isArray(bids) ? bids : [];
+  const sortedBids = [...bidsArray].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
 
   return (
     <div className="space-y-4">
