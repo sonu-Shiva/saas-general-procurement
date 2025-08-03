@@ -25,7 +25,7 @@ const navigation = [
   { name: "RFx Invitations", href: "/rfx", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management" },
   { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center" },
   { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, buyerOnly: true },
-  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Order History", buyerLabel: "Purchase Orders" },
+  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders" },
   { name: "Analytics", href: "/analytics", icon: BarChart3, buyerOnly: true },
 ];
 

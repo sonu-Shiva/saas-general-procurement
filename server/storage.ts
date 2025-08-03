@@ -215,6 +215,11 @@ export class DatabaseStorage implements IStorage {
     return vendor;
   }
 
+  async getVendorByUserId(userId: string): Promise<Vendor | undefined> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.userId, userId));
+    return vendor;
+  }
+
   async getVendors(filters?: { status?: string; category?: string; search?: string }): Promise<Vendor[]> {
     let query = db.select().from(vendors);
     

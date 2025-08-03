@@ -1180,8 +1180,16 @@ Focus on established businesses with verifiable contact information.`;
       
       console.log("Vendor role confirmed, proceeding");
       
+      // First find the vendor associated with this user
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found for this user" });
+      }
+      
+      console.log("Found vendor:", vendor.companyName, "with ID:", vendor.id);
+      
       // Get RFx invitations for this vendor
-      const invitations = await storage.getRfxInvitationsByVendor(userId);
+      const invitations = await storage.getRfxInvitationsByVendor(vendor.id);
       res.json(invitations);
     } catch (error) {
       console.error("Error fetching vendor RFx invitations:", error);
