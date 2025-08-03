@@ -17,9 +17,7 @@ import PurchaseOrders from "./pages/purchase-orders";
 import Analytics from "./pages/analytics";
 import VendorPortal from "./pages/vendor-portal";
 import Landing from "./pages/landing";
-import SimpleLanding from "./pages/simple-landing";
 import NotFound from "./pages/not-found";
-import RoleSelector from "./pages/role-selector";
 
 export default function App() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -32,24 +30,14 @@ export default function App() {
     );
   }
 
-  // If not authenticated, show simple landing page
+  // If not authenticated, show landing page
   if (!isAuthenticated) {
     return (
       <TooltipProvider>
         <Switch>
           <Route path="/vendor-portal" component={VendorPortal} />
-          <Route component={() => <SimpleLanding onLogin={() => window.location.reload()} />} />
+          <Route component={Landing} />
         </Switch>
-        <Toaster />
-      </TooltipProvider>
-    );
-  }
-
-  // If authenticated but no role set, show role selector
-  if (isAuthenticated && (!user || !user.role)) {
-    return (
-      <TooltipProvider>
-        <RoleSelector onRoleSelected={() => window.location.reload()} />
         <Toaster />
       </TooltipProvider>
     );

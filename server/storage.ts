@@ -64,7 +64,6 @@ export interface IStorage {
   // User operations - mandatory for Replit Auth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  updateUserRole(userId: string, role: string): Promise<void>;
   
   // Organization operations
   createOrganization(org: InsertOrganization): Promise<Organization>;
@@ -183,13 +182,6 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
-  }
-
-  async updateUserRole(userId: string, role: string): Promise<void> {
-    await db
-      .update(users)
-      .set({ role, updatedAt: new Date() })
-      .where(eq(users.id, userId));
   }
 
   // Organization operations

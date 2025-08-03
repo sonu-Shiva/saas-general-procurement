@@ -69,11 +69,11 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && python manage.py migrate --fake-initial && python manage.py runserver 0.0.0.0:8000"
+args = "cd backend && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd client && npm run dev"
+args = "npm run dev"
 
 [agent]
 integrations = ["javascript_database==1.0.0", "javascript_websocket==1.0.0", "javascript_log_in_with_replit==1.0.0", "javascript_object_storage==1.0.0", "perplexity_v0==1.0.0"]

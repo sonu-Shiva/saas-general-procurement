@@ -38,15 +38,15 @@ export function getSession() {
   });
   
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || "sclen-procurement-persistent-sessions-v1",
     store: sessionStore,
-    resave: true, // Save session even if unmodified
-    saveUninitialized: true, // Create session immediately
-    rolling: false, // Don't extend session on each request
-    name: 'connect.sid',
+    resave: false, // Don't save session if unmodified
+    saveUninitialized: false, // Don't create session until something stored
+    rolling: true, // Extend session on each request
+    name: 'sclen.sid', // Use unique session name
     cookie: {
       httpOnly: true,
-      secure: false,
+      secure: false, // Allow HTTP in development
       maxAge: sessionTtl,
       sameSite: 'lax',
     },
@@ -72,19 +72,12 @@ async function upsertUser(
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    role: 'buyer_user', // Default role for new users
-    isActive: true,
   });
 }
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
-  
-  // Set up session BEFORE passport
-  const sessionMiddleware = getSession();
-  app.use(sessionMiddleware);
-  
-  // Initialize passport AFTER sessions
+  app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -114,30 +107,13 @@ export async function setupAuth(app: Express) {
     passport.use(strategy);
   }
 
-  passport.serializeUser((user: any, cb) => {
-    console.log("Serializing user:", user.claims?.sub);
-    cb(null, user.claims?.sub);
+  passport.serializeUser((user: Express.User, cb) => {
+    console.log("Serializing user:", user ? "exists" : "null");
+    cb(null, user);
   });
-  
-  passport.deserializeUser(async (id: string, cb) => {
-    console.log("Deserializing user:", id);
-    try {
-      // Get user from database and reconstruct session
-      const user = await storage.getUser(id);
-      if (user) {
-        // Create a minimal user object with the required structure
-        const sessionUser = {
-          claims: { sub: id },
-          expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 // 7 days from now
-        };
-        cb(null, sessionUser);
-      } else {
-        cb(null, false);
-      }
-    } catch (error) {
-      console.error("Error deserializing user:", error);
-      cb(error, null);
-    }
+  passport.deserializeUser((user: Express.User, cb) => {
+    console.log("Deserializing user:", user ? "exists" : "null");
+    cb(null, user);
   });
 
   app.get("/api/login", (req, res, next) => {
@@ -167,7 +143,7 @@ export async function setupAuth(app: Express) {
     console.log("Using callback strategy:", strategyName);
     
     passport.authenticate(strategyName, {
-      successRedirect: "/",
+      successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
   });
@@ -187,7 +163,17 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user) {
+  console.log("=== AUTH CHECK ===");
+  console.log("Session ID:", req.sessionID);
+  console.log("Session exists:", !!req.session);
+  console.log("Session passport:", (req.session as any)?.passport ? "exists" : "null");
+  console.log("Authenticated:", req.isAuthenticated());
+  console.log("User object:", user ? "exists" : "null");
+  console.log("User claims:", user?.claims ? "exists" : "null");
+  console.log("Expires at:", user?.expires_at);
+
+  if (!req.isAuthenticated() || !user?.expires_at) {
+    console.log("Not authenticated or no expiry");
     return res.status(401).json({ message: "Unauthorized" });
   }
 
