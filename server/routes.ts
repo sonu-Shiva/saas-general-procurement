@@ -2186,6 +2186,110 @@ Focus on established businesses with verifiable contact information.`;
 
   const httpServer = createServer(app);
 
+  // =============================
+  // VENDOR PORTAL ROUTES
+  // =============================
+
+  // Get vendor's RFx invitations
+  app.get('/api/vendor/rfx-invitations', isAuthenticated, isVendor, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get vendor profile
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      const invitations = await storage.getRfxInvitationsByVendor(vendor.id);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching vendor RFx invitations:", error);
+      res.status(500).json({ message: "Failed to fetch RFx invitations" });
+    }
+  });
+
+  // Get vendor's RFx responses
+  app.get('/api/vendor/rfx-responses', isAuthenticated, isVendor, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get vendor profile
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      const responses = await storage.getRfxResponsesByVendor(vendor.id);
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching vendor RFx responses:", error);
+      res.status(500).json({ message: "Failed to fetch RFx responses" });
+    }
+  });
+
+  // Submit RFx response
+  app.post('/api/vendor/rfx-responses', isAuthenticated, isVendor, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get vendor profile
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      const { rfxId, proposedPrice, deliveryTime, technicalSpecification, additionalNotes } = req.body;
+
+      // Validate RFx invitation exists
+      const invitation = await storage.getRfxInvitation(rfxId, vendor.id);
+      if (!invitation) {
+        return res.status(404).json({ message: "RFx invitation not found" });
+      }
+
+      if (invitation.status === 'responded') {
+        return res.status(400).json({ message: "You have already responded to this RFx" });
+      }
+
+      // Create RFx response
+      const response = await storage.createRfxResponse({
+        rfxId,
+        vendorId: vendor.id,
+        proposedPrice: proposedPrice.toString(),
+        deliveryTime,
+        technicalSpecification,
+        additionalNotes: additionalNotes || '',
+        status: 'submitted',
+      });
+
+      // Update invitation status
+      await storage.updateRfxInvitationStatus(rfxId, vendor.id, 'responded');
+
+      res.json(response);
+    } catch (error) {
+      console.error("Error submitting RFx response:", error);
+      res.status(500).json({ message: "Failed to submit RFx response" });
+    }
+  });
+
+  // Check vendor terms acceptance for specific entity
+  app.get('/api/terms/check', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { entityType, entityId } = req.query;
+
+      if (!entityType || !entityId) {
+        return res.status(400).json({ message: "entityType and entityId are required" });
+      }
+
+      const acceptance = await storage.getTermsAcceptance(userId, entityType as string, entityId as string);
+      res.json({ hasAccepted: !!acceptance });
+    } catch (error) {
+      console.error("Error checking terms acceptance:", error);
+      res.status(500).json({ message: "Failed to check terms acceptance" });
+    }
+  });
+
   // WebSocket server for real-time auction functionality
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   

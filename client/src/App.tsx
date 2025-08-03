@@ -15,6 +15,7 @@ import AuctionCenter from "@/pages/auction-center";
 import DirectProcurement from "@/pages/direct-procurement";
 import PurchaseOrders from "@/pages/purchase-orders";
 import Analytics from "@/pages/analytics";
+import VendorPortal from "@/pages/vendor-portal";
 
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/direct-procurement" component={DirectProcurement} />
       <Route path="/purchase-orders" component={PurchaseOrders} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/vendor-portal" component={VendorPortal} />
       <Route component={NotFound} />
     </Switch>
   );

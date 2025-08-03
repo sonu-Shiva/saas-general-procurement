@@ -72,6 +72,7 @@ export interface IStorage {
   // Vendor operations
   createVendor(vendor: InsertVendor): Promise<Vendor>;
   getVendor(id: string): Promise<Vendor | undefined>;
+  getVendorByUserId(userId: string): Promise<Vendor | undefined>;
   getVendors(filters?: { status?: string; category?: string; search?: string }): Promise<Vendor[]>;
   updateVendor(id: string, updates: Partial<InsertVendor>): Promise<Vendor>;
   deleteVendor(id: string): Promise<boolean>;
@@ -110,9 +111,13 @@ export interface IStorage {
   
   createRfxInvitation(invitation: InsertRfxInvitation): Promise<RfxInvitation>;
   getRfxInvitations(rfxId: string): Promise<RfxInvitation[]>;
+  getRfxInvitation(rfxId: string, vendorId: string): Promise<RfxInvitation | undefined>;
+  getRfxInvitationsByVendor(vendorId: string): Promise<any[]>;
+  updateRfxInvitationStatus(rfxId: string, vendorId: string, status: string): Promise<void>;
   
   createRfxResponse(response: InsertRfxResponse): Promise<RfxResponse>;
   getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]>;
+  getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]>;
   
   // Auction operations
   createAuction(auction: InsertAuction): Promise<Auction>;
@@ -153,6 +158,7 @@ export interface IStorage {
   // Terms & Conditions operations
   recordTermsAcceptance(acceptance: InsertTermsAcceptance): Promise<TermsAcceptance>;
   checkTermsAcceptance(vendorId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined>;
+  getTermsAcceptance(userId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined>;
   getTermsAcceptances(vendorId: string): Promise<TermsAcceptance[]>;
 }
 
@@ -242,6 +248,11 @@ export class DatabaseStorage implements IStorage {
   async deleteVendor(id: string): Promise<boolean> {
     const result = await db.delete(vendors).where(eq(vendors.id, id));
     return result.length > 0;
+  }
+
+  async getVendorByUserId(userId: string): Promise<Vendor | undefined> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.createdBy, userId));
+    return vendor;
   }
 
   // Product Category operations
@@ -503,6 +514,47 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(rfxInvitations).where(eq(rfxInvitations.rfxId, rfxId));
   }
 
+  async getRfxInvitation(rfxId: string, vendorId: string): Promise<RfxInvitation | undefined> {
+    const [invitation] = await db.select().from(rfxInvitations)
+      .where(and(eq(rfxInvitations.rfxId, rfxId), eq(rfxInvitations.vendorId, vendorId)));
+    return invitation;
+  }
+
+  async getRfxInvitationsByVendor(vendorId: string): Promise<any[]> {
+    const invitations = await db.select({
+      id: rfxInvitations.id,
+      rfxId: rfxInvitations.rfxId,
+      vendorId: rfxInvitations.vendorId,
+      status: rfxInvitations.status,
+      invitedAt: rfxInvitations.invitedAt,
+      respondedAt: rfxInvitations.respondedAt,
+      rfx: {
+        id: rfxEvents.id,
+        title: rfxEvents.title,
+        type: rfxEvents.type,
+        scope: rfxEvents.scope,
+        dueDate: rfxEvents.dueDate,
+        status: rfxEvents.status,
+        budget: rfxEvents.budget,
+        termsAndConditionsPath: rfxEvents.termsAndConditionsPath,
+        criteria: rfxEvents.criteria,
+        evaluationParameters: rfxEvents.evaluationParameters,
+      }
+    })
+    .from(rfxInvitations)
+    .innerJoin(rfxEvents, eq(rfxInvitations.rfxId, rfxEvents.id))
+    .where(eq(rfxInvitations.vendorId, vendorId))
+    .orderBy(desc(rfxInvitations.invitedAt));
+    
+    return invitations;
+  }
+
+  async updateRfxInvitationStatus(rfxId: string, vendorId: string, status: string): Promise<void> {
+    await db.update(rfxInvitations)
+      .set({ status, respondedAt: status === 'responded' ? new Date() : null })
+      .where(and(eq(rfxInvitations.rfxId, rfxId), eq(rfxInvitations.vendorId, vendorId)));
+  }
+
   async createRfxResponse(response: InsertRfxResponse): Promise<RfxResponse> {
     const [newResponse] = await db.insert(rfxResponses).values(response).returning();
     return newResponse;
@@ -523,6 +575,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(rfxResponses)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(rfxResponses.submittedAt));
+  }
+
+  async getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]> {
+    return await db
+      .select()
+      .from(rfxResponses)
+      .where(eq(rfxResponses.vendorId, vendorId))
       .orderBy(desc(rfxResponses.submittedAt));
   }
 
@@ -874,6 +934,20 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(termsAcceptance.vendorId, vendorId),
+          eq(termsAcceptance.entityType, entityType as any),
+          eq(termsAcceptance.entityId, entityId)
+        )
+      );
+    return acceptance;
+  }
+
+  async getTermsAcceptance(userId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined> {
+    const [acceptance] = await db
+      .select()
+      .from(termsAcceptance)
+      .where(
+        and(
+          eq(termsAcceptance.vendorId, userId),
           eq(termsAcceptance.entityType, entityType as any),
           eq(termsAcceptance.entityId, entityId)
         )
