@@ -19,7 +19,7 @@ export default function VendorManagement() {
   const queryClient = useQueryClient();
 
   // Restrict access to vendor users
-  if (user?.role === 'vendor') {
+  if ((user as any)?.role === 'vendor') {
     return (
       <div className="max-w-2xl mx-auto text-center p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
@@ -81,7 +81,9 @@ export default function VendorManagement() {
   // Delete vendor mutation
   const deleteVendorMutation = useMutation({
     mutationFn: async (vendorId: string) => {
-      return await apiRequest("DELETE", `/api/vendors/${vendorId}`);
+      return await apiRequest(`/api/vendors/${vendorId}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
@@ -103,8 +105,9 @@ export default function VendorManagement() {
   // Disengage vendor mutation (change status to inactive)
   const disengageVendorMutation = useMutation({
     mutationFn: async (vendorId: string) => {
-      return await apiRequest("PATCH", `/api/vendors/${vendorId}`, {
-        status: "inactive"
+      return await apiRequest(`/api/vendors/${vendorId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "inactive" }),
       });
     },
     onSuccess: () => {
@@ -127,8 +130,9 @@ export default function VendorManagement() {
   // Reactivate vendor mutation (mark as approved)
   const reactivateVendorMutation = useMutation({
     mutationFn: async (vendorId: string) => {
-      return await apiRequest("PATCH", `/api/vendors/${vendorId}`, {
-        status: "approved"
+      return await apiRequest(`/api/vendors/${vendorId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "approved" }),
       });
     },
     onSuccess: () => {

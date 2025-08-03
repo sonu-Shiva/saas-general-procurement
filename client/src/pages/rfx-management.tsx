@@ -313,7 +313,7 @@ export default function RfxManagement() {
                   key={rfx.id} 
                   rfx={rfx}
                   isVendor={isVendor}
-                  onViewDetails={(rfx) => {
+                  onViewDetails={(rfx: any) => {
                     setSelectedRfxForView(rfx);
                     setIsViewDialogOpen(true);
                   }}
