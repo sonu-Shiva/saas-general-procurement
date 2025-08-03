@@ -14,7 +14,7 @@ import PurchaseOrders from "@/pages/purchase-orders";
 import DirectProcurement from "@/pages/direct-procurement";
 import Analytics from "@/pages/analytics";
 import VendorDiscovery from "@/pages/vendor-discovery";
-import VendorPortal from "@/pages/vendor-portal";
+
 import SimpleLogin from "@/pages/simple-login";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -69,7 +69,6 @@ function Router() {
           <Route path="/direct-procurement" component={DirectProcurement} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/vendor-discovery" component={VendorDiscovery} />
-          <Route path="/vendor-portal" component={VendorPortal} />
           <Route>
             <div className="p-8 text-center">
               <h1 className="text-2xl font-bold">Page not found</h1>

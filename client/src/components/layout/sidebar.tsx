@@ -19,7 +19,6 @@ import {
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Vendor Management", href: "/vendors", icon: Users, buyerOnly: true },
-  { name: "Vendor Portal", href: "/vendor-portal", icon: MessageSquare, vendorOnly: true },
   { name: "Product Catalogue", href: "/products", icon: Package },
   { name: "BOM Management", href: "/boms", icon: Layers, buyerOnly: true },
   { name: "RFx Invitations", href: "/rfx", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management" },
