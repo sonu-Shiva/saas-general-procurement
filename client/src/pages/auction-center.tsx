@@ -42,6 +42,9 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
     retry: false,
   });
 
+  console.log('Frontend: Received bids data:', bids);
+  console.log('Frontend: First bid details:', bids[0]);
+
 
 
   if (isLoading) {
