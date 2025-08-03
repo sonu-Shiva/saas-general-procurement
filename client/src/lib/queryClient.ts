@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 
-// Use Django backend on port 8000
-const API_BASE_URL = "http://localhost:8000";
+// Use Express backend on port 5000 (not Django)
+const API_BASE_URL = "http://localhost:5000";
 
 async function fetchApi(url: string, options: RequestInit = {}) {
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
@@ -22,6 +22,11 @@ async function fetchApi(url: string, options: RequestInit = {}) {
   }
 
   return response.json();
+}
+
+// Export apiRequest for mutations
+export async function apiRequest(url: string, options: RequestInit = {}) {
+  return fetchApi(url, options);
 }
 
 export const queryClient = new QueryClient({

@@ -8,11 +8,11 @@ export function useAuth() {
   });
 
   const login = () => {
-    window.location.href = "/api/auth/login";
+    window.location.href = "/api/login";
   };
 
   const logout = () => {
-    window.location.href = "/api/auth/logout";
+    window.location.href = "/api/logout";
   };
 
   return {

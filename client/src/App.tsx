@@ -19,7 +19,7 @@ import VendorPortal from "./pages/vendor-portal";
 import Landing from "./pages/landing";
 import NotFound from "./pages/not-found";
 
-function App() {
+export default function App() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
