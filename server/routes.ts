@@ -1336,18 +1336,22 @@ Focus on established businesses with verifiable contact information.`;
   app.get('/api/auctions/:id/bids', isAuthenticated, async (req, res) => {
     try {
       const bids = await storage.getAuctionBids(req.params.id);
+      console.log(`DEBUG: Raw bids from DB for auction ${req.params.id}:`, bids);
       
       // Include vendor information with bids
       const bidsWithVendors = await Promise.all(
         bids.map(async (bid) => {
           const vendor = await storage.getVendor(bid.vendorId);
-          return {
+          const result = {
             ...bid,
             vendorName: vendor?.companyName || 'Unknown Vendor'
           };
+          console.log(`DEBUG: Bid with vendor info:`, result);
+          return result;
         })
       );
       
+      console.log(`DEBUG: Final bids response:`, bidsWithVendors);
       res.json(bidsWithVendors);
     } catch (error) {
       console.error("Error fetching auction bids:", error);
@@ -1592,25 +1596,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/auctions/:id/bids', isAuthenticated, async (req, res) => {
-    try {
-      const bids = await storage.getAuctionBids(req.params.id);
-      
-      // Get vendor details for each bid
-      const bidsWithVendors = await Promise.all(bids.map(async (bid: any) => {
-        const vendor = await storage.getVendor(bid.vendorId);
-        return {
-          ...bid,
-          vendorName: vendor?.companyName || 'Unknown Vendor'
-        };
-      }));
-      
-      res.json(bidsWithVendors);
-    } catch (error) {
-      console.error("Error fetching auction bids:", error);
-      res.status(500).json({ message: "Failed to fetch auction bids" });
-    }
-  });
+
 
   // Purchase Order routes
   app.post('/api/purchase-orders', isAuthenticated, async (req: any, res) => {

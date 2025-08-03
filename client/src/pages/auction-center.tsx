@@ -122,7 +122,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold">
-                      ₹{bid.amount ? Number(bid.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                      ₹{bid.amount ? Number(String(bid.amount)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                     </div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
