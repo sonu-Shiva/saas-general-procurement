@@ -40,7 +40,8 @@ export default function DashboardCards({ stats, isLoading }: DashboardCardsProps
     );
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (!amount && amount !== 0) return '₹0';
     if (amount >= 1000000) {
       return `₹${(amount / 1000000).toFixed(1)}M`;
     }

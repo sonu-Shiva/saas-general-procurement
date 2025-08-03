@@ -107,7 +107,7 @@ export default function Dashboard() {
             </div>
 
             {/* Dashboard Cards */}
-            <DashboardCards stats={dashboardStats} isLoading={statsLoading} />
+            <DashboardCards stats={dashboardStats} isLoading={statsLoading || !dashboardStats} />
 
             {/* Bento Grid Layout */}
             <div className="bento-grid mt-8">
