@@ -48,12 +48,23 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
 
   // Ensure bids is always an array and filter out invalid bids
   const bidsArray = Array.isArray(bids) ? bids : [];
-  const validBids = bidsArray.filter((bid: any) => 
-    bid && 
-    bid.amount && 
-    !isNaN(parseFloat(bid.amount)) && 
-    parseFloat(bid.amount) > 0
-  );
+  
+  // Debug: Log the raw bids data to understand structure
+  console.log('Raw bids data:', bidsArray);
+  
+  // More flexible validation for different bid data structures
+  const validBids = bidsArray.filter((bid: any) => {
+    if (!bid) return false;
+    
+    // Check if amount exists and is a valid number
+    const amount = bid.amount || bid.bidAmount || bid.price;
+    if (!amount) return false;
+    
+    const numericAmount = parseFloat(amount);
+    return !isNaN(numericAmount) && numericAmount > 0;
+  });
+
+  console.log('Valid bids after filtering:', validBids);
 
   if (validBids.length === 0) {
     return (
@@ -67,7 +78,11 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
     );
   }
 
-  const sortedBids = [...validBids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
+  const sortedBids = [...validBids].sort((a: any, b: any) => {
+    const amountA = parseFloat(a.amount || a.bidAmount || a.price);
+    const amountB = parseFloat(b.amount || b.bidAmount || b.price);
+    return amountA - amountB;
+  });
 
   const formatBidDateTime = (timestamp: string) => {
     try {
@@ -114,7 +129,7 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
+                    <div className="text-lg font-semibold">₹{parseFloat(bid.amount || bid.bidAmount || bid.price).toFixed(2)}</div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
                       index === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
