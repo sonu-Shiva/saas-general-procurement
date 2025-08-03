@@ -536,7 +536,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
               <SelectValue placeholder="Select BOM (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="none">None</SelectItem>
               {boms.map((bom: any) => (
                 <SelectItem key={bom.id} value={bom.id}>
                   {bom.name} ({bom.version})

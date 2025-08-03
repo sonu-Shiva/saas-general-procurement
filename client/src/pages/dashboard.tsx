@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import DashboardCards from "@/components/dashboard-cards";
 import AiChat from "@/components/ai-chat";
 
@@ -15,6 +16,7 @@ import {
 
 export default function Dashboard() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
 
   const { data: dashboardStats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -52,34 +54,48 @@ export default function Dashboard() {
           Procurement Dashboard
         </h1>
         <p className="text-muted-foreground">
-          Welcome back, {user?.firstName || "User"}! Here's your procurement overview.
+          Welcome back, {(user as any)?.firstName || "User"}! Here's your procurement overview.
         </p>
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-8">
-        <div className="flex flex-wrap gap-4">
-          <Button className="bg-primary hover:bg-primary/90">
-            <FileText className="w-4 h-4 mr-2" />
-            New RFx
-          </Button>
-          <Button className="bg-secondary hover:bg-secondary/90">
-            <Gavel className="w-4 h-4 mr-2" />
-            Create Auction
-          </Button>
-          <Button className="bg-accent hover:bg-accent/90">
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Direct PO
-          </Button>
-          <Button variant="outline">
-            <Users className="w-4 h-4 mr-2" />
-            AI Vendor Discovery
-          </Button>
+      {(user as any)?.role !== 'vendor' && (
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-4">
+            <Button 
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => setLocation('/rfx')}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              New RFx
+            </Button>
+            <Button 
+              className="bg-secondary hover:bg-secondary/90"
+              onClick={() => setLocation('/auctions')}
+            >
+              <Gavel className="w-4 h-4 mr-2" />
+              Create Auction
+            </Button>
+            <Button 
+              className="bg-accent hover:bg-accent/90"
+              onClick={() => setLocation('/direct-procurement')}
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Direct PO
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setLocation('/vendor-discovery')}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              AI Vendor Discovery
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Dashboard Cards */}
-      <DashboardCards stats={dashboardStats} isLoading={statsLoading || !dashboardStats} />
+      <DashboardCards stats={dashboardStats as any} isLoading={statsLoading || !dashboardStats} />
 
       {/* Recent RFx Status Table */}
       <Card className="mt-8">
