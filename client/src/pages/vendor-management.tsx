@@ -3,8 +3,6 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
 import AddVendorForm from "@/components/add-vendor-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,22 +21,14 @@ export default function VendorManagement() {
   // Restrict access to vendor users
   if (user?.role === 'vendor') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-8">
-            <div className="max-w-2xl mx-auto text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
-              <p className="text-gray-600 mb-6">
-                Vendor Management is not available for vendor users. As a vendor, you can access your product catalogue and participate in RFx and auctions.
-              </p>
-              <Button onClick={() => window.history.back()}>
-                Go Back
-              </Button>
-            </div>
-          </main>
-        </div>
+      <div className="max-w-2xl mx-auto text-center p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
+        <p className="text-gray-600 mb-6">
+          Vendor Management is not available for vendor users. As a vendor, you can access your product catalogue and participate in RFx and auctions.
+        </p>
+        <Button onClick={() => window.history.back()}>
+          Go Back
+        </Button>
       </div>
     );
   }
@@ -159,12 +149,8 @@ export default function VendorManagement() {
   });
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background p-6">
-          <div className="max-w-7xl mx-auto">
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -353,8 +339,6 @@ export default function VendorManagement() {
                 ))}
               </div>
             )}
-          </div>
-        </main>
       </div>
 
       {/* Add Vendor Dialog */}

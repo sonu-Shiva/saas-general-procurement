@@ -4,8 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,12 +274,8 @@ export default function DirectProcurement() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
+    <>
+    <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Direct Procurement</h1>
@@ -822,8 +816,6 @@ export default function DirectProcurement() {
               </div>
             )}
           </div>
-        </main>
-      </div>
 
       {/* View Order Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
@@ -943,6 +935,6 @@ export default function DirectProcurement() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

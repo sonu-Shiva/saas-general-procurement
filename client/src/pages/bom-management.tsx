@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
 import BomBuilder from "@/components/bom-builder";
 import BomView from "@/components/bom-view";
 import { Button } from "@/components/ui/button";
@@ -61,22 +59,14 @@ export default function BomManagement() {
   // Restrict access to vendor users
   if (user?.role === 'vendor') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-8">
-            <div className="max-w-2xl mx-auto text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
-              <p className="text-gray-600 mb-6">
-                BOM Management is not available for vendor users. As a vendor, you can access your product catalogue and participate in RFx and auctions.
-              </p>
-              <Button onClick={() => window.history.back()}>
-                Go Back
-              </Button>
-            </div>
-          </main>
-        </div>
+      <div className="max-w-2xl mx-auto text-center p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
+        <p className="text-gray-600 mb-6">
+          BOM Management is not available for vendor users. As a vendor, you can access your product catalogue and participate in RFx and auctions.
+        </p>
+        <Button onClick={() => window.history.back()}>
+          Go Back
+        </Button>
       </div>
     );
   }
@@ -237,12 +227,8 @@ export default function BomManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 py-8">
+    <>
+    <div className="max-w-7xl mx-auto px-6 py-8">
             {/* Page Header */}
             <div className="flex justify-between items-center mb-8">
               <div>
@@ -619,8 +605,6 @@ export default function BomManagement() {
                 </CardContent>
               </Card>
             )}
-          </div>
-        </main>
       </div>
 
       {/* Copy BOM Dialog */}
@@ -684,6 +668,6 @@ export default function BomManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
