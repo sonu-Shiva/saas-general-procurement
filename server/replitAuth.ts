@@ -255,3 +255,25 @@ export const isBuyer: RequestHandler = async (req: any, res, next) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const isSourcingManager: RequestHandler = async (req: any, res, next) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Import storage here to avoid circular dependencies
+    const { storage } = await import('./storage');
+    const user = await storage.getUser(userId);
+    
+    if (!user || user.role !== 'sourcing_manager') {
+      return res.status(403).json({ message: "Access denied. Sourcing Manager role required." });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Error checking sourcing manager role:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

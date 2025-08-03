@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { nanoid } from "nanoid";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, isVendor, isBuyer } from "./replitAuth";
+import { setupAuth, isAuthenticated, isVendor, isBuyer, isSourcingManager } from "./replitAuth";
 import {
   insertVendorSchema,
   insertProductSchema,
@@ -1478,15 +1478,9 @@ Focus on established businesses with verifiable contact information.`;
   });
 
   // PO Approval routes
-  app.patch('/api/purchase-orders/:id/approve', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/purchase-orders/:id/approve', isAuthenticated, isSourcingManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== 'sourcing_manager') {
-        return res.status(403).json({ message: "Only Sourcing Managers can approve purchase orders" });
-      }
-
       const { comments } = req.body;
       const po = await storage.updatePurchaseOrder(req.params.id, {
         status: 'approved',
@@ -1501,16 +1495,11 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.patch('/api/purchase-orders/:id/reject', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/purchase-orders/:id/reject', isAuthenticated, isSourcingManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== 'sourcing_manager') {
-        return res.status(403).json({ message: "Only Sourcing Managers can reject purchase orders" });
-      }
-
       const { comments } = req.body;
+      
       if (!comments || comments.trim() === '') {
         return res.status(400).json({ message: "Comments are required for rejection" });
       }
@@ -2014,89 +2003,12 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  // PO Approval routes
-  app.patch('/api/purchase-orders/:id/approve', isAuthenticated, async (req: any, res) => {
+
+
+  app.patch('/api/purchase-orders/:id/issue', isAuthenticated, isSourcingManager, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const poId = req.params.id;
-      const { comments } = req.body;
-
-      // Check if user is sourcing manager
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'sourcing_manager') {
-        return res.status(403).json({ message: "Only Sourcing Managers can approve POs" });
-      }
-
-      // Get PO and verify it's pending approval
-      const po = await storage.getPurchaseOrder(poId);
-      if (!po) {
-        return res.status(404).json({ message: "Purchase Order not found" });
-      }
-
-      if (po.status !== 'pending_approval') {
-        return res.status(400).json({ message: "PO is not in pending approval status" });
-      }
-
-      // Approve the PO
-      const updatedPO = await storage.updatePurchaseOrder(poId, {
-        status: 'approved',
-        approvedBy: userId,
-        approvedAt: new Date(),
-        approvalComments: comments || 'Approved by Sourcing Manager'
-      });
-
-      res.json(updatedPO);
-    } catch (error) {
-      console.error("Error approving PO:", error);
-      res.status(500).json({ message: "Failed to approve purchase order" });
-    }
-  });
-
-  app.patch('/api/purchase-orders/:id/reject', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const poId = req.params.id;
-      const { comments } = req.body;
-
-      // Check if user is sourcing manager
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'sourcing_manager') {
-        return res.status(403).json({ message: "Only Sourcing Managers can reject POs" });
-      }
-
-      // Get PO and verify it's pending approval
-      const po = await storage.getPurchaseOrder(poId);
-      if (!po) {
-        return res.status(404).json({ message: "Purchase Order not found" });
-      }
-
-      if (po.status !== 'pending_approval') {
-        return res.status(400).json({ message: "PO is not in pending approval status" });
-      }
-
-      // Reject the PO (set back to draft for revision)
-      const updatedPO = await storage.updatePurchaseOrder(poId, {
-        status: 'draft',
-        approvalComments: comments || 'Rejected by Sourcing Manager - requires revision'
-      });
-
-      res.json(updatedPO);
-    } catch (error) {
-      console.error("Error rejecting PO:", error);
-      res.status(500).json({ message: "Failed to reject purchase order" });
-    }
-  });
-
-  app.patch('/api/purchase-orders/:id/issue', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const poId = req.params.id;
-
-      // Check if user is sourcing manager
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'sourcing_manager') {
-        return res.status(403).json({ message: "Only Sourcing Managers can issue POs" });
-      }
 
       // Get PO and verify it's approved
       const po = await storage.getPurchaseOrder(poId);
