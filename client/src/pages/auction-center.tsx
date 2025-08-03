@@ -35,12 +35,15 @@ import {
   ShoppingCart
 } from "lucide-react";
 
-// Auction Results Component
-function AuctionResults({ auctionId }: { auctionId: string }) {
+// Auction Results Component  
+function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreatePO?: (auction: any) => void }) {
   const { data: bids = [], isLoading } = useQuery({
     queryKey: ["/api/auctions", auctionId, "bids"],
     retry: false,
   });
+
+  console.log('AuctionResults - auctionId:', auctionId);
+  console.log('AuctionResults - bids:', bids);
 
   if (isLoading) {
     return <div className="text-center py-4">Loading results...</div>;
@@ -120,7 +123,7 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold">
-                      ₹{bid.amount ? Number(bid.amount).toFixed(2) : '0.00'}
+                      ₹{bid.amount ? parseFloat(bid.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
                     </div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
@@ -136,6 +139,19 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
             </Card>
           ))}
         </div>
+        
+        {/* Create PO Button for completed auctions */}
+        {sortedBids.length > 0 && onCreatePO && (
+          <div className="text-center mt-6 pt-4 border-t">
+            <Button 
+              onClick={() => onCreatePO({ id: auctionId, winningBid: sortedBids[0] })}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Create Purchase Order
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -542,7 +558,7 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
                 <DialogHeader>
                   <DialogTitle>Auction Results - {auction.name}</DialogTitle>
                 </DialogHeader>
-                <AuctionResults auctionId={auction.id} />
+                <AuctionResults auctionId={auction.id} onCreatePO={onCreatePO} />
               </DialogContent>
             </Dialog>
           )}
