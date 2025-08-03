@@ -2357,7 +2357,7 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(404).json({ message: "Vendor profile not found" });
       }
 
-      const { rfxId, proposedPrice, deliveryTime, technicalSpecification, additionalNotes } = req.body;
+      const { rfxId, proposedPrice, deliveryTime, technicalSpecification, additionalNotes, quotedPrice, deliveryTerms, paymentTerms, leadTime, response: responseText, attachments } = req.body;
 
       // Validate RFx invitation exists
       const invitation = await storage.getRfxInvitation(rfxId, vendor.id);
@@ -2369,15 +2369,16 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(400).json({ message: "You have already responded to this RFx" });
       }
 
-      // Create RFx response
+      // Create RFx response using the schema-compatible format
       const response = await storage.createRfxResponse({
         rfxId,
         vendorId: vendor.id,
-        proposedPrice: proposedPrice.toString(),
-        deliveryTime,
-        technicalSpecification,
-        additionalNotes: additionalNotes || '',
-        status: 'submitted',
+        response: responseText || technicalSpecification || '',
+        quotedPrice: (quotedPrice || proposedPrice)?.toString(),
+        deliveryTerms: deliveryTerms || additionalNotes || '',
+        paymentTerms: paymentTerms || '',
+        leadTime: leadTime || deliveryTime,
+        attachments: attachments || [],
       });
 
       // Update invitation status

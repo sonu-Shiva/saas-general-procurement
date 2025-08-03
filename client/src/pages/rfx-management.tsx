@@ -10,6 +10,7 @@ import EnhancedRfxForm from "@/components/enhanced-rfx-form";
 import ConvertRfxForm from "@/components/convert-rfx-form";
 import { CreatePOFromRfxDialog } from "@/components/CreatePOFromRfxDialog";
 import { TermsUploader } from "@/components/TermsUploader";
+import { RfxResponseForm } from "@/components/rfx-response-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +48,8 @@ export default function RfxManagement() {
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [convertSourceRfx, setConvertSourceRfx] = useState<any>(null);
   const [isPODialogOpen, setIsPODialogOpen] = useState(false);
+  const [selectedRfxForResponse, setSelectedRfxForResponse] = useState<any>(null);
+  const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
   const [selectedRfxForPO, setSelectedRfxForPO] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedRfxForView, setSelectedRfxForView] = useState<any>(null);
@@ -169,11 +172,8 @@ export default function RfxManagement() {
   };
 
   const handleRespondToRfx = (rfx: any) => {
-    // TODO: Open RFx response dialog/form for vendors
-    toast({
-      title: "RFx Response",
-      description: "RFx response functionality will be implemented in the next phase.",
-    });
+    setSelectedRfxForResponse(rfx);
+    setIsResponseDialogOpen(true);
   };
   
   return (
@@ -746,6 +746,28 @@ export default function RfxManagement() {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* RFx Response Dialog for Vendors */}
+      <Dialog open={isResponseDialogOpen} onOpenChange={setIsResponseDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Submit RFx Response</DialogTitle>
+          </DialogHeader>
+          {selectedRfxForResponse && (
+            <RfxResponseForm
+              rfx={selectedRfxForResponse}
+              onClose={() => setIsResponseDialogOpen(false)}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/vendor/rfx-invitations"] });
+                toast({
+                  title: "Response Submitted",
+                  description: "Your RFx response has been submitted successfully.",
+                });
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>
