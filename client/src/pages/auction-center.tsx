@@ -600,7 +600,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                 className="rounded"
               />
               <Label htmlFor={`vendor-${vendor.id}`} className="text-sm">
-                {vendor.name}
+                {vendor.companyName}
               </Label>
             </div>
           ))}
