@@ -79,3 +79,132 @@ class RFxResponseViewSet(viewsets.ModelViewSet):
         if self.request.user.role == 'vendor':
             return RFxResponse.objects.filter(vendor__user=self.request.user)
         return RFxResponse.objects.all()
+@action(detail=True, methods=['post'])
+def create_next_stage(self, request, pk=None):
+    """Create next stage RFx (RFI -> RFP -> RFQ)"""
+    parent_rfx = self.get_object()
+    
+    if parent_rfx.created_by != request.user:
+        return Response(
+            {'message': 'You can only create next stage for your own RFx'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Determine next type
+    if parent_rfx.type == 'rfi':
+        next_type = 'rfp'
+    elif parent_rfx.type == 'rfp':
+        next_type = 'rfq'
+    else:
+        return Response(
+            {'message': 'RFQ is the final stage in the workflow'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Create next stage RFx
+    next_rfx = RFxEvent.objects.create(
+        title=f"{next_type.upper()} - {parent_rfx.title}",
+        reference_no=f"{next_type.upper()}-{int(time.time())}",
+        type=next_type,
+        scope=parent_rfx.scope,
+        criteria=parent_rfx.criteria,
+        bom=parent_rfx.bom,
+        contact_person=parent_rfx.contact_person,
+        budget=parent_rfx.budget,
+        parent_rfx=parent_rfx,
+        created_by=request.user,
+        status='draft'
+    )
+    
+    # Copy vendor invitations
+    for invitation in parent_rfx.rfxinvitation_set.all():
+        RFxInvitation.objects.create(
+            rfx=next_rfx,
+            vendor=invitation.vendor,
+            status='invited'
+        )
+    
+    serializer = self.get_serializer(next_rfx)
+    return Response(serializer.data)
+
+@action(detail=True, methods=['patch'])
+def update_status(self, request, pk=None):
+    """Update RFx status"""
+    rfx = self.get_object()
+    status_value = request.data.get('status')
+    
+    if rfx.created_by != request.user:
+        return Response(
+            {'message': 'You can only update status of your own RFx'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    if status_value not in ['draft', 'active', 'closed', 'cancelled']:
+        return Response(
+            {'message': 'Invalid status'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    rfx.status = status_value
+    rfx.save()
+    
+    serializer = self.get_serializer(rfx)
+    return Response(serializer.data)
+
+@action(detail=True, methods=['post'])
+def create_po(self, request, pk=None):
+    """Create Purchase Order from RFx"""
+    from procurement.apps.purchase_orders.models import PurchaseOrder, POLineItem
+    from procurement.apps.purchase_orders.serializers import PurchaseOrderSerializer
+    
+    rfx = self.get_object()
+    vendor_id = request.data.get('vendor_id')
+    po_items = request.data.get('po_items', [])
+    delivery_date = request.data.get('delivery_date')
+    payment_terms = request.data.get('payment_terms', 'Net 30')
+    notes = request.data.get('notes', '')
+    priority = request.data.get('priority', 'medium')
+    total_amount = request.data.get('total_amount', '0')
+    
+    if rfx.created_by != request.user:
+        return Response(
+            {'message': 'You can only create POs for your own RFx'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    if not po_items:
+        return Response(
+            {'message': 'At least one PO item is required'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Generate PO number
+    po_number = f"PO-{int(time.time())}-{uuid.uuid4().hex[:5].upper()}"
+    
+    # Create Purchase Order
+    purchase_order = PurchaseOrder.objects.create(
+        po_number=po_number,
+        vendor_id=vendor_id,
+        rfx=rfx,
+        total_amount=total_amount,
+        status='pending_approval',
+        priority=priority,
+        delivery_date=delivery_date,
+        payment_terms=payment_terms,
+        terms_and_conditions=notes or f"Purchase Order created from RFx: {rfx.title}",
+        created_by=request.user
+    )
+    
+    # Create line items
+    for item in po_items:
+        POLineItem.objects.create(
+            po=purchase_order,
+            item_name=item.get('item_name'),
+            quantity=item.get('quantity'),
+            unit_price=item.get('unit_price'),
+            total_price=item.get('total_price'),
+            specifications=item.get('specifications', '')
+        )
+    
+    serializer = PurchaseOrderSerializer(purchase_order)
+    return Response(serializer.data)

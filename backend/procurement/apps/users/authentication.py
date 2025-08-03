@@ -66,3 +66,32 @@ def dashboard_stats(request):
         'completedPOs': 0,
         'recentActivity': []
     })
+def dashboard_stats(request):
+    """Get dashboard statistics for current user"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'message': 'Authentication required'}, status=401)
+    
+    try:
+        # Basic stats - implement based on your needs
+        stats = {
+            'total_vendors': 0,
+            'active_rfx': 0,
+            'pending_approvals': 0,
+            'completed_auctions': 0
+        }
+        
+        # Get counts based on user role
+        if request.user.role in ['buyer_admin', 'buyer_user', 'sourcing_manager']:
+            from procurement.apps.vendors.models import Vendor
+            from procurement.apps.rfx.models import RFxEvent
+            from procurement.apps.purchase_orders.models import PurchaseOrder
+            from procurement.apps.auctions.models import Auction
+            
+            stats['total_vendors'] = Vendor.objects.count()
+            stats['active_rfx'] = RFxEvent.objects.filter(status='active').count()
+            stats['pending_approvals'] = PurchaseOrder.objects.filter(status='pending_approval').count()
+            stats['completed_auctions'] = Auction.objects.filter(status='completed').count()
+        
+        return JsonResponse(stats)
+    except Exception as e:
+        return JsonResponse({'message': 'Failed to fetch dashboard stats'}, status=500)

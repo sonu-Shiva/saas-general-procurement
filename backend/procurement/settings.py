@@ -45,6 +45,7 @@ LOCAL_APPS = [
     'procurement.apps.purchase_orders',
     'procurement.apps.approvals',
     'procurement.apps.notifications',
+    'procurement.apps.direct_procurement',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
