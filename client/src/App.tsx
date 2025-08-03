@@ -17,6 +17,7 @@ import PurchaseOrders from "./pages/purchase-orders";
 import Analytics from "./pages/analytics";
 import VendorPortal from "./pages/vendor-portal";
 import Landing from "./pages/landing";
+import SimpleLanding from "./pages/simple-landing";
 import NotFound from "./pages/not-found";
 import RoleSelector from "./pages/role-selector";
 
@@ -31,13 +32,13 @@ export default function App() {
     );
   }
 
-  // If not authenticated, show landing page
+  // If not authenticated, show simple landing page
   if (!isAuthenticated) {
     return (
       <TooltipProvider>
         <Switch>
           <Route path="/vendor-portal" component={VendorPortal} />
-          <Route component={Landing} />
+          <Route component={() => <SimpleLanding onLogin={() => window.location.reload()} />} />
         </Switch>
         <Toaster />
       </TooltipProvider>

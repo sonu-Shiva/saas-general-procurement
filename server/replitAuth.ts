@@ -115,13 +115,29 @@ export async function setupAuth(app: Express) {
   }
 
   passport.serializeUser((user: any, cb) => {
-    console.log("Serializing user:", user ? JSON.stringify(user.claims?.sub) : "null");
-    cb(null, user);
+    console.log("Serializing user:", user.claims?.sub);
+    cb(null, user.claims?.sub);
   });
   
-  passport.deserializeUser((user: any, cb) => {
-    console.log("Deserializing user:", user ? JSON.stringify(user.claims?.sub) : "null");
-    cb(null, user);
+  passport.deserializeUser(async (id: string, cb) => {
+    console.log("Deserializing user:", id);
+    try {
+      // Get user from database and reconstruct session
+      const user = await storage.getUser(id);
+      if (user) {
+        // Create a minimal user object with the required structure
+        const sessionUser = {
+          claims: { sub: id },
+          expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 // 7 days from now
+        };
+        cb(null, sessionUser);
+      } else {
+        cb(null, false);
+      }
+    } catch (error) {
+      console.error("Error deserializing user:", error);
+      cb(error, null);
+    }
   });
 
   app.get("/api/login", (req, res, next) => {

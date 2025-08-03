@@ -29,12 +29,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Simple auth endpoint for testing
+  app.post('/api/auth/simple-login', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const { role, email, name } = req.body;
+      
+      if (!role || !email || !name) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Create or get user
+      const userId = `simple_${email.replace('@', '_').replace('.', '_')}`;
+      
+      let user = await storage.getUser(userId);
+      if (!user) {
+        await storage.upsertUser({
+          id: userId,
+          email,
+          firstName: name.split(' ')[0],
+          lastName: name.split(' ').slice(1).join(' ') || '',
+          role,
+          isActive: true,
+        });
+        user = await storage.getUser(userId);
+      } else {
+        await storage.updateUserRole(userId, role);
+        user = await storage.getUser(userId);
+      }
+
+      // Set session
+      (req.session as any).userId = userId;
+      (req.session as any).authenticated = true;
+      
       res.json(user);
+    } catch (error) {
+      console.error("Error in simple login:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Get current user with simple auth
+  app.get('/api/auth/user', async (req: any, res) => {
+    try {
+      // Check simple auth first
+      const sessionUserId = (req.session as any)?.userId;
+      const sessionAuthenticated = (req.session as any)?.authenticated;
+      
+      if (sessionUserId && sessionAuthenticated) {
+        const user = await storage.getUser(sessionUserId);
+        if (user) {
+          return res.json(user);
+        }
+      }
+
+      // Fallback to replit auth
+      if (req.isAuthenticated() && req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        return res.json(user);
+      }
+
+      res.status(401).json({ message: "Unauthorized" });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
