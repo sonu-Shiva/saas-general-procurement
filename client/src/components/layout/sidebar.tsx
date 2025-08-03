@@ -52,18 +52,18 @@ export default function Sidebar() {
             .map((item) => {
             const isActive = location === item.href;
             return (
-              <Link key={item.name} href={item.href}>
-                <a
-                  className={cn(
-                    "sidebar-nav",
-                    isActive
-                      ? "text-primary bg-primary/10 border-r-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.name}</span>
-                </a>
+              <Link 
+                key={item.name} 
+                href={item.href}
+                className={cn(
+                  "sidebar-nav",
+                  isActive
+                    ? "text-primary bg-primary/10 border-r-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="font-medium">{item.name}</span>
               </Link>
             );
           })}
