@@ -37,40 +37,76 @@ import {
 
 // Auction Results Component
 function AuctionResults({ auctionId }: { auctionId: string }) {
-  const { data: bids = [] } = useQuery({
+  const { data: bids = [], isLoading } = useQuery({
     queryKey: ["/api/auctions", auctionId, "bids"],
     retry: false,
   });
+
+  if (isLoading) {
+    return <div className="text-center py-4">Loading results...</div>;
+  }
 
   // Ensure bids is always an array
   const bidsArray = Array.isArray(bids) ? bids : [];
   const sortedBids = [...bidsArray].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
 
+  const formatBidDateTime = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="text-center">
         <h3 className="text-lg font-semibold mb-2">Final Rankings</h3>
+        <p className="text-muted-foreground mb-4">Ranked by bid amount (lowest first)</p>
         {sortedBids.length === 0 ? (
           <p className="text-muted-foreground">No bids placed in this auction</p>
         ) : (
           <div className="space-y-2">
             {sortedBids.map((bid: any, index: number) => (
-              <div key={bid.id} className={`p-3 rounded border ${index === 0 ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200'}`}>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                      index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-400' : 'bg-gray-300'
-                    }`}>
-                      {index + 1}
+              <Card key={bid.id} className={index === 0 ? 'border-green-500 bg-green-50' : ''}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        index === 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="font-medium">{bid.vendor?.companyName || bid.vendorName || 'Unknown Vendor'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatBidDateTime(bid.timestamp || bid.createdAt)}
+                        </div>
+                      </div>
                     </div>
-                    <span className="font-medium">{bid.vendorName}</span>
+                    <div className="text-right">
+                      <div className="text-lg font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
+                      {index === 0 && (
+                        <Badge className="bg-green-100 text-green-700 border-green-200">
+                          L1 Bidder
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold">₹{bid.amount}</div>
-                    <div className="text-sm text-muted-foreground">{new Date(bid.createdAt).toLocaleTimeString()}</div>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
@@ -949,6 +985,26 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const formatBidDateTime = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Auction Summary */}
@@ -1005,7 +1061,7 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
                       <div>
                         <div className="font-medium">{bid.vendor?.companyName || 'Vendor'}</div>
                         <div className="text-sm text-muted-foreground">
-                          {new Date(bid.timestamp).toLocaleTimeString()}
+                          {formatBidDateTime(bid.timestamp || bid.createdAt)}
                         </div>
                       </div>
                     </div>
