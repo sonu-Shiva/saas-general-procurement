@@ -98,11 +98,14 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
-                      {index === 0 && (
-                        <Badge className="bg-green-100 text-green-700 border-green-200">
-                          L1 Bidder
-                        </Badge>
-                      )}
+                      <Badge className={`${
+                        index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
+                        index === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                        index === 2 ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                        'bg-gray-100 text-gray-700 border-gray-200'
+                      }`}>
+                        L{index + 1} Bidder
+                      </Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -1050,29 +1053,50 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
                 No bids placed yet
               </div>
             ) : (
-              bids
-                .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                .map((bid: any, index: number) => (
-                  <div key={bid.id} className="flex justify-between items-center p-3 bg-muted/30 rounded">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
-                        {bid.vendor?.companyName?.[0] || 'V'}
+              (() => {
+                // Sort bids by amount (lowest first for ranking)
+                const sortedByAmount = [...bids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
+                
+                // Sort bids by timestamp (latest first for display)
+                const sortedByTime = [...bids].sort((a: any, b: any) => new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime());
+                
+                return sortedByTime.map((bid: any, index: number) => {
+                  // Find the ranking based on amount
+                  const rankIndex = sortedByAmount.findIndex(b => b.id === bid.id);
+                  
+                  return (
+                    <div key={bid.id} className="flex justify-between items-center p-3 bg-muted/30 rounded">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
+                          {bid.vendor?.companyName?.[0] || 'V'}
+                        </div>
+                        <div>
+                          <div className="font-medium">{bid.vendor?.companyName || 'Vendor'}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatBidDateTime(bid.timestamp || bid.createdAt)}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium">{bid.vendor?.companyName || 'Vendor'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatBidDateTime(bid.timestamp || bid.createdAt)}
+                      <div className="text-right">
+                        <div className="font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
+                        <div className="flex items-center space-x-2">
+                          {index === 0 && (
+                            <Badge variant="secondary" className="text-xs">Latest</Badge>
+                          )}
+                          <Badge className={`text-xs ${
+                            rankIndex === 0 ? 'bg-green-100 text-green-700 border-green-200' :
+                            rankIndex === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                            rankIndex === 2 ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                            'bg-gray-100 text-gray-700 border-gray-200'
+                          }`}>
+                            L{rankIndex + 1}
+                          </Badge>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
-                      {index === 0 && (
-                        <Badge variant="secondary" className="text-xs">Latest</Badge>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  );
+                });
+              })()
             )}
           </div>
         </CardContent>
@@ -1100,6 +1124,52 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
   const [currentBid, setCurrentBid] = useState('');
   const [bids, setBids] = useState<any[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch current bids
+  const { data: auctionBids = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "bids"],
+    queryFn: () => apiRequest(`/api/auctions/${auction.id}/bids`),
+    refetchInterval: 2000, // Refresh every 2 seconds
+    retry: false,
+  });
+
+  useEffect(() => {
+    setBids(auctionBids);
+  }, [auctionBids]);
+
+  const formatBidDateTime = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  // Get current user's ranking
+  const getCurrentUserRanking = () => {
+    const sortedBids = [...bids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
+    const userBids = sortedBids.filter((bid: any) => bid.vendorId === (user as any)?.id);
+    if (userBids.length === 0) return null;
+    
+    const bestUserBid = userBids[0];
+    const rankIndex = sortedBids.findIndex(bid => bid.id === bestUserBid.id);
+    return rankIndex + 1;
+  };
+
+  const userRanking = getCurrentUserRanking();
 
   const submitBid = async () => {
     if (!currentBid) return;
@@ -1137,11 +1207,11 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">₹{auction.currentBid || '0'}</div>
+              <div className="text-2xl font-bold text-green-600">₹{bids.length > 0 ? Math.min(...bids.map(b => parseFloat(b.amount))).toFixed(2) : '0'}</div>
               <div className="text-sm text-muted-foreground">Current Best Bid</div>
             </div>
           </CardContent>
@@ -1162,6 +1232,28 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
             </div>
           </CardContent>
         </Card>
+        <Card className={userRanking ? (userRanking <= 3 ? 'border-green-200 bg-green-50' : 'border-gray-200') : 'border-gray-200'}>
+          <CardContent className="p-4">
+            <div className="text-center">
+              {userRanking ? (
+                <>
+                  <div className={`text-2xl font-bold ${
+                    userRanking === 1 ? 'text-green-600' :
+                    userRanking === 2 ? 'text-blue-600' :
+                    userRanking === 3 ? 'text-orange-600' :
+                    'text-gray-600'
+                  }`}>L{userRanking}</div>
+                  <div className="text-sm text-muted-foreground">Your Ranking</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-gray-400">-</div>
+                  <div className="text-sm text-muted-foreground">No Bids Yet</div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex space-x-4">
@@ -1178,27 +1270,75 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
         </Button>
       </div>
 
-      <div>
-        <h3 className="text-lg font-medium mb-4">Bid History</h3>
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {bids.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No bids yet</p>
-          ) : (
-            bids.map((bid, index) => (
-              <Card key={index}>
-                <CardContent className="p-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">₹{bid.amount}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(bid.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <TrendingDown className="w-5 h-5" />
+            <span>Live Bid History</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {bids.length === 0 ? (
+              <div className="text-center text-muted-foreground py-4">
+                No bids placed yet
+              </div>
+            ) : (
+              (() => {
+                // Sort bids by amount (lowest first for ranking)
+                const sortedByAmount = [...bids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
+                
+                // Sort bids by timestamp (latest first for display)
+                const sortedByTime = [...bids].sort((a: any, b: any) => new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime());
+                
+                return sortedByTime.map((bid: any, index: number) => {
+                  // Find the ranking based on amount
+                  const rankIndex = sortedByAmount.findIndex(b => b.id === bid.id);
+                  const isCurrentUser = bid.vendorId === (user as any)?.id;
+                  
+                  return (
+                    <div key={bid.id} className={`flex justify-between items-center p-3 rounded ${
+                      isCurrentUser ? 'bg-blue-50 border border-blue-200' : 'bg-muted/30'
+                    }`}>
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                          isCurrentUser ? 'bg-blue-500 text-white' : 'bg-primary text-white'
+                        }`}>
+                          {isCurrentUser ? 'You' : (bid.vendor?.companyName?.[0] || 'V')}
+                        </div>
+                        <div>
+                          <div className="font-medium">{isCurrentUser ? 'Your Bid' : (bid.vendor?.companyName || 'Vendor')}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {formatBidDateTime(bid.timestamp || bid.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
+                        <div className="flex items-center space-x-2">
+                          {index === 0 && (
+                            <Badge variant="secondary" className="text-xs">Latest</Badge>
+                          )}
+                          {/* Only show L-ranking for top 3 positions */}
+                          {rankIndex < 3 && (
+                            <Badge className={`text-xs ${
+                              rankIndex === 0 ? 'bg-green-100 text-green-700 border-green-200' :
+                              rankIndex === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                              'bg-orange-100 text-orange-700 border-orange-200'
+                            }`}>
+                              L{rankIndex + 1}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
