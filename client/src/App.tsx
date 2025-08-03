@@ -1,9 +1,9 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Route, Switch } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from "react-error-boundary";
-import AuthWrapper from "@/components/auth-wrapper";
+import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import VendorManagement from "@/pages/vendor-management";
 import ProductCatalogue from "@/pages/product-catalogue";
@@ -15,8 +15,8 @@ import DirectProcurement from "@/pages/direct-procurement";
 import Analytics from "@/pages/analytics";
 import VendorDiscovery from "@/pages/vendor-discovery";
 import VendorPortal from "@/pages/vendor-portal";
-import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
+import SimpleLogin from "@/pages/simple-login";
+import Sidebar from "@/components/layout/sidebar";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -35,104 +35,54 @@ function ErrorFallback({ error }: { error: Error }) {
   );
 }
 
+function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <SimpleLogin />;
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <Switch>
+          <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/vendors" component={VendorManagement} />
+          <Route path="/products" component={ProductCatalogue} />
+          <Route path="/bom" component={BomManagement} />
+          <Route path="/rfx" component={RfxManagement} />
+          <Route path="/auctions" component={AuctionCenter} />
+          <Route path="/purchase-orders" component={PurchaseOrders} />
+          <Route path="/direct-procurement" component={DirectProcurement} />
+          <Route path="/analytics" component={Analytics} />
+          <Route path="/vendor-discovery" component={VendorDiscovery} />
+          <Route path="/vendor-portal" component={VendorPortal} />
+          <Route>
+            <div className="p-8 text-center">
+              <h1 className="text-2xl font-bold">Page not found</h1>
+            </div>
+          </Route>
+        </Switch>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route
-              path="/dashboard"
-              element={
-                <AuthWrapper>
-                  <Dashboard />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/vendors"
-              element={
-                <AuthWrapper>
-                  <VendorManagement />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/products"
-              element={
-                <AuthWrapper>
-                  <ProductCatalogue />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/boms"
-              element={
-                <AuthWrapper>
-                  <BomManagement />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/rfx"
-              element={
-                <AuthWrapper>
-                  <RfxManagement />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/auctions"
-              element={
-                <AuthWrapper>
-                  <AuctionCenter />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/purchase-orders"
-              element={
-                <AuthWrapper>
-                  <PurchaseOrders />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/direct-procurement"
-              element={
-                <AuthWrapper>
-                  <DirectProcurement />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <AuthWrapper>
-                  <Analytics />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/vendor-discovery"
-              element={
-                <AuthWrapper>
-                  <VendorDiscovery />
-                </AuthWrapper>
-              }
-            />
-            <Route
-              path="/vendor-portal"
-              element={
-                <AuthWrapper>
-                  <VendorPortal />
-                </AuthWrapper>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <Router />
         <Toaster />
       </QueryClientProvider>
     </ErrorBoundary>

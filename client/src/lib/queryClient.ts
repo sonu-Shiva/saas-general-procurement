@@ -1,6 +1,24 @@
 import { QueryClient } from "@tanstack/react-query";
 import { isUnauthorizedError } from "./authUtils";
 
+// API request function for mutations
+export async function apiRequest(endpoint: string, options: RequestInit = {}) {
+  const response = await fetch(endpoint, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
+  
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
+  
+  return response.json();
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
