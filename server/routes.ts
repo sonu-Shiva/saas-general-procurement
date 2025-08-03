@@ -493,7 +493,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/products', isAuthenticated, async (req, res) => {
+  app.get('/api/products', isAuthenticated, isVendor, async (req, res) => {
     try {
       const { category, search, isActive } = req.query;
       const filters: any = {};
@@ -602,8 +602,8 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  // Product Category routes - Both vendors and buyers can create/manage categories
-  app.post('/api/product-categories', isAuthenticated, async (req: any, res) => {
+  // Product Category routes - Only vendors can create/manage categories
+  app.post('/api/product-categories', isAuthenticated, isVendor, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const validatedData = insertProductCategorySchema.parse({
@@ -640,7 +640,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/product-categories', isAuthenticated, async (req, res) => {
+  app.get('/api/product-categories', isAuthenticated, isVendor, async (req, res) => {
     try {
       const { parentId, level, isActive } = req.query;
       const categories = await storage.getProductCategories({
@@ -655,7 +655,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/product-categories/hierarchy', isAuthenticated, async (req, res) => {
+  app.get('/api/product-categories/hierarchy', isAuthenticated, isVendor, async (req, res) => {
     try {
       const hierarchy = await storage.getProductCategoryHierarchy();
       res.json(hierarchy);
@@ -678,7 +678,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.put('/api/product-categories/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/product-categories/:id', isAuthenticated, isVendor, async (req: any, res) => {
     try {
       const categoryId = req.params.id;
       const userId = req.user.claims.sub;
@@ -702,7 +702,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.delete('/api/product-categories/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/product-categories/:id', isAuthenticated, isVendor, async (req: any, res) => {
     try {
       const categoryId = req.params.id;
       const userId = req.user.claims.sub;

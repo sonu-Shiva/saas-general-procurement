@@ -65,10 +65,10 @@ export default function PurchaseOrders() {
 
   const approvalMutation = useMutation({
     mutationFn: async ({ poId, action, comments }: { poId: string; action: string; comments: string }) => {
-      await apiRequest(`/api/purchase-orders/${poId}/approve`, {
-        method: "POST",
+      const endpoint = action === 'approve' ? 'approve' : action === 'reject' ? 'reject' : 'issue';
+      await apiRequest(`/api/purchase-orders/${poId}/${endpoint}`, {
+        method: "PATCH",
         body: JSON.stringify({
-          action,
           comments
         })
       });
@@ -436,7 +436,7 @@ export default function PurchaseOrders() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    {statusFilter === 'pending_approval' && (user as any)?.role !== 'vendor' && (
+                    {statusFilter === 'pending_approval' && (user as any)?.role === 'sourcing_manager' && (
                       <>
                         <Button
                           size="sm"
