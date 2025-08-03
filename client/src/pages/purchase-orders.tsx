@@ -329,16 +329,20 @@ export default function PurchaseOrders() {
         </Card>
       </div>
 
-      {/* 3-Bucket Status Tabs for Purchase Orders */}
+      {/* 4-Bucket Status Tabs for Purchase Orders */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="pending_approval" className="text-yellow-600">
             <Clock className="w-4 h-4 mr-2" />
             Pending Approval ({purchaseOrdersArray.filter(po => po.status === 'pending_approval').length})
           </TabsTrigger>
           <TabsTrigger value="approved" className="text-green-600">
             <CheckCircle className="w-4 h-4 mr-2" />
-            Approved and Issued ({purchaseOrdersArray.filter(po => po.status === 'approved').length})
+            Approved ({purchaseOrdersArray.filter(po => po.status === 'approved').length})
+          </TabsTrigger>
+          <TabsTrigger value="issued" className="text-blue-600">
+            <Send className="w-4 h-4 mr-2" />
+            Issued ({purchaseOrdersArray.filter(po => po.status === 'issued').length})
           </TabsTrigger>
           <TabsTrigger value="rejected" className="text-red-600">
             <XCircle className="w-4 h-4 mr-2" />
@@ -396,7 +400,9 @@ export default function PurchaseOrders() {
               {statusFilter === 'pending_approval' 
                 ? "No purchase orders are currently pending approval."
                 : statusFilter === 'approved'
-                ? "No purchase orders have been approved and issued yet."
+                ? "No purchase orders have been approved yet."
+                : statusFilter === 'issued'
+                ? "No purchase orders have been issued yet."
                 : "No purchase orders have been rejected."
               }
             </p>
@@ -466,7 +472,7 @@ export default function PurchaseOrders() {
                         </Button>
                       </>
                     )}
-                    {statusFilter === 'approved' && (user as any)?.role !== 'vendor' && (
+                    {statusFilter === 'approved' && (user as any)?.role === 'sourcing_manager' && (
                       <Button
                         size="sm"
                         variant="outline"
