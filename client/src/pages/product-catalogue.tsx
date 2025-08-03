@@ -50,10 +50,11 @@ export default function ProductCatalogue() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if user is a vendor (can create products)
+  // Check if user is a vendor (can create/edit products and categories)
   const isVendor = (user as any)?.role === 'vendor';
   // Check if user is a buyer (can view products and create BOMs)
   const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
+  // All users can view the catalog, only vendors can manage it
   
   console.log("DEBUG: User object:", user);
   console.log("DEBUG: User role:", (user as any)?.role);

@@ -493,7 +493,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/products', isAuthenticated, isVendor, async (req, res) => {
+  app.get('/api/products', isAuthenticated, async (req, res) => {
     try {
       const { category, search, isActive } = req.query;
       const filters: any = {};
@@ -640,7 +640,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/product-categories', isAuthenticated, isVendor, async (req, res) => {
+  app.get('/api/product-categories', isAuthenticated, async (req, res) => {
     try {
       const { parentId, level, isActive } = req.query;
       const categories = await storage.getProductCategories({
@@ -655,7 +655,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.get('/api/product-categories/hierarchy', isAuthenticated, isVendor, async (req, res) => {
+  app.get('/api/product-categories/hierarchy', isAuthenticated, async (req, res) => {
     try {
       const hierarchy = await storage.getProductCategoryHierarchy();
       res.json(hierarchy);
