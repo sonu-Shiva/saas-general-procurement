@@ -38,12 +38,12 @@ export function getSession() {
   });
   
   return session({
-    secret: process.env.SESSION_SECRET || "sclen-procurement-persistent-sessions-v1",
+    secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false, // Don't save session if unmodified
     saveUninitialized: false, // Don't create session until something stored
     rolling: true, // Extend session on each request
-    name: 'sclen.sid', // Use unique session name
+    name: 'connect.sid', // Standard session name
     cookie: {
       httpOnly: true,
       secure: false, // Allow HTTP in development
@@ -79,7 +79,12 @@ async function upsertUser(
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
-  app.use(getSession());
+  
+  // Set up session BEFORE passport
+  const sessionMiddleware = getSession();
+  app.use(sessionMiddleware);
+  
+  // Initialize passport AFTER sessions
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -109,12 +114,13 @@ export async function setupAuth(app: Express) {
     passport.use(strategy);
   }
 
-  passport.serializeUser((user: Express.User, cb) => {
-    console.log("Serializing user:", user ? "exists" : "null");
+  passport.serializeUser((user: any, cb) => {
+    console.log("Serializing user:", user ? JSON.stringify(user.claims?.sub) : "null");
     cb(null, user);
   });
-  passport.deserializeUser((user: Express.User, cb) => {
-    console.log("Deserializing user:", user ? "exists" : "null");
+  
+  passport.deserializeUser((user: any, cb) => {
+    console.log("Deserializing user:", user ? JSON.stringify(user.claims?.sub) : "null");
     cb(null, user);
   });
 
@@ -145,7 +151,7 @@ export async function setupAuth(app: Express) {
     console.log("Using callback strategy:", strategyName);
     
     passport.authenticate(strategyName, {
-      successReturnToOrRedirect: "/",
+      successRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
   });
@@ -168,14 +174,14 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   console.log("=== AUTH CHECK ===");
   console.log("Session ID:", req.sessionID);
   console.log("Session exists:", !!req.session);
-  console.log("Session passport:", (req.session as any)?.passport ? "exists" : "null");
+  console.log("Session passport:", JSON.stringify((req.session as any)?.passport));
   console.log("Authenticated:", req.isAuthenticated());
   console.log("User object:", user ? "exists" : "null");
   console.log("User claims:", user?.claims ? "exists" : "null");
   console.log("Expires at:", user?.expires_at);
 
-  if (!req.isAuthenticated() || !user?.expires_at) {
-    console.log("Not authenticated or no expiry");
+  if (!req.isAuthenticated() || !user) {
+    console.log("Not authenticated or no user");
     return res.status(401).json({ message: "Unauthorized" });
   }
 
