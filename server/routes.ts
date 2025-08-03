@@ -2190,6 +2190,76 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // =============================
+  // SIMPLE LOGIN ROUTE
+  // =============================
+  
+  // Simple login endpoint for development
+  app.post('/api/auth/simple-login', async (req, res) => {
+    try {
+      const { name, email, role } = req.body;
+      
+      if (!name || !email || !role) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      if (!['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      // Create or update user in storage
+      const user = await storage.upsertUser({
+        id: email, // Use email as unique ID for simple login
+        email: email,
+        firstName: name.split(' ')[0] || name,
+        lastName: name.split(' ')[1] || '',
+        profileImageUrl: null,
+        role: role,
+        organizationId: null,
+        isActive: true,
+      });
+      
+      // Create mock session data similar to Replit auth
+      const mockUser = {
+        claims: {
+          sub: user.id,
+          email: user.email,
+          first_name: user.firstName,
+          last_name: user.lastName,
+          profile_image_url: user.profileImageUrl,
+          exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
+        },
+        access_token: "mock_access_token",
+        refresh_token: "mock_refresh_token",
+        expires_at: Math.floor(Date.now() / 1000) + 3600
+      };
+      
+      // Log in the user using passport
+      req.login(mockUser, (err) => {
+        if (err) {
+          console.error("Login error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        
+        console.log("Simple login successful for:", email, "with role:", role);
+        res.json({ 
+          message: "Login successful",
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role
+          }
+        });
+      });
+      
+    } catch (error) {
+      console.error("Simple login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // =============================
