@@ -346,11 +346,19 @@ export default function AuctionCenter() {
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
             {selectedAuction && (
-              <LiveBiddingInterface 
-                auction={selectedAuction}
-                ws={ws}
-                onClose={() => setIsLiveBiddingOpen(false)}
-              />
+              isVendor ? (
+                <LiveBiddingInterface 
+                  auction={selectedAuction}
+                  ws={ws}
+                  onClose={() => setIsLiveBiddingOpen(false)}
+                />
+              ) : (
+                <LiveAuctionView 
+                  auction={selectedAuction}
+                  ws={ws}
+                  onClose={() => setIsLiveBiddingOpen(false)}
+                />
+              )
             )}
           </div>
         </DialogContent>
@@ -443,13 +451,19 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
         </div>
         <div className="flex space-x-2 ml-4">
           {!isVendor && auction.status === 'scheduled' && (
-            <Button variant="ghost" size="sm" onClick={onStart}>
-              <Play className="w-4 h-4 mr-1" />
-              Start
-            </Button>
+            <>
+              <Button variant="ghost" size="sm" onClick={onViewLive} data-testid="button-view-auction">
+                <Eye className="w-4 h-4 mr-1" />
+                View
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onStart} data-testid="button-start-auction">
+                <Play className="w-4 h-4 mr-1" />
+                Start
+              </Button>
+            </>
           )}
           {auction.status === 'live' && (
-            <Button variant="ghost" size="sm" onClick={onViewLive}>
+            <Button variant="ghost" size="sm" onClick={onViewLive} data-testid="button-view-live">
               <Eye className="w-4 h-4 mr-1" />
               {isVendor ? "Bid Now" : "View Live"}
             </Button>
@@ -457,7 +471,7 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
           {(auction.status === 'live' || auction.status === 'completed') && (
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" data-testid="button-view-results">
                   <Trophy className="w-4 h-4 mr-1" />
                   Results
                 </Button>
@@ -470,8 +484,8 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
               </DialogContent>
             </Dialog>
           )}
-          {!isVendor && (auction.status === 'live' || auction.status === 'completed') && (
-            <Button variant="ghost" size="sm" onClick={() => onCreatePO(auction)}>
+          {!isVendor && auction.status === 'completed' && (
+            <Button variant="ghost" size="sm" onClick={() => onCreatePO(auction)} data-testid="button-create-po">
               <ShoppingCart className="w-4 h-4 mr-1" />
               Create Purchase Order
             </Button>
@@ -896,6 +910,132 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         </Button>
       </div>
     </form>
+  );
+}
+
+// Live Auction View Component (for buyers - read-only view)
+function LiveAuctionView({ auction, ws, onClose }: any) {
+  const [bids, setBids] = useState<any[]>([]);
+  const [currentBid, setCurrentBid] = useState('0');
+
+  const { data: auctionBids = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "bids"],
+    queryFn: () => apiRequest(`/api/auctions/${auction.id}/bids`),
+    refetchInterval: 2000, // Refresh every 2 seconds
+    retry: false,
+  });
+
+  useEffect(() => {
+    setBids(auctionBids);
+    if (auctionBids.length > 0) {
+      const lowestBid = auctionBids.reduce((lowest: any, bid: any) => 
+        parseFloat(bid.amount) < parseFloat(lowest.amount) ? bid : lowest
+      );
+      setCurrentBid(lowestBid.amount);
+    }
+  }, [auctionBids]);
+
+  const getRemainingTime = (endTime: string) => {
+    const end = new Date(endTime);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
+    
+    if (diff <= 0) return "Auction Ended";
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Auction Summary */}
+      <div className="grid grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">₹{currentBid}</div>
+              <div className="text-sm text-muted-foreground">Current Best Bid</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">₹{auction.reservePrice || '0'}</div>
+              <div className="text-sm text-muted-foreground">Ceiling Price</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{getRemainingTime(auction.endTime)}</div>
+              <div className="text-sm text-muted-foreground">Time Remaining</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Bid History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <TrendingDown className="w-5 h-5" />
+            <span>Live Bid History</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {bids.length === 0 ? (
+              <div className="text-center text-muted-foreground py-4">
+                No bids placed yet
+              </div>
+            ) : (
+              bids
+                .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                .map((bid: any, index: number) => (
+                  <div key={bid.id} className="flex justify-between items-center p-3 bg-muted/30 rounded">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
+                        {bid.vendor?.companyName?.[0] || 'V'}
+                      </div>
+                      <div>
+                        <div className="font-medium">{bid.vendor?.companyName || 'Vendor'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(bid.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
+                      {index === 0 && (
+                        <Badge variant="secondary" className="text-xs">Latest</Badge>
+                      )}
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Buyer Notice */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-2 text-blue-700">
+            <Eye className="w-5 h-5" />
+            <span className="font-medium">Buyer View</span>
+          </div>
+          <p className="text-blue-600 text-sm mt-2">
+            You are viewing this auction as a buyer. Vendors can place bids in real-time. 
+            {auction.status === 'completed' && " The auction has ended - you can now create a Purchase Order."}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
