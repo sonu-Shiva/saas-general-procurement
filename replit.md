@@ -28,10 +28,12 @@ Preferred communication style: Simple, everyday language.
 - **Middleware**: Django middleware for CORS, authentication, and error handling.
 
 ### Authentication System
-- **Provider**: Replit OpenID Connect (OIDC) authentication.
+- **Provider**: Simple session-based authentication with role selection (August 2025 - Fixed infinite login loop issues).
 - **Session Management**: PostgreSQL-backed session management for persistent login.
-- **Strategy**: Passport.js with OpenID Connect strategy.
+- **Strategy**: Direct session creation with simple login form (bypasses complex OAuth issues).
 - **Authorization**: Role-based access control (buyer_admin, buyer_user, sourcing_manager, vendor).
+- **Login Flow**: Users enter name, email, and select role to access platform.
+- **Fallback**: Replit OIDC authentication still available but secondary to simple auth.
 
 ### Database Layer
 - **Database**: PostgreSQL (configured for Neon serverless).
