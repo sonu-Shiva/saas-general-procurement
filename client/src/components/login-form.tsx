@@ -4,6 +4,7 @@ import { LogIn } from "lucide-react";
 
 export default function LoginForm() {
   const handleLogin = () => {
+    // Use relative URL to ensure proper domain handling
     window.location.href = '/api/login';
   };
 

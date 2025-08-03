@@ -6,22 +6,34 @@ const API_BASE_URL = "http://localhost:5000";
 async function fetchApi(url: string, options: RequestInit = {}) {
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
 
-  const response = await fetch(fullUrl, {
-    credentials: "include",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  try {
+    const response = await fetch(fullUrl, {
+      credentials: "include",
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    const error = new Error(`${response.status}: ${errorText}`);
+    if (!response.ok) {
+      // Handle 401 specifically for authentication issues
+      if (response.status === 401) {
+        console.log('Authentication required, redirecting to login');
+        window.location.href = '/api/login';
+        return;
+      }
+      
+      const errorText = await response.text();
+      const error = new Error(`${response.status}: ${errorText}`);
+      throw error;
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('API request failed:', error);
     throw error;
   }
-
-  return response.json();
 }
 
 // Export apiRequest for mutations
