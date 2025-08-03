@@ -155,6 +155,9 @@ export interface IStorage {
   getNotifications(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<void>;
   
+  // Dashboard operations
+  getDashboardStats(userId: string): Promise<any>;
+  
   // Terms & Conditions operations
   recordTermsAcceptance(acceptance: InsertTermsAcceptance): Promise<TermsAcceptance>;
   checkTermsAcceptance(vendorId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined>;
@@ -451,6 +454,55 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(bomItems).where(eq(bomItems.bomId, bomId));
   }
 
+  async deleteBomItems(bomId: string): Promise<void> {
+    await db.delete(bomItems).where(eq(bomItems.bomId, bomId));
+  }
+
+  async updateBom(id: string, updates: Partial<InsertBom>): Promise<Bom> {
+    const [updatedBom] = await db
+      .update(boms)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(boms.id, id))
+      .returning();
+    return updatedBom;
+  }
+
+  async deleteBom(id: string): Promise<void> {
+    // Delete BOM items first due to foreign key constraint
+    await this.deleteBomItems(id);
+    // Delete the BOM
+    await db.delete(boms).where(eq(boms.id, id));
+  }
+
+  async searchVendors(query: string, filters?: { location?: string; category?: string; certifications?: string[] }): Promise<Vendor[]> {
+    let dbQuery = db.select().from(vendors);
+    
+    const conditions = [];
+    
+    // Search in company name, contact person, or email
+    conditions.push(
+      or(
+        like(vendors.companyName, `%${query}%`),
+        like(vendors.contactPerson, `%${query}%`),
+        like(vendors.email, `%${query}%`)
+      )
+    );
+    
+    if (filters?.location) {
+      conditions.push(like(vendors.address, `%${filters.location}%`));
+    }
+    
+    if (filters?.category) {
+      conditions.push(like(vendors.categories, `%${filters.category}%`));
+    }
+    
+    if (conditions.length > 0) {
+      dbQuery = dbQuery.where(and(...conditions));
+    }
+    
+    return await dbQuery.orderBy(desc(vendors.createdAt));
+  }
+
   // RFx operations
   async createRfxEvent(rfx: InsertRfxEvent): Promise<RfxEvent> {
     const [newRfx] = await db.insert(rfxEvents).values(rfx).returning();
@@ -645,15 +697,6 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(rfxInvitations, eq(rfxEvents.id, rfxInvitations.rfxId))
       .where(eq(rfxInvitations.vendorId, vendorUserId))
       .orderBy(desc(rfxEvents.createdAt));
-  }
-
-  async updateAuction(id: string, updates: Partial<InsertAuction>): Promise<Auction> {
-    const [auction] = await db
-      .update(auctions)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(auctions.id, id))
-      .returning();
-    return auction;
   }
 
   async updateAuction(id: string, updates: Partial<InsertAuction>): Promise<Auction> {
@@ -898,6 +941,64 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDirectProcurementOrder(id: string): Promise<void> {
     await db.delete(directProcurementOrders).where(eq(directProcurementOrders.id, id));
+  }
+
+  // Dashboard operations
+  async getDashboardStats(userId: string): Promise<any> {
+    try {
+      // Get user to determine role-based stats
+      const user = await this.getUser(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Basic stats for all users
+      const stats = {
+        totalVendors: 0,
+        totalProducts: 0,
+        totalBoms: 0,
+        totalRfx: 0,
+        totalAuctions: 0,
+        totalPurchaseOrders: 0,
+        pendingApprovals: 0,
+        recentActivity: []
+      };
+
+      // Get counts based on user role
+      if (user.role === 'vendor') {
+        // For vendors, show stats relevant to them
+        const vendor = await this.getVendorByUserId(userId);
+        if (vendor) {
+          stats.totalProducts = (await this.getProducts({ isActive: true })).filter(p => p.createdBy === userId).length;
+          stats.totalRfx = (await this.getRfxInvitationsByVendor(vendor.id)).length;
+          stats.totalAuctions = (await this.getAuctionsForVendor(userId)).length;
+        }
+      } else {
+        // For buyers/admins, show system-wide stats
+        stats.totalVendors = (await this.getVendors()).length;
+        stats.totalProducts = (await this.getProducts({ isActive: true })).length;
+        stats.totalBoms = (await this.getBoms(userId)).length;
+        stats.totalRfx = (await this.getRfxEvents({ createdBy: userId })).length;
+        stats.totalAuctions = (await this.getAuctions({ createdBy: userId })).length;
+        stats.totalPurchaseOrders = (await this.getPurchaseOrders({ createdBy: userId })).length;
+        stats.pendingApprovals = (await this.getApprovals(userId)).length;
+      }
+
+      return stats;
+    } catch (error) {
+      console.error("Error in getDashboardStats:", error);
+      // Return default stats on error
+      return {
+        totalVendors: 0,
+        totalProducts: 0,
+        totalBoms: 0,
+        totalRfx: 0,
+        totalAuctions: 0,
+        totalPurchaseOrders: 0,
+        pendingApprovals: 0,
+        recentActivity: []
+      };
+    }
   }
 
   // Terms & Conditions operations
