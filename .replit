@@ -20,7 +20,7 @@ localPort = 8000
 externalPort = 8000
 
 [workflows]
-runButton = "Django + Frontend"
+runButton = "Node.js Backend + Frontend"
 
 [[workflows.workflow]]
 name = "Project"
@@ -70,6 +70,15 @@ mode = "parallel"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd backend && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Node.js Backend + Frontend"
+author = 45057916
+mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
