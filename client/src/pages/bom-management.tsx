@@ -57,7 +57,7 @@ export default function BomManagement() {
   const queryClient = useQueryClient();
 
   // Restrict access to vendor users
-  if (user?.role === 'vendor') {
+  if ((user as any)?.role === 'vendor') {
     return (
       <div className="max-w-2xl mx-auto text-center p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
@@ -123,7 +123,7 @@ export default function BomManagement() {
   // Delete BOM mutation
   const deleteBomMutation = useMutation({
     mutationFn: async (bomId: string) => {
-      const response = await apiRequest("DELETE", `/api/boms/${bomId}`);
+      const response = await apiRequest(`/api/boms/${bomId}`, { method: "DELETE" });
       return response.json();
     },
     onSuccess: () => {
@@ -176,7 +176,10 @@ export default function BomManagement() {
 
   const copyBomMutation = useMutation({
     mutationFn: async ({ bomId, name, version }: { bomId: string; name: string; version: string }) => {
-      const response = await apiRequest("POST", `/api/boms/${bomId}/copy`, { name, version });
+      const response = await apiRequest(`/api/boms/${bomId}/copy`, {
+        method: "POST",
+        body: JSON.stringify({ name, version })
+      });
       return response.json();
     },
     onSuccess: () => {

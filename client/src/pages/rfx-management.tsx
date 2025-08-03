@@ -142,7 +142,7 @@ export default function RfxManagement() {
               </Badge>
               <Badge variant="outline" className="text-sm">
                 <MessageSquare className="w-4 h-4 mr-1" />
-                {vendorResponses.length} Responses
+                {Array.isArray(vendorResponses) ? vendorResponses.length : 0} Responses
               </Badge>
               <Badge variant="outline" className="text-sm">
                 <Clock className="w-4 h-4 mr-1" />

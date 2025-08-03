@@ -106,7 +106,10 @@ export default function ProductCatalogue() {
         data.categoryId = selectedCategory.id;
         data.category = selectedCategory.name; // Backward compatibility
       }
-      return await apiRequest("POST", "/api/products", data);
+      return await apiRequest("/api/products", {
+        method: "POST",
+        body: JSON.stringify(data)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
@@ -139,7 +142,10 @@ export default function ProductCatalogue() {
 
   const updateProductMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("PUT", `/api/products/${selectedProduct?.id}`, data);
+      return await apiRequest(`/api/products/${selectedProduct?.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data)
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });

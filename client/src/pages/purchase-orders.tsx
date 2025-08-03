@@ -65,9 +65,12 @@ export default function PurchaseOrders() {
 
   const approvalMutation = useMutation({
     mutationFn: async ({ poId, action, comments }: { poId: string; action: string; comments: string }) => {
-      await apiRequest("POST", `/api/purchase-orders/${poId}/approve`, {
-        action,
-        comments
+      await apiRequest(`/api/purchase-orders/${poId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({
+          action,
+          comments
+        })
       });
     },
     onSuccess: () => {
@@ -122,7 +125,9 @@ export default function PurchaseOrders() {
 
   const deleteMutation = useMutation({
     mutationFn: async (poId: string) => {
-      await apiRequest("DELETE", `/api/purchase-orders/${poId}`);
+      await apiRequest(`/api/purchase-orders/${poId}`, {
+        method: "DELETE"
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
@@ -233,7 +238,8 @@ export default function PurchaseOrders() {
   };
 
   // Filter POs based on current tab and search criteria
-  const filteredPOs = purchaseOrders.filter((po: PurchaseOrder) => {
+  const purchaseOrdersArray = Array.isArray(purchaseOrders) ? purchaseOrders : [];
+  const filteredPOs = purchaseOrdersArray.filter((po: PurchaseOrder) => {
     const matchesSearch = po.poNumber?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = po.status === statusFilter;
     const matchesVendor = vendorFilter === "all" || po.vendorId === vendorFilter;
@@ -267,7 +273,7 @@ export default function PurchaseOrders() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total POs</p>
-                <p className="text-2xl font-bold">{purchaseOrders?.length || 0}</p>
+                <p className="text-2xl font-bold">{Array.isArray(purchaseOrders) ? purchaseOrders.length : 0}</p>
               </div>
               <ShoppingCart className="w-8 h-8 text-primary" />
             </div>
@@ -279,9 +285,9 @@ export default function PurchaseOrders() {
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Active POs</p>
                 <p className="text-2xl font-bold text-success">
-                  {purchaseOrders?.filter((po: PurchaseOrder) => 
+                  {Array.isArray(purchaseOrders) ? purchaseOrders.filter((po: PurchaseOrder) => 
                     ['issued', 'acknowledged', 'shipped'].includes(po.status || '')
-                  ).length || 0}
+                  ).length : 0}
                 </p>
               </div>
               <CheckCircle className="w-8 h-8 text-success" />
@@ -294,7 +300,7 @@ export default function PurchaseOrders() {
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total Value</p>
                 <p className="text-2xl font-bold">
-                  {formatCurrency(purchaseOrders ? 
+                  {formatCurrency(Array.isArray(purchaseOrders) ? 
                     (purchaseOrders.reduce((sum: number, po: PurchaseOrder) => 
                       sum + parseFloat(po.totalAmount || '0'), 0
                     )) : 0)}
@@ -310,7 +316,7 @@ export default function PurchaseOrders() {
               <div>
                 <p className="text-sm text-muted-foreground mb-1">This Month</p>
                 <p className="text-2xl font-bold">
-                  {purchaseOrders?.filter((po: PurchaseOrder) => {
+                  {purchaseOrdersArray.filter((po: PurchaseOrder) => {
                     const poDate = new Date(po.createdAt || '');
                     const now = new Date();
                     return poDate.getMonth() === now.getMonth() && poDate.getFullYear() === now.getFullYear();
@@ -328,15 +334,15 @@ export default function PurchaseOrders() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="pending_approval" className="text-yellow-600">
             <Clock className="w-4 h-4 mr-2" />
-            Pending Approval ({purchaseOrders.filter(po => po.status === 'pending_approval').length})
+            Pending Approval ({purchaseOrdersArray.filter(po => po.status === 'pending_approval').length})
           </TabsTrigger>
           <TabsTrigger value="approved" className="text-green-600">
             <CheckCircle className="w-4 h-4 mr-2" />
-            Approved and Issued ({purchaseOrders.filter(po => po.status === 'approved').length})
+            Approved and Issued ({purchaseOrdersArray.filter(po => po.status === 'approved').length})
           </TabsTrigger>
           <TabsTrigger value="rejected" className="text-red-600">
             <XCircle className="w-4 h-4 mr-2" />
-            Rejected ({purchaseOrders.filter(po => po.status === 'rejected').length})
+            Rejected ({purchaseOrdersArray.filter(po => po.status === 'rejected').length})
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -363,11 +369,11 @@ export default function PurchaseOrders() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Vendors</SelectItem>
-                  {vendors.map((vendor: any) => (
+                  {Array.isArray(vendors) ? vendors.map((vendor: any) => (
                     <SelectItem key={vendor.id} value={vendor.id}>
                       {vendor.companyName}
                     </SelectItem>
-                  ))}
+                  )) : []}
                 </SelectContent>
               </Select>
             </div>
@@ -413,7 +419,7 @@ export default function PurchaseOrders() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                       <div>
                         <span className="font-medium">Vendor:</span>
-                        <p className="text-foreground">{po.vendorName || 'N/A'}</p>
+                        <p className="text-foreground">{(po as any).vendorName || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="font-medium">Total Amount:</span>
@@ -425,12 +431,12 @@ export default function PurchaseOrders() {
                       </div>
                       <div>
                         <span className="font-medium">Expected Delivery:</span>
-                        <p className="text-foreground">{po.expectedDeliveryDate ? new Date(po.expectedDeliveryDate).toLocaleDateString() : 'N/A'}</p>
+                        <p className="text-foreground">{(po as any).expectedDeliveryDate ? new Date((po as any).expectedDeliveryDate).toLocaleDateString() : 'N/A'}</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    {statusFilter === 'pending_approval' && user?.role !== 'vendor' && (
+                    {statusFilter === 'pending_approval' && (user as any)?.role !== 'vendor' && (
                       <>
                         <Button
                           size="sm"
@@ -460,7 +466,7 @@ export default function PurchaseOrders() {
                         </Button>
                       </>
                     )}
-                    {statusFilter === 'approved' && user?.role !== 'vendor' && (
+                    {statusFilter === 'approved' && (user as any)?.role !== 'vendor' && (
                       <Button
                         size="sm"
                         variant="outline"
