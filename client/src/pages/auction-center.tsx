@@ -46,12 +46,32 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
     return <div className="text-center py-4">Loading results...</div>;
   }
 
-  // Ensure bids is always an array
+  // Ensure bids is always an array and filter out invalid bids
   const bidsArray = Array.isArray(bids) ? bids : [];
-  const sortedBids = [...bidsArray].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
+  const validBids = bidsArray.filter((bid: any) => 
+    bid && 
+    bid.amount && 
+    !isNaN(parseFloat(bid.amount)) && 
+    parseFloat(bid.amount) > 0
+  );
+
+  if (validBids.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-muted-foreground">
+          <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <h3 className="text-lg font-medium mb-2">No Bids Yet</h3>
+          <p>This auction hasn't received any valid bids.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const sortedBids = [...validBids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
 
   const formatBidDateTime = (timestamp: string) => {
     try {
+      if (!timestamp) return 'Time not available';
       const date = new Date(timestamp);
       if (isNaN(date.getTime())) {
         return 'Invalid Date';
@@ -75,44 +95,40 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
       <div className="text-center">
         <h3 className="text-lg font-semibold mb-2">Final Rankings</h3>
         <p className="text-muted-foreground mb-4">Ranked by bid amount (lowest first)</p>
-        {sortedBids.length === 0 ? (
-          <p className="text-muted-foreground">No bids placed in this auction</p>
-        ) : (
-          <div className="space-y-2">
-            {sortedBids.map((bid: any, index: number) => (
-              <Card key={bid.id} className={index === 0 ? 'border-green-500 bg-green-50' : ''}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                        index === 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
-                      }`}>
-                        {index + 1}
-                      </div>
-                      <div>
-                        <div className="font-medium">{bid.vendor?.companyName || bid.vendorName || 'Unknown Vendor'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatBidDateTime(bid.timestamp || bid.createdAt)}
-                        </div>
-                      </div>
+        <div className="space-y-2">
+          {sortedBids.map((bid: any, index: number) => (
+            <Card key={bid.id} className={index === 0 ? 'border-green-500 bg-green-50' : ''}>
+              <CardContent className="p-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      index === 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {index + 1}
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
-                      <Badge className={`${
-                        index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
-                        index === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                        index === 2 ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                        'bg-gray-100 text-gray-700 border-gray-200'
-                      }`}>
-                        L{index + 1} Bidder
-                      </Badge>
+                    <div>
+                      <div className="font-medium">{bid.vendor?.companyName || bid.vendorName || 'Unknown Vendor'}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {formatBidDateTime(bid.timestamp || bid.createdAt)}
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                  <div className="text-right">
+                    <div className="text-lg font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
+                    <Badge className={`${
+                      index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
+                      index === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                      index === 2 ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                      'bg-gray-100 text-gray-700 border-gray-200'
+                    }`}>
+                      L{index + 1} Bidder
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
