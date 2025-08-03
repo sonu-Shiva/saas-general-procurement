@@ -59,7 +59,18 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
   }
   
   // Simple validation - if we have bids array with items, show them
-  const validBids = bidsArray.filter((bid: any) => bid && bid.id);
+  const validBids = bidsArray.filter((bid: any) => {
+    if (!bid || !bid.id) return false;
+    
+    // Log each bid to understand the structure
+    console.log('Checking bid:', bid);
+    
+    // Handle decimal amounts - they might be strings or need conversion
+    const amount = bid.amount;
+    console.log('Bid amount:', amount, 'Type:', typeof amount);
+    
+    return true; // For now, show all bids that have an ID
+  });
   
   console.log('AuctionResults - Valid bids count:', validBids.length);
 
@@ -76,8 +87,10 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
   }
 
   const sortedBids = [...validBids].sort((a: any, b: any) => {
-    const amountA = parseFloat(a.amount || a.bidAmount || a.price || '0');
-    const amountB = parseFloat(b.amount || b.bidAmount || b.price || '0');
+    // Handle decimal amounts that might be strings or numbers
+    const amountA = parseFloat(String(a.amount || '0'));
+    const amountB = parseFloat(String(b.amount || '0'));
+    console.log('Sorting - A:', amountA, 'B:', amountB);
     return amountA - amountB;
   });
 
@@ -126,7 +139,7 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-semibold">₹{parseFloat(bid.amount || bid.bidAmount || bid.price || '0').toFixed(2)}</div>
+                    <div className="text-lg font-semibold">₹{parseFloat(String(bid.amount || '0')).toFixed(2)}</div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
                       index === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
