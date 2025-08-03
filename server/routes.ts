@@ -1160,6 +1160,35 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Vendor-specific RFx invitations endpoint
+  app.get('/api/vendor/rfx-invitations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      console.log("=== VENDOR ROLE CHECK ===");
+      console.log("User ID from claims:", userId);
+      
+      const user = await storage.getUser(userId);
+      console.log("User from database:", user?.email, `(${user?.role})`);
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      if (user.role !== 'vendor') {
+        return res.status(403).json({ message: "Access denied: Only vendors can access RFx invitations" });
+      }
+      
+      console.log("Vendor role confirmed, proceeding");
+      
+      // Get RFx invitations for this vendor
+      const invitations = await storage.getRfxInvitationsByVendor(userId);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching vendor RFx invitations:", error);
+      res.status(500).json({ message: "Failed to fetch RFx invitations" });
+    }
+  });
+
   // Auction routes
   app.post('/api/auctions', isAuthenticated, async (req: any, res) => {
     try {

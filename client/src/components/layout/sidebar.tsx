@@ -18,15 +18,15 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Vendor Management", href: "/vendors", icon: Users, hiddenForVendors: true },
-  { name: "Vendor Portal", href: "/vendor-portal", icon: MessageSquare, onlyForVendors: true },
-  { name: "Product Catalogue", href: "/products", icon: Package, hiddenForVendors: true },
-  { name: "BOM Management", href: "/boms", icon: Layers, hiddenForVendors: true },
-  { name: "RFx Management", href: "/rfx", icon: FileText, hiddenForVendors: true },
-  { name: "Auction Center", href: "/auctions", icon: Gavel, hiddenForVendors: true },
-  { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, hiddenForVendors: true },
-  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, hiddenForVendors: true },
-  { name: "Analytics", href: "/analytics", icon: BarChart3, hiddenForVendors: true },
+  { name: "Vendor Management", href: "/vendors", icon: Users, buyerOnly: true },
+  { name: "Vendor Portal", href: "/vendor-portal", icon: MessageSquare, vendorOnly: true },
+  { name: "Product Catalogue", href: "/products", icon: Package },
+  { name: "BOM Management", href: "/boms", icon: Layers, buyerOnly: true },
+  { name: "RFx Invitations", href: "/rfx", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management" },
+  { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center" },
+  { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, buyerOnly: true },
+  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Order History", buyerLabel: "Purchase Orders" },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, buyerOnly: true },
 ];
 
 export default function Sidebar() {
@@ -39,34 +39,45 @@ export default function Sidebar() {
         <nav className="space-y-2">
           {navigation
             .filter((item) => {
-              // Hide certain items from vendor users
-              if ((user as any)?.role === 'vendor' && item.hiddenForVendors) {
+              const isVendor = (user as any)?.role === 'vendor';
+              
+              // Hide buyer-only items from vendors
+              if (isVendor && item.buyerOnly) {
                 return false;
               }
-              // Show vendor portal only for vendor users
-              if (item.onlyForVendors && (user as any)?.role !== 'vendor') {
+              // Hide vendor-only items from buyers
+              if (!isVendor && item.vendorOnly) {
                 return false;
               }
               return true;
             })
             .map((item) => {
-            const isActive = location === item.href;
-            return (
-              <Link 
-                key={item.name} 
-                href={item.href}
-                className={cn(
-                  "sidebar-nav",
-                  isActive
-                    ? "text-primary bg-primary/10 border-r-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="font-medium">{item.name}</span>
-              </Link>
-            );
-          })}
+              const isActive = location === item.href;
+              const isVendor = (user as any)?.role === 'vendor';
+              
+              // Use appropriate label based on user role
+              const displayName = isVendor && item.vendorLabel 
+                ? item.vendorLabel 
+                : !isVendor && item.buyerLabel 
+                  ? item.buyerLabel 
+                  : item.name;
+              
+              return (
+                <Link 
+                  key={item.name} 
+                  href={item.href}
+                  className={cn(
+                    "sidebar-nav",
+                    isActive
+                      ? "text-primary bg-primary/10 border-r-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="font-medium">{displayName}</span>
+                </Link>
+              );
+            })}
         </nav>
         
         {/* AI Assistant Quick Access */}

@@ -584,7 +584,6 @@ export class DatabaseStorage implements IStorage {
 
   async getRfxInvitationsByVendor(vendorId: string): Promise<any[]> {
     const invitations = await db.select({
-      id: rfxInvitations.id,
       rfxId: rfxInvitations.rfxId,
       vendorId: rfxInvitations.vendorId,
       status: rfxInvitations.status,

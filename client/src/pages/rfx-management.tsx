@@ -53,8 +53,11 @@ export default function RfxManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const isVendor = (user as any)?.role === 'vendor';
+
+  // Use different API endpoints based on user role
   const { data: rfxEvents = [], isLoading } = useQuery({
-    queryKey: ["/api/rfx"],
+    queryKey: isVendor ? ["/api/vendor/rfx-invitations"] : ["/api/rfx"],
     retry: false,
   });
 
@@ -164,6 +167,14 @@ export default function RfxManagement() {
     setSelectedRfxForPO(rfx);
     setIsPODialogOpen(true);
   };
+
+  const handleRespondToRfx = (rfx: any) => {
+    // TODO: Open RFx response dialog/form for vendors
+    toast({
+      title: "RFx Response",
+      description: "RFx response functionality will be implemented in the next phase.",
+    });
+  };
   
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -175,37 +186,46 @@ export default function RfxManagement() {
             {/* Page Header */}
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">RFx Management</h1>
-                <p className="text-muted-foreground">Manage Request for Quotes, Proposals, and Information</p>
+                <h1 className="text-3xl font-bold text-foreground">
+                  {isVendor ? "RFx Invitations" : "RFx Management"}
+                </h1>
+                <p className="text-muted-foreground">
+                  {isVendor 
+                    ? "View and respond to RFx invitations from buyers" 
+                    : "Manage Request for Quotes, Proposals, and Information"
+                  }
+                </p>
               </div>
-              <div className="flex space-x-3">
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create RFx
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-                    <DialogHeader>
-                      <DialogTitle>Create New RFx Request</DialogTitle>
-                    </DialogHeader>
-                    <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-                      <EnhancedRfxForm 
-                        onClose={() => setIsCreateDialogOpen(false)}
-                        onSuccess={() => {
-                          setIsCreateDialogOpen(false);
-                          queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
-                        }} 
-                      />
-                    </div>
-                  </DialogContent>
-                </Dialog>
-                <Button variant="outline" onClick={() => setIsAiDialogOpen(true)}>
-                  <Bot className="w-4 h-4 mr-2" />
-                  AI Assistant
-                </Button>
-              </div>
+              {!isVendor && (
+                <div className="flex space-x-3">
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-primary hover:bg-primary/90">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create RFx
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+                      <DialogHeader>
+                        <DialogTitle>Create New RFx Request</DialogTitle>
+                      </DialogHeader>
+                      <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+                        <EnhancedRfxForm 
+                          onClose={() => setIsCreateDialogOpen(false)}
+                          onSuccess={() => {
+                            setIsCreateDialogOpen(false);
+                            queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+                          }} 
+                        />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <Button variant="outline" onClick={() => setIsAiDialogOpen(true)}>
+                    <Bot className="w-4 h-4 mr-2" />
+                    AI Assistant
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Stats Cards */}
@@ -216,7 +236,7 @@ export default function RfxManagement() {
                     <FileText className="w-8 h-8 text-primary" />
                     <div>
                       <div className="text-2xl font-bold text-foreground">{rfxEventsArray.length}</div>
-                      <div className="text-sm text-muted-foreground">Total RFx</div>
+                      <div className="text-sm text-muted-foreground">{isVendor ? "Total Invitations" : "Total RFx"}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -227,9 +247,12 @@ export default function RfxManagement() {
                     <CheckCircle className="w-8 h-8 text-green-600" />
                     <div>
                       <div className="text-2xl font-bold text-foreground">
-                        {rfxEventsArray.filter((r: any) => r.status === 'active').length}
+                        {isVendor 
+                          ? rfxEventsArray.filter((r: any) => r.status === 'invited' || r.status === 'viewed').length
+                          : rfxEventsArray.filter((r: any) => r.status === 'active').length
+                        }
                       </div>
-                      <div className="text-sm text-muted-foreground">Active</div>
+                      <div className="text-sm text-muted-foreground">{isVendor ? "Pending Response" : "Active"}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -308,7 +331,7 @@ export default function RfxManagement() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <FileText className="w-5 h-5" />
-                  <span>RFx Requests</span>
+                  <span>{isVendor ? "RFx Invitations" : "RFx Requests"}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -320,17 +343,24 @@ export default function RfxManagement() {
                 ) : filteredRfxEvents.length === 0 ? (
                   <div className="p-12 text-center">
                     <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-foreground mb-2">No RFx Found</h3>
+                    <h3 className="text-lg font-medium text-foreground mb-2">
+                      {isVendor ? "No Invitations Found" : "No RFx Found"}
+                    </h3>
                     <p className="text-muted-foreground mb-6">
-                      {rfxEventsArray.length === 0 
-                        ? "Create your first RFx to get started with vendor management."
-                        : "No RFx match your current filters. Try adjusting your search criteria."
+                      {isVendor 
+                        ? "You haven't received any RFx invitations yet. Buyers will send you invitations to participate in their procurement requests."
+                        : (rfxEventsArray.length === 0 
+                          ? "Create your first RFx to get started with vendor management."
+                          : "No RFx match your current filters. Try adjusting your search criteria."
+                        )
                       }
                     </p>
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create First Request
-                    </Button>
+                    {!isVendor && (
+                      <Button onClick={() => setIsCreateDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create First Request
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="divide-y divide-border">
@@ -341,11 +371,22 @@ export default function RfxManagement() {
                             <div className="flex items-center space-x-3 mb-2">
                               <h3 className="text-lg font-medium text-foreground">{rfx.title}</h3>
                               <Badge variant={
-                                rfx.status === 'active' ? 'default' :
-                                rfx.status === 'draft' ? 'secondary' :
-                                rfx.status === 'completed' ? 'outline' : 'destructive'
+                                isVendor ? (
+                                  rfx.status === 'invited' ? 'secondary' :
+                                  rfx.status === 'viewed' ? 'default' :
+                                  rfx.status === 'responded' ? 'outline' : 'destructive'
+                                ) : (
+                                  rfx.status === 'active' ? 'default' :
+                                  rfx.status === 'draft' ? 'secondary' :
+                                  rfx.status === 'completed' ? 'outline' : 'destructive'
+                                )
                               }>
-                                {rfx.status}
+                                {isVendor ? (
+                                  rfx.status === 'invited' ? 'New Invitation' :
+                                  rfx.status === 'viewed' ? 'Viewed' :
+                                  rfx.status === 'responded' ? 'Responded' :
+                                  rfx.status === 'declined' ? 'Declined' : rfx.status
+                                ) : rfx.status}
                               </Badge>
                               <Badge variant="secondary">
                                 {rfx.type}
@@ -375,70 +416,110 @@ export default function RfxManagement() {
                             </div>
                           </div>
                           <div className="flex space-x-2 ml-4">
-                            <Button variant="ghost" size="sm" onClick={() => handleViewRfx(rfx)}>
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
-                            {rfx.status === 'draft' && (
-                              <Button variant="ghost" size="sm" onClick={() => handleEditRfx(rfx)}>
-                                <Edit className="w-4 h-4 mr-1" />
-                                Edit
-                              </Button>
-                            )}
-                            {rfx.status === 'draft' && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handlePublishRfx(rfx.id)}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <Send className="w-4 h-4 mr-1" />
-                                Publish
-                              </Button>
-                            )}
-                            {rfx.status === 'active' && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleCloseRfx(rfx.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="w-4 h-4 mr-1" />
-                                Close
-                              </Button>
-                            )}
-                            {(rfx.type === 'rfi' || rfx.type === 'rfp') && rfx.status === 'closed' && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleCreateNextStage(rfx)}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <Send className="w-4 h-4 mr-1" />
-                                Create {rfx.type === 'rfi' ? 'RFP' : 'RFQ'}
-                              </Button>
-                            )}
-                            {(rfx.type === 'rfi' || rfx.type === 'rfp') && (rfx.status === 'active' || rfx.status === 'closed') && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleConvertRfx(rfx)}
-                                className="text-blue-600 hover:text-blue-700"
-                              >
-                                <TrendingUp className="w-4 h-4 mr-1" />
-                                Convert
-                              </Button>
-                            )}
-                            {rfx.type === 'rfq' && (rfx.status === 'active' || rfx.status === 'closed') && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleCreatePOFromRfx(rfx)}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <ShoppingCart className="w-4 h-4 mr-1" />
-                                Create Purchase Order
-                              </Button>
+                            {isVendor ? (
+                              // Vendor-specific actions
+                              <>
+                                <Button variant="ghost" size="sm" onClick={() => handleViewRfx(rfx)}>
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View Details
+                                </Button>
+                                {rfx.status === 'invited' || rfx.status === 'viewed' ? (
+                                  <Button 
+                                    variant="default" 
+                                    size="sm"
+                                    className="text-white bg-green-600 hover:bg-green-700"
+                                    onClick={() => handleRespondToRfx(rfx)}
+                                  >
+                                    <Send className="w-4 h-4 mr-1" />
+                                    Respond
+                                  </Button>
+                                ) : rfx.status === 'responded' ? (
+                                  <Button variant="outline" size="sm" disabled>
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    Responded
+                                  </Button>
+                                ) : (
+                                  <Button variant="ghost" size="sm" disabled>
+                                    <X className="w-4 h-4 mr-1" />
+                                    Closed
+                                  </Button>
+                                )}
+                                {rfx.rfx?.termsAndConditionsPath && (
+                                  <Button variant="ghost" size="sm">
+                                    <FileText className="w-4 h-4 mr-1" />
+                                    Terms & Conditions
+                                  </Button>
+                                )}
+                              </>
+                            ) : (
+                              // Buyer-specific actions (existing)
+                              <>
+                                <Button variant="ghost" size="sm" onClick={() => handleViewRfx(rfx)}>
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View
+                                </Button>
+                                {rfx.status === 'draft' && (
+                                  <Button variant="ghost" size="sm" onClick={() => handleEditRfx(rfx)}>
+                                    <Edit className="w-4 h-4 mr-1" />
+                                    Edit
+                                  </Button>
+                                )}
+                                {rfx.status === 'draft' && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handlePublishRfx(rfx.id)}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <Send className="w-4 h-4 mr-1" />
+                                    Publish
+                                  </Button>
+                                )}
+                                {rfx.status === 'active' && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleCloseRfx(rfx.id)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="w-4 h-4 mr-1" />
+                                    Close
+                                  </Button>
+                                )}
+                                {(rfx.type === 'rfi' || rfx.type === 'rfp') && rfx.status === 'closed' && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleCreateNextStage(rfx)}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <Send className="w-4 h-4 mr-1" />
+                                    Create {rfx.type === 'rfi' ? 'RFP' : 'RFQ'}
+                                  </Button>
+                                )}
+                                {(rfx.type === 'rfi' || rfx.type === 'rfp') && (rfx.status === 'active' || rfx.status === 'closed') && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleConvertRfx(rfx)}
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    <TrendingUp className="w-4 h-4 mr-1" />
+                                    Convert
+                                  </Button>
+                                )}
+                                {rfx.type === 'rfq' && (rfx.status === 'active' || rfx.status === 'closed') && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleCreatePOFromRfx(rfx)}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <ShoppingCart className="w-4 h-4 mr-1" />
+                                    Create Purchase Order
+                                  </Button>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
