@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+
 import VendorCard from "@/components/vendor-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,14 +73,9 @@ export default function VendorDiscovery() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Page Header */}
-            <div className="mb-8">
+    <div className="space-y-6 p-6">
+      {/* Page Header */}
+      <div className="mb-8">
               <h1 className="text-3xl font-bold text-foreground mb-2">Vendor Discovery</h1>
               <p className="text-muted-foreground">
                 Find and connect with suppliers using AI-powered search and intelligent recommendations
@@ -378,16 +372,13 @@ export default function VendorDiscovery() {
                           </Button>
                         </>
                       )}
-                    </CardContent>
-                  </Card>
-                )}
+                  </CardContent>
+                </Card>
+              )}
 
-                {/* Pagination could be added here if needed */}
-              </div>
+              {/* Pagination could be added here if needed */}
             </div>
           </div>
-        </main>
-      </div>
     </div>
   );
 }

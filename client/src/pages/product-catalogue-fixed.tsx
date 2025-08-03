@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+
 import CategoryManager from "@/components/category-manager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -221,15 +220,10 @@ export default function ProductCatalogue() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Page Header */}
-            <div className="flex justify-between items-center mb-8">
-              <div>
+    <div className="space-y-6 p-6">
+      {/* Page Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
                 <h1 className="text-3xl font-bold text-foreground">Product Catalogue</h1>
                 <p className="text-muted-foreground">Manage your centralized product and service catalogue with hierarchical categories</p>
               </div>
@@ -606,11 +600,8 @@ export default function ProductCatalogue() {
                   )}
                 </div>
               </TabsContent>
-            </Tabs>
-          </div>
-        </main>
-      </div>
-
+      </Tabs>
+      
       {/* View Product Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl">

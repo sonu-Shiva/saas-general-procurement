@@ -3,8 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -207,35 +206,22 @@ export default function DirectProcurementSimple() {
 
   if (!user || user.role === 'vendor') {
     return (
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="flex-1 flex flex-col">
-          <Header />
-          <main className="flex-1 p-6">
-            <Card className="max-w-md mx-auto mt-20">
-              <CardContent className="pt-6 text-center">
-                <Building className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Access Restricted</h3>
-                <p className="text-gray-600">
-                  Direct Procurement is only available for buyer roles.
-                </p>
-              </CardContent>
-            </Card>
-          </main>
-        </div>
+      <div className="max-w-2xl mx-auto text-center p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
+        <p className="text-gray-600 mb-6">
+          Direct Procurement is only available for buyer roles.
+        </p>
+        <Button onClick={() => window.history.back()}>
+          Go Back
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Header />
-        <main className="flex-1 p-6">
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Direct Procurement</h1>
                 <p className="text-gray-600 mt-1">Create purchase orders directly from BOMs</p>
@@ -558,10 +544,7 @@ export default function DirectProcurementSimple() {
                   </div>
                 )}
               </CardContent>
-            </Card>
-          </div>
-        </main>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -97,14 +96,9 @@ export default function Analytics() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Page Header */}
-            <div className="flex justify-between items-center mb-8">
+    <div className="space-y-6 p-6">
+      {/* Page Header */}
+      <div className="flex justify-between items-center mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">Analytics & Reports</h1>
                 <p className="text-muted-foreground">Comprehensive insights into your procurement performance</p>
@@ -616,10 +610,7 @@ export default function Analytics() {
                   </Card>
                 </div>
               </TabsContent>
-            </Tabs>
-          </div>
-        </main>
-      </div>
+        </Tabs>
     </div>
   );
 }
