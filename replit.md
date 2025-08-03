@@ -40,6 +40,7 @@ Preferred communication style: Simple, everyday language.
 ### Core Modules
 - **Dashboard**: Executive overview and AI chat.
 - **Vendor Management**: Complete vendor lifecycle.
+- **Vendor Portal**: Complete seller interface for RFx responses and workflow management.
 - **Product Catalog**: Centralized product information.
 - **BOM Management**: Bill of Materials creation and management.
 - **RFx Management**: Request for Quote/Proposal/Information workflows.

@@ -19,6 +19,7 @@ import {
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Vendor Management", href: "/vendors", icon: Users, hiddenForVendors: true },
+  { name: "Vendor Portal", href: "/vendor-portal", icon: MessageSquare, onlyForVendors: true },
   { name: "Product Catalogue", href: "/products", icon: Package },
   { name: "BOM Management", href: "/boms", icon: Layers, hiddenForVendors: true },
   { name: "RFx Management", href: "/rfx", icon: FileText },
@@ -38,8 +39,12 @@ export default function Sidebar() {
         <nav className="space-y-2">
           {navigation
             .filter((item) => {
-              // Hide Vendor Management and BOM Management from vendor users
-              if (user?.role === 'vendor' && item.hiddenForVendors) {
+              // Hide certain items from vendor users
+              if ((user as any)?.role === 'vendor' && item.hiddenForVendors) {
+                return false;
+              }
+              // Show vendor portal only for vendor users
+              if (item.onlyForVendors && (user as any)?.role !== 'vendor') {
                 return false;
               }
               return true;
