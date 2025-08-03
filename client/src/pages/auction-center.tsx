@@ -439,7 +439,17 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
     startTime: '',
     endTime: '',
     selectedVendors: [] as string[],
+    selectedBomItems: [] as string[],
   });
+
+  // Fetch BOM items when a BOM is selected
+  const { data: bomItems = [] } = useQuery({
+    queryKey: ["/api/bom-items", formData.bomId],
+    enabled: !!formData.bomId && formData.bomId !== 'none',
+    retry: false,
+  });
+
+  const selectedBom = boms.find((bom: any) => bom.id === formData.bomId);
 
   const createAuctionMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -451,6 +461,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           description: data.description,
           bomId: data.bomId || null,
           bomLineItemId: null,
+          selectedBomItems: data.selectedBomItems || [],
           reservePrice: data.ceilingPrice,
           startTime: data.startTime ? new Date(data.startTime).toISOString() : null,
           endTime: data.endTime ? new Date(data.endTime).toISOString() : null,
@@ -518,6 +529,23 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
     }));
   };
 
+  const handleBomItemToggle = (itemId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedBomItems: prev.selectedBomItems.includes(itemId)
+        ? prev.selectedBomItems.filter(id => id !== itemId)
+        : [...prev.selectedBomItems, itemId]
+    }));
+  };
+
+  const handleBomChange = (value: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      bomId: value,
+      selectedBomItems: [] // Reset selected items when BOM changes
+    }));
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
@@ -531,7 +559,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         </div>
         <div>
           <Label htmlFor="bomId">Bill of Materials</Label>
-          <Select value={formData.bomId} onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value }))}>
+          <Select value={formData.bomId} onValueChange={handleBomChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select BOM (optional)" />
             </SelectTrigger>
@@ -586,6 +614,60 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           />
         </div>
       </div>
+
+      {/* BOM Items Selection */}
+      {formData.bomId && formData.bomId !== 'none' && selectedBom && (
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <Label className="text-base font-medium">BOM Items for Auction</Label>
+            <Badge variant="outline">{selectedBom.name} ({selectedBom.version})</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Select specific items from this BOM to include in the auction:
+          </p>
+          {bomItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Loading BOM items...</p>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {bomItems.map((item: any) => (
+                <div key={item.id} className="flex items-center space-x-3 p-2 border rounded hover:bg-muted/50">
+                  <input
+                    type="checkbox"
+                    id={`bom-item-${item.id}`}
+                    checked={formData.selectedBomItems.includes(item.id)}
+                    onChange={() => handleBomItemToggle(item.id)}
+                    className="rounded"
+                  />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <Label htmlFor={`bom-item-${item.id}`} className="text-sm font-medium">
+                          {item.productName}
+                        </Label>
+                        {item.internalCode && (
+                          <p className="text-xs text-muted-foreground">Code: {item.internalCode}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm">Qty: {item.requestedQuantity}</div>
+                        <div className="text-sm text-muted-foreground">₹{item.unitPrice}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {bomItems.length > 0 && (
+            <div className="mt-3 pt-3 border-t">
+              <div className="flex justify-between text-sm">
+                <span>Selected Items: {formData.selectedBomItems.length}</span>
+                <span>Total Items: {bomItems.length}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <Label>Invite Vendors</Label>
