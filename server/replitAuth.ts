@@ -40,13 +40,13 @@ export function getSession() {
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
-    resave: false, // Don't save session if unmodified
-    saveUninitialized: false, // Don't create session until something stored
-    rolling: true, // Extend session on each request
-    name: 'connect.sid', // Standard session name
+    resave: true, // Save session even if unmodified
+    saveUninitialized: true, // Create session immediately
+    rolling: false, // Don't extend session on each request
+    name: 'connect.sid',
     cookie: {
       httpOnly: true,
-      secure: false, // Allow HTTP in development
+      secure: false,
       maxAge: sessionTtl,
       sameSite: 'lax',
     },
@@ -171,17 +171,7 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  console.log("=== AUTH CHECK ===");
-  console.log("Session ID:", req.sessionID);
-  console.log("Session exists:", !!req.session);
-  console.log("Session passport:", JSON.stringify((req.session as any)?.passport));
-  console.log("Authenticated:", req.isAuthenticated());
-  console.log("User object:", user ? "exists" : "null");
-  console.log("User claims:", user?.claims ? "exists" : "null");
-  console.log("Expires at:", user?.expires_at);
-
   if (!req.isAuthenticated() || !user) {
-    console.log("Not authenticated or no user");
     return res.status(401).json({ message: "Unauthorized" });
   }
 

@@ -18,6 +18,7 @@ import Analytics from "./pages/analytics";
 import VendorPortal from "./pages/vendor-portal";
 import Landing from "./pages/landing";
 import NotFound from "./pages/not-found";
+import RoleSelector from "./pages/role-selector";
 
 export default function App() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -38,6 +39,16 @@ export default function App() {
           <Route path="/vendor-portal" component={VendorPortal} />
           <Route component={Landing} />
         </Switch>
+        <Toaster />
+      </TooltipProvider>
+    );
+  }
+
+  // If authenticated but no role set, show role selector
+  if (isAuthenticated && (!user || !user.role)) {
+    return (
+      <TooltipProvider>
+        <RoleSelector onRoleSelected={() => window.location.reload()} />
         <Toaster />
       </TooltipProvider>
     );
