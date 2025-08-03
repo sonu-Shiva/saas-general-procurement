@@ -49,48 +49,29 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
   // Ensure bids is always an array
   const bidsArray = Array.isArray(bids) ? bids : [];
   
-  // Debug logging
-  console.log('AuctionResults - Raw bids data:', bidsArray);
-  console.log('AuctionResults - Bids array length:', bidsArray.length);
-  
-  if (bidsArray.length > 0) {
-    console.log('AuctionResults - First bid structure:', bidsArray[0]);
-    console.log('AuctionResults - First bid keys:', Object.keys(bidsArray[0]));
-  }
-  
-  // Simple validation - if we have bids array with items, show them
-  const validBids = bidsArray.filter((bid: any) => {
-    if (!bid || !bid.id) return false;
-    
-    // Log each bid to understand the structure
-    console.log('Checking bid:', bid);
-    
-    // Handle decimal amounts - they might be strings or need conversion
-    const amount = bid.amount;
-    console.log('Bid amount:', amount, 'Type:', typeof amount);
-    
-    return true; // For now, show all bids that have an ID
-  });
-  
-  console.log('AuctionResults - Valid bids count:', validBids.length);
-
-  if (validBids.length === 0) {
+  // Check if we have any bids
+  if (bidsArray.length === 0) {
     return (
       <div className="text-center py-8">
         <div className="text-muted-foreground">
           <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-300" />
           <h3 className="text-lg font-medium mb-2">No Bids Yet</h3>
-          <p>This auction hasn't received any valid bids.</p>
+          <p>This auction hasn't received any bids.</p>
         </div>
       </div>
     );
   }
 
+  // Use all bids - they come from the database with proper structure
+  const validBids = bidsArray;
+
+
+
+  // Sort bids by amount (ascending - lowest first)
   const sortedBids = [...validBids].sort((a: any, b: any) => {
-    // Handle decimal amounts that might be strings or numbers
-    const amountA = parseFloat(String(a.amount || '0'));
-    const amountB = parseFloat(String(b.amount || '0'));
-    console.log('Sorting - A:', amountA, 'B:', amountB);
+    // Convert decimal amount strings to numbers for proper comparison
+    const amountA = Number(a.amount) || 0;
+    const amountB = Number(b.amount) || 0;
     return amountA - amountB;
   });
 
@@ -139,7 +120,9 @@ function AuctionResults({ auctionId }: { auctionId: string }) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-semibold">₹{parseFloat(String(bid.amount || '0')).toFixed(2)}</div>
+                    <div className="text-lg font-semibold">
+                      ₹{Number(bid.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
                       index === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
