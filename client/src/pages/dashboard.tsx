@@ -68,11 +68,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
+    <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="max-w-7xl mx-auto px-6 py-8">
             {/* Page Header */}
             <div className="mb-8">
