@@ -487,10 +487,43 @@ export default function PurchaseOrders() {
                         Issue
                       </Button>
                     )}
-                    <Button size="sm" variant="outline">
-                      <Eye className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl">
+                        <DialogHeader>
+                          <DialogTitle>Purchase Order Details - {po.poNumber}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <strong>Vendor:</strong> {(po as any).vendorName || 'N/A'}
+                            </div>
+                            <div>
+                              <strong>Total Amount:</strong> {formatCurrency(parseFloat(po.totalAmount || '0'))}
+                            </div>
+                            <div>
+                              <strong>Status:</strong> <Badge className={getStatusColor(po.status || '')}>{po.status?.replace('_', ' ')}</Badge>
+                            </div>
+                            <div>
+                              <strong>Created:</strong> {po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A'}
+                            </div>
+                          </div>
+                          <div>
+                            <strong>Terms & Conditions:</strong>
+                            <p className="text-sm text-muted-foreground mt-1">{(po as any).termsAndConditions || 'No terms specified'}</p>
+                          </div>
+                          <div>
+                            <strong>Notes:</strong>
+                            <p className="text-sm text-muted-foreground mt-1">{(po as any).notes || 'No notes'}</p>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     {po.status === 'draft' && (
                       <Button
                         size="sm"

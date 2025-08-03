@@ -1322,7 +1322,82 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Create Bid - Alternative endpoint for frontend compatibility
+  app.post('/api/auctions/:id/bid', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const auctionId = req.params.id;
+      const { amount } = req.body;
 
+      console.log("=== BID PLACEMENT ===");
+      console.log("User ID:", userId);
+      console.log("Auction ID:", auctionId);
+      console.log("Bid Amount:", amount);
+
+      // Verify auction exists and is live
+      const auction = await storage.getAuction(auctionId);
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+
+      if (auction.status !== 'live') {
+        return res.status(400).json({ message: "Auction is not live" });
+      }
+
+      // Verify user is a vendor
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'vendor') {
+        return res.status(403).json({ message: "Only vendors can place bids" });
+      }
+
+      // Find vendor by user
+      const vendors = await storage.getVendors({});
+      const vendor = vendors.find((v: any) => v.contactPerson === user.email || v.email === user.email);
+      if (!vendor) {
+        return res.status(403).json({ message: "Vendor profile not found" });
+      }
+
+      // Validate bid amount
+      if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        return res.status(400).json({ message: "Invalid bid amount" });
+      }
+
+      // Check if bid is lower than reserve price (for reverse auction)
+      if (auction.reservePrice && parseFloat(amount) >= parseFloat(auction.reservePrice)) {
+        return res.status(400).json({ message: "Bid must be below ceiling price" });
+      }
+
+      // Create bid
+      const bid = await storage.createBid({
+        auctionId,
+        vendorId: vendor.id,
+        amount: amount.toString(),
+        status: 'active' as const
+      });
+
+      console.log("New bid created:", bid);
+
+      // Update auction's current bid if this is the lowest bid
+      const allBids = await storage.getAuctionBids(auctionId);
+      const lowestBid = allBids.reduce((lowest: any, current: any) => 
+        parseFloat(current.amount) < parseFloat(lowest.amount) ? current : lowest, bid);
+      
+      if (lowestBid.id === bid.id) {
+        await storage.updateAuction(auctionId, {
+          currentBid: amount.toString(),
+          leadingVendorId: vendor.id
+        });
+      }
+
+      res.json({
+        ...bid,
+        message: "Bid placed successfully"
+      });
+    } catch (error) {
+      console.error("Error creating bid:", error);
+      res.status(500).json({ message: "Failed to create bid" });
+    }
+  });
 
   // Auction Participants
   app.post('/api/auction-participants', isAuthenticated, async (req, res) => {
@@ -1412,10 +1487,20 @@ Focus on established businesses with verifiable contact information.`;
   app.get('/api/auctions/:id/bids', isAuthenticated, async (req, res) => {
     try {
       const bids = await storage.getAuctionBids(req.params.id);
-      res.json(bids);
+      
+      // Get vendor details for each bid
+      const bidsWithVendors = await Promise.all(bids.map(async (bid: any) => {
+        const vendor = await storage.getVendor(bid.vendorId);
+        return {
+          ...bid,
+          vendorName: vendor?.companyName || 'Unknown Vendor'
+        };
+      }));
+      
+      res.json(bidsWithVendors);
     } catch (error) {
       console.error("Error fetching auction bids:", error);
-      res.status(500).json({ message: "Failed to fetch bids" });
+      res.status(500).json({ message: "Failed to fetch auction bids" });
     }
   });
 
