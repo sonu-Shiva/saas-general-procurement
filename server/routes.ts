@@ -1667,7 +1667,7 @@ Focus on established businesses with verifiable contact information.`;
         vendorId,
         bomItems,
         totalAmount: totalAmount.toString(),
-        status: "pending_approval", // All POs go through approval workflow
+        status: "pending_approval" as const, // All POs go through approval workflow
         priority: (priority || "medium"),
         deliveryDate: new Date(deliveryDate),
         paymentTerms,
@@ -1690,7 +1690,7 @@ Focus on established businesses with verifiable contact information.`;
           bomId,
           vendorId,
           totalAmount: totalAmount.toString(),
-          status: "pending_approval",
+          status: "pending_approval" as const,
           priority: (priority || "medium"),
           deliveryDate: new Date(deliveryDate),
           paymentTerms,
@@ -1711,7 +1711,7 @@ Focus on established businesses with verifiable contact information.`;
             quantity: bomItem.requestedQuantity.toString(),
             unitPrice: bomItem.unitPrice.toString(),
             totalPrice: bomItem.totalPrice.toString(),
-            status: "pending",
+            status: "pending" as const,
             lineTotal: bomItem.totalPrice.toString(),
             itemName: bomItem.productName, // Store the product name for reference
           };
@@ -1818,7 +1818,7 @@ Focus on established businesses with verifiable contact information.`;
         poNumber,
         vendorId: dpo.vendorId,
         totalAmount: dpo.totalAmount,
-        status: 'pending_approval',
+        status: 'pending_approval' as const,
         paymentTerms: dpo.paymentTerms,
         deliverySchedule: { deliveryDate: dpo.deliveryDate },
         termsAndConditions: dpo.notes || '',
@@ -1834,7 +1834,7 @@ Focus on established businesses with verifiable contact information.`;
             quantity: item.requestedQuantity.toString(),
             unitPrice: item.unitPrice,
             totalPrice: item.totalPrice,
-            specifications: item.specifications || '',
+            lineTotal: item.totalPrice.toString(),
           });
         }
       }
@@ -1894,8 +1894,7 @@ Focus on established businesses with verifiable contact information.`;
         vendorId,
         rfxId,
         totalAmount: totalAmount || "0",
-        status: "pending_approval",
-        priority: priority || "medium",
+        status: "pending_approval" as const,
         deliveryDate: new Date(deliveryDate),
         paymentTerms: paymentTerms || "Net 30",
         termsAndConditions: notes || `Purchase Order created from RFx: ${rfx.title}`,
@@ -1912,9 +1911,8 @@ Focus on established businesses with verifiable contact information.`;
           quantity: item.quantity.toString(),
           unitPrice: item.unitPrice.toString(),
           totalPrice: item.totalPrice.toString(),
-          status: "pending",
+          status: "pending" as const,
           itemName: item.itemName,
-          specifications: item.specifications || '',
         };
         
         console.log("Creating PO line item:", lineItemData);
