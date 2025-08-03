@@ -2207,17 +2207,30 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(400).json({ message: "Invalid role" });
       }
       
-      // Create or update user in storage
-      const user = await storage.upsertUser({
-        id: email, // Use email as unique ID for simple login
-        email: email,
-        firstName: name.split(' ')[0] || name,
-        lastName: name.split(' ')[1] || '',
-        profileImageUrl: null,
-        role: role,
-        organizationId: null,
-        isActive: true,
-      });
+      // Try to get existing user first
+      let user = await storage.getUserByEmail(email);
+      
+      if (user) {
+        // Update existing user's role if needed
+        if (user.role !== role) {
+          user = await storage.upsertUser({
+            ...user,
+            role: role,
+          });
+        }
+      } else {
+        // Create new user
+        user = await storage.upsertUser({
+          id: email, // Use email as unique ID for simple login
+          email: email,
+          firstName: name.split(' ')[0] || name,
+          lastName: name.split(' ')[1] || '',
+          profileImageUrl: null,
+          role: role,
+          organizationId: null,
+          isActive: true,
+        });
+      }
       
       // Create mock session data similar to Replit auth
       const mockUser = {
