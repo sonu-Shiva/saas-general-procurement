@@ -441,6 +441,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
     endTime: '',
     selectedVendors: [] as string[],
     selectedBomItems: [] as string[],
+    termsUrl: '',
   });
 
   // Fetch BOM items when a BOM is selected
@@ -470,6 +471,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           startTime: data.startTime ? new Date(data.startTime).toISOString() : null,
           endTime: data.endTime ? new Date(data.endTime).toISOString() : null,
           status: 'scheduled',
+          termsUrl: data.termsUrl,
         }),
         credentials: "include",
       });
@@ -646,14 +648,17 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                     <div className="flex justify-between items-start">
                       <div>
                         <Label htmlFor={`bom-item-${item.id}`} className="text-sm font-medium">
-                          {item.productName}
+                          {item.itemName}
                         </Label>
-                        {item.internalCode && (
-                          <p className="text-xs text-muted-foreground">Code: {item.internalCode}</p>
+                        {item.itemCode && (
+                          <p className="text-xs text-muted-foreground">Code: {item.itemCode}</p>
+                        )}
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground">{item.description}</p>
                         )}
                       </div>
                       <div className="text-right">
-                        <div className="text-sm">Qty: {item.requestedQuantity}</div>
+                        <div className="text-sm">Qty: {item.quantity}</div>
                         <div className="text-sm text-muted-foreground">₹{item.unitPrice}</div>
                       </div>
                     </div>
@@ -672,6 +677,18 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           )}
         </div>
       )}
+
+      {/* Terms & Conditions Upload */}
+      <div className="border rounded-lg p-4">
+        <Label className="text-base font-medium">Terms & Conditions *</Label>
+        <p className="text-sm text-muted-foreground mb-3">
+          Upload terms and conditions that vendors must accept before bidding
+        </p>
+        <TermsUploader
+          onUpload={(url) => setFormData(prev => ({ ...prev, termsUrl: url }))}
+          currentTermsUrl={formData.termsUrl}
+        />
+      </div>
 
       <div>
         <Label>Invite Vendors</Label>
@@ -697,7 +714,10 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" disabled={createAuctionMutation.isPending}>
+        <Button 
+          type="submit" 
+          disabled={createAuctionMutation.isPending || !formData.termsUrl}
+        >
           {createAuctionMutation.isPending ? "Creating..." : "Create Auction"}
         </Button>
       </div>
