@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Calendar, 
-  DollarSign, 
+  IndianRupee, 
   Truck, 
   CreditCard, 
   Clock, 
@@ -162,10 +162,10 @@ function ResponseCard({ response, index, onCreatePO, rfxType }: any) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {response.quotedPrice && (
             <div className="flex items-center space-x-2">
-              <DollarSign className="w-4 h-4 text-green-600" />
+              <IndianRupee className="w-4 h-4 text-green-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Quoted Price</p>
-                <p className="font-medium">₹{parseFloat(response.quotedPrice).toLocaleString()}</p>
+                <p className="font-medium">₹{parseFloat(response.quotedPrice).toLocaleString('en-IN')}</p>
               </div>
             </div>
           )}

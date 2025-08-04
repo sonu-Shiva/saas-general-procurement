@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Calendar, DollarSign, FileText, Clock, AlertCircle, Check } from "lucide-react";
+import { Calendar, IndianRupee, FileText, Clock, AlertCircle, Check } from "lucide-react";
 
 const rfxResponseSchema = z.object({
   quotedPrice: z.string().min(1, "Quoted price is required"),

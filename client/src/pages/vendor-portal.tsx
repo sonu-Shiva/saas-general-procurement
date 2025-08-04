@@ -12,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { FileText, Clock, DollarSign, Truck, AlertCircle, CheckCircle, Calendar, Download } from "lucide-react";
+import { FileText, Clock, IndianRupee, Truck, AlertCircle, CheckCircle, Calendar, Download } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { TermsAcceptanceDialog } from "@/components/TermsAcceptanceDialog";
