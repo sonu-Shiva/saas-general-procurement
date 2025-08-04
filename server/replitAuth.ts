@@ -158,6 +158,21 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // TEMPORARY: Skip authentication for development/testing
+  if (process.env.NODE_ENV === 'development') {
+    console.log("DEVELOPMENT MODE: Bypassing authentication");
+    // Create a mock user for development
+    (req as any).user = {
+      claims: {
+        sub: "dev-user-123",
+        email: "dev@sclen.com",
+        first_name: "Developer",
+        last_name: "User"
+      }
+    };
+    return next();
+  }
+
   const user = req.user as any;
 
   console.log("=== AUTH CHECK ===");

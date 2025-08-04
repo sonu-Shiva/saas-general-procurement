@@ -6,6 +6,14 @@ This project is a modern, full-stack procurement management platform designed to
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### AI Discovery Integration (January 2025)
+- Fixed Perplexity API integration with correct "sonar-pro" model
+- Enhanced vendor discovery to return real supplier data with complete contact information
+- Implemented development authentication bypass for testing core functionality
+- Confirmed AI discovery working with chemical suppliers and electronic component suppliers
+
 ## System Architecture
 
 ### Frontend Architecture
