@@ -124,7 +124,10 @@ export default function DirectProcurement() {
       console.log("=== CREATING ORDER ===");
       console.log("Order data:", data);
       
-      return await apiRequest("POST", "/api/direct-procurement", data);
+      return await apiRequest("/api/direct-procurement", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       toast({
@@ -148,7 +151,10 @@ export default function DirectProcurement() {
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return apiRequest("PATCH", `/api/direct-procurement/${id}/status`, { status });
+      return apiRequest(`/api/direct-procurement/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
     },
     onSuccess: () => {
       toast({
@@ -169,7 +175,9 @@ export default function DirectProcurement() {
   // Delete order mutation
   const deleteOrderMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/direct-procurement/${id}`);
+      return apiRequest(`/api/direct-procurement/${id}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       toast({
