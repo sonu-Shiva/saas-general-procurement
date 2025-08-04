@@ -231,10 +231,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { query, location, category } = req.body;
 
-      console.log("=== AI VENDOR DISCOVERY ===");
+      console.log("=== AI VENDOR DISCOVERY REQUEST ===");
+      console.log("Timestamp:", new Date().toISOString());
       console.log("Query:", query);
       console.log("Location:", location);
       console.log("Category:", category);
+      console.log("User authenticated:", !!req.user);
+      console.log("Session ID:", req.sessionID);
 
       if (!process.env.PERPLEXITY_API_KEY) {
         throw new Error("Perplexity API key not configured");

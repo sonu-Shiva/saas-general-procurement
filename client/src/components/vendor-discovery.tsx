@@ -112,8 +112,11 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
       });
     },
     onError: (error: any) => {
+      console.error("AI Discovery Error:", error);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
       toast({
-        title: "Error",
+        title: "Discovery Failed",
         description: error.message || "Failed to discover vendors",
         variant: "destructive",
       });
