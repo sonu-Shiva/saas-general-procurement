@@ -2620,6 +2620,18 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(400).json({ message: "You have already responded to this RFx" });
       }
 
+      // Check if terms must be accepted for this RFx
+      const rfxEvent = await storage.getRfxEvent(rfxId);
+      if (rfxEvent?.termsAndConditionsRequired && rfxEvent?.termsAndConditionsPath) {
+        const termsAcceptance = await storage.getTermsAcceptance(userId, 'rfx', rfxId);
+        if (!termsAcceptance) {
+          return res.status(400).json({ 
+            message: "You must accept the terms and conditions before submitting a response.",
+            requiresTermsAcceptance: true 
+          });
+        }
+      }
+
       // Create RFx response using the schema-compatible format
       const response = await storage.createRfxResponse({
         rfxId,
@@ -2663,6 +2675,31 @@ Focus on established businesses with verifiable contact information.`;
     } catch (error) {
       console.error("Error downloading terms:", error);
       res.status(500).json({ message: "Failed to download terms" });
+    }
+  });
+
+  // Accept terms and conditions for specific entity
+  app.post('/api/terms/accept', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { entityType, entityId, termsAndConditionsPath } = req.body;
+
+      if (!entityType || !entityId) {
+        return res.status(400).json({ message: "entityType and entityId are required" });
+      }
+
+      const acceptance = await storage.createTermsAcceptance({
+        userId,
+        entityType,
+        entityId,
+        termsAndConditionsPath,
+        acceptedAt: new Date(),
+      });
+
+      res.json(acceptance);
+    } catch (error) {
+      console.error("Error accepting terms:", error);
+      res.status(500).json({ message: "Failed to accept terms" });
     }
   });
 

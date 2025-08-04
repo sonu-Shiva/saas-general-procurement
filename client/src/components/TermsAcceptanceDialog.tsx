@@ -42,18 +42,13 @@ export function TermsAcceptanceDialog({
   const handleDownloadTerms = () => {
     console.log('DEBUG: Terms path:', termsAndConditionsPath);
     if (termsAndConditionsPath) {
-      // Handle different path formats
-      let downloadUrl = termsAndConditionsPath;
-      
-      // If it's just a filename, use the terms download endpoint
-      if (!downloadUrl.startsWith('http') && !downloadUrl.startsWith('/')) {
-        downloadUrl = `/api/terms/download/${downloadUrl}`;
-      }
-      // If it starts with '/', use it as is
-      else if (downloadUrl.startsWith('/') && !downloadUrl.startsWith('/api/') && !downloadUrl.startsWith('/public-objects/')) {
-        downloadUrl = `/public-objects${downloadUrl}`;
+      let filename = termsAndConditionsPath;
+      // Extract filename from full URL if needed
+      if (filename.includes('/')) {
+        filename = filename.split('/').pop() || 'terms.pdf';
       }
       
+      const downloadUrl = `/api/terms/download/${filename}`;
       console.log('DEBUG: Opening URL:', downloadUrl);
       window.open(downloadUrl, '_blank');
       setHasReadTerms(true);

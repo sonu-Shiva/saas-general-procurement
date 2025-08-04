@@ -88,6 +88,7 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
   const queryClient = useQueryClient();
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [hasCheckedTerms, setHasCheckedTerms] = useState(false);
 
   const form = useForm<RfxResponseFormData>({
     resolver: zodResolver(rfxResponseSchema),
@@ -139,11 +140,21 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
       onClose();
     },
     onError: (error: any) => {
-      toast({
-        title: "Submission Failed",
-        description: error.message || "Failed to submit response. Please try again.",
-        variant: "destructive",
-      });
+      console.error('DEBUG: Submit error:', error);
+      if (error.message?.includes("terms and conditions")) {
+        setShowTermsDialog(true);
+        toast({
+          title: "Terms Required",
+          description: "You must accept the terms & conditions before submitting your response.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Submission Failed",
+          description: error.message || "Failed to submit response. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -569,6 +580,12 @@ export default function VendorPortal() {
                           <div className="flex items-center gap-2 text-sm">
                             <span className="text-muted-foreground">₹</span>
                             <span className="text-muted-foreground">Budget: ₹{invitation.rfx.budget}</span>
+                          </div>
+                        )}
+                        {invitation.rfx.termsAndConditionsPath && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="h-4 w-4 text-orange-500" />
+                            <span className="text-orange-600 font-medium">Terms & Conditions Required</span>
                           </div>
                         )}
                       </div>
