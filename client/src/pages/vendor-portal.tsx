@@ -36,14 +36,17 @@ interface RfxInvitation {
   rfx: {
     id: string;
     title: string;
+    referenceNo?: string;
     type: string;
     scope: string;
     dueDate: string;
     status: string;
     budget?: string;
+    contactPerson?: string;
     termsAndConditionsPath?: string;
     criteria?: string;
     evaluationParameters?: string;
+    attachments?: string;
   };
 }
 
@@ -166,7 +169,7 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
   };
 
   const isExpired = new Date(invitation.rfx.dueDate) < new Date();
-  const canRespond = invitation.status === 'pending' && !isExpired;
+  const canRespond = ['invited', 'pending'].includes(invitation.status) && !isExpired && invitation.rfx.status === 'active';
 
   return (
     <>
@@ -193,64 +196,73 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Type</p>
                     <Badge className={getRfxTypeColor(invitation.rfx.type)}>
-                      {invitation.rfx.type}
+                      {invitation.rfx.type.toUpperCase()}
                     </Badge>
                   </div>
                   <div>
+                    <p className="text-sm font-medium text-muted-foreground">Status</p>
+                    <Badge variant="outline" className="text-green-700 border-green-700">
+                      {invitation.rfx.status?.toUpperCase() || 'ACTIVE'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Reference No</p>
+                    <p className="text-sm">{invitation.rfx.referenceNo || 'N/A'}</p>
+                  </div>
+                  <div>
                     <p className="text-sm font-medium text-muted-foreground">Due Date</p>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span className={isExpired ? 'text-red-600' : 'text-foreground'}>
-                        {format(new Date(invitation.rfx.dueDate), 'PPp')}
-                      </span>
-                      {isExpired && <Badge variant="destructive">Expired</Badge>}
-                    </div>
+                    <p className={`text-sm ${isExpired ? 'text-red-600 font-medium' : ''}`}>
+                      {format(new Date(invitation.rfx.dueDate), 'PPp')}
+                    </p>
                   </div>
                   {invitation.rfx.budget && (
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Budget</p>
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        <span>${invitation.rfx.budget}</span>
-                      </div>
+                      <p className="text-sm font-medium text-green-600">${invitation.rfx.budget}</p>
+                    </div>
+                  )}
+                  {invitation.rfx.contactPerson && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Contact Person</p>
+                      <p className="text-sm">{invitation.rfx.contactPerson}</p>
                     </div>
                   )}
                 </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Scope</p>
-                  <p className="text-sm">{invitation.rfx.scope}</p>
-                </div>
+
+                {invitation.rfx.scope && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Scope of Work</p>
+                    <p className="text-sm bg-muted p-3 rounded-md">{invitation.rfx.scope}</p>
+                  </div>
+                )}
 
                 {invitation.rfx.criteria && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Evaluation Criteria</p>
-                    <p className="text-sm">{invitation.rfx.criteria}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Evaluation Criteria</p>
+                    <p className="text-sm bg-muted p-3 rounded-md">{invitation.rfx.criteria}</p>
                   </div>
                 )}
 
                 {invitation.rfx.evaluationParameters && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Evaluation Parameters</p>
-                    <p className="text-sm">{invitation.rfx.evaluationParameters}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Evaluation Parameters</p>
+                    <div className="text-sm bg-muted p-3 rounded-md">
+                      <pre className="whitespace-pre-wrap text-xs">{JSON.stringify(invitation.rfx.evaluationParameters, null, 2)}</pre>
+                    </div>
                   </div>
                 )}
 
                 {invitation.rfx.termsAndConditionsPath && (
-                  <div className="border-t pt-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <AlertCircle className="h-4 w-4" />
-                      Terms & Conditions
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      You must accept the terms and conditions before submitting your response.
-                    </p>
-                    {(termsAccepted || termsStatus?.hasAccepted) && (
-                      <div className="flex items-center gap-2 mt-2 text-green-600">
-                        <CheckCircle className="h-4 w-4" />
-                        <span className="text-sm">Terms & Conditions Accepted</span>
-                      </div>
-                    )}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Terms & Conditions</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.open(invitation.rfx.termsAndConditionsPath, '_blank')}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download Terms & Conditions
+                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -260,14 +272,14 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
             {canRespond ? (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Your Response</CardTitle>
+                  <CardTitle className="text-lg">Submit Your Response</CardTitle>
                   <CardDescription>
-                    Provide your proposal details for this RFx request
+                    Provide your proposal for this {invitation.rfx.type} request
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
@@ -283,6 +295,7 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                                   placeholder="0.00"
                                   {...field}
                                   onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                  data-testid="input-proposed-price"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -297,7 +310,11 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                             <FormItem>
                               <FormLabel>Delivery Time</FormLabel>
                               <FormControl>
-                                <Input placeholder="e.g., 2-3 weeks, 30 days" {...field} />
+                                <Input 
+                                  placeholder="e.g., 2-3 weeks, 30 days" 
+                                  {...field} 
+                                  data-testid="input-delivery-time"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -316,6 +333,7 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                                 placeholder="Describe your technical approach, specifications, and methodology..."
                                 className="min-h-[120px]"
                                 {...field}
+                                data-testid="textarea-technical-spec"
                               />
                             </FormControl>
                             <FormMessage />
@@ -334,6 +352,7 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                                 placeholder="Any additional information, terms, or clarifications..."
                                 className="min-h-[80px]"
                                 {...field}
+                                data-testid="textarea-additional-notes"
                               />
                             </FormControl>
                             <FormMessage />
@@ -346,12 +365,14 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                           type="button"
                           variant="outline"
                           onClick={onClose}
+                          data-testid="button-cancel-response"
                         >
                           Cancel
                         </Button>
                         <Button
                           type="submit"
                           disabled={submitResponseMutation.isPending}
+                          data-testid="button-submit-response"
                         >
                           {submitResponseMutation.isPending ? "Submitting..." : "Submit Response"}
                         </Button>
@@ -418,7 +439,9 @@ export default function VendorPortal() {
     queryFn: () => apiRequest('/api/vendor/rfx-responses'),
   });
 
-  const pendingInvitations = invitations.filter((inv: RfxInvitation) => inv.status === 'pending');
+  const pendingInvitations = invitations.filter((inv: RfxInvitation) => 
+    ['invited', 'pending'].includes(inv.status) && inv.rfx.status === 'active'
+  );
   const respondedInvitations = invitations.filter((inv: RfxInvitation) => inv.status === 'responded');
 
   return (
@@ -531,179 +554,44 @@ export default function VendorPortal() {
         </TabsContent>
 
         <TabsContent value="responded" className="space-y-4">
-          {invitationsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="h-3 bg-muted rounded"></div>
-                      <div className="h-3 bg-muted rounded w-2/3"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : respondedInvitations.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Responded Invitations</h3>
-                  <p className="text-muted-foreground">
-                    You haven't responded to any RFx invitations yet.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {respondedInvitations.map((invitation: RfxInvitation) => (
-                <Card key={invitation.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">{invitation.rfx.title}</CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getRfxTypeColor(invitation.rfx.type)}>
-                            {invitation.rfx.type}
-                          </Badge>
-                          <Badge className={getStatusColor(invitation.status)}>
-                            Responded
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          Responded: {format(new Date(invitation.respondedAt!), 'PPp')}
-                        </span>
-                      </div>
-                      {invitation.rfx.budget && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Budget: ${invitation.rfx.budget}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {invitation.rfx.scope}
-                    </p>
-
-                    <Button 
-                      variant="outline" 
-                      className="w-full" 
-                      onClick={() => setSelectedInvitation(invitation)}
-                    >
-                      View Details
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Responded Invitations</h3>
+                <p className="text-muted-foreground">
+                  You haven't responded to any RFx invitations yet.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="responses" className="space-y-4">
-          {responsesLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader>
-                    <div className="h-4 bg-muted rounded w-1/2"></div>
-                    <div className="h-3 bg-muted rounded w-1/3"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-3 bg-muted rounded w-full"></div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : responses.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No Responses</h3>
-                  <p className="text-muted-foreground">
-                    You haven't submitted any RFx responses yet.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {responses.map((response: RfxResponse) => (
-                <Card key={response.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">Response #{response.id.slice(-8)}</CardTitle>
-                        <CardDescription>
-                          Submitted on {format(new Date(response.submittedAt), 'PPp')}
-                        </CardDescription>
-                      </div>
-                      <Badge className={getStatusColor(response.status)}>
-                        {response.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          <span className="font-medium">Proposed:</span> ${response.proposedPrice}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Truck className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          <span className="font-medium">Delivery:</span> {response.deliveryTime}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          <span className="font-medium">Status:</span> {response.status}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Technical Specification</p>
-                      <p className="text-sm line-clamp-2">{response.technicalSpecification}</p>
-                    </div>
-
-                    {response.additionalNotes && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Additional Notes</p>
-                        <p className="text-sm line-clamp-2">{response.additionalNotes}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Responses Submitted</h3>
+                <p className="text-muted-foreground">
+                  You haven't submitted any RFx responses yet.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
       {selectedInvitation && (
         <RfxResponseDialog
           invitation={selectedInvitation}
+          isOpen={!!selectedInvitation}
           onClose={() => setSelectedInvitation(null)}
         />
       )}
     </div>
   );
 }
+                      <Calendar className="h-4 w-4" />
+                      <span className={isExpired ? 'text-red-600' : 'text-foreground'}>
+                        {format(new Date(invitation.rfx.dueDate), 'PPp')}
