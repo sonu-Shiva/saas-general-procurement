@@ -89,7 +89,12 @@ export function TermsUploader({
   return (
     <div className="space-y-2">
       <Button 
-        onClick={() => setShowModal(true)} 
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowModal(true);
+        }} 
         className={buttonClassName}
         variant={hasCurrentFile ? "outline" : "default"}
       >
