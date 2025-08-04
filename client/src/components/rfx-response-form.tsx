@@ -31,6 +31,7 @@ interface RfxResponseFormProps {
 }
 
 export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProps) {
+  console.log('DEBUG rfx-response-form.tsx: RECEIVED rfx prop:', rfx);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const { toast } = useToast();
@@ -61,17 +62,24 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
       setIsSubmitting(true);
 
       // Submit the RFx response using the vendor endpoint
+      console.log('DEBUG rfx-response-form.tsx: rfx object:', rfx);
+      console.log('DEBUG rfx-response-form.tsx: rfx.id:', rfx.id);
+      console.log('DEBUG rfx-response-form.tsx: rfx.rfxId:', rfx.rfxId);
+      console.log('DEBUG rfx-response-form.tsx: Using ID:', rfx.rfxId || rfx.id);
+      const payload = {
+        rfxId: rfx.rfxId || rfx.id,
+        quotedPrice: parseFloat(data.quotedPrice),
+        leadTime: parseInt(data.leadTime),
+        response: data.response,
+        deliveryTerms: data.deliveryTerms,
+        paymentTerms: data.paymentTerms,
+        attachments: data.attachments || [],
+      };
+      console.log('DEBUG rfx-response-form.tsx: Full payload:', payload);
+      
       await apiRequest('/api/vendor/rfx-responses', {
         method: "POST",
-        body: JSON.stringify({
-          rfxId: rfx.rfxId,
-          quotedPrice: parseFloat(data.quotedPrice),
-          leadTime: parseInt(data.leadTime),
-          response: data.response,
-          deliveryTerms: data.deliveryTerms,
-          paymentTerms: data.paymentTerms,
-          attachments: data.attachments || [],
-        }),
+        body: JSON.stringify(payload),
       });
 
       toast({
