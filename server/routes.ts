@@ -2645,12 +2645,17 @@ Focus on established businesses with verifiable contact information.`;
   // Serve terms and conditions documents
   app.get('/api/terms/download/:filename', async (req, res) => {
     try {
-      const filename = req.params.filename;
+      let filename = req.params.filename;
       console.log('DEBUG: Downloading terms file:', filename);
+      
+      // Extract filename from full URL if needed
+      if (filename.includes('/')) {
+        filename = filename.split('/').pop() || 'terms.pdf';
+      }
       
       // For now, redirect to public objects path or return a response
       // In production, you'd serve the actual file from storage
-      if (filename) {
+      if (filename && filename !== 'undefined') {
         res.redirect(`/public-objects/${filename}`);
       } else {
         res.status(404).json({ message: "Terms file not found" });

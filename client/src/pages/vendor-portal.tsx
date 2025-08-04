@@ -278,7 +278,11 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                       size="sm"
                       className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
                       onClick={() => {
-                        const filename = invitation.rfx.termsAndConditionsPath || 'terms.pdf';
+                        let filename = invitation.rfx.termsAndConditionsPath || 'terms.pdf';
+                        // Extract filename from full URL if it's a full path
+                        if (filename.includes('/')) {
+                          filename = filename.split('/').pop() || 'terms.pdf';
+                        }
                         window.open(`/api/terms/download/${filename}`, '_blank');
                       }}
                     >
