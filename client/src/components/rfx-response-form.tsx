@@ -133,7 +133,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
               <span>Due: {dueDate ? dueDate.toLocaleDateString() : 'Not specified'}</span>
             </div>
             <div className="flex items-center space-x-2 text-sm">
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <span className="w-4 h-4 text-muted-foreground">₹</span>
               <span>Budget: {rfxData.budget ? `₹${rfxData.budget}` : 'Not specified'}</span>
             </div>
             <div className="flex items-center space-x-2 text-sm">
@@ -163,10 +163,16 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
           <CardContent>
             <div className="space-y-4">
               {rfxData.termsAndConditionsPath && (
-                <Button variant="outline" className="w-full">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Download Terms & Conditions (PDF)
-                </Button>
+                <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  window.open(`/api/terms/download/${rfxData.termsAndConditionsPath}`, '_blank');
+                }}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Download Terms & Conditions (PDF)
+              </Button>
               )}
               <div className="flex items-center space-x-2">
                 <input
