@@ -108,13 +108,7 @@ export default function DirectProcurement() {
   const selectedBomId = form.watch("bomId");
   const { data: bomItems = [], isError, error } = useQuery({
     queryKey: ["/api/bom-items", selectedBomId],
-    queryFn: async () => {
-      if (!selectedBomId) return [];
-      const response = await apiRequest("GET", `/api/bom-items/${selectedBomId}`);
-      const data = await response.json();
-      console.log("BOM Items API Response:", data);
-      return data;
-    },
+    queryFn: () => apiRequest(`/api/bom-items/${selectedBomId}`),
     enabled: !!selectedBomId,
     retry: false,
   });
