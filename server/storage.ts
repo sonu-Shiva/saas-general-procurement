@@ -264,11 +264,6 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getVendorByUserId(userId: string): Promise<Vendor | undefined> {
-    const [vendor] = await db.select().from(vendors).where(eq(vendors.createdBy, userId));
-    return vendor;
-  }
-
   // Product Category operations
   async createProductCategory(category: InsertProductCategory): Promise<ProductCategory> {
     const [newCategory] = await db.insert(productCategories).values(category).returning();
@@ -732,14 +727,42 @@ export class DatabaseStorage implements IStorage {
     return auctionList;
   }
 
-  async getRfxEventsForVendor(vendorUserId: string): Promise<RfxEvent[]> {
+  async getRfxEventsForVendor(vendorId: string): Promise<RfxEvent[]> {
     // Get RFx events where the vendor is invited to participate
-    return await db
-      .select()
+    const results = await db
+      .select({
+        id: rfxEvents.id,
+        title: rfxEvents.title,
+        referenceNo: rfxEvents.referenceNo,
+        type: rfxEvents.type,
+        status: rfxEvents.status,
+        scope: rfxEvents.scope,
+        criteria: rfxEvents.criteria,
+        submissionDeadline: rfxEvents.submissionDeadline,
+        budget: rfxEvents.budget,
+        contactPerson: rfxEvents.contactPerson,
+        bomId: rfxEvents.bomId,
+        parentRfxId: rfxEvents.parentRfxId,
+        termsAndConditionsPath: rfxEvents.termsAndConditionsPath,
+        termsAndConditionsRequired: rfxEvents.termsAndConditionsRequired,
+        createdBy: rfxEvents.createdBy,
+        createdAt: rfxEvents.createdAt,
+        updatedAt: rfxEvents.updatedAt,
+      })
       .from(rfxEvents)
       .innerJoin(rfxInvitations, eq(rfxEvents.id, rfxInvitations.rfxId))
-      .where(eq(rfxInvitations.vendorId, vendorUserId))
+      .where(eq(rfxInvitations.vendorId, vendorId))
       .orderBy(desc(rfxEvents.createdAt));
+    
+    return results;
+  }
+
+  async getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]> {
+    return await db
+      .select()
+      .from(rfxResponses)
+      .where(eq(rfxResponses.vendorId, vendorId))
+      .orderBy(desc(rfxResponses.submittedAt));
   }
 
   async updateAuction(id: string, updates: Partial<InsertAuction>): Promise<Auction> {

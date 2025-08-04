@@ -11,8 +11,10 @@ import { FileText, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface TermsUploaderProps {
-  onTermsUpload: (url: string) => void;
+  onUploadComplete?: (filePath: string) => void;  // Updated for consistency
+  onTermsUpload?: (url: string) => void;          // Keep for backward compatibility
   currentTermsUrl?: string;
+  currentFilePath?: string;                       // Add for consistency
   buttonClassName?: string;
   children?: ReactNode;
 }
@@ -33,8 +35,10 @@ interface TermsUploaderProps {
  * @param props.children - Optional custom button content
  */
 export function TermsUploader({
+  onUploadComplete,
   onTermsUpload,
   currentTermsUrl,
+  currentFilePath,
   buttonClassName,
   children,
 }: TermsUploaderProps) {
@@ -71,14 +75,16 @@ export function TermsUploader({
         if (result.successful && result.successful.length > 0) {
           const uploadedFile = result.successful[0];
           if (uploadedFile.uploadURL) {
-            onTermsUpload(uploadedFile.uploadURL);
+            // Call both callbacks for compatibility
+            onTermsUpload?.(uploadedFile.uploadURL);
+            onUploadComplete?.(uploadedFile.uploadURL);
             setShowModal(false);
           }
         }
       })
   );
 
-  const hasCurrentFile = Boolean(currentTermsUrl);
+  const hasCurrentFile = Boolean(currentTermsUrl || currentFilePath);
 
   return (
     <div className="space-y-2">

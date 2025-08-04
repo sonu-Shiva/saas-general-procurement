@@ -1054,6 +1054,54 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Vendor-specific RFx invitations API (for frontend compatibility)
+  app.get('/api/vendor/rfx-invitations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'vendor') {
+        return res.status(403).json({ message: "Access denied. Vendors only." });
+      }
+      
+      // Find the vendor record for this user
+      const vendor = await storage.getVendorByUserId(userId);
+      if (vendor) {
+        const rfxEvents = await storage.getRfxEventsForVendor(vendor.id);
+        res.json(rfxEvents);
+      } else {
+        res.json([]);
+      }
+    } catch (error) {
+      console.error("Error fetching vendor RFx invitations:", error);
+      res.status(500).json({ message: "Failed to fetch RFx invitations" });
+    }
+  });
+
+  // Vendor-specific RFx responses API (for frontend compatibility)
+  app.get('/api/vendor/rfx-responses', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'vendor') {
+        return res.status(403).json({ message: "Access denied. Vendors only." });
+      }
+      
+      // Find the vendor record for this user
+      const vendor = await storage.getVendorByUserId(userId);
+      if (vendor) {
+        const responses = await storage.getRfxResponsesByVendor(vendor.id);
+        res.json(responses);
+      } else {
+        res.json([]);
+      }
+    } catch (error) {
+      console.error("Error fetching vendor RFx responses:", error);
+      res.status(500).json({ message: "Failed to fetch RFx responses" });
+    }
+  });
+
   app.get('/api/rfx/:id', isAuthenticated, async (req, res) => {
     try {
       const rfx = await storage.getRfxEvent(req.params.id);
