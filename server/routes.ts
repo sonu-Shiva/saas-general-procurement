@@ -5,6 +5,24 @@ import { nanoid } from "nanoid";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isVendor, isBuyer, isSourcingManager } from "./replitAuth";
 import {
+  users, 
+  vendors,
+  vendors as vendorsTable,
+  products,
+  categories,
+  bomItems,
+  boms,
+  rfxEvents,
+  rfxResponses,
+  auctions,
+  auctionBids,
+  purchaseOrders,
+  purchaseOrderItems,
+  directProcurementOrders,
+  directProcurementOrderItems,
+  notifications
+} from "@shared/schema";
+import {
   insertVendorSchema,
   insertProductSchema,
   insertProductCategorySchema,
@@ -72,16 +90,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { role } = req.body;
-      
+
       if (!['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Update user role
       const updatedUser = await storage.upsertUser({
         id: userId,
@@ -93,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organizationId: user.organizationId,
         isActive: user.isActive,
       });
-      
+
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating user role:", error);
@@ -133,11 +151,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/vendors/search', isAuthenticated, async (req, res) => {
     try {
       const { q, location, category, certifications } = req.query;
-      
+
       if (!q) {
         return res.status(400).json({ message: "Search query is required" });
       }
-      
+
       const vendors = await storage.searchVendors(
         q as string,
         {
@@ -212,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/vendors/discover", isAuthenticated, async (req, res) => {
     try {
       const { query, location, category } = req.body;
-      
+
       console.log("=== AI VENDOR DISCOVERY ===");
       console.log("Query:", query);
       console.log("Location:", location);
@@ -224,21 +242,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Build search prompt based on user input
       let searchPrompt = "Find professional vendors and suppliers";
-      
+
       if (query && query.trim()) {
         searchPrompt += ` specializing in ${query.trim()}`;
       }
-      
+
       if (category && category !== "all" && category.trim()) {
         searchPrompt += ` in the ${category} category`;
       }
-      
+
       if (location && location !== "all" && location.trim()) {
         searchPrompt += ` located in ${location}`;
       } else {
         searchPrompt += " in India";
       }
-      
+
       searchPrompt += `. Please format the response as follows for each vendor:
 
 **[Company Name]**
@@ -286,22 +304,22 @@ Focus on established businesses with verifiable contact information.`;
 
       const perplexityData = await perplexityResponse.json();
       const aiResponse = perplexityData.choices[0]?.message?.content || "";
-      
+
       console.log("AI Response:", aiResponse);
 
       // Parse AI response to extract vendor information
       const vendors = parseVendorResponse(aiResponse);
-      
+
       console.log(`Found ${vendors.length} vendors from AI discovery`);
-      
+
       res.json(vendors);
     } catch (error) {
       console.error("Error in AI vendor discovery:", error);
-      
+
       // Fallback to curated test data if API fails
       console.log("Falling back to curated vendor data");
       let fallbackVendors = [];
-      
+
       // Provide relevant fallback based on search query
       if ((query as string) && (query as string).toLowerCase().includes("office")) {
         fallbackVendors = [
@@ -349,7 +367,7 @@ Focus on established businesses with verifiable contact information.`;
           }
         ];
       }
-      
+
       res.json(fallbackVendors);
     }
   });
@@ -357,17 +375,17 @@ Focus on established businesses with verifiable contact information.`;
   // Helper function to parse AI response into structured vendor data
   function parseVendorResponse(aiResponse: string) {
     const vendors = [];
-    
+
     try {
       console.log("Parsing AI response...");
-      
+
       // Look for table format or structured vendor information
       const lines = aiResponse.split('\n');
       let currentVendor: any = null;
-      
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        
+
         // Look for vendor names in markdown format like **VendorName** or ### VendorName
         const nameMatch = line.match(/^\*\*([^*]+)\*\*|^###?\s*(.+)|^\d+\.\s*\*\*([^*]+)\*\*/);
         if (nameMatch) {
@@ -375,7 +393,7 @@ Focus on established businesses with verifiable contact information.`;
           if (currentVendor && currentVendor.name && currentVendor.name !== "Company Name") {
             vendors.push(currentVendor);
           }
-          
+
           const vendorName = (nameMatch[1] || nameMatch[2] || nameMatch[3]).trim();
           // Exclude notes, disclaimers, and generic names
           if (vendorName && 
@@ -397,7 +415,7 @@ Focus on established businesses with verifiable contact information.`;
             };
           }
         }
-        
+
         if (currentVendor) {
           // Extract specific information patterns
           if (line.includes("Contact Email:") || line.includes("Email:")) {
@@ -406,35 +424,35 @@ Focus on established businesses with verifiable contact information.`;
               currentVendor.email = emailMatch[0];
             }
           }
-          
+
           if (line.includes("Phone:") || line.includes("Phone Number:")) {
             const phoneMatch = line.match(/[\+]?[\d\s\-\(\)]{8,}/);
             if (phoneMatch) {
               currentVendor.phone = phoneMatch[0].trim();
             }
           }
-          
+
           if (line.includes("Address:") || line.includes("Location:")) {
             const addressMatch = line.match(/(?:Address:|Location:)\s*(.+)/);
             if (addressMatch) {
               currentVendor.location = addressMatch[1].trim();
             }
           }
-          
+
           if (line.includes("Website:") || line.includes("www.") || line.includes("http")) {
             const websiteMatch = line.match(/(?:www\.|https?:\/\/)[\w\.-]+\.\w+(?:\/[\w\.-]*)?/);
             if (websiteMatch) {
               currentVendor.website = websiteMatch[0];
             }
           }
-          
+
           if (line.includes("Logo URL:") || line.includes("Logo:")) {
             const logoMatch = line.match(/(?:Logo URL:|Logo:)\s*(.+)/);
             if (logoMatch) {
               currentVendor.logoUrl = logoMatch[1].trim();
             }
           }
-          
+
           if (line.includes("Description:") || (line.length > 50 && !line.includes("|") && !line.includes("**"))) {
             if (line.includes("Description:")) {
               const descMatch = line.match(/Description:\s*(.+)/);
@@ -447,12 +465,12 @@ Focus on established businesses with verifiable contact information.`;
           }
         }
       }
-      
+
       // Add the last vendor if it exists
       if (currentVendor && currentVendor.name && currentVendor.name !== "Company Name") {
         vendors.push(currentVendor);
       }
-      
+
       // Clean up vendors with missing critical information  
       const validVendors = vendors.filter(vendor => {
         return vendor.name && 
@@ -467,7 +485,7 @@ Focus on established businesses with verifiable contact information.`;
         const hasRealPhone = vendor.phone && !vendor.phone.includes("Not publicly listed") && vendor.phone.length > 5;
         const hasRealWebsite = vendor.website && !vendor.website.includes("Not publicly listed") && vendor.website.includes(".");
         const hasRealAddress = vendor.location && !vendor.location.includes("Not publicly listed") && vendor.location.length > 10;
-        
+
         return {
           ...vendor,
           email: hasRealEmail ? vendor.email : "",
@@ -482,10 +500,10 @@ Focus on established businesses with verifiable contact information.`;
         // Only include vendors that have at least one real piece of contact info
         return vendor.email || vendor.phone || vendor.website || vendor.location;
       });
-      
+
       console.log(`Parsed ${validVendors.length} valid vendors`);
       return validVendors.slice(0, 8);
-      
+
     } catch (error) {
       console.error("Error parsing AI response:", error);
       return [];
@@ -498,13 +516,13 @@ Focus on established businesses with verifiable contact information.`;
       console.log("=== PRODUCT CREATION ===");
       console.log("User ID:", req.user.claims.sub);
       console.log("Request body:", JSON.stringify(req.body, null, 2));
-      
+
       const userId = req.user.claims.sub;
       const validatedData = insertProductSchema.parse({
         ...req.body,
         createdBy: userId,
       });
-      
+
       console.log("Validated data:", JSON.stringify(validatedData, null, 2));
       const product = await storage.createProduct(validatedData);
       console.log("Product created successfully:", product.id);
@@ -523,19 +541,19 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const { category, search, isActive } = req.query;
       const filters: any = {};
-      
+
       if (category && category !== 'all') {
         filters.category = category as string;
       }
-      
+
       if (search) {
         filters.search = search as string;
       }
-      
+
       if (isActive !== undefined) {
         filters.isActive = isActive === 'true';
       }
-      
+
       const products = await storage.getProducts(filters);
       res.json(products);
     } catch (error) {
@@ -561,22 +579,22 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const productId = req.params.id;
-      
+
       // Get the existing product to check ownership
       const existingProduct = await storage.getProduct(productId);
       if (!existingProduct) {
         return res.status(404).json({ message: "Product not found" });
       }
-      
+
       // Check if user is the creator of the product or is a vendor
       const user = await storage.getUser(userId);
       const isVendor = user?.role === 'vendor';
       const isOwner = existingProduct.createdBy === userId;
-      
+
       if (!isVendor && !isOwner) {
         return res.status(403).json({ message: "You can only edit products you created" });
       }
-      
+
       const updates = insertProductSchema.partial().parse(req.body);
       const product = await storage.updateProduct(productId, updates);
       res.json(product);
@@ -590,35 +608,35 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const productId = req.params.id;
-      
+
       console.log("=== DELETE PRODUCT ===");
       console.log("User ID:", userId);
       console.log("Product ID:", productId);
-      
+
       // Get the existing product to check ownership
       const existingProduct = await storage.getProduct(productId);
       if (!existingProduct) {
         console.log("Product not found");
         return res.status(404).json({ message: "Product not found" });
       }
-      
+
       console.log("Product found:", existingProduct.itemName);
       console.log("Product created by:", existingProduct.createdBy);
-      
+
       // Check if user is the creator of the product or is a vendor
       const user = await storage.getUser(userId);
       const isVendor = user?.role === 'vendor';
       const isOwner = existingProduct.createdBy === userId;
-      
+
       console.log("User role:", user?.role);
       console.log("Is vendor:", isVendor);
       console.log("Is owner:", isOwner);
-      
+
       if (!isVendor && !isOwner) {
         console.log("Permission denied - user cannot delete this product");
         return res.status(403).json({ message: "You can only delete products you created" });
       }
-      
+
       await storage.deleteProduct(productId);
       console.log("Product deleted successfully");
       res.json({ message: "Product deleted successfully" });
@@ -636,7 +654,7 @@ Focus on established businesses with verifiable contact information.`;
         ...req.body,
         createdBy: userId,
       });
-      
+
       // Generate code if not provided
       if (!validatedData.code) {
         const siblings = await storage.getProductCategories({
@@ -647,7 +665,7 @@ Focus on established businesses with verifiable contact information.`;
           ? Math.max(...siblings.map(s => parseInt(s.code.split('.').pop() || '0'))) 
           : 0;
         const nextNumber = maxCode + 1;
-        
+
         if (validatedData.parentId) {
           const parent = await storage.getProductCategory(validatedData.parentId);
           validatedData.code = `${parent?.code}.${nextNumber}`;
@@ -657,7 +675,7 @@ Focus on established businesses with verifiable contact information.`;
           validatedData.level = 1;
         }
       }
-      
+
       const category = await storage.createProductCategory(validatedData);
       res.json(category);
     } catch (error) {
@@ -708,17 +726,17 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const categoryId = req.params.id;
       const userId = req.user.claims.sub;
-      
+
       // Check if category exists and user has permission to edit it
       const existingCategory = await storage.getProductCategory(categoryId);
       if (!existingCategory) {
         return res.status(404).json({ message: "Category not found" });
       }
-      
+
       if (existingCategory.createdBy !== userId) {
         return res.status(403).json({ message: "You can only edit categories you created" });
       }
-      
+
       const updates = insertProductCategorySchema.partial().parse(req.body);
       const category = await storage.updateProductCategory(categoryId, updates);
       res.json(category);
@@ -732,23 +750,23 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const categoryId = req.params.id;
       const userId = req.user.claims.sub;
-      
+
       // Check if category exists and user has permission to delete it
       const existingCategory = await storage.getProductCategory(categoryId);
       if (!existingCategory) {
         return res.status(404).json({ message: "Category not found" });
       }
-      
+
       if (existingCategory.createdBy !== userId) {
         return res.status(403).json({ message: "You can only delete categories you created" });
       }
-      
+
       // Check if category has children or products
       const children = await storage.getProductCategories({ parentId: categoryId });
       if (children.length > 0) {
         return res.status(400).json({ message: "Cannot delete category with subcategories" });
       }
-      
+
       await storage.deleteProductCategory(categoryId);
       res.json({ message: "Category deleted successfully" });
     } catch (error) {
@@ -763,12 +781,12 @@ Focus on established businesses with verifiable contact information.`;
       const userId = req.user.claims.sub;
       console.log("Creating BOM for user:", userId);
       console.log("Request body:", req.body);
-      
+
       const validatedData = insertBomSchema.parse({
         ...req.body,
         createdBy: userId,
       });
-      
+
       console.log("Validated BOM data:", validatedData);
       const bom = await storage.createBom(validatedData);
       console.log("BOM created successfully:", bom);
@@ -803,11 +821,11 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(404).json({ message: "BOM not found" });
       }
       console.log("BOM found:", bom);
-      
+
       const items = await storage.getBomItems(req.params.id);
       console.log("BOM items found:", items);
       console.log("Items count:", items.length);
-      
+
       const response = { ...bom, items };
       console.log("Sending BOM response:", response);
       res.json(response);
@@ -821,17 +839,17 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const bomId = req.params.id;
       const userId = req.user.claims.sub;
-      
+
       // Check if BOM exists and user has permission to edit it
       const existingBom = await storage.getBom(bomId);
       if (!existingBom) {
         return res.status(404).json({ message: "BOM not found" });
       }
-      
+
       if (existingBom.createdBy !== userId) {
         return res.status(403).json({ message: "You can only edit BOMs you created" });
       }
-      
+
       const updates = insertBomSchema.partial().parse(req.body);
       const bom = await storage.updateBom(bomId, updates);
       res.json(bom);
@@ -845,30 +863,30 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const bomId = req.params.id;
       const userId = req.user.claims.sub;
-      
+
       console.log("=== DELETE BOM ===");
       console.log("User ID:", userId);
       console.log("BOM ID:", bomId);
-      
+
       // Check if BOM exists and user has permission to delete it
       const existingBom = await storage.getBom(bomId);
       if (!existingBom) {
         console.log("BOM not found");
         return res.status(404).json({ message: "BOM not found" });
       }
-      
+
       console.log("BOM found:", existingBom.name);
       console.log("BOM created by:", existingBom.createdBy);
-      
+
       // Check if user is the creator of the BOM
       const isOwner = existingBom.createdBy === userId;
       console.log("Is owner:", isOwner);
-      
+
       if (!isOwner) {
         console.log("Permission denied - user cannot delete this BOM");
         return res.status(403).json({ message: "You can only delete BOMs you created" });
       }
-      
+
       await storage.deleteBom(bomId);
       console.log("BOM deleted successfully");
       res.json({ message: "BOM deleted successfully" });
@@ -882,12 +900,12 @@ Focus on established businesses with verifiable contact information.`;
     try {
       console.log("Creating BOM item for BOM:", req.params.id);
       console.log("BOM item data:", req.body);
-      
+
       const validatedData = insertBomItemSchema.parse({
         ...req.body,
         bomId: req.params.id,
       });
-      
+
       console.log("Validated BOM item data:", validatedData);
       console.log("ProductId in validated data:", validatedData.productId);
       const bomItem = await storage.createBomItem(validatedData);
@@ -920,11 +938,11 @@ Focus on established businesses with verifiable contact information.`;
       console.log("=== FETCHING BOM ITEMS ===");
       console.log("BOM ID:", bomId);
       console.log("User ID:", req.user?.claims?.sub);
-      
+
       const items = await storage.getBomItems(bomId);
       console.log("Found BOM items:", items.length);
       console.log("Items:", items);
-      
+
       res.json(items);
     } catch (error) {
       console.error("Error fetching BOM items:", error);
@@ -938,11 +956,11 @@ Focus on established businesses with verifiable contact information.`;
       const bomId = req.params.id;
       const userId = req.user.claims.sub;
       const { name, version } = req.body;
-      
+
       if (!name || !version) {
         return res.status(400).json({ message: "Both name and version are required for copying BOM" });
       }
-      
+
       const copiedBom = await storage.copyBom(bomId, name, version, userId);
       res.json(copiedBom);
     } catch (error) {
@@ -959,11 +977,11 @@ Focus on established businesses with verifiable contact information.`;
   app.get('/api/boms/check-duplicate', isAuthenticated, async (req, res) => {
     try {
       const { name, version } = req.query;
-      
+
       if (!name || !version) {
         return res.status(400).json({ message: "Both name and version are required for duplicate check" });
       }
-      
+
       const exists = await storage.checkBomExists(name as string, version as string);
       res.json({ exists });
     } catch (error) {
@@ -1018,13 +1036,13 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       const { status, type } = req.query;
-      
+
       // Buyers/admins see all RFx they created
       if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager') {
         const rfxEvents = await storage.getRfxEvents({
@@ -1059,18 +1077,18 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       console.log("Vendor RFx API - User ID:", userId);
       console.log("Vendor RFx API - User role:", user?.role);
-      
+
       if (!user || user.role !== 'vendor') {
         return res.status(403).json({ message: "Access denied. Vendors only." });
       }
-      
+
       // Find the vendor record for this user
       const vendor = await storage.getVendorByUserId(userId);
       console.log("Vendor RFx API - Found vendor:", vendor ? vendor.id : 'No vendor found');
-      
+
       if (vendor) {
         const rfxEvents = await storage.getRfxEventsForVendor(vendor.id);
         console.log("Vendor RFx API - RFx events found:", rfxEvents.length);
@@ -1092,11 +1110,11 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       if (!user || user.role !== 'vendor') {
         return res.status(403).json({ message: "Access denied. Vendors only." });
       }
-      
+
       // Find the vendor record for this user
       const vendor = await storage.getVendorByUserId(userId);
       if (vendor) {
@@ -1116,11 +1134,11 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const { entityType, entityId, termsAndConditionsPath } = req.body;
-      
+
       // Record T&C acceptance (for now, just return success)
       // In a full implementation, you'd store this in a terms_acceptances table
       console.log(`T&C accepted by user ${userId} for ${entityType} ${entityId}`);
-      
+
       res.json({ 
         success: true, 
         message: "Terms & conditions acceptance recorded",
@@ -1137,7 +1155,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const { entityType, entityId } = req.query;
-      
+
       // Check T&C acceptance status (for now, just return false)
       // In a full implementation, you'd query the terms_acceptances table
       res.json({ hasAccepted: false });
@@ -1170,7 +1188,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const parentRfxId = req.params.id;
-      
+
       const parentRfx = await storage.getRfxEvent(parentRfxId);
       if (!parentRfx) {
         return res.status(404).json({ message: "Parent RFx not found" });
@@ -1191,7 +1209,7 @@ Focus on established businesses with verifiable contact information.`;
 
       const responses = await storage.getRfxResponses(parentRfxId);
       const invitations = await storage.getRfxInvitations(parentRfxId);
-      
+
       // Pre-populate with information from parent RFx
       const nextStageData = {
         title: `${nextType.toUpperCase()} - ${parentRfx.title}`,
@@ -1208,7 +1226,7 @@ Focus on established businesses with verifiable contact information.`;
       };
 
       const nextRfx = await storage.createRfxEvent(nextStageData as any);
-      
+
       // Copy vendor invitations from parent RFx
       for (const invitation of invitations) {
         await storage.createRfxInvitation({
@@ -1258,13 +1276,13 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const rfxId = req.params.id;
       const userId = req.user.claims.sub;
-      
+
       // Verify user can access this RFx (must be creator or have proper role)
       const rfx = await storage.getRfxEvent(rfxId);
       if (!rfx) {
         return res.status(404).json({ message: "RFx not found" });
       }
-      
+
       // Only allow buyers to view responses 
       if (rfx.createdBy !== userId) {
         const user = await storage.getUser(userId);
@@ -1272,7 +1290,7 @@ Focus on established businesses with verifiable contact information.`;
           return res.status(403).json({ message: "Unauthorized to view responses" });
         }
       }
-      
+
       const responses = await storage.getRfxResponses(rfxId);
       console.log(`DEBUG: Retrieved ${responses?.length || 0} responses for RFx ${rfxId}`);
       res.json(responses || []);
@@ -1287,7 +1305,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const { status } = req.body;
-      
+
       if (!['draft', 'active', 'closed', 'cancelled'].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
@@ -1315,28 +1333,28 @@ Focus on established businesses with verifiable contact information.`;
       const userId = req.user.claims.sub;
       console.log("=== VENDOR ROLE CHECK ===");
       console.log("User ID from claims:", userId);
-      
+
       const user = await storage.getUser(userId);
       console.log("User from database:", user?.email, `(${user?.role})`);
-      
+
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       if (user.role !== 'vendor') {
         return res.status(403).json({ message: "Access denied: Only vendors can access RFx invitations" });
       }
-      
+
       console.log("Vendor role confirmed, proceeding");
-      
+
       // First find the vendor associated with this user
       const vendor = await storage.getVendorByUserId(userId);
       if (!vendor) {
         return res.status(404).json({ message: "Vendor profile not found for this user" });
       }
-      
+
       console.log("Found vendor:", vendor.companyName, "with ID:", vendor.id);
-      
+
       // Get RFx invitations for this vendor
       const invitations = await storage.getRfxInvitationsByVendor(vendor.id);
       res.json(invitations);
@@ -1351,28 +1369,28 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const auctionData = { ...req.body, createdBy: userId };
-      
+
       // Clean up frontend-specific fields that aren't in the database schema
       const { bomId, selectedBomItems, selectedVendors, termsUrl, ceilingPrice, ...dbData } = auctionData;
-      
+
       // Remove undefined values to avoid Zod validation issues
       Object.keys(dbData).forEach(key => {
         if (dbData[key] === undefined || dbData[key] === null || dbData[key] === '') {
           delete dbData[key];
         }
       });
-      
+
       // Map ceilingPrice to reservePrice for database
       if (ceilingPrice) {
         dbData.reservePrice = ceilingPrice;
       }
-      
+
       // Map termsUrl to termsAndConditionsPath
       if (termsUrl) {
         dbData.termsAndConditionsPath = termsUrl;
         dbData.termsAndConditionsRequired = true;
       }
-      
+
       // Convert ISO string dates to Date objects for database
       if (dbData.startTime) {
         dbData.startTime = new Date(dbData.startTime);
@@ -1380,10 +1398,10 @@ Focus on established businesses with verifiable contact information.`;
       if (dbData.endTime) {
         dbData.endTime = new Date(dbData.endTime);
       }
-      
+
       const validatedData = insertAuctionSchema.parse(dbData);
       const auction = await storage.createAuction(validatedData);
-      
+
       // If vendors were selected, invite them to the auction
       if (selectedVendors && Array.isArray(selectedVendors)) {
         for (const vendorId of selectedVendors) {
@@ -1397,7 +1415,7 @@ Focus on established businesses with verifiable contact information.`;
           }
         }
       }
-      
+
       res.json(auction);
     } catch (error) {
       console.error("Error creating auction:", error);
@@ -1409,11 +1427,11 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       // Buyers/admins see all auctions they created
       if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager') {
         const auctions = await storage.getAuctions({ createdBy: userId });
@@ -1439,10 +1457,10 @@ Focus on established businesses with verifiable contact information.`;
       if (!auction) {
         return res.status(404).json({ message: "Auction not found" });
       }
-      
+
       // Get auction bids for additional context
       const bids = await storage.getAuctionBids(req.params.id);
-      
+
       res.json({
         ...auction,
         bids: bids,
@@ -1460,7 +1478,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const bids = await storage.getAuctionBids(req.params.id);
       console.log(`DEBUG: Raw bids from DB for auction ${req.params.id}:`, bids);
-      
+
       // Include vendor information with bids
       const bidsWithVendors = await Promise.all(
         bids.map(async (bid) => {
@@ -1473,7 +1491,7 @@ Focus on established businesses with verifiable contact information.`;
           return result;
         })
       );
-      
+
       console.log(`DEBUG: Final bids response:`, bidsWithVendors);
       res.json(bidsWithVendors);
     } catch (error) {
@@ -1486,22 +1504,22 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const auctionId = req.params.id;
-      
+
       const auction = await storage.getAuction(auctionId);
       if (!auction) {
         return res.status(404).json({ message: "Auction not found" });
       }
-      
+
       if (auction.createdBy !== userId) {
         return res.status(403).json({ message: "You can only edit your own auctions" });
       }
-      
+
       if (auction.status !== 'scheduled') {
         return res.status(400).json({ message: "Only scheduled auctions can be edited" });
       }
-      
+
       const updates = req.body;
-      
+
       // Convert ISO string dates to Date objects for database
       if (updates.startTime) {
         updates.startTime = new Date(updates.startTime);
@@ -1509,7 +1527,7 @@ Focus on established businesses with verifiable contact information.`;
       if (updates.endTime) {
         updates.endTime = new Date(updates.endTime);
       }
-      
+
       const updatedAuction = await storage.updateAuction(auctionId, updates);
       res.json(updatedAuction);
     } catch (error) {
@@ -1523,19 +1541,19 @@ Focus on established businesses with verifiable contact information.`;
       const userId = req.user.claims.sub;
       const { status } = req.body;
       const auction = await storage.getAuction(req.params.id);
-      
+
       if (!auction) {
         return res.status(404).json({ message: "Auction not found" });
       }
-      
+
       if (auction.createdBy !== userId) {
         return res.status(403).json({ message: "You can only modify your own auctions" });
       }
-      
+
       const updatedAuction = await storage.updateAuctionStatus(req.params.id, status);
-      
+
       // Note: WebSocket notifications will be handled after server setup
-      
+
       res.json(updatedAuction);
     } catch (error) {
       console.error("Error updating auction status:", error);
@@ -1616,7 +1634,7 @@ Focus on established businesses with verifiable contact information.`;
       const allBids = await storage.getAuctionBids(auctionId);
       const lowestBid = allBids.reduce((lowest: any, current: any) => 
         parseFloat(current.amount) < parseFloat(lowest.amount) ? current : lowest, bid);
-      
+
       if (lowestBid.id === bid.id) {
         await storage.updateAuction(auctionId, {
           currentBid: amount.toString(),
@@ -1650,50 +1668,50 @@ Focus on established businesses with verifiable contact information.`;
   app.post('/api/bids', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       // Get user to find vendor ID
       const user = await storage.getUser(userId);
       if (!user || user.role !== 'vendor') {
         return res.status(403).json({ message: "Only vendors can place bids" });
       }
-      
+
       // Find vendor by user
       const vendors = await storage.getVendors({});
       const vendor = vendors.find((v: any) => v.contactPerson === user.email || v.email === user.email);
       if (!vendor) {
         return res.status(403).json({ message: "Vendor profile not found" });
       }
-      
+
       const validatedData = insertBidSchema.parse({
         ...req.body,
         vendorId: vendor.id,
       });
-      
+
       // Validate bid against auction rules
       const auction = await storage.getAuction(validatedData.auctionId);
       if (!auction) {
         return res.status(404).json({ message: "Auction not found" });
       }
-      
+
       if (auction.status !== 'live') {
         return res.status(400).json({ message: "Auction is not active" });
       }
-      
+
       if (parseFloat(validatedData.amount) >= parseFloat(auction.reservePrice || '0')) {
         return res.status(400).json({ message: "Bid must be below ceiling price" });
       }
-      
+
       const bid = await storage.createBid(validatedData);
-      
+
       // Update auction current bid if this is the lowest
       const allBids = await storage.getAuctionBids(validatedData.auctionId);
       const lowestBid = allBids.reduce((lowest: any, current: any) => 
         parseFloat(current.amount) < parseFloat(lowest.amount) ? current : lowest, bid);
-        
+
       if (bid.id === lowestBid.id) {
         await storage.updateAuctionCurrentBid(validatedData.auctionId, validatedData.amount);
       }
-      
+
       // Calculate real-time rankings
       const vendorBids = allBids.reduce((acc: any, b: any) => {
         if (!acc[b.vendorId] || parseFloat(b.amount) < parseFloat(acc[b.vendorId].amount)) {
@@ -1701,7 +1719,7 @@ Focus on established businesses with verifiable contact information.`;
         }
         return acc;
       }, {});
-      
+
       const rankings = Object.values(vendorBids)
         .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount))
         .map((b: any, index: number) => ({
@@ -1709,9 +1727,9 @@ Focus on established businesses with verifiable contact information.`;
           rank: index + 1,
           rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`
         }));
-      
+
       // Note: WebSocket broadcasts will be handled after server setup
-      
+
       res.json({ bid, rankings });
     } catch (error) {
       console.error("Error placing bid:", error);
@@ -1801,7 +1819,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const { comments } = req.body;
-      
+
       if (!comments || comments.trim() === '') {
         return res.status(400).json({ message: "Comments are required for rejection" });
       }
@@ -1823,7 +1841,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       if (!user || user.role !== 'sourcing_manager') {
         return res.status(403).json({ message: "Only Sourcing Managers can issue purchase orders" });
       }
@@ -1842,7 +1860,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       // Get the PO first to check ownership and status
       const po = await storage.getPurchaseOrder(req.params.id);
       if (!po) {
@@ -1932,11 +1950,11 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const userId = req.user.claims.sub;
       const { bomId, vendorId, bomItems, deliveryDate, paymentTerms, notes, priority } = req.body;
-      
+
       console.log("=== CREATING DIRECT PROCUREMENT ORDER ===");
       console.log("User ID:", userId);
       console.log("Request body:", JSON.stringify(req.body, null, 2));
-      
+
       // Validate required fields
       if (!bomId) {
         console.error("Missing bomId");
@@ -1954,15 +1972,15 @@ Focus on established businesses with verifiable contact information.`;
         console.error("Missing deliveryDate");
         return res.status(400).json({ message: "Delivery date is required" });
       }
-      
+
       // Calculate total amount from BOM items
       const totalAmount = bomItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
       console.log("Calculated total amount:", totalAmount);
-      
+
       // Generate reference number
       const referenceNo = `DPO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
       console.log("Generated reference number:", referenceNo);
-      
+
       const orderData = {
         referenceNo,
         bomId,
@@ -1976,17 +1994,17 @@ Focus on established businesses with verifiable contact information.`;
         notes: notes || null,
         createdBy: userId,
       };
-      
+
       console.log("Order data to insert:", JSON.stringify(orderData, null, 2));
 
       const order = await storage.createDirectProcurementOrder(orderData);
       console.log("Created order:", JSON.stringify(order, null, 2));
-      
+
       // Automatically create corresponding Purchase Order for approval workflow
       try {
         console.log("=== CREATING PURCHASE ORDER FROM DIRECT PROCUREMENT ===");
         const poNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-        
+
         const poData = {
           poNumber,
           bomId,
@@ -2000,11 +2018,11 @@ Focus on established businesses with verifiable contact information.`;
           createdBy: userId,
           directProcurementOrderId: order.id, // Link to original direct procurement order
         };
-        
+
         console.log("PO data to insert:", JSON.stringify(poData, null, 2));
         const purchaseOrder = await storage.createPurchaseOrder(poData);
         console.log("Created PO:", JSON.stringify(purchaseOrder, null, 2));
-        
+
         // Create line items for the PO from BOM items
         for (const bomItem of bomItems) {
           const lineItemData = {
@@ -2017,18 +2035,18 @@ Focus on established businesses with verifiable contact information.`;
             lineTotal: bomItem.totalPrice.toString(),
             itemName: bomItem.productName, // Store the product name for reference
           };
-          
+
           console.log("Creating PO line item:", JSON.stringify(lineItemData, null, 2));
           await storage.createPoLineItem(lineItemData);
         }
-        
+
         console.log("Successfully created Purchase Order and line items");
       } catch (poError) {
         console.error("Error creating PO from direct procurement order:", poError);
         // Don't fail the direct procurement order creation if PO creation fails
         // The direct procurement order is still created successfully
       }
-      
+
       res.json(order);
     } catch (error: any) {
       console.error("Error creating BOM-based direct procurement order:", error);
@@ -2041,7 +2059,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const { id } = req.params;
       const order = await storage.getDirectProcurementOrderById(id);
-      
+
       if (!order) {
         return res.status(404).json({ message: "Direct procurement order not found" });
       }
@@ -2057,7 +2075,7 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const { id } = req.params;
       const { status } = req.body;
-      
+
       const order = await storage.updateDirectProcurementOrderStatus(id, status);
       res.json(order);
     } catch (error) {
@@ -2070,23 +2088,23 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const { id } = req.params;
       const userId = req.user.claims.sub;
-      
+
       // Check if order exists and user has permission to delete
       const order = await storage.getDirectProcurementOrderById(id);
       if (!order) {
         return res.status(404).json({ message: "Direct procurement order not found" });
       }
-      
+
       // Only allow deletion of draft or pending_approval orders
       if (!['draft', 'pending_approval'].includes(order.status)) {
         return res.status(400).json({ message: "Cannot delete orders that are not in draft or pending approval status" });
       }
-      
+
       // Only allow creator or admin to delete
       if (order.createdBy !== userId) {
         return res.status(403).json({ message: "You can only delete orders you created" });
       }
-      
+
       await storage.deleteDirectProcurementOrder(id);
       res.json({ message: "Direct procurement order deleted successfully" });
     } catch (error) {
@@ -2100,21 +2118,21 @@ Focus on established businesses with verifiable contact information.`;
     try {
       const { id } = req.params;
       const userId = req.user.claims.sub;
-      
+
       // Get the direct procurement order
       const dpo = await storage.getDirectProcurementOrderById(id);
       if (!dpo) {
         return res.status(404).json({ message: "Direct procurement order not found" });
       }
-      
+
       // Check if user has permission (creator or admin)
       if (dpo.createdBy !== userId) {
         return res.status(403).json({ message: "You can only convert orders you created" });
       }
-      
+
       // Generate PO number
       const poNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-      
+
       // Create purchase order
       const purchaseOrder = await storage.createPurchaseOrder({
         poNumber,
@@ -2126,7 +2144,7 @@ Focus on established businesses with verifiable contact information.`;
         termsAndConditions: dpo.notes || '',
         createdBy: userId,
       });
-      
+
       // Create line items for each BOM item
       if (dpo.bomItems && Array.isArray(dpo.bomItems)) {
         for (const item of dpo.bomItems) {
@@ -2140,10 +2158,10 @@ Focus on established businesses with verifiable contact information.`;
           });
         }
       }
-      
+
       // Update the DPO status to indicate it's been converted
       await storage.updateDirectProcurementOrderStatus(id, 'submitted');
-      
+
       res.json({
         success: true,
         message: "Purchase Order created successfully",
@@ -2216,7 +2234,7 @@ Focus on established businesses with verifiable contact information.`;
           status: "pending" as const,
           itemName: item.itemName,
         };
-        
+
         console.log("Creating PO line item:", lineItemData);
         await storage.createPoLineItem(lineItemData);
       }
@@ -2261,7 +2279,7 @@ Focus on established businesses with verifiable contact information.`;
       // Get bids for this vendor
       const bids = await storage.getBids({ auctionId, vendorId });
       const winningBid = bids.find((bid: any) => bid.isWinning) || bids.sort((a: any, b: any) => Number(a.amount) - Number(b.amount))[0];
-      
+
       if (!winningBid) {
         return res.status(400).json({ message: "No valid bid found for this vendor" });
       }
@@ -2382,7 +2400,7 @@ Focus on established businesses with verifiable contact information.`;
       // Get vendor ID for the current user
       const vendors = await storage.getVendors();
       const vendor = vendors.find(v => v.userId === userId);
-      
+
       if (!vendor) {
         return res.status(404).json({ error: "Vendor profile not found" });
       }
@@ -2413,7 +2431,7 @@ Focus on established businesses with verifiable contact information.`;
       // Get vendor ID for the current user
       const vendors = await storage.getVendors();
       const vendor = vendors.find(v => v.userId === userId);
-      
+
       if (!vendor) {
         return res.status(404).json({ error: "Vendor profile not found" });
       }
@@ -2443,23 +2461,23 @@ Focus on established businesses with verifiable contact information.`;
   // =============================
   // SIMPLE LOGIN ROUTE
   // =============================
-  
+
   // Simple login endpoint for development
   app.post('/api/auth/simple-login', async (req, res) => {
     try {
       const { name, email, role } = req.body;
-      
+
       if (!name || !email || !role) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-      
+
       if (!['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
-      
+
       // Try to get existing user first
       let user = await storage.getUserByEmail(email);
-      
+
       if (user) {
         // Update existing user's role if needed
         if (user.role !== role) {
@@ -2481,7 +2499,7 @@ Focus on established businesses with verifiable contact information.`;
           isActive: true,
         });
       }
-      
+
       // Create mock session data similar to Replit auth
       const mockUser = {
         claims: {
@@ -2496,14 +2514,14 @@ Focus on established businesses with verifiable contact information.`;
         refresh_token: "mock_refresh_token",
         expires_at: Math.floor(Date.now() / 1000) + 3600
       };
-      
+
       // Log in the user using passport
       req.login(mockUser, (err) => {
         if (err) {
           console.error("Login error:", err);
           return res.status(500).json({ message: "Login failed" });
         }
-        
+
         console.log("Simple login successful for:", email, "with role:", role);
         res.json({ 
           message: "Login successful",
@@ -2516,7 +2534,7 @@ Focus on established businesses with verifiable contact information.`;
           }
         });
       });
-      
+
     } catch (error) {
       console.error("Simple login error:", error);
       res.status(500).json({ message: "Login failed" });
@@ -2533,7 +2551,7 @@ Focus on established businesses with verifiable contact information.`;
   app.get('/api/vendor/rfx-invitations', isAuthenticated, isVendor, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       // Get vendor profile
       const vendor = await storage.getVendorByUserId(userId);
       if (!vendor) {
@@ -2552,7 +2570,7 @@ Focus on established businesses with verifiable contact information.`;
   app.get('/api/vendor/rfx-responses', isAuthenticated, isVendor, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       // Get vendor profile
       const vendor = await storage.getVendorByUserId(userId);
       if (!vendor) {
@@ -2571,7 +2589,7 @@ Focus on established businesses with verifiable contact information.`;
   app.post('/api/vendor/rfx-responses', isAuthenticated, isVendor, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       // Get vendor profile
       const vendor = await storage.getVendorByUserId(userId);
       if (!vendor) {
@@ -2579,7 +2597,7 @@ Focus on established businesses with verifiable contact information.`;
       }
 
       console.log('DEBUG: Full request body:', req.body);
-      
+
       // Handle different field name formats from different forms
       const { 
         rfxId, 
@@ -2588,10 +2606,10 @@ Focus on established businesses with verifiable contact information.`;
         // From rfx-response-form.tsx form  
         quotedPrice, deliveryTerms, paymentTerms, leadTime, response: responseText, attachments 
       } = req.body;
-      
+
       console.log('DEBUG: Extracted rfxId:', rfxId);
       console.log('DEBUG: typeof rfxId:', typeof rfxId);
-      
+
       // Use the values that are actually provided (normalize field names)
       const finalPrice = proposedPrice || quotedPrice;
       const finalDeliveryTime = deliveryTime || leadTime;
@@ -2600,7 +2618,7 @@ Focus on established businesses with verifiable contact information.`;
       const finalDeliveryTerms = deliveryTerms || '';
       const finalPaymentTerms = paymentTerms || '';
       const finalAttachments = attachments || [];
-      
+
       console.log('DEBUG: Final normalized values:', {
         finalPrice,
         finalDeliveryTime,
@@ -2659,12 +2677,12 @@ Focus on established businesses with verifiable contact information.`;
     try {
       let filename = req.params.filename;
       console.log('DEBUG: Downloading terms file:', filename);
-      
+
       // Extract filename from full URL if needed
       if (filename.includes('/')) {
         filename = filename.split('/').pop() || 'terms.pdf';
       }
-      
+
       // For now, redirect to public objects path or return a response
       // In production, you'd serve the actual file from storage
       if (filename && filename !== 'undefined') {
@@ -2723,44 +2741,44 @@ Focus on established businesses with verifiable contact information.`;
 
   // WebSocket server for real-time auction functionality
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
+
   wss.on('connection', (ws: WebSocket, req) => {
     console.log('WebSocket connection established');
-    
+
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message.toString());
-        
+
         if (data.type === 'join_auction') {
           // Join auction room
           (ws as any).auctionId = data.auctionId;
           ws.send(JSON.stringify({ type: 'joined_auction', auctionId: data.auctionId }));
         }
-        
+
         if (data.type === 'place_bid') {
           // Place bid in auction
           const { auctionId, vendorId, amount } = data;
-          
+
           // Validate bid
           const auction = await storage.getAuction(auctionId);
           if (!auction || auction.status !== 'live') {
             ws.send(JSON.stringify({ type: 'bid_error', message: 'Auction not available' }));
             return;
           }
-          
+
           const currentBid = await storage.getLatestBid(auctionId);
           if (currentBid && amount >= currentBid.amount) {
             ws.send(JSON.stringify({ type: 'bid_error', message: 'Bid must be lower than current bid' }));
             return;
           }
-          
+
           // Create bid
           const bid = await storage.createBid({
             auctionId,
             vendorId,
             amount: amount.toString(),
           });
-          
+
           // Broadcast to all clients in auction
           const bidUpdate = {
             type: 'bid_update',
@@ -2772,7 +2790,7 @@ Focus on established businesses with verifiable contact information.`;
               timestamp: bid.timestamp,
             },
           };
-          
+
           wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN && (client as any).auctionId === auctionId) {
               client.send(JSON.stringify(bidUpdate));
@@ -2784,7 +2802,7 @@ Focus on established businesses with verifiable contact information.`;
         ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
       }
     });
-    
+
     ws.on('close', () => {
       console.log('WebSocket connection closed');
     });

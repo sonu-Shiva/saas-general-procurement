@@ -137,7 +137,12 @@ function ResponseCard({ response, index, onCreatePO, rfxType }: any) {
               <span className="text-sm font-medium text-blue-800">{index + 1}</span>
             </div>
             <div>
-              <h3 className="font-medium">{response.vendor?.companyName || response.vendor?.company_name || 'Unknown Vendor'}</h3>
+              <h3 className="font-medium">
+                {response.vendor?.companyName || 
+                 response.vendor?.company_name || 
+                 response.vendorName ||
+                 `Vendor ${response.vendorId?.slice(-8) || 'Unknown'}`}
+              </h3>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Calendar className="w-4 h-4" />
                 <span>Submitted: {new Date(response.submittedAt || response.submitted_at).toLocaleDateString()}</span>
