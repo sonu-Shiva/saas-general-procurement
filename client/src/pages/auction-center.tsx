@@ -618,6 +618,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           bomId: data.bomId || null,
           bomLineItemId: null,
           selectedBomItems: data.selectedBomItems || [],
+          selectedVendors: data.selectedVendors || [],
           reservePrice: data.ceilingPrice,
           startTime: data.startTime ? new Date(data.startTime).toISOString() : null,
           endTime: data.endTime ? new Date(data.endTime).toISOString() : null,
@@ -634,18 +635,6 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
       return response.json();
     },
     onSuccess: (auction) => {
-      if (formData.selectedVendors.length > 0) {
-        Promise.all(
-          formData.selectedVendors.map(vendorId =>
-            fetch("/api/auction-participants", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ auctionId: auction.id, vendorId }),
-              credentials: "include",
-            })
-          )
-        );
-      }
       toast({
         title: "Success",
         description: "Auction created successfully",
