@@ -12,7 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { FileText, Clock, DollarSign, Truck, AlertCircle, CheckCircle, Calendar } from "lucide-react";
+import { FileText, Clock, DollarSign, Truck, AlertCircle, CheckCircle, Calendar, Download } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { TermsAcceptanceDialog } from "@/components/TermsAcceptanceDialog";
@@ -101,8 +101,8 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
 
   // Check if terms are already accepted
   const { data: termsStatus } = useQuery({
-    queryKey: ['/api/terms/check', invitation.rfx.id],
-    queryFn: () => apiRequest(`/api/terms/check?entityType=rfx&entityId=${invitation.rfx.id}`),
+    queryKey: ['/api/terms/check', invitation.rfxId],
+    queryFn: () => apiRequest(`/api/terms/check?entityType=rfx&entityId=${invitation.rfxId}`),
     enabled: !!invitation.rfx.termsAndConditionsPath,
   });
 
@@ -111,7 +111,7 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
       return apiRequest('/api/vendor/rfx-responses', {
         method: 'POST',
         body: JSON.stringify({
-          rfxId: invitation.rfx.id,
+          rfxId: invitation.rfxId,
           ...data,
         }),
       });
@@ -156,7 +156,7 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
         method: 'POST',
         body: JSON.stringify({
           entityType: 'rfx',
-          entityId: invitation.rfx.id,
+          entityId: invitation.rfxId,
           termsAndConditionsPath: invitation.rfx.termsAndConditionsPath,
         }),
       });
@@ -293,7 +293,7 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                           name="proposedPrice"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Proposed Price ($) *</FormLabel>
+                              <FormLabel>Proposed Price ($) <span className="text-red-500">*</span></FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
@@ -315,7 +315,7 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                           name="deliveryTime"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Delivery Time *</FormLabel>
+                              <FormLabel>Delivery Time <span className="text-red-500">*</span></FormLabel>
                               <FormControl>
                                 <Input 
                                   placeholder="e.g., 2-3 weeks, 30 days" 
@@ -334,7 +334,7 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                         name="technicalSpecification"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Technical Specification *</FormLabel>
+                            <FormLabel>Technical Specification <span className="text-red-500">*</span></FormLabel>
                             <FormControl>
                               <Textarea
                                 placeholder="Describe your technical approach, specifications, and methodology..."
@@ -387,10 +387,7 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                         </Button>
                         <Button
                           type="submit"
-                          disabled={
-                            submitResponseMutation.isPending || 
-                            (invitation.rfx.termsAndConditionsPath && !termsAccepted && !termsStatus?.hasAccepted)
-                          }
+                          disabled={submitResponseMutation.isPending}
                           data-testid="button-submit-response"
                         >
                           {submitResponseMutation.isPending ? "Submitting..." : "Submit Response"}
