@@ -664,6 +664,28 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
       return;
     }
 
+    // Validate start and end times
+    if (!formData.startTime || !formData.endTime) {
+      toast({
+        title: "Error",
+        description: "Please specify both start and end times for the auction",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate that end time is after start time
+    const startDate = new Date(formData.startTime);
+    const endDate = new Date(formData.endTime);
+    if (endDate <= startDate) {
+      toast({
+        title: "Error",
+        description: "End time must be after start time",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate Terms & Conditions upload
     if (!formData.termsUrl) {
       toast({
@@ -810,7 +832,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           )}
         </div>
         <div>
-          <Label htmlFor="startTime">Start Time</Label>
+          <Label htmlFor="startTime">Start Time *</Label>
           <Input
             id="startTime"
             type="datetime-local"
@@ -821,10 +843,11 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                 e.preventDefault();
               }
             }}
+            data-testid="input-start-time"
           />
         </div>
         <div>
-          <Label htmlFor="endTime">End Time</Label>
+          <Label htmlFor="endTime">End Time *</Label>
           <Input
             id="endTime"
             type="datetime-local"
@@ -835,6 +858,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                 e.preventDefault();
               }
             }}
+            data-testid="input-end-time"
           />
         </div>
       </div>
