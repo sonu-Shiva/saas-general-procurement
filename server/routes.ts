@@ -2549,9 +2549,34 @@ Focus on established businesses with verifiable contact information.`;
       }
 
       console.log('DEBUG: Full request body:', req.body);
-      const { rfxId, proposedPrice, deliveryTime, technicalSpecification, additionalNotes, quotedPrice, deliveryTerms, paymentTerms, leadTime, response: responseText, attachments } = req.body;
+      
+      // Handle different field name formats from different forms
+      const { 
+        rfxId, 
+        // From vendor-portal.tsx form
+        proposedPrice, deliveryTime, technicalSpecification, additionalNotes,
+        // From rfx-response-form.tsx form  
+        quotedPrice, deliveryTerms, paymentTerms, leadTime, response: responseText, attachments 
+      } = req.body;
+      
       console.log('DEBUG: Extracted rfxId:', rfxId);
       console.log('DEBUG: typeof rfxId:', typeof rfxId);
+      
+      // Use the values that are actually provided (normalize field names)
+      const finalPrice = proposedPrice || quotedPrice;
+      const finalDeliveryTime = deliveryTime || leadTime;
+      const finalTechnicalSpec = technicalSpecification || responseText;
+      const finalNotes = additionalNotes || '';
+      const finalDeliveryTerms = deliveryTerms || '';
+      const finalPaymentTerms = paymentTerms || '';
+      const finalAttachments = attachments || [];
+      
+      console.log('DEBUG: Final normalized values:', {
+        finalPrice,
+        finalDeliveryTime,
+        finalTechnicalSpec,
+        finalNotes
+      });
 
       // Validate RFx invitation exists
       console.log(`Looking for invitation: rfxId=${rfxId}, vendorId=${vendor.id}`);
