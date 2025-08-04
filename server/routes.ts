@@ -2551,7 +2551,9 @@ Focus on established businesses with verifiable contact information.`;
       const { rfxId, proposedPrice, deliveryTime, technicalSpecification, additionalNotes, quotedPrice, deliveryTerms, paymentTerms, leadTime, response: responseText, attachments } = req.body;
 
       // Validate RFx invitation exists
+      console.log(`Looking for invitation: rfxId=${rfxId}, vendorId=${vendor.id}`);
       const invitation = await storage.getRfxInvitation(rfxId, vendor.id);
+      console.log(`Invitation found:`, invitation);
       if (!invitation) {
         return res.status(404).json({ message: "RFx invitation not found" });
       }

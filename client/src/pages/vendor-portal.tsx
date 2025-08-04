@@ -83,7 +83,7 @@ function getRfxTypeColor(type: string) {
   }
 }
 
-function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation; onClose: () => void }) {
+function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInvitation; isOpen?: boolean; onClose: () => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showTermsDialog, setShowTermsDialog] = useState(false);
@@ -107,7 +107,7 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
   });
 
   const submitResponseMutation = useMutation({
-    mutationFn: async (data: RfxResponseFormData) => {
+    mutationFn: async (data: RfxResponseFormData & { isDraft?: boolean }) => {
       return apiRequest('/api/vendor/rfx-responses', {
         method: 'POST',
         body: JSON.stringify({
@@ -116,10 +116,12 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
         }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       toast({
-        title: "Response Submitted",
-        description: "Your RFx response has been submitted successfully.",
+        title: variables.isDraft ? "Draft Saved" : "Response Submitted",
+        description: variables.isDraft 
+          ? "Your draft has been saved successfully." 
+          : "Your RFx response has been submitted successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/vendor/rfx-invitations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/vendor/rfx-responses'] });
@@ -139,7 +141,12 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
       setShowTermsDialog(true);
       return;
     }
-    submitResponseMutation.mutate(data);
+    submitResponseMutation.mutate({ ...data, isDraft: false });
+  };
+
+  const handleSaveDraft = () => {
+    const data = form.getValues();
+    submitResponseMutation.mutate({ ...data, isDraft: true });
   };
 
   const handleTermsAccepted = async () => {
@@ -286,7 +293,7 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                           name="proposedPrice"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Proposed Price ($)</FormLabel>
+                              <FormLabel>Proposed Price ($) *</FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
@@ -308,7 +315,7 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                           name="deliveryTime"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Delivery Time</FormLabel>
+                              <FormLabel>Delivery Time *</FormLabel>
                               <FormControl>
                                 <Input 
                                   placeholder="e.g., 2-3 weeks, 30 days" 
@@ -327,7 +334,7 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                         name="technicalSpecification"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Technical Specification</FormLabel>
+                            <FormLabel>Technical Specification *</FormLabel>
                             <FormControl>
                               <Textarea
                                 placeholder="Describe your technical approach, specifications, and methodology..."
@@ -370,8 +377,20 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
                           Cancel
                         </Button>
                         <Button
-                          type="submit"
+                          type="button"
+                          variant="secondary"
+                          onClick={handleSaveDraft}
                           disabled={submitResponseMutation.isPending}
+                          data-testid="button-save-draft"
+                        >
+                          {submitResponseMutation.isPending ? "Saving..." : "Save as Draft"}
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={
+                            submitResponseMutation.isPending || 
+                            (invitation.rfx.termsAndConditionsPath && !termsAccepted && !termsStatus?.hasAccepted)
+                          }
                           data-testid="button-submit-response"
                         >
                           {submitResponseMutation.isPending ? "Submitting..." : "Submit Response"}
@@ -585,7 +604,6 @@ export default function VendorPortal() {
       {selectedInvitation && (
         <RfxResponseDialog
           invitation={selectedInvitation}
-          isOpen={!!selectedInvitation}
           onClose={() => setSelectedInvitation(null)}
         />
       )}
@@ -593,5 +611,3 @@ export default function VendorPortal() {
   );
 }
                       <Calendar className="h-4 w-4" />
-                      <span className={isExpired ? 'text-red-600' : 'text-foreground'}>
-                        {format(new Date(invitation.rfx.dueDate), 'PPp')}
