@@ -2,165 +2,144 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle, FileText, Download } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { AlertTriangle, FileText, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface TermsAcceptanceDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  termsAndConditionsPath?: string;
+  rfxTitle: string;
+  rfxType: string;
   onAccept: () => void;
-  termsPath: string;
-  entityType: string;
-  entityId: string;
+  onDecline: () => void;
 }
 
 export function TermsAcceptanceDialog({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
+  termsAndConditionsPath,
+  rfxTitle,
+  rfxType,
   onAccept,
-  termsPath,
-  entityType,
-  entityId,
+  onDecline,
 }: TermsAcceptanceDialogProps) {
-  const [hasRead, setHasRead] = useState(false);
-  const [isAccepting, setIsAccepting] = useState(false);
-  const { toast } = useToast();
+  const [hasReadTerms, setHasReadTerms] = useState(false);
+  const [hasAgreedToTerms, setHasAgreedToTerms] = useState(false);
 
-  const acceptTermsMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest('/api/terms/accept', 'POST', {
-        entityType,
-        entityId,
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Terms Accepted",
-        description: "You have successfully accepted the terms and conditions.",
-      });
+  const handleAccept = () => {
+    if (hasReadTerms && hasAgreedToTerms) {
       onAccept();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to accept terms. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleAccept = async () => {
-    if (!hasRead) {
-      toast({
-        title: "Please confirm",
-        description: "You must confirm that you have read the terms and conditions.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsAccepting(true);
-    try {
-      await acceptTermsMutation.mutateAsync();
-    } finally {
-      setIsAccepting(false);
+      onOpenChange(false);
     }
   };
 
-  const downloadTerms = () => {
-    // Open the terms document in a new tab for download
-    window.open(termsPath, '_blank');
+  const handleDecline = () => {
+    onDecline();
+    onOpenChange(false);
   };
+
+  const handleDownloadTerms = () => {
+    if (termsAndConditionsPath) {
+      window.open(termsAndConditionsPath, '_blank');
+      setHasReadTerms(true);
+    }
+  };
+
+  const canAccept = hasReadTerms && hasAgreedToTerms;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md" data-testid="dialog-terms-acceptance">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
             Terms & Conditions Required
           </DialogTitle>
           <DialogDescription>
-            You must read and accept the terms and conditions before proceeding.
+            You must review and accept the terms & conditions before participating in this {rfxType.toUpperCase()}.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                    Mandatory Terms Acceptance
-                  </p>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
-                    Before you can submit your response, you must review and accept the terms and conditions
-                    document provided for this request.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-              <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Terms & Conditions Document</p>
-                  <p className="text-sm text-muted-foreground">
-                    Review the complete terms and conditions
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                onClick={downloadTerms}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Download & Review
-              </Button>
-            </div>
-
-            <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
-              <Checkbox
-                id="terms-read"
-                checked={hasRead}
-                onCheckedChange={(checked) => setHasRead(checked as boolean)}
-                className="mt-1"
-              />
-              <div className="space-y-1 leading-none">
-                <label
-                  htmlFor="terms-read"
-                  className="text-sm font-medium leading-normal cursor-pointer"
-                >
-                  I have read and understood the terms and conditions
-                </label>
-                <p className="text-xs text-muted-foreground">
-                  By checking this box, you confirm that you have thoroughly reviewed
-                  the terms and conditions document and understand all obligations.
-                </p>
-              </div>
-            </div>
+        <div className="space-y-4">
+          <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">{rfxTitle}</h4>
+            <Badge variant="outline" className="text-blue-700 dark:text-blue-300">
+              {rfxType.toUpperCase()}
+            </Badge>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
+          {termsAndConditionsPath && (
+            <div className="space-y-3">
+              <Button
+                onClick={handleDownloadTerms}
+                variant="outline"
+                className="w-full"
+                data-testid="button-download-terms"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Download & Read Terms & Conditions
+                <Download className="h-4 w-4 ml-2" />
+              </Button>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="read-terms"
+                  checked={hasReadTerms}
+                  onCheckedChange={(checked) => setHasReadTerms(checked as boolean)}
+                  disabled={!termsAndConditionsPath}
+                  data-testid="checkbox-read-terms"
+                />
+                <label
+                  htmlFor="read-terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  I have downloaded and read the Terms & Conditions
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="agree-terms"
+                  checked={hasAgreedToTerms}
+                  onCheckedChange={(checked) => setHasAgreedToTerms(checked as boolean)}
+                  disabled={!hasReadTerms}
+                  data-testid="checkbox-agree-terms"
+                />
+                <label
+                  htmlFor="agree-terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  I agree to the Terms & Conditions and understand they are legally binding
+                </label>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={handleDecline}
+              variant="outline"
+              className="flex-1"
+              data-testid="button-decline-terms"
+            >
+              Decline
             </Button>
             <Button
               onClick={handleAccept}
-              disabled={!hasRead || isAccepting || acceptTermsMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={!canAccept}
+              className="flex-1"
+              data-testid="button-accept-terms"
             >
-              {isAccepting || acceptTermsMutation.isPending ? "Accepting..." : "Accept & Continue"}
+              Accept & Continue
             </Button>
           </div>
+
+          {!canAccept && termsAndConditionsPath && (
+            <p className="text-xs text-muted-foreground text-center">
+              You must download, read, and agree to the terms before proceeding.
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>

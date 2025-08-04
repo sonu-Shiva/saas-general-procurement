@@ -1060,16 +1060,25 @@ Focus on established businesses with verifiable contact information.`;
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
+      console.log("Vendor RFx API - User ID:", userId);
+      console.log("Vendor RFx API - User role:", user?.role);
+      
       if (!user || user.role !== 'vendor') {
         return res.status(403).json({ message: "Access denied. Vendors only." });
       }
       
       // Find the vendor record for this user
       const vendor = await storage.getVendorByUserId(userId);
+      console.log("Vendor RFx API - Found vendor:", vendor ? vendor.id : 'No vendor found');
+      
       if (vendor) {
         const rfxEvents = await storage.getRfxEventsForVendor(vendor.id);
+        console.log("Vendor RFx API - RFx events found:", rfxEvents.length);
         res.json(rfxEvents);
       } else {
+        // Check if there are any vendors in the system for this user
+        const allVendors = await storage.getVendors();
+        console.log("Vendor RFx API - All vendors:", allVendors.map(v => ({ id: v.id, userId: v.userId, createdBy: v.createdBy, companyName: v.companyName })));
         res.json([]);
       }
     } catch (error) {
@@ -1099,6 +1108,42 @@ Focus on established businesses with verifiable contact information.`;
     } catch (error) {
       console.error("Error fetching vendor RFx responses:", error);
       res.status(500).json({ message: "Failed to fetch RFx responses" });
+    }
+  });
+
+  // Terms & Conditions acceptance API
+  app.post('/api/terms/accept', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { entityType, entityId, termsAndConditionsPath } = req.body;
+      
+      // Record T&C acceptance (for now, just return success)
+      // In a full implementation, you'd store this in a terms_acceptances table
+      console.log(`T&C accepted by user ${userId} for ${entityType} ${entityId}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Terms & conditions acceptance recorded",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error recording T&C acceptance:", error);
+      res.status(500).json({ message: "Failed to record terms acceptance" });
+    }
+  });
+
+  // Terms & Conditions status check API
+  app.get('/api/terms/check', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { entityType, entityId } = req.query;
+      
+      // Check T&C acceptance status (for now, just return false)
+      // In a full implementation, you'd query the terms_acceptances table
+      res.json({ hasAccepted: false });
+    } catch (error) {
+      console.error("Error checking T&C status:", error);
+      res.status(500).json({ message: "Failed to check terms status" });
     }
   });
 

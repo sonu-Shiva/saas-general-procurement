@@ -612,7 +612,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateRfxInvitationStatus(rfxId: string, vendorId: string, status: string): Promise<void> {
     await db.update(rfxInvitations)
-      .set({ status, respondedAt: status === 'responded' ? new Date() : null })
+      .set({ 
+        status: status as any,
+        respondedAt: status === 'responded' ? new Date() : null 
+      })
       .where(and(eq(rfxInvitations.rfxId, rfxId), eq(rfxInvitations.vendorId, vendorId)));
   }
 
@@ -738,13 +741,15 @@ export class DatabaseStorage implements IStorage {
         status: rfxEvents.status,
         scope: rfxEvents.scope,
         criteria: rfxEvents.criteria,
-        submissionDeadline: rfxEvents.submissionDeadline,
+        dueDate: rfxEvents.dueDate,
         budget: rfxEvents.budget,
         contactPerson: rfxEvents.contactPerson,
         bomId: rfxEvents.bomId,
         parentRfxId: rfxEvents.parentRfxId,
         termsAndConditionsPath: rfxEvents.termsAndConditionsPath,
         termsAndConditionsRequired: rfxEvents.termsAndConditionsRequired,
+        evaluationParameters: rfxEvents.evaluationParameters,
+        attachments: rfxEvents.attachments,
         createdBy: rfxEvents.createdBy,
         createdAt: rfxEvents.createdAt,
         updatedAt: rfxEvents.updatedAt,

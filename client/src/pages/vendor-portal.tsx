@@ -139,11 +139,30 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
     submitResponseMutation.mutate(data);
   };
 
-  const handleTermsAccepted = () => {
-    setTermsAccepted(true);
-    setShowTermsDialog(false);
-    // Submit the form after terms acceptance
-    form.handleSubmit(handleSubmit)();
+  const handleTermsAccepted = async () => {
+    try {
+      // Record T&C acceptance
+      await apiRequest('/api/terms/accept', {
+        method: 'POST',
+        body: JSON.stringify({
+          entityType: 'rfx',
+          entityId: invitation.rfx.id,
+          termsAndConditionsPath: invitation.rfx.termsAndConditionsPath,
+        }),
+      });
+      
+      setTermsAccepted(true);
+      setShowTermsDialog(false);
+      
+      // Submit the form after terms acceptance
+      submitResponseMutation.mutate(form.getValues());
+    } catch (error) {
+      toast({
+        title: "Terms Acceptance Failed",
+        description: "Failed to record terms acceptance. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const isExpired = new Date(invitation.rfx.dueDate) < new Date();
@@ -364,12 +383,20 @@ function RfxResponseDialog({ invitation, onClose }: { invitation: RfxInvitation;
 
       {showTermsDialog && invitation.rfx.termsAndConditionsPath && (
         <TermsAcceptanceDialog
-          isOpen={showTermsDialog}
-          onClose={() => setShowTermsDialog(false)}
+          open={showTermsDialog}
+          onOpenChange={setShowTermsDialog}
+          termsAndConditionsPath={invitation.rfx.termsAndConditionsPath}
+          rfxTitle={invitation.rfx.title}
+          rfxType={invitation.rfx.type}
           onAccept={handleTermsAccepted}
-          termsPath={invitation.rfx.termsAndConditionsPath}
-          entityType="rfx"
-          entityId={invitation.rfx.id}
+          onDecline={() => {
+            setShowTermsDialog(false);
+            toast({
+              title: "Terms Required",
+              description: "You must accept the terms & conditions to participate in this RFx.",
+              variant: "destructive",
+            });
+          }}
         />
       )}
     </>
