@@ -101,16 +101,28 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
 
   // AI vendor discovery mutation
   const discoverVendorsMutation = useMutation({
-    mutationFn: async (data: AIDiscoveryData) => {
-      console.log("Making AI discovery request with data:", data);
-      try {
-        const result = await apiRequest("/api/vendors/discover", "POST", data);
-        console.log("AI discovery result:", result);
-        return result;
-      } catch (error) {
-        console.error("AI discovery request failed:", error);
-        throw error;
+    mutationFn: async (formData: AIDiscoveryData) => {
+      console.log("Making AI discovery request with data:", formData);
+      
+      // Make the request directly with fetch to avoid any potential issues
+      const response = await fetch("/api/vendors/discover", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Response not OK:", response.status, errorText);
+        throw new Error(errorText || `HTTP ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log("AI discovery result:", result);
+      return result;
     },
     onSuccess: (vendors) => {
       setDiscoveredVendors(vendors);
