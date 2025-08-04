@@ -22,7 +22,7 @@ const rfxFormSchema = z.object({
   selectedVendors: z.array(z.string()).min(1, "At least one vendor must be selected"),
   criteria: z.string().optional(),
   evaluationParameters: z.string().optional(),
-  termsAndConditionsPath: z.string().optional(),
+  termsAndConditionsPath: z.string().min(1, "Terms & Conditions upload is required"),
 });
 
 type RfxFormData = z.infer<typeof rfxFormSchema>;
@@ -78,6 +78,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
           budget: data.budget || undefined,
           bomId: data.bomId || undefined,
           termsAndConditionsPath: termsAndConditionsPath || undefined,
+          termsAndConditionsRequired: !!termsAndConditionsPath,
           criteria: data.criteria || undefined,
           evaluationParameters: data.evaluationParameters || undefined,
           status: "draft",
@@ -368,7 +369,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
         <Card className="p-6 border-2 border-border">
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium text-foreground">Terms & Conditions (Optional)</h3>
+              <h3 className="text-lg font-medium text-foreground">Terms & Conditions *</h3>
               <p className="text-sm text-muted-foreground">
                 Upload terms and conditions that vendors must accept before participating in this {selectedType.toUpperCase()}
               </p>
@@ -381,6 +382,9 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
               }}
               currentFilePath={termsAndConditionsPath}
             />
+            {form.formState.errors.termsAndConditionsPath && (
+              <p className="text-sm text-destructive">{form.formState.errors.termsAndConditionsPath.message}</p>
+            )}
           </div>
         </Card>
 
