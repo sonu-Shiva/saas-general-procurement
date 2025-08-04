@@ -2,18 +2,36 @@ import { QueryClient } from "@tanstack/react-query";
 import { isUnauthorizedError } from "./authUtils";
 
 // API request function for mutations
-export async function apiRequest(endpoint: string, options: RequestInit = {}) {
-  const response = await fetch(endpoint, {
+export async function apiRequest(endpoint: string, method: string = 'GET', data?: any) {
+  const options: RequestInit = {
+    method,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
     },
-    ...options,
-  });
+  };
+
+  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(endpoint, options);
   
   if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
+    const text = await response.text();
+    let errorMessage;
+    try {
+      const errorJson = JSON.parse(text);
+      errorMessage = errorJson.message || `${response.status}: ${response.statusText}`;
+    } catch {
+      // If response is not JSON, it might be HTML error page
+      if (text.includes('<!DOCTYPE')) {
+        errorMessage = `Unexpected token '<', "<!DOCTYPE " is not valid JSON`;
+      } else {
+        errorMessage = `${response.status}: ${response.statusText}`;
+      }
+    }
+    throw new Error(errorMessage);
   }
   
   return response.json();
