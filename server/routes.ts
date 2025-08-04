@@ -661,15 +661,29 @@ Focus on established businesses with verifiable contact information.`;
           parentId: validatedData.parentId || undefined,
           isActive: true,
         });
-        const maxCode = siblings.length > 0 
-          ? Math.max(...siblings.map(s => parseInt(s.code.split('.').pop() || '0'))) 
-          : 0;
+        
+        let maxCode = 0;
+        if (siblings.length > 0) {
+          // Extract numeric parts from codes and find the maximum
+          const codes = siblings.map(s => {
+            const codeParts = s.code.split('.');
+            const lastPart = codeParts[codeParts.length - 1];
+            return parseInt(lastPart) || 0;
+          });
+          maxCode = Math.max(...codes);
+        }
+        
         const nextNumber = maxCode + 1;
 
         if (validatedData.parentId) {
           const parent = await storage.getProductCategory(validatedData.parentId);
-          validatedData.code = `${parent?.code}.${nextNumber}`;
-          validatedData.level = (parent?.level || 0) + 1;
+          if (parent) {
+            validatedData.code = `${parent.code}.${nextNumber}`;
+            validatedData.level = (parent.level || 0) + 1;
+          } else {
+            validatedData.code = nextNumber.toString();
+            validatedData.level = 1;
+          }
         } else {
           validatedData.code = nextNumber.toString();
           validatedData.level = 1;

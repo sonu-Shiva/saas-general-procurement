@@ -195,6 +195,7 @@ export default function CategoryManager({
       parentId: undefined,
       sortOrder: 0,
     },
+    mode: "onChange",
   });
 
   const createCategoryMutation = useMutation({
@@ -300,14 +301,21 @@ export default function CategoryManager({
   });
 
   const handleCreateCategory = (parentCat?: ProductCategory) => {
+    console.log("=== HANDLE CREATE CATEGORY ===");
+    console.log("Parent category:", parentCat);
+    
     setParentCategory(parentCat || null);
+    
     // Reset form with proper default values
-    form.reset({
+    const defaultValues = {
       name: "",
       description: "",
       parentId: parentCat?.id || undefined,
       sortOrder: 0,
-    });
+    };
+    
+    console.log("Form default values:", defaultValues);
+    form.reset(defaultValues);
     setIsCreateDialogOpen(true);
   };
 
@@ -331,18 +339,33 @@ export default function CategoryManager({
   const onSubmit = (data: any) => {
     console.log("=== FORM ONSUBMIT CALLED ===");
     console.log("Form submitted with data:", data);
-    console.log("Form validation errors:", form.formState.errors);
-    console.log("Form is valid:", form.formState.isValid);
-    console.log("User role:", (user as any)?.role);
-    console.log("Can manage categories:", canManageCategories);
-    console.log("Editing category:", editingCategory);
+    
+    // Validate required fields
+    if (!data.name || data.name.trim() === "") {
+      toast({
+        title: "Validation Error",
+        description: "Category name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Prepare data with parent ID from the selected parent category
+    const categoryData = {
+      name: data.name.trim(),
+      description: data.description?.trim() || "",
+      parentId: parentCategory?.id || data.parentId || undefined,
+      sortOrder: data.sortOrder || 0,
+    };
+    
+    console.log("Prepared category data:", categoryData);
     
     if (editingCategory) {
       console.log("Path: Updating category...");
-      updateCategoryMutation.mutate(data);
+      updateCategoryMutation.mutate(categoryData);
     } else {
       console.log("Path: Creating new category...");
-      createCategoryMutation.mutate(data);
+      createCategoryMutation.mutate(categoryData);
     }
   };
 
