@@ -102,7 +102,15 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
   // AI vendor discovery mutation
   const discoverVendorsMutation = useMutation({
     mutationFn: async (data: AIDiscoveryData) => {
-      return await apiRequest("/api/vendors/discover", "POST", data);
+      console.log("Making AI discovery request with data:", data);
+      try {
+        const result = await apiRequest("/api/vendors/discover", "POST", data);
+        console.log("AI discovery result:", result);
+        return result;
+      } catch (error) {
+        console.error("AI discovery request failed:", error);
+        throw error;
+      }
     },
     onSuccess: (vendors) => {
       setDiscoveredVendors(vendors);
@@ -159,6 +167,8 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
   };
 
   const onDiscoverySubmit = (data: AIDiscoveryData) => {
+    console.log("Form submitted with data:", data);
+    console.log("About to call discoverVendorsMutation.mutate");
     discoverVendorsMutation.mutate(data);
   };
 
