@@ -1157,6 +1157,7 @@ Focus on established businesses with verifiable contact information.`;
       const responses = await storage.getRfxResponses(req.params.id);
       const childRfxEvents = await storage.getChildRfxEvents(req.params.id);
       const parentRfx = rfx.parentRfxId ? await storage.getRfxEvent(rfx.parentRfxId) : null;
+      console.log('DEBUG: RFx responses found:', responses?.length || 0);
       res.json({ ...rfx, invitations, responses, childRfxEvents, parentRfx });
     } catch (error) {
       console.error("Error fetching RFx:", error);
@@ -1249,6 +1250,35 @@ Focus on established businesses with verifiable contact information.`;
     } catch (error) {
       console.error("Error creating RFx response:", error);
       res.status(400).json({ message: "Failed to create RFx response" });
+    }
+  });
+
+  // Get RFx responses for buyers to review
+  app.get('/api/rfx/:id/responses', isAuthenticated, async (req, res) => {
+    try {
+      const rfxId = req.params.id;
+      const userId = req.user.claims.sub;
+      
+      // Verify user can access this RFx (must be creator or have proper role)
+      const rfx = await storage.getRfxEvent(rfxId);
+      if (!rfx) {
+        return res.status(404).json({ message: "RFx not found" });
+      }
+      
+      // Only allow buyers to view responses 
+      if (rfx.createdBy !== userId) {
+        const user = await storage.getUser(userId);
+        if (!user || !['buyer_admin', 'buyer_user', 'sourcing_manager'].includes(user.role)) {
+          return res.status(403).json({ message: "Unauthorized to view responses" });
+        }
+      }
+      
+      const responses = await storage.getRfxResponses(rfxId);
+      console.log(`DEBUG: Retrieved ${responses?.length || 0} responses for RFx ${rfxId}`);
+      res.json(responses || []);
+    } catch (error) {
+      console.error("Error fetching RFx responses:", error);
+      res.status(500).json({ message: "Failed to fetch RFx responses" });
     }
   });
 

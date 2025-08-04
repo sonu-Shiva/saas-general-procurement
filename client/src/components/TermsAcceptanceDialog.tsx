@@ -40,9 +40,18 @@ export function TermsAcceptanceDialog({
   };
 
   const handleDownloadTerms = () => {
+    console.log('DEBUG: Terms path:', termsAndConditionsPath);
     if (termsAndConditionsPath) {
-      window.open(termsAndConditionsPath, '_blank');
+      // Handle different path formats
+      let downloadUrl = termsAndConditionsPath;
+      if (!downloadUrl.startsWith('http') && !downloadUrl.startsWith('/')) {
+        downloadUrl = `/public-objects/${downloadUrl}`;
+      }
+      console.log('DEBUG: Opening URL:', downloadUrl);
+      window.open(downloadUrl, '_blank');
       setHasReadTerms(true);
+    } else {
+      console.error('DEBUG: No terms path provided');
     }
   };
 

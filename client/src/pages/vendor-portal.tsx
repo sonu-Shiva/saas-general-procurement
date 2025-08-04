@@ -229,7 +229,7 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                   {invitation.rfx.budget && (
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Budget</p>
-                      <p className="text-sm font-medium text-green-600">${invitation.rfx.budget}</p>
+                      <p className="text-sm font-medium text-green-600">₹{invitation.rfx.budget}</p>
                     </div>
                   )}
                   {invitation.rfx.contactPerson && (
@@ -463,6 +463,10 @@ export default function VendorPortal() {
     ['invited', 'pending'].includes(inv.status) && inv.rfx.status === 'active'
   );
   const respondedInvitations = invitations.filter((inv: RfxInvitation) => inv.status === 'responded');
+  
+  console.log('DEBUG: All invitations:', invitations);
+  console.log('DEBUG: Pending invitations:', pendingInvitations);
+  console.log('DEBUG: Responded invitations:', respondedInvitations);
 
   return (
     <div className="container mx-auto py-6">
@@ -549,7 +553,7 @@ export default function VendorPortal() {
                         {invitation.rfx.budget && (
                           <div className="flex items-center gap-2 text-sm">
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Budget: ${invitation.rfx.budget}</span>
+                            <span className="text-muted-foreground">Budget: ₹{invitation.rfx.budget}</span>
                           </div>
                         )}
                       </div>
@@ -561,9 +565,9 @@ export default function VendorPortal() {
                       <Button 
                         className="w-full" 
                         onClick={() => setSelectedInvitation(invitation)}
-                        disabled={isExpired}
+                        disabled={isExpired || invitation.status === 'responded'}
                       >
-                        {isExpired ? 'Expired' : 'Respond'}
+                        {isExpired ? 'Expired' : invitation.status === 'responded' ? 'Already Responded' : 'Respond'}
                       </Button>
                     </CardContent>
                   </Card>
@@ -574,17 +578,46 @@ export default function VendorPortal() {
         </TabsContent>
 
         <TabsContent value="responded" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Responded Invitations</h3>
-                <p className="text-muted-foreground">
-                  You haven't responded to any RFx invitations yet.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {respondedInvitations?.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Responded Invitations</h3>
+                  <p className="text-muted-foreground">
+                    You haven't responded to any RFx invitations yet.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {respondedInvitations?.map((invitation: RfxInvitation) => (
+                <Card key={invitation.id} className="border border-green-200 bg-green-50">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-green-800">{invitation.rfx.title}</h3>
+                        <p className="text-sm text-muted-foreground">{invitation.rfx.referenceNo}</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Badge variant="outline" className="text-green-700 border-green-300">
+                          {invitation.rfx.type.toUpperCase()}
+                        </Badge>
+                        <Badge variant="default" className="bg-green-600">
+                          Responded
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">{invitation.rfx.scope}</p>
+                    <div className="text-xs text-green-600">
+                      Responded on: {invitation.respondedAt ? format(new Date(invitation.respondedAt), 'PPp') : 'N/A'}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="responses" className="space-y-4">
