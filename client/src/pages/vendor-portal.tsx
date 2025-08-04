@@ -129,6 +129,13 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
       });
       queryClient.invalidateQueries({ queryKey: ['/api/vendor/rfx-invitations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/vendor/rfx-responses'] });
+      
+      // Force refetch to ensure UI updates
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/vendor/rfx-invitations'] });
+        queryClient.refetchQueries({ queryKey: ['/api/vendor/rfx-responses'] });
+      }, 500);
+      
       onClose();
     },
     onError: (error: any) => {
@@ -552,7 +559,7 @@ export default function VendorPortal() {
                         </div>
                         {invitation.rfx.budget && (
                           <div className="flex items-center gap-2 text-sm">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">₹</span>
                             <span className="text-muted-foreground">Budget: ₹{invitation.rfx.budget}</span>
                           </div>
                         )}

@@ -2642,6 +2642,25 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Serve terms and conditions documents
+  app.get('/api/terms/download/:filename', async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      console.log('DEBUG: Downloading terms file:', filename);
+      
+      // For now, redirect to public objects path or return a response
+      // In production, you'd serve the actual file from storage
+      if (filename) {
+        res.redirect(`/public-objects/${filename}`);
+      } else {
+        res.status(404).json({ message: "Terms file not found" });
+      }
+    } catch (error) {
+      console.error("Error downloading terms:", error);
+      res.status(500).json({ message: "Failed to download terms" });
+    }
+  });
+
   // Check vendor terms acceptance for specific entity
   app.get('/api/terms/check', isAuthenticated, async (req: any, res) => {
     try {
