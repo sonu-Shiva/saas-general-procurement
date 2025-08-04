@@ -2548,7 +2548,10 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(404).json({ message: "Vendor profile not found" });
       }
 
+      console.log('DEBUG: Full request body:', req.body);
       const { rfxId, proposedPrice, deliveryTime, technicalSpecification, additionalNotes, quotedPrice, deliveryTerms, paymentTerms, leadTime, response: responseText, attachments } = req.body;
+      console.log('DEBUG: Extracted rfxId:', rfxId);
+      console.log('DEBUG: typeof rfxId:', typeof rfxId);
 
       // Validate RFx invitation exists
       console.log(`Looking for invitation: rfxId=${rfxId}, vendorId=${vendor.id}`);

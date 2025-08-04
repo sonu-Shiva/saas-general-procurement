@@ -108,6 +108,10 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
 
   const submitResponseMutation = useMutation({
     mutationFn: async (data: RfxResponseFormData & { isDraft?: boolean }) => {
+      console.log('DEBUG: invitation object:', invitation);
+      console.log('DEBUG: rfxId being sent:', invitation.rfxId);
+      console.log('DEBUG: full payload:', { rfxId: invitation.rfxId, ...data });
+      
       return apiRequest('/api/vendor/rfx-responses', {
         method: 'POST',
         body: JSON.stringify({
