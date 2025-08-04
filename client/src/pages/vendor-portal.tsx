@@ -275,11 +275,15 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                     <p className="text-sm font-medium text-muted-foreground mb-2">Terms & Conditions</p>
                     <Button 
                       variant="outline" 
-                      size="sm" 
-                      onClick={() => window.open(invitation.rfx.termsAndConditionsPath, '_blank')}
+                      size="sm"
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
+                      onClick={() => {
+                        const filename = invitation.rfx.termsAndConditionsPath || 'terms.pdf';
+                        window.open(`/api/terms/download/${filename}`, '_blank');
+                      }}
                     >
                       <FileText className="h-4 w-4 mr-2" />
-                      Download Terms & Conditions
+                      Download Terms & Conditions (PDF)
                     </Button>
                   </div>
                 )}
@@ -304,13 +308,13 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                           name="proposedPrice"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Proposed Price ($) <span className="text-red-500">*</span></FormLabel>
+                              <FormLabel>Proposed Price (₹) <span className="text-red-500">*</span></FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
                                   step="0.01"
                                   min="0"
-                                  placeholder="0.00"
+                                  placeholder="₹0.00"
                                   {...field}
                                   onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                                   data-testid="input-proposed-price"
