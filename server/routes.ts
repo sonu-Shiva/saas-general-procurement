@@ -271,6 +271,11 @@ Focus on established businesses with verifiable contact information.`;
 
       console.log("Perplexity search prompt:", searchPrompt);
 
+      // Validate API key
+      if (!process.env.PERPLEXITY_API_KEY) {
+        throw new Error("PERPLEXITY_API_KEY environment variable is not set");
+      }
+
       // Call Perplexity API
       const perplexityResponse = await fetch("https://api.perplexity.ai/chat/completions", {
         method: "POST",
@@ -279,7 +284,7 @@ Focus on established businesses with verifiable contact information.`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "sonar-pro",
+          model: "llama-3.1-sonar-small-128k-online",
           messages: [
             {
               role: "system",
@@ -291,7 +296,11 @@ Focus on established businesses with verifiable contact information.`;
             }
           ],
           max_tokens: 1500,
-          temperature: 0.1,
+          temperature: 0.2,
+          top_p: 0.9,
+          search_recency_filter: "month",
+          return_images: false,
+          return_related_questions: false,
           stream: false
         })
       });
@@ -299,10 +308,21 @@ Focus on established businesses with verifiable contact information.`;
       if (!perplexityResponse.ok) {
         const errorText = await perplexityResponse.text();
         console.error(`Perplexity API error ${perplexityResponse.status}:`, errorText);
+        console.error("Response headers:", Object.fromEntries(perplexityResponse.headers.entries()));
         throw new Error(`Perplexity API error: ${perplexityResponse.status} - ${errorText}`);
       }
 
-      const perplexityData = await perplexityResponse.json();
+      const responseText = await perplexityResponse.text();
+      console.log("Raw Perplexity response:", responseText.substring(0, 500)); // Log first 500 chars
+      
+      let perplexityData;
+      try {
+        perplexityData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Failed to parse Perplexity response as JSON:", parseError);
+        console.error("Response text:", responseText.substring(0, 1000));
+        throw new Error("Invalid JSON response from Perplexity API");
+      }
       const aiResponse = perplexityData.choices[0]?.message?.content || "";
 
       console.log("AI Response:", aiResponse);
