@@ -9,7 +9,6 @@ import ConvertRfxForm from "@/components/convert-rfx-form";
 import { CreatePOFromRfxDialog } from "@/components/CreatePOFromRfxDialog";
 import { TermsUploader } from "@/components/TermsUploader";
 import { RfxResponseForm } from "@/components/rfx-response-form";
-import { RfxResponsesView } from "@/components/rfx-responses-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,8 +51,6 @@ export default function RfxManagement() {
   const [selectedRfxForPO, setSelectedRfxForPO] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedRfxForView, setSelectedRfxForView] = useState<any>(null);
-  const [selectedRfxForResponses, setSelectedRfxForResponses] = useState<any>(null);
-  const [isResponsesDialogOpen, setIsResponsesDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -121,11 +118,6 @@ export default function RfxManagement() {
   const handleRespondToRfx = (rfx: any) => {
     setSelectedRfxForResponse(rfx);
     setIsResponseDialogOpen(true);
-  };
-
-  const handleViewResponses = (rfx: any) => {
-    setSelectedRfxForResponses(rfx);
-    setIsResponsesDialogOpen(true);
   };
   
   return (
@@ -326,7 +318,6 @@ export default function RfxManagement() {
                     setIsViewDialogOpen(true);
                   }}
                   onRespond={handleRespondToRfx}
-                  onViewResponses={handleViewResponses}
                   onConvert={handleConvertRfx}
                   onCreatePO={handleCreatePOFromRfx}
                   onClose={handleCloseRfx}
@@ -445,31 +436,12 @@ export default function RfxManagement() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* RFx Responses View Dialog for Buyers */}
-      <Dialog open={isResponsesDialogOpen} onOpenChange={setIsResponsesDialogOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <MessageSquare className="w-5 h-5" />
-              <span>RFx Responses - {selectedRfxForResponses?.title}</span>
-            </DialogTitle>
-          </DialogHeader>
-          {selectedRfxForResponses && (
-            <RfxResponsesView
-              rfx={selectedRfxForResponses}
-              onClose={() => setIsResponsesDialogOpen(false)}
-              onCreatePO={handleCreatePOFromRfx}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
 
 // RFx Card Component
-function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onConvert, onCreatePO, onClose }: any) {
+function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onConvert, onCreatePO, onClose }: any) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-700 border-green-200';
@@ -533,10 +505,6 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
           )}
           {!isVendor && (
             <>
-              <Button variant="ghost" size="sm" onClick={() => onViewResponses(rfx)}>
-                <MessageSquare className="w-4 h-4 mr-1" />
-                Responses
-              </Button>
               {rfx.status === 'closed' && rfx.type === 'rfq' && (
                 <Button variant="ghost" size="sm" onClick={() => onCreatePO(rfx)}>
                   <ShoppingCart className="w-4 h-4 mr-1" />
