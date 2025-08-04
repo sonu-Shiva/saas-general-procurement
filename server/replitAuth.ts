@@ -93,19 +93,20 @@ export async function setupAuth(app: Express) {
     verified(null, user);
   };
 
-  for (const domain of process.env
-    .REPLIT_DOMAINS!.split(",")) {
-    const strategy = new Strategy(
-      {
-        name: `replitauth:${domain}`,
-        config,
-        scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
-      },
-      verify,
-    );
-    passport.use(strategy);
-  }
+  // Register strategy for the primary domain
+  const primaryDomain = process.env.REPLIT_DOMAINS!.split(",")[0];
+  console.log("Registering auth strategy for domain:", primaryDomain);
+  
+  const strategy = new Strategy(
+    {
+      name: `replitauth:${primaryDomain}`,
+      config,
+      scope: "openid email profile offline_access",
+      callbackURL: `https://${primaryDomain}/api/callback`,
+    },
+    verify,
+  );
+  passport.use(strategy);
 
   passport.serializeUser((user: Express.User, cb) => {
     console.log("Serializing user:", user ? "exists" : "null");
@@ -119,10 +120,8 @@ export async function setupAuth(app: Express) {
   app.get("/api/login", (req, res, next) => {
     console.log("Login attempt for hostname:", req.hostname);
     
-    // For localhost development, use the first domain from REPLIT_DOMAINS
-    const strategyName = req.hostname === 'localhost' 
-      ? `replitauth:${process.env.REPLIT_DOMAINS!.split(",")[0]}`
-      : `replitauth:${req.hostname}`;
+    const primaryDomain = process.env.REPLIT_DOMAINS!.split(",")[0];
+    const strategyName = `replitauth:${primaryDomain}`;
     
     console.log("Using strategy:", strategyName);
     
@@ -135,10 +134,8 @@ export async function setupAuth(app: Express) {
   app.get("/api/callback", (req, res, next) => {
     console.log("Callback for hostname:", req.hostname);
     
-    // For localhost development, use the first domain from REPLIT_DOMAINS
-    const strategyName = req.hostname === 'localhost'
-      ? `replitauth:${process.env.REPLIT_DOMAINS!.split(",")[0]}`
-      : `replitauth:${req.hostname}`;
+    const primaryDomain = process.env.REPLIT_DOMAINS!.split(",")[0];
+    const strategyName = `replitauth:${primaryDomain}`;
     
     console.log("Using callback strategy:", strategyName);
     
