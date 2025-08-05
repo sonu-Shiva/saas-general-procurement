@@ -16,26 +16,26 @@ import { apiRequest } from "@/lib/queryClient";
 
 // Status color functions
 const getVendorStatusColor = (invitation: any) => {
-  const status = invitation.rfxStatus || 'active';
+  const status = invitation.status || 'invited';
   switch (status.toLowerCase()) {
-    case 'active':
-      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    case 'invited':
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
     case 'responded':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
     case 'cancelled':
       return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
     case 'po_generated':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
     default:
       return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   }
 };
 
 const getVendorStatusText = (invitation: any) => {
-  const status = invitation.rfxStatus || 'active';
+  const status = invitation.status || 'invited';
   switch (status.toLowerCase()) {
-    case 'active':
-      return 'ACTIVE';
+    case 'invited':
+      return 'INVITED';
     case 'responded':
       return 'RESPONDED';
     case 'cancelled':
@@ -77,8 +77,8 @@ export default function VendorPortal() {
     const invStatus = inv.status || 'invited';
     const rfxStatus = inv.rfxStatus || 'active';
     const isNotExpired = inv.rfxDueDate ? new Date(inv.rfxDueDate) > new Date() : true;
-    return ['invited', 'pending'].includes(invStatus) && 
-           ['active', 'open'].includes(rfxStatus) && 
+    return invStatus === 'invited' && 
+           ['active', 'draft'].includes(rfxStatus) && 
            isNotExpired;
   });
   
@@ -208,6 +208,16 @@ export default function VendorPortal() {
                           </div>
                           
                           <div className="flex items-center gap-2 ml-4">
+                            {invitation.status === 'invited' && !isExpired && (
+                              <Button 
+                                variant="default" 
+                                size="sm" 
+                                data-testid={`button-respond-${invitation.rfxId}`}
+                                className="bg-primary hover:bg-primary/90"
+                              >
+                                Respond
+                              </Button>
+                            )}
                             <Button variant="outline" size="sm" data-testid={`button-view-${invitation.rfxId}`}>
                               View
                             </Button>
