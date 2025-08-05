@@ -206,12 +206,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Query is required' });
       }
 
-      // Construct search prompt
-      let searchPrompt = `Find 5-8 professional vendors and suppliers specializing in ${query}`;
+      // Construct comprehensive search prompt
+      let searchPrompt = `I need complete contact information for professional suppliers of ${query}`;
       if (location && location !== 'all') {
         searchPrompt += ` in ${location}`;
       }
-      searchPrompt += ' in India. IMPORTANT: Only include vendors with REAL contact information (email addresses and phone numbers). Please format the response exactly as follows for each vendor:\n\n**[Company Name]**\n- Contact Email: [real email address - must be valid, not "Not publicly listed"]\n- Phone Number: [real phone number with country code like +91-80-12345678]\n- Address: [complete address]\n- Website: [website URL]\n- Logo URL: [company logo URL if available]\n- Description: [brief description]\n\nPrioritize vendors with publicly available contact details from their websites, business directories, or official listings. Skip vendors without real email addresses or phone numbers.';
+      searchPrompt += ` in India. Search company websites, IndiaMART, JustDial, business directories, and company contact pages to find REAL contact details.
+
+MANDATORY: Only include suppliers with VERIFIED contact information:
+- Full phone numbers (like +91-80-22334455 or +91-9876543210)
+- Real email addresses (like info@company.com or sales@company.com)
+- Complete business addresses
+
+Format each supplier exactly as:
+
+**[Company Name]**
+- Contact Email: [verified email from company website/directory]
+- Phone Number: [complete phone number with area code]
+- Address: [full street address with city and state]
+- Website: [company website URL]
+- Logo URL: [logo URL if available]
+- Description: [company services and products]
+
+CRITICAL: Search each company's actual website and business listings to get real contact details. Do not include companies with missing phone numbers or email addresses. I need actionable contact information that I can actually use to reach these suppliers.`;
+
+      console.log('Enhanced Perplexity search prompt:', searchPrompt);
 
       console.log('Perplexity search prompt:', searchPrompt);
 
@@ -223,22 +242,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'sonar-pro',
+          model: 'llama-3.1-sonar-large-128k-online',
           messages: [
             {
               role: 'system',
-              content: 'You are a helpful assistant that finds real vendors and suppliers. Always provide accurate, up-to-date information with real contact details.'
+              content: 'You are a business intelligence assistant that finds verified supplier contact information. Search company websites, business directories like IndiaMART, JustDial, and official contact pages to provide complete, actionable contact details. Always prioritize real phone numbers and email addresses that businesses can actually use to contact suppliers.'
             },
             {
               role: 'user',
               content: searchPrompt
             }
           ],
-          max_tokens: 2000,
-          temperature: 0.2,
+          max_tokens: 3000,
+          temperature: 0.1,
           return_citations: true,
           return_images: false,
           return_related_questions: false,
+          search_recency_filter: "month",
         }),
       });
 
@@ -301,7 +321,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const regex = new RegExp(`${fieldName}\\s*([^\\n-]+)`, 'i');
     const match = text.match(regex);
     if (match && match[1]) {
-      return match[1].trim().replace(/^[-\s]+/, '').trim();
+      const value = match[1].trim().replace(/^[-\s]+/, '').trim();
+      
+      // Filter out common placeholder values
+      const invalidValues = [
+        'Not publicly listed',
+        'Not available',
+        'Not listed',
+        'Contact via platform',
+        'N/A',
+        '+91',
+        'info@',
+        '[email',
+        'contact@'
+      ];
+      
+      if (invalidValues.some(invalid => value.includes(invalid))) {
+        return null;
+      }
+      
+      return value;
     }
     return null;
   }
