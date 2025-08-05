@@ -60,7 +60,7 @@ export default function RfxManagement() {
   const isVendor = (user as any)?.role === 'vendor';
 
   // Use different API endpoints based on user role
-  const { data: rfxEvents = [], isLoading } = useQuery({
+  const { data: rfxEvents = [], isLoading, refetch } = useQuery({
     queryKey: isVendor ? ["/api/vendor/rfx-invitations"] : ["/api/rfx"],
     retry: false,
   });
@@ -131,7 +131,7 @@ export default function RfxManagement() {
   return (
     <div className="space-y-6 p-6">
       {/* Page Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
             {isVendor ? "RFx Invitations" : "RFx Management"}
@@ -234,6 +234,50 @@ export default function RfxManagement() {
                       }}
                     />
                   )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
+        {!isVendor && (
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/dev/create-vendor-invitations', { method: 'POST' });
+                  const data = await response.json();
+                  console.log('Vendor invitations created:', data);
+                  alert(`Created vendor invitations: ${data.message}`);
+                  refetch(); // Invalidate and refetch to show updated counts
+                } catch (error) {
+                  console.error('Error creating vendor invitations:', error);
+                  alert('Failed to create vendor invitations');
+                }
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              🧪 Create Vendor Invitations (Dev)
+            </Button>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create RFx
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+                <DialogHeader>
+                  <DialogTitle>Create New RFx Request</DialogTitle>
+                </DialogHeader>
+                <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+                  <EnhancedRfxForm 
+                    onClose={() => setIsCreateDialogOpen(false)}
+                    onSuccess={() => {
+                      setIsCreateDialogOpen(false);
+                      queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+                    }}
+                  />
                 </div>
               </DialogContent>
             </Dialog>

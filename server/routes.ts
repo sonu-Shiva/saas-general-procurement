@@ -470,6 +470,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vendor RFx invitation routes
+  app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      console.log("Vendor RFx invitations - User ID:", userId);
+      console.log("Vendor RFx invitations - User role:", currentDevUser.role);
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      if (currentDevUser.role !== 'vendor') {
+        console.log("User is not a vendor, returning empty array");
+        return res.json([]);
+      }
+
+      // For development, let's find vendor by userId or create a mock vendor
+      let vendor = await storage.getVendorByUserId(userId);
+      console.log("Found vendor:", vendor ? vendor.id : 'No vendor found');
+
+      if (!vendor) {
+        // For development, let's get all vendors and see if we can match by email
+        const allVendors = await storage.getVendors();
+        console.log("All vendors:", allVendors.map(v => ({ id: v.id, email: v.email, userId: v.userId })));
+        
+        // Try to find by email
+        vendor = allVendors.find(v => v.email === currentDevUser.email);
+        console.log("Found vendor by email:", vendor ? vendor.id : 'No vendor found by email');
+
+        if (!vendor) {
+          // For development, create a temporary vendor profile
+          console.log("Creating temporary vendor profile for development");
+          vendor = await storage.createVendor({
+            companyName: `${currentDevUser.firstName} ${currentDevUser.lastName} Company`,
+            email: currentDevUser.email,
+            contactPerson: `${currentDevUser.firstName} ${currentDevUser.lastName}`,
+            phone: '1234567890',
+            address: 'Development Address',
+            city: 'Dev City',
+            state: 'Dev State',
+            country: 'India',
+            pincode: '123456',
+            gstNumber: 'DEV123456',
+            userId: userId,
+          });
+          console.log("Created vendor:", vendor.id);
+        }
+      }
+
+      // Get RFx invitations for this vendor
+      const invitations = await storage.getRfxInvitationsForVendor(vendor.id);
+      console.log(`Found ${invitations.length} invitations for vendor ${vendor.id}`);
+      
+      // Format the response to match the expected structure
+      const formattedInvitations = invitations.map(inv => ({
+        id: `${inv.rfxId}-${inv.vendorId}`,
+        rfxId: inv.rfxId,
+        vendorId: inv.vendorId,
+        status: inv.status || 'invited',
+        invitedAt: inv.invitedAt,
+        respondedAt: inv.respondedAt,
+        rfx: {
+          id: inv.rfxId,
+          title: inv.rfxTitle,
+          referenceNo: inv.rfxReferenceNo,
+          type: inv.rfxType,
+          scope: inv.rfxScope,
+          dueDate: inv.rfxDueDate,
+          status: inv.rfxStatus,
+          budget: inv.rfxBudget,
+          contactPerson: inv.rfxContactPerson,
+          termsAndConditionsPath: inv.rfxTermsAndConditionsPath,
+          criteria: inv.rfxCriteria,
+          evaluationParameters: inv.rfxEvaluationParameters,
+          attachments: inv.rfxAttachments,
+        }
+      }));
+
+      console.log("Formatted invitations:", formattedInvitations.length);
+      res.json(formattedInvitations);
+    } catch (error) {
+      console.error("Error fetching vendor RFx invitations:", error);
+      res.status(500).json({ message: "Failed to fetch RFx invitations" });
+    }
+  });
+
+  // Vendor RFx responses route
+  app.get('/api/vendor/rfx-responses', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      if (currentDevUser.role !== 'vendor') {
+        return res.json([]);
+      }
+
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.json([]);
+      }
+
+      const responses = await storage.getRfxResponsesByVendor(vendor.id);
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching vendor RFx responses:", error);
+      res.status(500).json({ message: "Failed to fetch RFx responses" });
+    }
+  });
+
+  // Submit RFx response
+  app.post('/api/vendor/rfx-responses', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      if (currentDevUser.role !== 'vendor') {
+        return res.status(403).json({ message: "Access denied. Vendors only." });
+      }
+
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      const responseData = {
+        ...req.body,
+        vendorId: vendor.id,
+      };
+
+      const response = await storage.createRfxResponse(responseData);
+      
+      // Update invitation status to 'responded'
+      await storage.updateRfxInvitationStatus(req.body.rfxId, vendor.id, 'responded');
+      
+      res.json(response);
+    } catch (error) {
+      console.error("Error creating RFx response:", error);
+      res.status(500).json({ message: "Failed to create RFx response" });
+    }
+  });
+
+  // Development helper: Create vendor invitations for latest RFx
+  app.post('/api/dev/create-vendor-invitations', async (req: any, res) => {
+    try {
+      console.log("Creating vendor invitations for development...");
+      
+      // Get the latest RFx
+      const rfxEvents = await storage.getRfxEvents();
+      if (rfxEvents.length === 0) {
+        return res.status(404).json({ message: "No RFx events found" });
+      }
+
+      const latestRfx = rfxEvents[0]; // Assuming they're ordered by creation date
+      console.log("Latest RFx:", latestRfx.id, latestRfx.title);
+
+      // Get all vendors
+      const vendors = await storage.getVendors();
+      console.log("Found vendors:", vendors.length);
+
+      // Create invitations for all vendors to the latest RFx
+      const invitations = [];
+      for (const vendor of vendors) {
+        try {
+          const invitation = await storage.createRfxInvitation({
+            rfxId: latestRfx.id,
+            vendorId: vendor.id,
+            status: 'invited'
+          });
+          invitations.push(invitation);
+          console.log(`Created invitation for vendor ${vendor.id} to RFx ${latestRfx.id}`);
+        } catch (error) {
+          console.log(`Invitation already exists for vendor ${vendor.id} to RFx ${latestRfx.id}`);
+        }
+      }
+
+      res.json({ 
+        message: `Created ${invitations.length} vendor invitations for RFx ${latestRfx.title}`,
+        rfxId: latestRfx.id,
+        invitations: invitations.length
+      });
+    } catch (error) {
+      console.error("Error creating vendor invitations:", error);
+      res.status(500).json({ message: "Failed to create vendor invitations" });
+    }
+  });
+
   // Auction routes
   app.get('/api/auctions', async (req, res) => {
     try {

@@ -106,7 +106,7 @@ export interface IStorage {
   createRfxEvent(rfx: InsertRfxEvent): Promise<RfxEvent>;
   getRfxEvent(id: string): Promise<RfxEvent | undefined>;
   getRfxEvents(filters?: { status?: string; type?: string; createdBy?: string }): Promise<RfxEvent[]>;
-  getRfxEventsForVendor(vendorUserId: string): Promise<RfxEvent[]>;
+  getRfxEventsForVendor(vendorId: string): Promise<RfxEvent[]>;
   updateRfxEvent(id: string, updates: Partial<InsertRfxEvent>): Promise<RfxEvent>;
   updateRfxEventStatus(id: string, status: string): Promise<RfxEvent>;
 
@@ -114,9 +114,10 @@ export interface IStorage {
   getRfxInvitations(rfxId: string): Promise<RfxInvitation[]>;
   getRfxInvitation(rfxId: string, vendorId: string): Promise<RfxInvitation | undefined>;
   getRfxInvitationsByVendor(vendorId: string): Promise<any[]>;
+  getRfxInvitationsForVendor(vendorId: string): Promise<any[]>;
   updateRfxInvitationStatus(rfxId: string, vendorId: string, status: string): Promise<void>;
 
-  createRfxResponse(response: InsertRfxResponse): Promise<RfxResponse>;
+  createRfxResponse(data: any): Promise<RfxResponse>;
   getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]>;
   getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]>;
 
@@ -638,18 +639,70 @@ export class DatabaseStorage implements IStorage {
     return invitations;
   }
 
-  async updateRfxInvitationStatus(rfxId: string, vendorId: string, status: string): Promise<void> {
-    await db.update(rfxInvitations)
-      .set({
-        status: status as any,
-        respondedAt: status === 'responded' ? new Date() : null
+  async getRfxInvitationsForVendor(vendorId: string): Promise<any[]> {
+    // Get RFx invitations with full RFx details for vendor portal
+    const results = await db
+      .select({
+        rfxId: rfxInvitations.rfxId,
+        vendorId: rfxInvitations.vendorId,
+        status: rfxInvitations.status,
+        invitedAt: rfxInvitations.invitedAt,
+        respondedAt: rfxInvitations.respondedAt,
+        rfxTitle: rfxEvents.title,
+        rfxReferenceNo: rfxEvents.referenceNo,
+        rfxType: rfxEvents.type,
+        rfxScope: rfxEvents.scope,
+        rfxDueDate: rfxEvents.dueDate,
+        rfxStatus: rfxEvents.status,
+        rfxBudget: rfxEvents.budget,
+        rfxContactPerson: rfxEvents.contactPerson,
+        rfxTermsAndConditionsPath: rfxEvents.termsAndConditionsPath,
+        rfxCriteria: rfxEvents.criteria,
+        rfxEvaluationParameters: rfxEvents.evaluationParameters,
+        rfxAttachments: rfxEvents.attachments,
       })
-      .where(and(eq(rfxInvitations.rfxId, rfxId), eq(rfxInvitations.vendorId, vendorId)));
+      .from(rfxInvitations)
+      .innerJoin(rfxEvents, eq(rfxInvitations.rfxId, rfxEvents.id))
+      .where(eq(rfxInvitations.vendorId, vendorId))
+      .orderBy(desc(rfxEvents.createdAt));
+
+    return results;
   }
 
-  async createRfxResponse(response: InsertRfxResponse): Promise<RfxResponse> {
-    const [newResponse] = await db.insert(rfxResponses).values(response).returning();
-    return newResponse;
+  async updateRfxInvitationStatus(rfxId: string, vendorId: string, status: string): Promise<void> {
+    await db
+      .update(rfxInvitations)
+      .set({ 
+        status: status as any,
+        respondedAt: status === 'responded' ? new Date() : undefined
+      })
+      .where(
+        and(
+          eq(rfxInvitations.rfxId, rfxId),
+          eq(rfxInvitations.vendorId, vendorId)
+        )
+      );
+  }
+
+  async createRfxResponse(data: any): Promise<RfxResponse> {
+    const [response] = await db.insert(rfxResponses).values({
+      rfxId: data.rfxId,
+      vendorId: data.vendorId,
+      response: {
+        proposedPrice: data.proposedPrice,
+        deliveryTime: data.deliveryTime,
+        technicalSpecification: data.technicalSpecification,
+        additionalNotes: data.additionalNotes,
+        isDraft: data.isDraft || false,
+      },
+      quotedPrice: data.proposedPrice?.toString(),
+      deliveryTerms: data.deliveryTime,
+      paymentTerms: data.additionalNotes,
+      leadTime: null,
+      attachments: data.attachments || [],
+    }).returning();
+
+    return response;
   }
 
   async getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]> {
