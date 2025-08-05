@@ -96,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(currentDevUser);
   });
 
-  app.patch('/api/auth/user/role', (req, res) => {
+  app.patch('/api/auth/user/role', async (req, res) => {
     console.log('Role change requested to:', req.body.role);
     if (!isLoggedIn) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -109,8 +109,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: 'Invalid role' });
     }
 
+    // Update both in-memory and database
     currentDevUser.role = role;
-    console.log('Role updated to:', role);
+    
+    try {
+      // Update the user in the database
+      await storage.upsertUser({
+        id: currentDevUser.id,
+        email: currentDevUser.email,
+        firstName: currentDevUser.firstName,
+        lastName: currentDevUser.lastName,
+        role: role as any,
+      });
+      console.log('Role updated in database and memory to:', role);
+    } catch (error) {
+      console.error('Failed to update role in database:', error);
+    }
+    
     res.json(currentDevUser);
   });
 
