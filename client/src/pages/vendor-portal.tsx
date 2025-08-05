@@ -166,6 +166,13 @@ export default function VendorPortal() {
                 <div className="space-y-4">
                   {pendingInvitations.map((invitation: any) => {
                     const isExpired = invitation.rfxDueDate ? new Date(invitation.rfxDueDate) < new Date() : false;
+                    console.log('DEBUG: Invitation details:', {
+                      rfxId: invitation.rfxId,
+                      status: invitation.status,
+                      isExpired,
+                      rfxDueDate: invitation.rfxDueDate,
+                      shouldShowRespond: invitation.status === 'invited' && !isExpired
+                    });
                     
                     return (
                       <div key={invitation.rfxId} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
