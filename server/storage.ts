@@ -58,8 +58,9 @@ import {
   type InsertTermsAcceptance,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc, sql, like, inArray, isNull, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { v4 as uuidv4 } from 'uuid';
+import { desc, eq, like, asc, and, sql, inArray, isNull, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations - mandatory for Replit Auth
@@ -687,29 +688,55 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async createRfxResponse(responseData: any): Promise<RfxResponse> {
-    console.log('Storage: Creating RFx response with data:', responseData);
+  async createRfxResponse(data: {
+    rfxId: string;
+    vendorId: string;
+    response?: any;
+    quotedPrice?: number;
+    deliveryTerms?: string;
+    paymentTerms?: string;
+    leadTime?: number;
+    attachments?: string[];
+    termsAccepted?: boolean;
+    companyName?: string;
+    contactPerson?: string;
+    email?: string;
+    phone?: string;
+  }): Promise<RfxResponse> {
+    const id = uuidv4();
+    const now = new Date();
 
-    const responseId = nanoid();
-    const insertData = {
-      id: responseId,
-      rfxId: responseData.rfxId,
-      vendorId: responseData.vendorId,
-      response: responseData.response,
-      quotedPrice: responseData.quotedPrice ? parseFloat(responseData.quotedPrice.replace(/[^\d.-]/g, '')) : null,
-      deliveryTerms: responseData.deliveryTerms,
-      paymentTerms: responseData.paymentTerms,
-      leadTime: responseData.leadTime,
-      attachments: responseData.attachments ? JSON.stringify(responseData.attachments) : null,
-      termsAccepted: responseData.termsAccepted || false,
-      submittedAt: new Date(),
+    console.log('Creating RFx response with data:', data);
+
+    const responseData = {
+      companyDetails: {
+        companyName: data.companyName,
+        contactPerson: data.contactPerson,
+        email: data.email,
+        phone: data.phone
+      },
+      responseDetails: data.response || {},
+      termsAccepted: data.termsAccepted || false
     };
 
-    console.log('Storage: Insert data prepared:', insertData);
+    const [response] = await this.db
+      .insert(rfxResponses)
+      .values({
+        id,
+        rfxId: data.rfxId,
+        vendorId: data.vendorId,
+        response: responseData,
+        quotedPrice: data.quotedPrice ? data.quotedPrice.toString() : null,
+        deliveryTerms: data.deliveryTerms,
+        paymentTerms: data.paymentTerms,
+        leadTime: data.leadTime,
+        attachments: data.attachments || [],
+        submittedAt: now,
+      })
+      .returning();
 
-    const response = await this.db.insert(rfxResponses).values(insertData).returning();
-    console.log('Storage: RFx response created successfully:', response[0]);
-    return response[0];
+    console.log('RFx response created successfully:', response);
+    return response;
   }
 
   async getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]> {

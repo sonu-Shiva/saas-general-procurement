@@ -191,7 +191,7 @@ export const rfxResponses = pgTable("rfx_responses", {
   deliveryTerms: text("delivery_terms"),
   paymentTerms: text("payment_terms"),
   leadTime: integer("lead_time"),
-  attachments: text("attachments").array(),
+  attachments: jsonb("attachments").default([]),
   submittedAt: timestamp("submitted_at").defaultNow(),
 });
 
@@ -580,7 +580,7 @@ export const insertVendorSchema = createInsertSchema(vendors).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  performanceScore: z.union([z.string(), z.number()]).optional().transform((val) => 
+  performanceScore: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
 });
@@ -600,7 +600,7 @@ export const insertProductSchema = createInsertSchema(products).omit({
   updatedAt: true,
 }).extend({
   itemName: z.string().min(1, "Item name is required"),
-  basePrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+  basePrice: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
 });
@@ -610,10 +610,10 @@ export const insertBomSchema = createInsertSchema(boms).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  validFrom: z.union([z.string(), z.date()]).optional().transform((val) => 
+  validFrom: z.union([z.string(), z.date()]).optional().transform((val) =>
     val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
-  validTo: z.union([z.string(), z.date()]).optional().transform((val) => 
+  validTo: z.union([z.string(), z.date()]).optional().transform((val) =>
     val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
 });
@@ -623,10 +623,10 @@ export const insertBomItemSchema = createInsertSchema(bomItems).omit({
   createdAt: true,
 }).extend({
   quantity: z.union([z.string(), z.number()]).transform((val) => String(val)),
-  unitPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+  unitPrice: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
-  totalPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+  totalPrice: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
   productId: z.string().uuid().optional(),
@@ -638,10 +638,10 @@ export const insertRfxEventSchema = createInsertSchema(rfxEvents).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  budget: z.union([z.string(), z.number()]).optional().transform((val) => 
+  budget: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
-  dueDate: z.union([z.string(), z.date()]).optional().transform((val) => 
+  dueDate: z.union([z.string(), z.date()]).optional().transform((val) =>
     val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
 });
@@ -660,19 +660,19 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  ceilingPrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+  ceilingPrice: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
-  reservePrice: z.union([z.string(), z.number()]).optional().transform((val) => 
+  reservePrice: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
-  currentBid: z.union([z.string(), z.number()]).optional().transform((val) => 
+  currentBid: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
-  startTime: z.union([z.string(), z.date()]).optional().transform((val) => 
+  startTime: z.union([z.string(), z.date()]).optional().transform((val) =>
     val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
-  endTime: z.union([z.string(), z.date()]).optional().transform((val) => 
+  endTime: z.union([z.string(), z.date()]).optional().transform((val) =>
     val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
   bomId: z.string().nullable().optional(),
