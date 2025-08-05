@@ -109,11 +109,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: 'Invalid role' });
     }
 
-    // Update both in-memory and database
-    currentDevUser.role = role;
-    
     try {
-      // Update the user in the database
+      // Update the user in the database first
       await storage.upsertUser({
         id: currentDevUser.id,
         email: currentDevUser.email,
@@ -121,12 +118,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: currentDevUser.lastName,
         role: role as any,
       });
+      
+      // Update in-memory only after database update succeeds
+      currentDevUser.role = role;
       console.log('Role updated in database and memory to:', role);
+      
+      res.json(currentDevUser);
     } catch (error) {
       console.error('Failed to update role in database:', error);
+      res.status(500).json({ message: 'Failed to update role' });
     }
-    
-    res.json(currentDevUser);
   });
 
   // Auth middleware for protected routes
@@ -575,10 +576,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check user role from database
+      // Get fresh user data from database to ensure role changes are reflected
       const user = await storage.getUser(userId);
       console.log('Vendor RFx invitations - User role:', user?.role);
+      console.log('Vendor RFx invitations - Current session role:', currentDevUser.role);
 
       if (!user || user.role !== 'vendor') {
+        console.log('User role check failed. User found:', !!user, 'Role:', user?.role);
         return res.json([]);
       }
 
