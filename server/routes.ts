@@ -303,8 +303,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   function extractField(text: string, fieldName: string): string | null {
-    console.log(`Extracting field "${fieldName}" from text: ${text.substring(0, 200)}...`);
-    
     // Try multiple patterns to extract field values
     const patterns = [
       new RegExp(`-\\s*${fieldName}\\s*([^\\n]+)`, 'i'),
@@ -321,48 +319,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         value = value.replace(/^[-:\s]+/, '').trim();
         value = value.replace(/[.\s]+$/, '');
         
-        console.log(`Found potential value for ${fieldName}: "${value}"`);
-        
         // Filter out placeholder values
         const invalidValues = [
           'Not publicly listed',
-          'Not available',
+          'Not available', 
           'Not listed in search results',
           'Contact via platform',
-          'N/A'
+          'N/A',
+          '[Not publicly available]',
+          '[No official website found]'
         ];
         
         // Check for invalid values
         if (invalidValues.some(invalid => value.toLowerCase().includes(invalid.toLowerCase()))) {
-          console.log(`Rejected "${value}" for ${fieldName} - invalid placeholder`);
           continue;
         }
         
         // Special validation for email
         if (fieldName.toLowerCase().includes('email')) {
           if (!value.includes('@') || value.length < 5) {
-            console.log(`Rejected "${value}" for email - invalid format`);
             continue;
           }
+          return value;
         }
         
-        // Special validation for phone
+        // Special validation for phone - accept any phone number with digits
         if (fieldName.toLowerCase().includes('phone')) {
-          if (value === '+91' || value.length < 8) {
-            console.log(`Rejected "${value}" for phone - incomplete`);
-            continue;
+          // Remove spaces and check if it contains digits
+          const cleanPhone = value.replace(/\s/g, '');
+          if (cleanPhone.match(/\d/) && cleanPhone.length >= 8) {
+            return value;
           }
+          continue;
         }
         
         // Ensure we have meaningful content
         if (value.length > 3) {
-          console.log(`Accepted "${value}" for ${fieldName}`);
           return value;
         }
       }
     }
     
-    console.log(`No valid value found for ${fieldName}`);
     return null;
   }
 
