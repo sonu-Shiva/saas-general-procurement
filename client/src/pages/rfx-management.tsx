@@ -217,6 +217,17 @@ export default function RfxManagement() {
     }
   };
 
+  const handleViewRfx = (rfx: any) => {
+    setSelectedRfxForView(rfx);
+    setIsViewDialogOpen(true);
+  };
+
+  // const handleRespondToRfx = (invitation: any) => {
+  //   console.log('Opening response form for invitation:', invitation);
+  //   setSelectedRfxForResponse(invitation);
+  //   setIsResponseDialogOpen(true);
+  // };
+
   return (
     <div className="space-y-6 p-6">
       {/* Page Header */}
@@ -390,6 +401,8 @@ export default function RfxManagement() {
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="closed">Closed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="invited">Invited</SelectItem>
+                  <SelectItem value="responded">Responded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -435,10 +448,7 @@ export default function RfxManagement() {
                   key={rfx.id} 
                   rfx={rfx}
                   isVendor={isVendor}
-                  onViewDetails={(rfx: any) => {
-                    setSelectedRfxForView(rfx);
-                    setIsViewDialogOpen(true);
-                  }}
+                  onViewDetails={handleViewRfx}
                   onRespond={handleRespondToRfx}
                   onViewResponses={handleViewResponses}
                   onConvert={handleConvertRfx}
