@@ -284,7 +284,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
                 Choose vendors to send this {selectedType.toUpperCase()} to
               </p>
             </div>
-            
+
             {Array.isArray(vendors) && vendors.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto">
                 {vendors.map((vendor: any) => (
@@ -315,7 +315,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
                 <p className="text-muted-foreground">No vendors available for selection.</p>
               </div>
             )}
-            
+
             {form.formState.errors.selectedVendors && (
               <p className="text-sm text-destructive">{form.formState.errors.selectedVendors.message}</p>
             )}
@@ -374,7 +374,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
                 Upload terms and conditions that vendors must accept before participating in this {selectedType.toUpperCase()}
               </p>
             </div>
-            
+
             <TermsUploader
               onUploadComplete={(filePath: string) => {
                 setTermsAndConditionsPath(filePath);
@@ -397,6 +397,10 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
             type="submit" 
             disabled={createRfxMutation.isPending}
             className="bg-primary hover:bg-primary/90"
+            onClick={(e) => {
+              console.log("Create RFx button clicked");
+              // Let the form handle submission
+            }}
           >
             {createRfxMutation.isPending ? "Creating..." : `Create ${selectedType.toUpperCase()}`}
           </Button>

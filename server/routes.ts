@@ -413,6 +413,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/rfx', async (req: any, res) => {
+    try {
+      console.log("RFx creation request received:", req.body);
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      const rfxData = {
+        ...req.body,
+        createdBy: userId,
+        referenceNo: `RFX-${Date.now()}`,
+        status: req.body.status || "draft",
+      };
+      
+      console.log("Creating RFx with data:", rfxData);
+      const rfx = await storage.createRfxEvent(rfxData);
+      console.log("RFx created successfully:", rfx);
+      res.json(rfx);
+    } catch (error) {
+      console.error("Error creating RFx:", error);
+      res.status(500).json({ message: "Failed to create RFx", error: error.message });
+    }
+  });
+
+  app.post('/api/rfx/invitations', async (req: any, res) => {
+    try {
+      console.log("RFx invitation request:", req.body);
+      const invitation = await storage.createRfxInvitation(req.body);
+      res.json(invitation);
+    } catch (error) {
+      console.error("Error creating RFx invitation:", error);
+      res.status(500).json({ message: "Failed to create RFx invitation" });
+    }
+  });
+
   // Auction routes
   app.get('/api/auctions', async (req, res) => {
     try {
