@@ -1,393 +1,334 @@
-# Vendor RFx Response Enhancement Plan
-## Respond Feature with Multiple File Attachments
+# Vendor RFx Respond Feature Implementation Plan
 
-### Project Analysis Summary
+## Current State Analysis
 
-**Current State Assessment:**
-✅ **Object Storage**: Fully operational with Google Cloud Storage via Replit
-  - Bucket: `replit-objstore-612b004e-f715-4e61-9bc6-70c3c0a53cf0`
-  - Public paths: `/public`
-  - Private directory: `/.private`
+### ✅ **What's Already Working:**
+- **File Upload Infrastructure**: `ObjectUploader.tsx` component supports multiple files with Uppy + AWS S3
+- **Object Storage**: Google Cloud Storage fully operational with bucket and ACL policies
+- **Database Schema**: `rfxResponses` table exists with `attachments` array field
+- **Response Form UI**: `rfx-response-form.tsx` exists with form fields and file upload UI
+- **Storage Methods**: `createRfxResponse()`, `getRfxResponses()`, `getRfxResponsesByVendor()` exist
+- **Terms Acceptance**: Working T&C acceptance workflow
 
-✅ **Existing File Upload Infrastructure**:
-  - `ObjectUploader.tsx` - Generic multi-file uploader using Uppy + AWS S3 (supports multiple files)
-  - `TermsUploader.tsx` - Specialized PDF uploader for Terms & Conditions
-  - Complete object storage service with ACL policies in `server/objectStorage.ts`
-  - Presigned URL generation for secure uploads via `/api/objects/upload`
+### ❌ **Critical Gaps Identified:**
+- **Missing Backend API Endpoints**: No `/api/vendor/rfx-responses` routes in `server/routes.ts`
+- **Broken Form Submission**: Response form has UI but submission fails (404 error)
+- **Storage Implementation Issues**: Multiple LSP errors in storage methods need fixing
+- **Incomplete Vendor Workflow**: Vendors can view invitations but cannot submit responses
 
-✅ **Database Schema**: Ready for attachments
-  - `rfxResponses.attachments` - `text().array()` field exists in schema
-  - Proper foreign key relationships established
-  - Terms acceptance tracking table ready
+## Step-by-Step Implementation Plan
 
-✅ **Vendor Portal Infrastructure**:
-  - `vendor-portal.tsx` - Main vendor interface with RFx invitation management
-  - `rfx-response-form.tsx` - Response submission form (PARTIALLY IMPLEMENTED)
-  - `rfx-management.tsx` - RFx management with vendor filtering and response dialogs
-  - Backend API endpoints for vendor responses (NEEDS COMPLETION)
+### Phase 1: Fix Backend API Infrastructure (Priority: CRITICAL)
 
-✅ **Current Response Form Features**:
-  - Basic file upload functionality (single file upload implemented)
-  - Terms & conditions acceptance workflow
-  - Form validation with Zod schema
-  - Response fields: quotedPrice, deliveryTerms, paymentTerms, leadTime, response text
+#### Step 1.1: Create Vendor Response API Endpoints
+**File**: `server/routes.ts`
+**Estimated Time**: 30 minutes
 
-### Implementation Plan
+Add missing vendor response endpoints:
 
-#### Phase 1: Complete RFx Response API Backend (1-2 hours)
-**Target**: Establish robust backend API for vendor responses
+```typescript
+// Vendor RFx Response endpoints
+app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "User not found" });
+    }
 
-**1.1 Complete Vendor RFx Response API Endpoints**
-- **File**: `server/routes.ts` 
-- **Missing Endpoints to Add**:
-  ```typescript
-  // Vendor-specific RFx endpoints
-  app.get('/api/vendor/rfx-invitations', async (req, res) => {
-    // Get RFx invitations for current vendor
-  });
-  
-  app.get('/api/vendor/rfx-responses', async (req, res) => {
-    // Get vendor's submitted responses
-  });
-  
-  app.post('/api/vendor/rfx-responses', async (req, res) => {
-    // Create new RFx response with attachments
-  });
-  
-  app.put('/api/vendor/rfx-responses/:id', async (req, res) => {
-    // Update existing response (draft mode)
-  });
-  ```
+    // Get vendor profile for current user
+    const vendor = await storage.getVendorByUserId(userId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor profile not found" });
+    }
 
-**1.2 Storage Methods Enhancement**
-- **File**: `server/storage.ts`
-- **Methods to Add/Complete**:
-  ```typescript
-  async getVendorRfxInvitations(vendorId: string): Promise<RfxInvitation[]>
-  async getVendorRfxResponses(vendorId: string): Promise<RfxResponse[]>  
-  async createRfxResponse(responseData: InsertRfxResponse): Promise<RfxResponse>
-  async updateRfxResponse(id: string, data: Partial<InsertRfxResponse>): Promise<RfxResponse>
-  ```
+    const invitations = await storage.getRfxInvitationsForVendor(vendor.id);
+    res.json(invitations);
+  } catch (error) {
+    console.error("Error fetching vendor RFx invitations:", error);
+    res.status(500).json({ message: "Failed to fetch RFx invitations" });
+  }
+});
 
-#### Phase 2: Enhanced Multiple File Upload (2-3 hours)
-**Target**: Professional multi-file attachment system
+app.get('/api/vendor/rfx-responses', async (req: any, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "User not found" });
+    }
 
-**2.1 Upgrade Current File Upload in Response Form**
-- **File**: `client/src/components/rfx-response-form.tsx`
-- **Current State**: Basic single file upload exists but needs enhancement
-- **Improvements Needed**:
-  - Replace current basic upload with ObjectUploader component
-  - Support multiple file types (PDF, DOC, DOCX, XLS, XLSX, JPG, PNG)
-  - Maximum 10 files per response, 25MB per file
-  - Better file management (remove individual files)
-  - Upload progress indicators
-  - File validation and error handling
+    const vendor = await storage.getVendorByUserId(userId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor profile not found" });
+    }
 
-**2.2 Create RfxAttachmentManager Component**
-- **File**: `client/src/components/RfxAttachmentManager.tsx`
-- **Features**:
-  - Wrapper around ObjectUploader for RFx-specific needs
-  - File type restrictions for business documents
-  - Attachment list display with metadata
-  - File removal functionality
-  - Integration with form validation
+    const responses = await storage.getRfxResponsesByVendor(vendor.id);
+    res.json(responses);
+  } catch (error) {
+    console.error("Error fetching vendor responses:", error);
+    res.status(500).json({ message: "Failed to fetch responses" });
+  }
+});
 
-#### Phase 3: Complete Vendor Response Workflow (2-3 hours)
-**Target**: End-to-end vendor response functionality
+app.post('/api/vendor/rfx-responses', async (req: any, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "User not found" });
+    }
 
-**3.1 Fix Response Form Integration**
-- **File**: `client/src/components/rfx-response-form.tsx`
-- **Current Issues**:
-  - Form submission logic incomplete
-  - Attachment handling needs improvement
-  - Terms acceptance flow needs refinement
-- **Enhancements**:
-  - Complete form submission to backend API
-  - Proper attachment persistence 
-  - Draft vs final submission modes
-  - Better error handling and user feedback
+    const vendor = await storage.getVendorByUserId(userId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor profile not found" });
+    }
 
-**3.2 Vendor Portal Enhancement**
-- **File**: `client/src/pages/vendor-portal.tsx`
-- **Improvements**:
-  - Display attachment count in invitation cards
-  - Show response status with attachment info
-  - Quick attachment preview functionality
-  - Filter responses by attachment status
+    const responseData = {
+      ...req.body,
+      vendorId: vendor.id,
+    };
 
-#### Phase 4: Advanced Features & Testing (1-2 hours)
-**Target**: Professional-grade features and validation
+    console.log('Creating vendor response:', responseData);
 
-**4.1 File Management Features**
-- **File previews**: Thumbnail generation for images, file type icons
-- **File metadata**: Display file size, upload date, file type
-- **Download functionality**: Secure download links via object storage
-- **Bulk operations**: Select multiple files for deletion
+    const response = await storage.createRfxResponse(responseData);
+    
+    // Update invitation status to 'responded'
+    await storage.updateRfxInvitationStatus(
+      req.body.rfxId, 
+      vendor.id, 
+      'responded'
+    );
 
-**4.2 Security & Validation**
-- **File type validation**: Server-side MIME type checking
-- **Access control**: Proper ACL policies for vendor-uploaded files  
-- **Content validation**: Ensure uploaded files match declared types
-- **Audit trail**: Track all file operations for compliance
-
-### Technical Implementation Details
-
-#### Current Component Architecture (IDENTIFIED)
-```
-RfxResponseForm (EXISTS - needs enhancement)
-├── Basic file upload (EXISTS - needs upgrade to ObjectUploader)
-├── Form Fields (EXISTS - working)
-├── Terms Acceptance (EXISTS - working)
-└── Submission Controls (EXISTS - needs API integration)
+    res.json(response);
+  } catch (error) {
+    console.error("Error creating RFx response:", error);
+    res.status(500).json({ message: "Failed to create response" });
+  }
+});
 ```
 
-#### Target Component Architecture
-```
-RfxResponseForm (ENHANCED)
-├── RfxAttachmentManager (NEW)
-│   ├── ObjectUploader (EXISTING - reuse)
-│   ├── AttachmentList (NEW)
-│   └── FilePreview (NEW)
-├── Form Fields (EXISTING - keep)
-└── SubmissionControls (ENHANCED)
-```
+#### Step 1.2: Fix Storage Layer Issues
+**File**: `server/storage.ts`
+**Estimated Time**: 45 minutes
 
-#### API Flow (CURRENT vs TARGET)
-**CURRENT FLOW (PARTIAL)**:
-```
-1. Basic file upload → Manual FormData upload
-2. Limited file handling → Basic attachment array
-3. No proper API integration → Form submission incomplete
-```
+Fix the critical LSP errors in storage methods:
 
-**TARGET FLOW**:
-```
-1. User selects files → RfxAttachmentManager
-2. Request presigned URLs → POST /api/objects/upload (EXISTS)
-3. Upload files to object storage → Direct to GCS (EXISTS)
-4. Update attachment metadata → PUT /api/vendor/rfx-responses/:id (NEW)
-5. Set ACL policies → ObjectStorageService (EXISTS)
-6. Submit response → POST /api/vendor/rfx-responses (NEW)
-```
+1. Fix `createRfxResponse()` method - correct the insert syntax
+2. Fix duplicate function implementations
+3. Add missing `getVendorByUserId()` method
+4. Correct schema mismatches
 
-#### Database Schema (Already Present)
-```sql
-rfx_responses {
-  attachments: text[] -- Array of object storage paths
+#### Step 1.3: Add Missing Storage Method
+**File**: `server/storage.ts`
+
+Add the missing `getVendorByUserId()` method:
+
+```typescript
+async getVendorByUserId(userId: string): Promise<Vendor | undefined> {
+  const [vendor] = await this.db
+    .select()
+    .from(vendors)
+    .where(eq(vendors.userId, userId));
+  return vendor;
 }
 ```
 
-### File Structure Plan
+### Phase 2: Enhance File Upload Capability (Priority: HIGH)
 
-#### Files to Create:
-```
-client/src/components/
-├── RfxAttachmentManager.tsx        # RFx-specific attachment handler
-├── FilePreview.tsx                 # File preview component  
-└── AttachmentList.tsx              # Attachment display/management
-```
+#### Step 2.1: Upgrade Response Form File Upload
+**File**: `client/src/components/rfx-response-form.tsx`
+**Estimated Time**: 30 minutes
 
-#### Files to Modify (PRIORITY ORDER):
+Current form already has file upload but needs enhancement:
 
-**HIGH PRIORITY** (Core Functionality):
-```
-server/
-├── routes.ts                       # ADD vendor RFx response API endpoints
-└── storage.ts                      # ADD vendor response CRUD methods
-
-client/src/components/
-└── rfx-response-form.tsx           # UPGRADE file upload, fix API integration
-
-shared/
-└── schema.ts                       # ADD missing Zod schemas for vendor responses
-```
-
-**MEDIUM PRIORITY** (Enhanced UX):
-```
-client/src/pages/
-├── vendor-portal.tsx               # ENHANCE attachment display
-└── rfx-management.tsx              # IMPROVE vendor response workflow
+1. **Replace existing file upload with ObjectUploader component**:
+```typescript
+// Replace existing file upload with:
+<ObjectUploader
+  maxNumberOfFiles={10}
+  maxFileSize={25 * 1024 * 1024} // 25MB
+  onGetUploadParameters={handleGetUploadParameters}
+  onComplete={handleUploadComplete}
+  buttonClassName="w-full"
+>
+  <div className="flex items-center gap-2">
+    <Upload className="w-4 h-4" />
+    <span>Upload Supporting Documents</span>
+  </div>
+</ObjectUploader>
 ```
 
-**LOW PRIORITY** (Advanced Features):
+2. **Update attachment handling**:
+```typescript
+const handleUploadComplete = (result: UploadResult) => {
+  if (result.successful && result.successful.length > 0) {
+    const newAttachments = result.successful.map(file => ({
+      id: nanoid(),
+      fileName: file.name,
+      filePath: file.uploadURL,
+      fileSize: file.size,
+      fileType: file.type,
+      uploadedAt: new Date().toISOString(),
+    }));
+    
+    setAttachments(prev => [...prev, ...newAttachments]);
+  }
+};
 ```
-server/
-├── objectStorage.ts                # EXTEND for RFx-specific ACL policies
-└── fileValidation.ts               # CREATE file validation utilities (NEW)
+
+#### Step 2.2: Create Attachment Manager Component
+**File**: `client/src/components/RfxAttachmentManager.tsx`
+**Estimated Time**: 45 minutes
+
+Create a specialized component for managing RFx response attachments:
+
+```typescript
+interface AttachmentInfo {
+  id: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  fileType: string;
+  uploadedAt: string;
+}
+
+export function RfxAttachmentManager({
+  attachments,
+  onAttachmentsChange,
+  maxFiles = 10,
+  maxFileSize = 25 * 1024 * 1024,
+}) {
+  // Component logic for:
+  // - File upload using ObjectUploader
+  // - Attachment list display
+  // - File removal
+  // - File preview/download
+}
 ```
 
-### Current State Analysis (CRITICAL FINDINGS)
+### Phase 3: Complete Integration & Testing (Priority: MEDIUM)
 
-#### ✅ WORKING COMPONENTS:
-- Object storage infrastructure (`ObjectUploader.tsx`, `TermsUploader.tsx`)
-- Database schema with attachments field (`rfxResponses.attachments`)
-- Basic response form UI (`rfx-response-form.tsx`)
-- Terms acceptance workflow
-- Vendor portal navigation
+#### Step 3.1: Test End-to-End Workflow
+**Estimated Time**: 30 minutes
 
-#### ❌ MISSING/INCOMPLETE COMPONENTS:
-- **Backend API endpoints** for vendor responses (`/api/vendor/rfx-responses/*`)
-- **Storage methods** for vendor response CRUD operations
-- **Form submission logic** in response form (API integration incomplete)
-- **Multi-file upload** integration (currently basic single file)
-- **Response persistence** workflow (draft/final submission)
+1. **Test Response Submission**:
+   - Vendor can view RFx invitations
+   - Vendor can open response form
+   - Vendor can upload multiple files
+   - Vendor can submit response successfully
+   - Files are saved and accessible
 
-### Implementation Priority Matrix
+2. **Verify Data Persistence**:
+   - Response data saved to database
+   - Attachments properly stored in object storage
+   - Invitation status updated to 'responded'
 
-**CRITICAL (Must Fix First)**:
-1. ❌ **Backend API endpoints** - vendor response CRUD operations missing
-2. ❌ **Form submission logic** - RFx response form cannot actually submit
-3. ❌ **Storage layer methods** - vendor response persistence incomplete
-4. ❌ **API integration** - frontend form not connected to backend
+#### Step 3.2: Update Vendor Portal Display
+**File**: `client/src/pages/vendor-portal.tsx`
+**Estimated Time**: 20 minutes
 
-**High Priority (Core Features)**:
-1. ✅ **Object storage integration** - infrastructure exists and working
-2. ❌ **Multiple file upload** - basic upload exists, needs enhancement
-3. ❌ **Response workflow** - vendor can view invitations but cannot respond
-4. ❌ **Attachment persistence** - files upload but not saved with response
+Enhance vendor portal to show:
+- Attachment count in invitation cards
+- Response status indicators
+- Quick file preview options
 
-**Medium Priority (Enhanced UX)**:
-1. ❌ **File preview functionality** - need thumbnail/preview system
-2. ✅ **Terms acceptance** - workflow exists and working  
-3. ❌ **Draft vs final submission** - response states incomplete
-4. ❌ **Attachment management** - file removal/editing capabilities
+#### Step 3.3: Error Handling & Validation
+**Estimated Time**: 30 minutes
 
-**Low Priority (Advanced Features)**:
-1. File scanning/virus detection
-2. Advanced file thumbnails
-3. File versioning capabilities
-4. Collaborative annotations
+1. **Frontend Validation**:
+   - File type restrictions (PDF, DOC, DOCX, XLS, XLSX, images)
+   - File size limits
+   - Maximum file count
 
-### Security Considerations
+2. **Backend Validation**:
+   - Request data validation
+   - User authorization checks
+   - File upload security
 
-**Access Control**:
-- Vendor-uploaded files should have ACL policy: `owner: vendorId, visibility: private`
-- Only the uploading vendor and authorized buyers can access files
-- Implement role-based access for different user types
+### Phase 4: Advanced Features (Priority: LOW)
 
-**File Validation**:
-- Whitelist approved file extensions
-- Validate MIME types server-side
-- Implement file size limits per file and total per response
-- Basic content scanning for security threats
+#### Step 4.1: File Preview System
+**File**: `client/src/components/FilePreview.tsx`
+**Estimated Time**: 45 minutes
 
-**Storage Management**:
-- Automatic cleanup of orphaned files
-- Retention policies for completed RFx responses
-- Backup and disaster recovery procedures
+- Thumbnail generation for images
+- File type icons for documents
+- Quick preview modal
+- Download functionality
 
-### Testing Strategy
+#### Step 4.2: Draft Response Capability
+**Estimated Time**: 30 minutes
 
-**Unit Tests**:
-- File upload component functionality
-- File validation logic
-- API endpoint responses
-- Database operations
+- Save responses as drafts
+- Auto-save functionality
+- Resume editing capability
 
-**Integration Tests**:
-- End-to-end file upload workflow
-- Cross-browser compatibility
-- Mobile responsiveness
-- Error handling scenarios
+## Technical Requirements
 
-**User Acceptance Tests**:
-- Vendor workflow completion
-- Buyer file access verification
-- Performance under load
-- Security penetration testing
+### File Upload Specifications:
+- **Supported Types**: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, ZIP
+- **Maximum Files**: 10 per response
+- **File Size Limit**: 25MB per file
+- **Total Upload Limit**: 250MB per response
 
-### Performance Optimization
+### Security Requirements:
+- User authentication required
+- Vendor authorization validation
+- File type validation (client + server)
+- Secure object storage with proper ACL policies
 
-**Frontend**:
-- Lazy loading of file previews
-- Chunked file uploads for large files
-- Client-side compression for images
-- Progressive enhancement for older browsers
+### Database Schema (Already Exists):
+```sql
+rfx_responses:
+  - id (UUID)
+  - rfx_id (UUID)
+  - vendor_id (UUID)
+  - response (JSONB)
+  - quoted_price (DECIMAL)
+  - delivery_terms (TEXT)
+  - payment_terms (TEXT)
+  - lead_time (INTEGER)
+  - attachments (TEXT[]) -- Array of file paths
+  - submitted_at (TIMESTAMP)
+```
 
-**Backend**:
-- Async file processing
-- CDN integration for file delivery
-- Database indexing for attachment queries
-- Caching of file metadata
+## Implementation Timeline
 
-### Monitoring & Analytics
+**Total Estimated Time: 4-5 hours**
 
-**Metrics to Track**:
-- File upload success rates
-- Average file sizes and types
-- User engagement with attachment features
-- Error rates and failure points
+1. **Phase 1 (Critical)**: 2 hours - Fix backend API and storage issues
+2. **Phase 2 (High)**: 1.5 hours - Enhance file upload capability
+3. **Phase 3 (Medium)**: 1 hour - Integration and testing
+4. **Phase 4 (Low)**: 1.5 hours - Advanced features (optional)
 
-**Alerts**:
-- Storage quota approaching limits
-- Unusual file upload patterns
-- Failed upload attempts
-- Security violations
+## Success Criteria
 
-### Migration & Deployment
+1. ✅ Vendors can view their RFx invitations
+2. ✅ Vendors can open and fill out response forms
+3. ✅ Vendors can upload multiple supporting documents
+4. ✅ Response submission works end-to-end
+5. ✅ Files are securely stored and accessible
+6. ✅ Invitation status updates to 'responded'
+7. ✅ Form validation works properly
+8. ✅ Error handling provides clear feedback
 
-**Data Migration**:
-- No migration needed - `attachments` field already exists
-- Backward compatibility maintained
-- Gradual rollout possible
+## Risk Mitigation
 
-**Deployment Steps**:
-1. Deploy backend API changes
-2. Update frontend components
-3. Run integration tests
-4. Monitor initial usage
-5. Gather user feedback
-6. Iterate based on feedback
+**High Risk Items:**
+- Storage layer LSP errors must be fixed first
+- API endpoints must be created before frontend testing
+- File upload integration requires careful testing
 
----
+**Mitigation Strategy:**
+- Fix backend issues in Phase 1 before proceeding
+- Test each component individually before integration
+- Use existing working file upload infrastructure
+- Implement comprehensive error handling
 
-## Critical Implementation Blockers Identified
+## Next Steps
 
-### 🚨 **MAJOR ISSUE**: Vendor Response Workflow Incomplete
+1. **Start with Phase 1.2**: Fix storage layer LSP errors
+2. **Then Phase 1.1**: Create missing API endpoints
+3. **Test basic response submission**: Ensure end-to-end flow works
+4. **Enhance file upload**: Upgrade to multiple file support
+5. **Polish and test**: Complete integration and validation
 
-**Problem**: The vendor response system has a **fundamental gap** - vendors cannot actually submit responses despite having a form interface.
-
-**Root Cause Analysis**:
-1. **Missing Backend APIs**: No `/api/vendor/rfx-responses` endpoints exist in `server/routes.ts`
-2. **Incomplete Storage Layer**: Vendor response CRUD methods missing from `server/storage.ts`  
-3. **Broken Form Submission**: `rfx-response-form.tsx` has submission logic but no working API endpoint
-4. **Attachment Persistence Gap**: Files upload to object storage but not saved with response record
-
-### 🔧 **Immediate Fix Required**
-
-**Before any file attachment enhancements**, we must fix the core vendor response workflow:
-
-1. **Create Backend API endpoints** for vendor responses
-2. **Implement Storage methods** for response CRUD operations
-3. **Fix Form submission logic** to connect frontend to backend
-4. **Test end-to-end workflow** from invitation to response submission
-
-**Only after this foundation is solid** should we enhance the file attachment system.
-
----
-
-## Revised Implementation Approach
-
-### Phase 1: **Fix Core Response Workflow** (CRITICAL - 2-3 hours)
-- Implement missing vendor response API endpoints
-- Add storage methods for response persistence  
-- Fix form submission integration
-- Test basic response submission (without multiple attachments)
-
-### Phase 2: **Enhance File Attachments** (1-2 hours)
-- Upgrade to multiple file upload using existing ObjectUploader
-- Implement attachment persistence with responses
-- Add file management capabilities
-
-### Phase 3: **Polish & Advanced Features** (1-2 hours)
-- File previews, validation, security enhancements
-- Vendor portal improvements
-- Error handling and user experience polish
-
-**Estimated Timeline**: 4-7 hours total development time
-**Risk Level**: Medium (requires fixing existing broken functionality)
-**User Impact**: **CRITICAL** (enables core vendor response capability)
-
-### Recommendation
-
-**START WITH PHASE 1** - The vendor response workflow must work before adding file attachment enhancements. This ensures we build on a solid foundation and deliver working functionality incrementally.
+This plan leverages your existing robust file upload infrastructure while addressing the critical gaps in the vendor response workflow. The phased approach ensures we build on a solid foundation and deliver working functionality incrementally.
