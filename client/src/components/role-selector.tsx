@@ -87,10 +87,7 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
   const updateRoleMutation = useMutation({
     mutationFn: async (role: string) => {
       console.log("Updating role to:", role);
-      return await apiRequest("/api/auth/user/role", {
-        method: "PATCH",
-        body: JSON.stringify({ role }),
-      });
+      return await apiRequest("PATCH", "/api/auth/user/role", { role });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

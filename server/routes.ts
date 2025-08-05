@@ -52,14 +52,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // For development mode, create/return a mock user
+      // For development mode, create/return a mock user with session-stored role
       if (process.env.NODE_ENV === 'development' && userId === 'dev-user-123') {
+        const userRole = req.session?.userRole || 'buyer_admin';
         return res.json({
           id: 'dev-user-123',
           email: 'dev@sclen.com',
           firstName: 'Developer',
           lastName: 'User',
-          role: 'buyer_admin'
+          role: userRole
         });
       }
       
@@ -97,11 +98,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update user role - only for first-time setup or admin use
-  app.patch('/api/auth/user/role', isAuthenticated, async (req: any, res) => {
+  // Development logout endpoint
+  app.post('/api/auth/logout', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      if (process.env.NODE_ENV === 'development') {
+        // Clear any session data
+        req.session?.destroy?.(() => {});
+        res.clearCookie('connect.sid');
+        return res.json({ success: true, message: 'Logged out successfully' });
+      }
+      
+      // In production, use proper logout
+      req.logout(() => {
+        res.json({ success: true, message: 'Logged out successfully' });
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Failed to logout" });
+    }
+  });
+
+  // Development role switching endpoint
+  app.patch('/api/auth/user/role', async (req: any, res) => {
+    try {
       const { role } = req.body;
+      
+      if (process.env.NODE_ENV === 'development') {
+        // Validate role
+        const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
+        if (!validRoles.includes(role)) {
+          return res.status(400).json({ message: 'Invalid role' });
+        }
+        
+        // For development, store role in session or return updated user
+        req.session = req.session || {};
+        req.session.userRole = role;
+        
+        return res.json({
+          id: 'dev-user-123',
+          email: 'dev@sclen.com',
+          firstName: 'Developer',
+          lastName: 'User',
+          role: role
+        });
+      }
+      
+      const userId = req.user.claims.sub;
 
       if (!['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });

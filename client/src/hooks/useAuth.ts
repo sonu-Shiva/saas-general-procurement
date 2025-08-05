@@ -16,10 +16,13 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      // Make a logout request
-      const response = await fetch('/api/logout', {
-        method: 'GET',
-        credentials: 'include'
+      // Make a logout request to the correct endpoint
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
       
       console.log('Logout response:', response.status);

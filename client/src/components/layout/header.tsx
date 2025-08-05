@@ -15,7 +15,7 @@ import { ShoppingCart, Search, Bot, Bell, Moon, Sun, ChevronDown, User, Settings
 import RoleSelector from "@/components/role-selector";
 
 export default function Header() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isRoleSelectorOpen, setIsRoleSelectorOpen] = useState(false);
 
@@ -106,7 +106,7 @@ export default function Header() {
                   Change Role
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.location.href = '/api/logout'}>
+                <DropdownMenuItem onClick={logout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </DropdownMenuItem>
