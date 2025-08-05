@@ -19,10 +19,10 @@ export default function SimpleLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.role) {
+    if (!formData.role) {
       toast({
         title: "Error",
-        description: "Please fill in all fields",
+        description: "Please select a role",
         variant: "destructive",
       });
       return;
@@ -30,10 +30,11 @@ export default function SimpleLogin() {
 
     setIsLoading(true);
     try {
-      await apiRequest("/api/auth/simple-login", {
-        method: "POST",
-        body: JSON.stringify(formData),
-      });
+      // First login to the system
+      await apiRequest('POST', '/api/auth/login', {});
+      
+      // Then set the role
+      await apiRequest('PATCH', '/api/auth/user/role', { role: formData.role });
       
       toast({
         title: "Success",
@@ -63,28 +64,10 @@ export default function SimpleLogin() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Enter your full name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
+            <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg mb-4">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Development Mode: Choose your role to access the platform
+              </p>
             </div>
             
             <div>
