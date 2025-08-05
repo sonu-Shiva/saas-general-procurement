@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { discoverVendorsAPI, type VendorDiscoveryRequest } from "@/lib/vendorDiscoveryApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,42 +100,18 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
     },
   });
 
-  // AI vendor discovery mutation
+  // AI vendor discovery mutation using dedicated API
   const aiVendorMutation = useMutation({
     mutationFn: async (searchData: AIDiscoveryData) => {
-      console.log("Starting AI vendor discovery with:", searchData);
+      console.log("🚀 Starting AI vendor discovery with dedicated API");
       
-      try {
-        // Use a completely isolated fetch call
-        const fetchOptions = {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include" as RequestCredentials,
-          body: JSON.stringify(searchData),
-        };
-        
-        console.log("Fetch options:", fetchOptions);
-        
-        const response = await fetch("/api/vendors/discover", fetchOptions);
-        
-        console.log("Response status:", response.status);
-        console.log("Response headers:", response.headers);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Response not OK:", response.status, errorText);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log("Successfully got AI discovery result:", result);
-        return result;
-      } catch (err) {
-        console.error("Fetch error in AI discovery:", err);
-        throw err;
-      }
+      const request: VendorDiscoveryRequest = {
+        query: searchData.query,
+        location: searchData.location || undefined,
+        category: searchData.category || undefined,
+      };
+      
+      return await discoverVendorsAPI(request);
     },
     onSuccess: (vendors) => {
       setDiscoveredVendors(vendors);
