@@ -485,9 +485,14 @@ export default function VendorPortal() {
     queryFn: () => apiRequest('/api/vendor/rfx-responses'),
   });
 
-  const pendingInvitations = invitations.filter((inv: RfxInvitation) => 
-    ['invited', 'pending'].includes(inv.status) && inv.rfx.status === 'active'
-  );
+  const pendingInvitations = invitations.filter((inv: RfxInvitation) => {
+    const invStatus = inv.status || 'invited';
+    const rfxStatus = inv.rfx?.status || 'active';
+    const isNotExpired = new Date(inv.rfx.dueDate) > new Date();
+    return ['invited', 'pending'].includes(invStatus) && 
+           ['active', 'open'].includes(rfxStatus) && 
+           isNotExpired;
+  });
   const respondedInvitations = invitations.filter((inv: RfxInvitation) => inv.status === 'responded');
   
   console.log('DEBUG: All invitations:', invitations);
@@ -553,6 +558,8 @@ export default function VendorPortal() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {pendingInvitations.map((invitation: RfxInvitation) => {
                 const isExpired = new Date(invitation.rfx.dueDate) < new Date();
+                const canRespond = !isExpired && invitation.status !== 'responded';
+                
                 return (
                   <Card key={invitation.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
@@ -561,9 +568,10 @@ export default function VendorPortal() {
                           <CardTitle className="text-lg">{invitation.rfx.title}</CardTitle>
                           <div className="flex items-center gap-2">
                             <Badge className={getRfxTypeColor(invitation.rfx.type)}>
-                              {invitation.rfx.type}
+                              {invitation.rfx.type.toUpperCase()}
                             </Badge>
                             {isExpired && <Badge variant="destructive">Expired</Badge>}
+                            {!isExpired && canRespond && <Badge className="bg-green-100 text-green-700">Action Required</Badge>}
                           </div>
                         </div>
                       </div>
@@ -572,7 +580,7 @@ export default function VendorPortal() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className={isExpired ? 'text-red-600' : 'text-muted-foreground'}>
+                          <span className={isExpired ? 'text-red-600 font-medium' : 'text-muted-foreground'}>
                             Due: {format(new Date(invitation.rfx.dueDate), 'PPp')}
                           </span>
                         </div>
@@ -594,13 +602,31 @@ export default function VendorPortal() {
                         {invitation.rfx.scope}
                       </p>
 
-                      <Button 
-                        className="w-full" 
-                        onClick={() => setSelectedInvitation(invitation)}
-                        disabled={isExpired || invitation.status === 'responded'}
-                      >
-                        {isExpired ? 'Expired' : invitation.status === 'responded' ? 'Already Responded' : 'Respond'}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            console.log('View Details clicked for invitation:', invitation);
+                            setSelectedInvitation(invitation);
+                          }}
+                        >
+                          View Details
+                        </Button>
+                        <Button 
+                          className="flex-1" 
+                          onClick={() => {
+                            console.log('Respond button clicked for invitation:', invitation);
+                            setSelectedInvitation(invitation);
+                          }}
+                          disabled={!canRespond}
+                          variant={canRespond ? "default" : "secondary"}
+                        >
+                          {isExpired ? 'Expired' : 
+                           invitation.status === 'responded' ? 'Already Responded' : 
+                           'Respond Now'}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
