@@ -83,6 +83,50 @@ function getRfxTypeColor(type: string) {
   }
 }
 
+// Get vendor status display text based on 5-state system
+function getVendorStatusText(invitation: RfxInvitation): string {
+  // Check if vendor has responded
+  if (invitation.status === 'responded') {
+    return 'RESPONDED';
+  }
+  
+  // Check RFx status (prioritize RFx status over invitation status)
+  const rfxStatus = invitation.rfx?.status?.toLowerCase();
+  
+  switch (rfxStatus) {
+    case 'active':
+      return 'ACTIVE';
+    case 'cancelled':
+      return 'CANCELLED';
+    case 'po_generated':
+      return 'PO GENERATED';
+    default:
+      return 'ACTIVE'; // Default to active for any RFx
+  }
+}
+
+// Get vendor status badge color based on 5-state system
+function getVendorStatusColor(invitation: RfxInvitation): string {
+  // Check if vendor has responded
+  if (invitation.status === 'responded') {
+    return 'bg-purple-100 text-purple-700';
+  }
+  
+  // Check RFx status
+  const rfxStatus = invitation.rfx?.status?.toLowerCase();
+  
+  switch (rfxStatus) {
+    case 'active':
+      return 'bg-green-100 text-green-700';
+    case 'cancelled':
+      return 'bg-red-100 text-red-700';
+    case 'po_generated':
+      return 'bg-blue-100 text-blue-700';
+    default:
+      return 'bg-green-100 text-green-700'; // Default to green for active
+  }
+}
+
 function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInvitation; isOpen?: boolean; onClose: () => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -230,8 +274,8 @@ function RfxResponseDialog({ invitation, isOpen, onClose }: { invitation: RfxInv
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <Badge variant="outline" className="text-green-700 border-green-700">
-                      {invitation.rfx.status?.toUpperCase() || 'ACTIVE'}
+                    <Badge className={getVendorStatusColor(invitation)}>
+                      {getVendorStatusText(invitation)}
                     </Badge>
                   </div>
                   <div>
@@ -570,8 +614,8 @@ export default function VendorPortal() {
                             <Badge className={getRfxTypeColor(invitation.rfx.type)}>
                               {invitation.rfx.type.toUpperCase()}
                             </Badge>
-                            <Badge className={invitation.status === 'responded' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}>
-                              {invitation.status === 'responded' ? 'RESPONDED' : (invitation.rfx.status?.toUpperCase() || 'ACTIVE')}
+                            <Badge className={getVendorStatusColor(invitation)}>
+                              {getVendorStatusText(invitation)}
                             </Badge>
                             {isExpired && <Badge variant="destructive">Expired</Badge>}
                             {!isExpired && canRespond && invitation.status !== 'responded' && <Badge className="bg-blue-100 text-blue-700">Action Required</Badge>}

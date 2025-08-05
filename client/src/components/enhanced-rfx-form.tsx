@@ -24,7 +24,7 @@ const rfxFormSchema = z.object({
     val ? (typeof val === 'string' ? parseFloat(val) : val) : undefined
   ),
   contactPerson: z.string().optional(),
-  status: z.enum(["draft", "published"]).default("draft"),
+  status: z.enum(["draft", "published"]).default("published"),
   termsAndConditionsRequired: z.boolean().default(false),
   termsAndConditionsPath: z.string().optional(),
   selectedVendors: z.array(z.string()).optional(), // Added for vendor selection
@@ -88,7 +88,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
         budget: data.budget ? parseFloat(data.budget.toString()) : null,
         contactPerson: data.contactPerson || '',
-        status: data.status || 'draft',
+        status: data.status || 'active',
         attachments: attachments.length > 0 ? attachments : [],
         termsAndConditionsRequired: data.termsAndConditionsRequired || false,
         termsAndConditionsPath: data.termsAndConditionsPath || null,

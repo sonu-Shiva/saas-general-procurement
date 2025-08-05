@@ -603,7 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...rfxFields,
         createdBy: userId,
         referenceNo: `RFX-${Date.now()}`,
-        status: req.body.status || "draft",
+        status: req.body.status || "active",
         dueDate: req.body.dueDate ? new Date(req.body.dueDate) : null,
       };
 
