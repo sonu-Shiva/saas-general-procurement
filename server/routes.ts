@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { storage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import {
-  users, 
+  users,
   vendors,
   vendors as vendorsTable,
   products,
@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const { role } = req.body;
     const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
-    
+
     if (!validRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
     }
@@ -159,14 +159,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { entityType, entityId, termsAndConditionsPath } = req.body;
-      
+
       console.log(`Terms accepted by user ${userId} for ${entityType} ${entityId}`);
-      
+
       // In a full implementation, you'd store this in a terms_acceptances table
       // For now, we'll just return success
-      res.json({ 
-        success: true, 
-        message: "Terms and conditions accepted successfully" 
+      res.json({
+        success: true,
+        message: "Terms and conditions accepted successfully"
       });
     } catch (error) {
       console.error("Error accepting terms:", error);
@@ -183,10 +183,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { entityType, entityId } = req.query;
-      
+
       // For development, we'll return that terms are not accepted by default
       // In a full implementation, you'd check the terms_acceptances table
-      res.json({ 
+      res.json({
         accepted: false,
         entityType,
         entityId,
@@ -219,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       // For development, return mock stats since user might not exist in DB
       const mockStats = {
         totalVendors: 5,
@@ -260,13 +260,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/vendors/:id', async (req, res) => {
     try {
       const vendorId = req.params.id;
-      
+
       // Check if vendor exists first
       const existingVendor = await storage.getVendor(vendorId);
       if (!existingVendor) {
         return res.status(404).json({ message: "Vendor not found" });
       }
-      
+
       const vendor = await storage.updateVendor(vendorId, req.body);
       res.json(vendor);
     } catch (error) {
@@ -278,13 +278,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/vendors/:id', async (req, res) => {
     try {
       const vendorId = req.params.id;
-      
+
       // Check if vendor exists first
       const existingVendor = await storage.getVendor(vendorId);
       if (!existingVendor) {
         return res.status(404).json({ message: "Vendor not found" });
       }
-      
+
       const result = await storage.deleteVendor(vendorId);
       if (!result) {
         return res.status(500).json({ message: "Failed to delete vendor" });
@@ -416,32 +416,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       new RegExp(`${fieldName}\\s*([^\\n]+)`, 'i'),
       new RegExp(`${fieldName}:?\\s*([^\\n]+)`, 'i')
     ];
-    
+
     for (const regex of patterns) {
       const match = text.match(regex);
       if (match && match[1]) {
         let value = match[1].trim();
-        
+
         // Clean up the value
         value = value.replace(/^[-:\s]+/, '').trim();
         value = value.replace(/[.\s]+$/, '');
-        
+
         // Filter out placeholder values
         const invalidValues = [
           'Not publicly listed',
-          'Not available', 
+          'Not available',
           'Not listed in search results',
           'Contact via platform',
           'N/A',
           '[Not publicly available]',
           '[No official website found]'
         ];
-        
+
         // Check for invalid values
         if (invalidValues.some(invalid => value.toLowerCase().includes(invalid.toLowerCase()))) {
           continue;
         }
-        
+
         // Special validation for email
         if (fieldName.toLowerCase().includes('email')) {
           if (!value.includes('@') || value.length < 5) {
@@ -449,7 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           return value;
         }
-        
+
         // Special validation for phone - accept any phone number with digits
         if (fieldName.toLowerCase().includes('phone')) {
           // Remove spaces and check if it contains digits
@@ -459,14 +459,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           continue;
         }
-        
+
         // Ensure we have meaningful content
         if (value.length > 3) {
           return value;
         }
       }
     }
-    
+
     return null;
   }
 
@@ -488,9 +488,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
       }
-      
+
       const { selectedVendors, ...rfxFields } = req.body;
-      
+
       const rfxData = {
         ...rfxFields,
         createdBy: userId,
@@ -498,16 +498,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: req.body.status || "draft",
         dueDate: req.body.dueDate ? new Date(req.body.dueDate) : null,
       };
-      
+
       console.log("Creating RFx with data:", rfxData);
       const rfx = await storage.createRfxEvent(rfxData);
       console.log("RFx created successfully:", rfx);
-      
+
       // Create invitations for selected vendors only
       if (selectedVendors && selectedVendors.length > 0) {
         console.log(`Creating invitations for ${selectedVendors.length} selected vendors`);
         const invitations = [];
-        
+
         for (const vendorId of selectedVendors) {
           try {
             const invitation = await storage.createRfxInvitation({
@@ -521,12 +521,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(`Failed to create invitation for vendor ${vendorId}:`, error);
           }
         }
-        
+
         console.log(`Successfully created ${invitations.length} invitations`);
-        res.json({ 
-          rfx, 
+        res.json({
+          rfx,
           invitationsCreated: invitations.length,
-          selectedVendors: selectedVendors.length 
+          selectedVendors: selectedVendors.length
         });
       } else {
         console.log("No vendors selected for invitation");
@@ -549,19 +549,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Vendor RFx invitation routes
+  // Vendor RFx invitations route
   app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
-      console.log("Vendor RFx invitations - User ID:", userId);
-      console.log("Vendor RFx invitations - User role:", currentDevUser.role);
+      console.log('Vendor RFx invitations - User ID:', req.user?.claims?.sub);
 
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
       }
 
-      if (currentDevUser.role !== 'vendor') {
-        console.log("User is not a vendor, returning empty array");
+      // Check user role from database
+      const user = await storage.getUser(userId);
+      console.log('Vendor RFx invitations - User role:', user?.role);
+
+      if (!user || user.role !== 'vendor') {
         return res.json([]);
       }
 
@@ -573,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For development, let's get all vendors and see if we can match by email
         const allVendors = await storage.getVendors();
         console.log("All vendors:", allVendors.map(v => ({ id: v.id, email: v.email, userId: v.userId })));
-        
+
         // Try to find by email
         vendor = allVendors.find(v => v.email === currentDevUser.email);
         console.log("Found vendor by email:", vendor ? vendor.id : 'No vendor found by email');
@@ -595,7 +597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: userId,
           });
           console.log("Created vendor:", vendor.id);
-          
+
           // Automatically create invitations for this new vendor to all existing RFx events
           console.log("Creating invitations for new vendor to existing RFx events...");
           const existingRfxEvents = await storage.getRfxEvents();
@@ -617,7 +619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get RFx invitations for this vendor
       const invitations = await storage.getRfxInvitationsForVendor(vendor.id);
       console.log(`Found ${invitations.length} invitations for vendor ${vendor.id}`);
-      
+
       // Format the response to match the expected structure
       const formattedInvitations = invitations.map(inv => ({
         id: `${inv.rfxId}-${inv.vendorId}`,
@@ -659,7 +661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
 
-      if (currentDevUser.role !== 'vendor') {
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'vendor') {
         return res.json([]);
       }
 
@@ -680,13 +683,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/vendor/rfx-responses', async (req: any, res) => {
     try {
       console.log('RFx response submission request:', req.body);
-      
+
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
       }
 
-      if (currentDevUser.role !== 'vendor') {
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'vendor') {
         return res.status(403).json({ message: "Access denied. Vendors only." });
       }
 
@@ -707,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Creating RFx response with data:', responseData);
       const response = await storage.createRfxResponse(responseData);
       console.log('RFx response created successfully:', response.id);
-      
+
       // Update invitation status to 'responded'
       try {
         await storage.updateRfxInvitationStatus(req.body.rfxId, vendor.id, 'responded');
@@ -716,13 +720,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to update invitation status:', invitationError);
         // Don't fail the entire request if invitation update fails
       }
-      
+
       res.json(response);
     } catch (error) {
       console.error("Error creating RFx response:", error);
-      res.status(500).json({ 
-        message: "Failed to create RFx response", 
-        error: error.message 
+      res.status(500).json({
+        message: "Failed to create RFx response",
+        error: error.message
       });
     }
   });
@@ -732,7 +736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const rfxId = req.params.rfxId;
       console.log(`Creating invitation for development vendor to RFx ${rfxId}...`);
-      
+
       // Ensure the current development user has a vendor profile if in vendor role
       if (currentDevUser.role === 'vendor') {
         let devVendor = await storage.getVendorByUserId(currentDevUser.id);
@@ -761,8 +765,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: 'invited'
           });
           console.log(`Created invitation for development vendor ${devVendor.id} to RFx ${rfxId}`);
-          
-          res.json({ 
+
+          res.json({
             message: `Development vendor invited to RFx`,
             rfxId: rfxId,
             vendorId: devVendor.id,
@@ -770,7 +774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (error) {
           if (error.message?.includes('duplicate') || error.code === '23505') {
-            res.json({ 
+            res.json({
               message: `Development vendor already invited to this RFx`,
               rfxId: rfxId,
               vendorId: devVendor.id
@@ -829,21 +833,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting product:", error);
       console.error("Error code:", error?.code);
       console.error("Error constraint:", error?.constraint);
-      
+
       // Handle foreign key constraint violations with user-friendly messages
       if (error?.code === '23503') {
         const constraintName = error?.constraint || '';
         if (constraintName.includes('bom_items')) {
-          return res.status(400).json({ 
-            message: "Cannot delete product: It is currently used in one or more BOMs. Please remove it from all BOMs first." 
+          return res.status(400).json({
+            message: "Cannot delete product: It is currently used in one or more BOMs. Please remove it from all BOMs first."
           });
         }
         // Handle other potential foreign key constraints
-        return res.status(400).json({ 
-          message: "Cannot delete product: It is currently referenced by other records. Please remove all references first." 
+        return res.status(400).json({
+          message: "Cannot delete product: It is currently referenced by other records. Please remove all references first."
         });
       }
-      
+
       res.status(500).json({ message: "Failed to delete product" });
     }
   });

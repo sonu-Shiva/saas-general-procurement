@@ -718,10 +718,27 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
   const invitationStatus = rfx.status || rfx.invitationStatus;
   const rfxStatus = rfxData.status;
   
+  // Debug logging for vendor response logic
+  console.log('RfxCard - Debug Info:', {
+    isVendor,
+    rfxId: rfx.id,
+    invitationStatus,
+    rfxStatus,
+    canRespondCheck: {
+      isVendor,
+      statusCheck: (invitationStatus === 'invited' || invitationStatus === 'active'),
+      rfxActiveCheck: (rfxStatus === 'active'),
+      notRespondedCheck: (invitationStatus !== 'responded')
+    }
+  });
+  
   // Determine if vendor can respond - check both invitation and RFx status
   const canRespond = isVendor && 
     (invitationStatus === 'invited' || invitationStatus === 'active') && 
-    (rfxStatus === 'active');
+    (rfxStatus === 'active') &&
+    (invitationStatus !== 'responded');
+    
+  console.log('RfxCard - Can Respond:', canRespond);
 
   const getStatusColor = (status: string) => {
     switch (status) {
