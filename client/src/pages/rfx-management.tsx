@@ -397,12 +397,10 @@ export default function RfxManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="invited">Invited</SelectItem>
                   <SelectItem value="responded">Responded</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="po_generated">PO Generated</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -756,11 +754,9 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-700 border-green-200';
-      case 'invited': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'draft': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'closed': return 'bg-gray-100 text-gray-700 border-gray-200';
-      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
       case 'responded': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
+      case 'po_generated': return 'bg-blue-100 text-blue-700 border-blue-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -786,8 +782,8 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
               {(rfxData.type || 'RFX').toUpperCase()}
             </Badge>
             {isVendor ? (
-              <Badge className={getStatusColor(invitationStatus)}>
-                {invitationStatus?.toUpperCase() || 'INVITED'}
+              <Badge className={getStatusColor(invitationStatus === 'responded' ? 'responded' : rfxStatus)}>
+                {invitationStatus === 'responded' ? 'RESPONDED' : rfxStatus?.toUpperCase() || 'DRAFT'}
               </Badge>
             ) : (
               <Badge className={getStatusColor(rfxStatus)}>
