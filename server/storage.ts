@@ -719,6 +719,9 @@ export class DatabaseStorage implements IStorage {
       termsAccepted: data.termsAccepted || false
     };
 
+    // Ensure attachments is properly formatted for PostgreSQL array field
+    const attachmentsArray = Array.isArray(data.attachments) ? data.attachments : [];
+
     const [response] = await this.db
       .insert(rfxResponses)
       .values({
@@ -730,7 +733,7 @@ export class DatabaseStorage implements IStorage {
         deliveryTerms: data.deliveryTerms,
         paymentTerms: data.paymentTerms,
         leadTime: data.leadTime,
-        attachments: data.attachments || [],
+        attachments: attachmentsArray, // PostgreSQL array of text
         submittedAt: now,
       })
       .returning();

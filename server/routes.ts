@@ -229,6 +229,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vendor RFx Response endpoints
+  app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Get vendor profile for current user
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      const invitations = await storage.getRfxInvitationsForVendor(vendor.id);
+      res.json(invitations);
+    } catch (error) {
+      console.error("Error fetching vendor RFx invitations:", error);
+      res.status(500).json({ message: "Failed to fetch RFx invitations" });
+    }
+  });
+
+  app.get('/api/vendor/rfx-responses', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      const responses = await storage.getRfxResponsesByVendor(vendor.id);
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching vendor responses:", error);
+      res.status(500).json({ message: "Failed to fetch responses" });
+    }
+  });
+
+  app.post('/api/vendor/rfx-responses', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      const responseData = {
+        ...req.body,
+        vendorId: vendor.id,
+      };
+
+      console.log('Creating vendor response:', responseData);
+
+      const response = await storage.createRfxResponse(responseData);
+      
+      // Update invitation status to 'responded'
+      await storage.updateRfxInvitationStatus(
+        req.body.rfxId, 
+        vendor.id, 
+        'responded'
+      );
+
+      res.json(response);
+    } catch (error) {
+      console.error("Error creating RFx response:", error);
+      res.status(500).json({ message: "Failed to create response" });
+    }
+  });
+
   app.get('/objects/:objectPath(*)', async (req, res) => {
     try {
       const objectStorageService = new ObjectStorageService();

@@ -191,7 +191,7 @@ export const rfxResponses = pgTable("rfx_responses", {
   deliveryTerms: text("delivery_terms"),
   paymentTerms: text("payment_terms"),
   leadTime: integer("lead_time"),
-  attachments: jsonb("attachments").default([]),
+  attachments: text("attachments").array().default([]),
   submittedAt: timestamp("submitted_at").defaultNow(),
 });
 
