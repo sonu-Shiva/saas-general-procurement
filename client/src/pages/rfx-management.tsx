@@ -713,12 +713,24 @@ export default function RfxManagement() {
 
 // RFx Card Component
 function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onConvert, onCreatePO, onClose }: any) {
+  // Extract the proper RFx data based on the structure
+  const rfxData = rfx.rfx || rfx;
+  const invitationStatus = rfx.status || rfx.invitationStatus;
+  const rfxStatus = rfxData.status;
+  
+  // Determine if vendor can respond - check both invitation and RFx status
+  const canRespond = isVendor && 
+    (invitationStatus === 'invited' || invitationStatus === 'active') && 
+    (rfxStatus === 'active');
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-700 border-green-200';
+      case 'invited': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'draft': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
       case 'closed': return 'bg-gray-100 text-gray-700 border-gray-200';
       case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
+      case 'responded': return 'bg-purple-100 text-purple-700 border-purple-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
@@ -738,30 +750,36 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
             <h3 className="text-lg font-medium text-foreground">
-              {rfx.title || rfx.rfxTitle || rfx.rfx?.title || 'Untitled RFx'}
+              {rfxData.title || 'Untitled RFx'}
             </h3>
-            <Badge className={getTypeColor(rfx.type || rfx.rfxType || rfx.rfx?.type)}>
-              {(rfx.type || rfx.rfxType || rfx.rfx?.type || 'RFX').toUpperCase()}
+            <Badge className={getTypeColor(rfxData.type)}>
+              {(rfxData.type || 'RFX').toUpperCase()}
             </Badge>
-            <Badge className={getStatusColor(rfx.status || rfx.invitationStatus)}>
-              {(rfx.status || rfx.invitationStatus)?.toUpperCase() || 'DRAFT'}
-            </Badge>
+            {isVendor ? (
+              <Badge className={getStatusColor(invitationStatus)}>
+                {invitationStatus?.toUpperCase() || 'INVITED'}
+              </Badge>
+            ) : (
+              <Badge className={getStatusColor(rfxStatus)}>
+                {rfxStatus?.toUpperCase() || 'DRAFT'}
+              </Badge>
+            )}
           </div>
-          <p className="text-muted-foreground mb-3">{rfx.scope || 'No description available'}</p>
+          <p className="text-muted-foreground mb-3">{rfxData.scope || 'No description available'}</p>
           <div className="flex items-center space-x-6 text-sm text-muted-foreground">
             <div className="flex items-center space-x-1">
               <Calendar className="w-4 h-4" />
-              <span>Created: {rfx.createdAt ? new Date(rfx.createdAt).toLocaleDateString() : 'N/A'}</span>
+              <span>Created: {rfxData.createdAt ? new Date(rfxData.createdAt).toLocaleDateString() : 'N/A'}</span>
             </div>
-            {(rfx.submissionDeadline || rfx.rfxSubmissionDeadline || rfx.rfx?.submissionDeadline) && (
+            {rfxData.dueDate && (
               <div className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
-                <span>Deadline: {new Date(rfx.submissionDeadline || rfx.rfxSubmissionDeadline || rfx.rfx?.submissionDeadline).toLocaleDateString()}</span>
+                <span>Deadline: {new Date(rfxData.dueDate).toLocaleDateString()}</span>
               </div>
             )}
             <div className="flex items-center space-x-1">
               <Users className="w-4 h-4" />
-              <span>Vendors: {rfx.invitedVendorsCount || rfx.vendorCount || rfx.rfx?.invitedVendorsCount || 0}</span>
+              <span>Vendors: {rfxData.invitedVendorsCount || 0}</span>
             </div>
           </div>
         </div>
@@ -770,11 +788,24 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
             <Eye className="w-4 h-4 mr-1" />
             View
           </Button>
-          {isVendor && (rfx.status || rfx.invitationStatus) === 'active' && (
-            <Button variant="ghost" size="sm" onClick={() => onRespond(rfx)}>
+          {canRespond && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => {
+                console.log('Respond button clicked for:', rfx);
+                onRespond(rfx);
+              }}
+              className="bg-primary hover:bg-primary/90 text-white"
+            >
               <Send className="w-4 h-4 mr-1" />
               Respond
             </Button>
+          )}
+          {isVendor && invitationStatus === 'responded' && (
+            <Badge variant="outline" className="text-green-600 border-green-600">
+              Responded
+            </Badge>
           )}
           {!isVendor && (
             <>
@@ -782,7 +813,7 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
                 <MessageSquare className="w-4 h-4 mr-1" />
                 Responses
               </Button>
-              {(rfx.status === 'closed' && (rfx.type || rfx.rfxType || rfx.rfx?.type) === 'rfq') && (
+              {(rfxStatus === 'closed' && rfxData.type === 'rfq') && (
                 <Button variant="ghost" size="sm" onClick={() => onCreatePO(rfx)}>
                   <ShoppingCart className="w-4 h-4 mr-1" />
                   Create PO
@@ -792,8 +823,8 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
                 <Target className="w-4 h-4 mr-1" />
                 Convert
               </Button>
-              {(rfx.status || rfx.invitationStatus) === 'active' && (
-                <Button variant="ghost" size="sm" onClick={() => onClose(rfx.id)}>
+              {rfxStatus === 'active' && (
+                <Button variant="ghost" size="sm" onClick={() => onClose(rfxData.id)}>
                   <X className="w-4 h-4 mr-1" />
                   Close
                 </Button>
