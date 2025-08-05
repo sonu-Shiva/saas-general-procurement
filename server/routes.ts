@@ -495,6 +495,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/product-categories/:id', async (req, res) => {
+    try {
+      const categoryData = insertProductCategorySchema.partial().parse(req.body);
+      const updatedCategory = await storage.updateProductCategory(req.params.id, categoryData);
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error("Error updating product category:", error);
+      res.status(500).json({ message: "Failed to update product category" });
+    }
+  });
+
   app.delete('/api/product-categories/:id', async (req, res) => {
     try {
       await storage.deleteProductCategory(req.params.id);

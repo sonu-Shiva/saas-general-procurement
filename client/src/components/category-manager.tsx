@@ -374,13 +374,13 @@ export default function CategoryManager({
     } else {
       console.log("Path: Creating new category...");
       
-      // Generate a unique code based on the name for new categories
-      const code = categoryData.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-      const timestamp = Date.now().toString().slice(-4); // Last 4 digits of timestamp for uniqueness
+      // Generate a clean, readable code based on the name for new categories
+      const cleanName = categoryData.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+      const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
       
       const formDataWithCode = {
         ...categoryData,
-        code: `${code}-${timestamp}`,
+        code: `${cleanName}_${randomSuffix}`,
         level: parentCategory ? parentCategory.level + 1 : 1,
       };
       
