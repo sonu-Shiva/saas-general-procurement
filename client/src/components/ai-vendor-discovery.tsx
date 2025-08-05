@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Sparkles, MapPin, Phone, Mail, Globe, Building } from "lucide-react";
+import { Bot, User, Send, Sparkles, MapPin, Phone, Mail, Globe, Building, MessageSquare } from "lucide-react";
 
 interface DiscoveredVendor {
   name: string;
@@ -18,20 +19,42 @@ interface DiscoveredVendor {
   category: string;
 }
 
+interface ChatMessage {
+  id: string;
+  type: 'user' | 'ai' | 'vendors';
+  content: string;
+  timestamp: Date;
+  vendors?: DiscoveredVendor[];
+}
+
 interface AIVendorDiscoveryProps {
   onVendorsFound?: (vendors: DiscoveredVendor[]) => void;
 }
 
 export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [discoveredVendors, setDiscoveredVendors] = useState<DiscoveredVendor[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      type: 'ai',
+      content: "Hi! I'm your AI procurement assistant. I can help you discover and connect with verified suppliers. What are you looking to source today?",
+      timestamp: new Date()
+    }
+  ]);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const discoverVendors = useMutation({
     mutationFn: async (query: string): Promise<DiscoveredVendor[]> => {
-      setIsSearching(true);
-      
       const response = await fetch('/api/vendors/discover', {
         method: 'POST',
         headers: {
@@ -49,211 +72,267 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
         throw new Error(`Search failed: ${response.status}`);
       }
 
-      const vendors = await response.json();
-      setIsSearching(false);
-      return vendors;
+      return await response.json();
     },
-    onSuccess: (vendors) => {
-      setDiscoveredVendors(vendors);
+    onSuccess: (vendors, query) => {
+      setIsThinking(false);
+      
+      // Add AI response with vendors
+      const aiMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'vendors',
+        content: `Great! I found ${vendors.length} verified suppliers for "${query}". Here are the options:`,
+        timestamp: new Date(),
+        vendors: vendors
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
       onVendorsFound?.(vendors);
-      toast({
-        title: "Discovery Successful",
-        description: `Found ${vendors.length} verified suppliers`,
-      });
+      
+      // Add follow-up message
+      setTimeout(() => {
+        const followUpMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          content: "Would you like me to refine this search, find suppliers in a specific location, or help you with something else?",
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, followUpMessage]);
+      }, 1000);
     },
     onError: (error: any) => {
-      setIsSearching(false);
-      console.error("AI Discovery Error:", error);
-      toast({
-        title: "Discovery Failed",
-        description: error.message || "Failed to discover vendors",
-        variant: "destructive",
-      });
+      setIsThinking(false);
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'ai',
+        content: `I'm sorry, I encountered an issue while searching: ${error.message}. Could you try rephrasing your request?`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     },
   });
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
-      toast({
-        title: "Search Query Required",
-        description: "Please enter what you're looking for",
-        variant: "destructive",
-      });
-      return;
-    }
-    discoverVendors.mutate(searchQuery);
+  const handleSendMessage = () => {
+    if (!currentMessage.trim()) return;
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: currentMessage,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Show AI thinking
+    setIsThinking(true);
+    const thinkingMessage: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      type: 'ai',
+      content: "Let me search for suppliers that match your requirements...",
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, thinkingMessage]);
+    
+    // Start vendor discovery
+    discoverVendors.mutate(currentMessage);
+    setCurrentMessage("");
   };
 
-  const handleQuickSearch = (query: string) => {
-    setSearchQuery(query);
-    discoverVendors.mutate(query);
+  const handleQuickPrompt = (prompt: string) => {
+    setCurrentMessage(prompt);
+    setTimeout(() => handleSendMessage(), 100);
+  };
+
+  const renderMessage = (message: ChatMessage) => {
+    if (message.type === 'vendors' && message.vendors) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm">{message.content}</p>
+          <div className="grid grid-cols-1 gap-3">
+            {message.vendors.map((vendor, index) => (
+              <Card key={index} className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950">
+                <CardContent className="p-3">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm text-foreground">
+                          {vendor.name}
+                        </h4>
+                        <Badge variant="secondary" className="text-xs mt-1">
+                          {vendor.category || 'General'}
+                        </Badge>
+                      </div>
+                      {vendor.logoUrl && (
+                        <img 
+                          src={vendor.logoUrl} 
+                          alt={`${vendor.name} logo`}
+                          className="w-8 h-8 rounded object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      {vendor.email && (
+                        <div className="flex items-center text-muted-foreground">
+                          <Mail className="w-3 h-3 mr-1" />
+                          <span>{vendor.email}</span>
+                        </div>
+                      )}
+                      {vendor.phone && (
+                        <div className="flex items-center text-muted-foreground">
+                          <Phone className="w-3 h-3 mr-1" />
+                          <span>{vendor.phone}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {vendor.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {vendor.description}
+                      </p>
+                    )}
+
+                    <div className="flex space-x-2 pt-1">
+                      <Button size="sm" className="text-xs h-6 flex-1">
+                        Add to Network
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-xs h-6">
+                        Contact
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return <p className="text-sm">{message.content}</p>;
   };
 
   return (
-    <div className="space-y-6">
-      {/* Search Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-        <CardHeader>
+    <div className="flex flex-col h-[600px]">
+      {/* Chat Header */}
+      <Card className="mb-4">
+        <CardHeader className="pb-3">
           <CardTitle className="flex items-center text-blue-900 dark:text-blue-100">
-            <Bot className="w-6 h-6 mr-2" />
-            AI-Powered Vendor Discovery
+            <MessageSquare className="w-5 h-5 mr-2" />
+            AI Vendor Discovery Chat
           </CardTitle>
         </CardHeader>
-        <CardContent>
+      </Card>
+
+      {/* Chat Messages */}
+      <Card className="flex-1 flex flex-col">
+        <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
-            <div className="flex space-x-4">
-              <div className="flex-1">
-                <Input
-                  placeholder="Describe what you need... e.g., 'Electronic components with ISO certification'"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="text-lg py-3"
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                />
-              </div>
-              <Button 
-                onClick={handleSearch}
-                disabled={isSearching || !searchQuery.trim()}
-                className="bg-blue-600 hover:bg-blue-700 px-8"
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {isSearching ? (
-                  <>
-                    <div className="animate-spin w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    AI Search
-                  </>
-                )}
-              </Button>
-            </div>
+                <div
+                  className={`max-w-[80%] rounded-lg p-3 ${
+                    message.type === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-foreground'
+                  }`}
+                >
+                  <div className="flex items-start space-x-2">
+                    {message.type === 'ai' && (
+                      <Bot className="w-4 h-4 mt-0.5 text-blue-600" />
+                    )}
+                    {message.type === 'user' && (
+                      <User className="w-4 h-4 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      {renderMessage(message)}
+                      <div className={`text-xs mt-1 ${
+                        message.type === 'user' ? 'text-blue-100' : 'text-muted-foreground'
+                      }`}>
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
             
-            {/* Quick Search Options */}
+            {isThinking && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+                  <div className="flex items-center space-x-2">
+                    <Bot className="w-4 h-4 text-blue-600" />
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-1 bg-blue-600 rounded-full animate-bounce"></div>
+                      <div className="w-1 h-1 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-1 h-1 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        {/* Quick Prompts */}
+        {messages.length === 1 && (
+          <div className="p-4 border-t">
+            <p className="text-sm text-muted-foreground mb-2">Try these common requests:</p>
             <div className="flex flex-wrap gap-2">
               <Badge 
                 variant="outline" 
-                className="cursor-pointer hover:bg-blue-600 hover:text-white"
-                onClick={() => handleQuickSearch("Electronic components with ISO 9001 certification")}
+                className="cursor-pointer hover:bg-blue-600 hover:text-white text-xs"
+                onClick={() => handleQuickPrompt("I need electronic components with ISO 9001 certification")}
               >
                 Electronic Components
               </Badge>
               <Badge 
                 variant="outline" 
-                className="cursor-pointer hover:bg-blue-600 hover:text-white"
-                onClick={() => handleQuickSearch("Textile manufacturers in Gujarat")}
+                className="cursor-pointer hover:bg-blue-600 hover:text-white text-xs"
+                onClick={() => handleQuickPrompt("Find textile manufacturers in Gujarat")}
               >
                 Textile Manufacturing
               </Badge>
               <Badge 
                 variant="outline" 
-                className="cursor-pointer hover:bg-blue-600 hover:text-white"
-                onClick={() => handleQuickSearch("Chemical suppliers with export license")}
+                className="cursor-pointer hover:bg-blue-600 hover:text-white text-xs"
+                onClick={() => handleQuickPrompt("Chemical suppliers with export license")}
               >
                 Chemical Suppliers
               </Badge>
             </div>
           </div>
-        </CardContent>
+        )}
+
+        {/* Message Input */}
+        <div className="p-4 border-t">
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Describe what you need to source..."
+              value={currentMessage}
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              disabled={isThinking}
+            />
+            <Button 
+              onClick={handleSendMessage}
+              disabled={!currentMessage.trim() || isThinking}
+              size="icon"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </Card>
-
-      {/* Results Section */}
-      {discoveredVendors.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Sparkles className="w-5 h-5 mr-2 text-blue-600" />
-              Discovered Vendors ({discoveredVendors.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {discoveredVendors.map((vendor, index) => (
-                <Card key={index} className="border border-blue-200 dark:border-blue-800">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* Vendor Header */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-foreground">
-                            {vendor.name}
-                          </h3>
-                          <Badge variant="secondary" className="mt-1">
-                            {vendor.category || 'General'}
-                          </Badge>
-                        </div>
-                        {vendor.logoUrl && (
-                          <img 
-                            src={vendor.logoUrl} 
-                            alt={`${vendor.name} logo`}
-                            className="w-12 h-12 rounded object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        )}
-                      </div>
-
-                      {/* Contact Information */}
-                      <div className="space-y-2 text-sm">
-                        {vendor.email && (
-                          <div className="flex items-center text-muted-foreground">
-                            <Mail className="w-4 h-4 mr-2" />
-                            <span>{vendor.email}</span>
-                          </div>
-                        )}
-                        {vendor.phone && (
-                          <div className="flex items-center text-muted-foreground">
-                            <Phone className="w-4 h-4 mr-2" />
-                            <span>{vendor.phone}</span>
-                          </div>
-                        )}
-                        {vendor.website && (
-                          <div className="flex items-center text-muted-foreground">
-                            <Globe className="w-4 h-4 mr-2" />
-                            <a 
-                              href={vendor.website} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
-                            >
-                              {vendor.website}
-                            </a>
-                          </div>
-                        )}
-                        {vendor.address && (
-                          <div className="flex items-start text-muted-foreground">
-                            <MapPin className="w-4 h-4 mr-2 mt-0.5" />
-                            <span className="text-xs">{vendor.address}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Description */}
-                      {vendor.description && (
-                        <p className="text-sm text-muted-foreground">
-                          {vendor.description}
-                        </p>
-                      )}
-
-                      {/* Actions */}
-                      <div className="flex space-x-2 pt-2">
-                        <Button size="sm" className="flex-1">
-                          Add to Network
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          Contact
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

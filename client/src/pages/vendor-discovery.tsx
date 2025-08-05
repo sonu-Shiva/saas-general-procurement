@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import VendorCard from "@/components/vendor-card";
+import AIVendorDiscovery from "@/components/ai-vendor-discovery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
   Filter, 
@@ -20,7 +22,8 @@ import {
   Globe,
   Users,
   Building,
-  CheckCircle
+  CheckCircle,
+  MessageSquare
 } from "lucide-react";
 import type { Vendor } from "@shared/schema";
 
@@ -118,7 +121,7 @@ export default function VendorDiscovery() {
       
     } catch (error) {
       console.error("AI search error:", error);
-      alert(`AI Discovery Error: ${error.message}`);
+      alert(`AI Discovery Error: ${(error as Error).message}`);
     }
   };
 
@@ -137,71 +140,30 @@ export default function VendorDiscovery() {
     <div className="space-y-6 p-6">
       {/* Page Header */}
       <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Vendor Discovery</h1>
-              <p className="text-muted-foreground">
-                Find and connect with suppliers using AI-powered search and intelligent recommendations
-              </p>
-            </div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Vendor Discovery</h1>
+        <p className="text-muted-foreground">
+          Find and connect with suppliers using AI-powered chat and intelligent search
+        </p>
+      </div>
 
-            {/* AI Search Section */}
-            <Card className="mb-8 bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Bot className="w-6 h-6 mr-2 text-primary" />
-                  AI-Powered Vendor Discovery
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex space-x-4">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Describe what you need... e.g., 'Find stainless steel pipe suppliers in Gujarat with ISO certification'"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="text-lg py-3"
-                      />
-                    </div>
-                    <Button 
-                      onClick={() => {
-                        console.log("AI Search button clicked!");
-                        handleAiSearch();
-                      }}
-                      className="bg-primary hover:bg-primary/90 px-8"
-                      disabled={!searchQuery}
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      AI Search
-                    </Button>
-                  </div>
-                  
-                  {/* Sample AI Queries */}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge 
-                      variant="outline" 
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => setSearchQuery("Electronic components suppliers with ISO 9001 certification")}
-                    >
-                      Electronic components with ISO 9001
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => setSearchQuery("Bulk cotton yarn suppliers in Tamil Nadu")}
-                    >
-                      Bulk cotton yarn in Tamil Nadu
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => setSearchQuery("Office furniture suppliers with delivery within 7 days")}
-                    >
-                      Quick delivery office furniture
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Discovery Tabs */}
+      <Tabs defaultValue="ai-chat" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ai-chat" className="flex items-center space-x-2">
+            <MessageSquare className="w-4 h-4" />
+            <span>AI Chat Discovery</span>
+          </TabsTrigger>
+          <TabsTrigger value="search" className="flex items-center space-x-2">
+            <Search className="w-4 h-4" />
+            <span>Search & Filters</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ai-chat" className="mt-6">
+          <AIVendorDiscovery />
+        </TabsContent>
+
+        <TabsContent value="search" className="mt-6">
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               {/* Filters Sidebar */}
@@ -443,6 +405,8 @@ export default function VendorDiscovery() {
               {/* Pagination could be added here if needed */}
             </div>
           </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
