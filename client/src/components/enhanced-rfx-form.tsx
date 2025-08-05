@@ -41,6 +41,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
   const queryClient = useQueryClient();
   const [attachments, setAttachments] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [termsAndConditionsPath, setTermsAndConditionsPath] = useState<string>('');
 
   // Fetch vendors and BOMs
   const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
@@ -61,9 +62,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
       type: "rfi",
       dueDate: "",
       budget: "",
-      selectedVendors: [],
       criteria: "",
-      evaluationParameters: "",
       termsAndConditionsPath: "",
     },
   });
