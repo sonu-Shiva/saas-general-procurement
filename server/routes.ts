@@ -484,6 +484,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/product-categories', async (req, res) => {
+    try {
+      const categoryData = insertProductCategorySchema.parse(req.body);
+      const newCategory = await storage.createProductCategory(categoryData);
+      res.json(newCategory);
+    } catch (error) {
+      console.error("Error creating product category:", error);
+      res.status(500).json({ message: "Failed to create product category" });
+    }
+  });
+
+  app.delete('/api/product-categories/:id', async (req, res) => {
+    try {
+      await storage.deleteProductCategory(req.params.id);
+      res.json({ success: true, message: 'Product category deleted successfully' });
+    } catch (error) {
+      console.error("Error deleting product category:", error);
+      res.status(500).json({ message: "Failed to delete product category" });
+    }
+  });
+
   // BOM routes
   app.get('/api/boms', async (req, res) => {
     try {

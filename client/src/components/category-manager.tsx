@@ -373,7 +373,18 @@ export default function CategoryManager({
       updateCategoryMutation.mutate(categoryData);
     } else {
       console.log("Path: Creating new category...");
-      createCategoryMutation.mutate(categoryData);
+      
+      // Generate a unique code based on the name for new categories
+      const code = categoryData.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      const timestamp = Date.now().toString().slice(-4); // Last 4 digits of timestamp for uniqueness
+      
+      const formDataWithCode = {
+        ...categoryData,
+        code: `${code}-${timestamp}`,
+        level: parentCategory ? parentCategory.level + 1 : 1,
+      };
+      
+      createCategoryMutation.mutate(formDataWithCode);
     }
   };
 
