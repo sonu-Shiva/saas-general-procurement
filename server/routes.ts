@@ -55,6 +55,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log('DEVELOPMENT MODE: Setting up simple auth system');
 
+  // Ensure development user exists in database
+  try {
+    const existingUser = await storage.getUser(currentDevUser.id);
+    if (!existingUser) {
+      console.log('Creating development user in database...');
+      await storage.upsertUser({
+        id: currentDevUser.id,
+        email: currentDevUser.email,
+        firstName: currentDevUser.firstName,
+        lastName: currentDevUser.lastName,
+        role: currentDevUser.role as any,
+      });
+      console.log('Development user created successfully');
+    } else {
+      console.log('Development user already exists in database');
+    }
+  } catch (error) {
+    console.error('Error ensuring development user exists:', error);
+  }
+
   // Auth routes
   app.get('/api/auth/user', (req, res) => {
     console.log('Auth check - isLoggedIn:', isLoggedIn);
