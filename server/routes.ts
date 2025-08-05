@@ -450,8 +450,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       await storage.deleteProduct(req.params.id);
       res.json({ success: true, message: 'Product deleted successfully' });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting product:", error);
+      
+      // Handle foreign key constraint violations with user-friendly messages
+      if (error?.code === '23503') {
+        const constraintName = error?.constraint || '';
+        if (constraintName.includes('bom_items')) {
+          return res.status(400).json({ 
+            message: "Cannot delete product: It is currently used in one or more BOMs. Please remove it from all BOMs first." 
+          });
+        }
+        // Handle other potential foreign key constraints
+        return res.status(400).json({ 
+          message: "Cannot delete product: It is currently referenced by other records. Please remove all references first." 
+        });
+      }
+      
       res.status(500).json({ message: "Failed to delete product" });
     }
   });
