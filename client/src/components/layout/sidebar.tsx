@@ -21,7 +21,7 @@ const navigation = [
   { name: "Vendor Management", href: "/vendors", icon: Users, buyerOnly: true },
   { name: "Product Catalogue", href: "/products", icon: Package },
   { name: "BOM Management", href: "/boms", icon: Layers, buyerOnly: true },
-  { name: "RFx Invitations", href: "/rfx", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management" },
+  { name: "RFx Invitations", href: "/vendor-portal", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management", vendorHref: "/vendor-portal", buyerHref: "/rfx" },
   { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center" },
   { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, buyerOnly: true },
   { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders" },
@@ -47,8 +47,16 @@ export default function Sidebar() {
               return true;
             })
             .map((item) => {
-              const isActive = location === item.href;
               const isVendor = (user as any)?.role === 'vendor';
+              
+              // Use appropriate href based on user role
+              const href = isVendor && item.vendorHref 
+                ? item.vendorHref 
+                : !isVendor && item.buyerHref 
+                  ? item.buyerHref 
+                  : item.href;
+              
+              const isActive = location === href;
               
               // Use appropriate label based on user role
               const displayName = isVendor && item.vendorLabel 
@@ -60,7 +68,7 @@ export default function Sidebar() {
               return (
                 <Link 
                   key={item.name} 
-                  href={item.href}
+                  href={href}
                   className={cn(
                     "sidebar-nav",
                     isActive
