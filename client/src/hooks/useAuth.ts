@@ -10,12 +10,22 @@ export function useAuth() {
     refetchOnWindowFocus: false,
   });
 
-  const login = () => {
-    if (process.env.NODE_ENV === 'development') {
-      // For development, just refresh to get the dev user
+  const login = async () => {
+    try {
+      // Call the login API to restore authentication state
+      const user = await apiRequest('/api/auth/login', { method: 'POST' });
+      
+      // Update the cache with the returned user data
+      queryClient.setQueryData(['/api/auth/user'], user);
+      
+      // Refresh all queries to ensure proper data loading
+      queryClient.invalidateQueries();
+      
+      return user;
+    } catch (error) {
+      console.error('Login error:', error);
+      // Fallback to page refresh for development
       window.location.reload();
-    } else {
-      window.location.href = "/api/login";
     }
   };
 
