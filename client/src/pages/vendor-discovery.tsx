@@ -57,7 +57,14 @@ export default function VendorDiscovery() {
   };
 
   const handleAiSearch = async () => {
-    if (!searchQuery.trim()) return;
+    console.log("=== AI SEARCH BUTTON CLICKED ===");
+    console.log("Search query:", searchQuery);
+    
+    if (!searchQuery.trim()) {
+      console.log("Empty search query, returning");
+      alert("Please enter a search query first!");
+      return;
+    }
     
     console.log("Starting AI search for:", searchQuery);
     
@@ -100,8 +107,14 @@ export default function VendorDiscovery() {
       
       console.log("AI discovered vendors:", response);
       
-      // For now, log the results. In a full implementation, you'd display them
-      alert(`AI Discovery Success!\n\nFound ${response.length} vendors:\n${response.map((v: any) => `• ${v.name} - ${v.email}`).join('\n')}`);
+      // Show the results in a clear alert
+      const vendorList = response.map((v: any) => 
+        `• ${v.name}\n  ${v.email || 'No email'}\n  ${v.phone || 'No phone'}\n  ${v.category || 'General'}\n`
+      ).join('\n');
+      
+      alert(`🎉 AI Discovery Success!\n\nFound ${response.length} verified suppliers:\n\n${vendorList}`);
+      
+      console.log("Full vendor details:", response);
       
     } catch (error) {
       console.error("AI search error:", error);
@@ -150,7 +163,10 @@ export default function VendorDiscovery() {
                       />
                     </div>
                     <Button 
-                      onClick={handleAiSearch}
+                      onClick={() => {
+                        console.log("AI Search button clicked!");
+                        handleAiSearch();
+                      }}
                       className="bg-primary hover:bg-primary/90 px-8"
                       disabled={!searchQuery}
                     >
