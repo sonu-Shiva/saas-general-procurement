@@ -73,10 +73,10 @@ export default function RfxManagement() {
   });
 
   console.log("RfxManagement render - rfxEvents:", rfxEvents, "isLoading:", isLoading);
-  
+
   // Ensure rfxEvents is always an array and define filteredRfxEvents
   const rfxEventsArray = Array.isArray(rfxEvents) ? rfxEvents : [];
-  
+
   const filteredRfxEvents = rfxEventsArray.filter((rfx: any) => {
     const matchesSearch = rfx.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          rfx.scope?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -91,7 +91,7 @@ export default function RfxManagement() {
         method: 'PATCH',
         credentials: "include",
       });
-      
+
       if (response.ok) {
         toast({
           title: "Success",
@@ -127,7 +127,7 @@ export default function RfxManagement() {
     setSelectedRfxForResponses(rfx);
     setIsResponsesDialogOpen(true);
   };
-  
+
   return (
     <div className="space-y-6 p-6">
       {/* Page Header */}

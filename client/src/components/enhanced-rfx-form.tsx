@@ -11,18 +11,22 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TermsUploader } from "@/components/TermsUploader";
+import { useToast } from "@/hooks/use-toast";
+import { RfxAttachmentUploader } from "./RfxAttachmentUploader";
 
 const rfxFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  scope: z.string().min(1, "Scope is required"),
   type: z.enum(["rfi", "rfp", "rfq"]),
-  dueDate: z.string().min(1, "Due date is required"),
-  budget: z.string().optional(),
-  bomId: z.string().optional(),
-  selectedVendors: z.array(z.string()).min(1, "At least one vendor must be selected"),
+  scope: z.string().optional(),
   criteria: z.string().optional(),
-  evaluationParameters: z.string().optional(),
-  termsAndConditionsPath: z.string().min(1, "Terms & Conditions upload is required"),
+  dueDate: z.string().optional(),
+  budget: z.union([z.string(), z.number()]).optional().transform(val => 
+    val ? (typeof val === 'string' ? parseFloat(val) : val) : undefined
+  ),
+  contactPerson: z.string().optional(),
+  status: z.enum(["draft", "published"]).default("draft"),
+  termsAndConditionsRequired: z.boolean().default(false),
+  termsAndConditionsPath: z.string().optional(),
 });
 
 type RfxFormData = z.infer<typeof rfxFormSchema>;
@@ -33,8 +37,10 @@ interface EnhancedRfxFormProps {
 }
 
 export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormProps) {
-  const [termsAndConditionsPath, setTermsAndConditionsPath] = useState<string>("");
+  const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch vendors and BOMs
   const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
@@ -55,7 +61,6 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
       type: "rfi",
       dueDate: "",
       budget: "",
-      bomId: "",
       selectedVendors: [],
       criteria: "",
       evaluationParameters: "",
@@ -67,52 +72,140 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
 
   const createRfxMutation = useMutation({
     mutationFn: async (data: RfxFormData) => {
-      const response = await fetch("/api/rfx", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      try {
+        setIsSubmitting(true);
+
+        // Transform data for API
+        const transformedData = {
           title: data.title,
-          scope: data.scope,
           type: data.type,
-          dueDate: data.dueDate,
-          budget: data.budget || undefined,
-          bomId: data.bomId || undefined,
-          termsAndConditionsPath: termsAndConditionsPath || undefined,
-          termsAndConditionsRequired: !!termsAndConditionsPath,
-          criteria: data.criteria || undefined,
-          evaluationParameters: data.evaluationParameters || undefined,
-          status: "draft",
-        }),
-        credentials: "include",
-      });
+          scope: data.scope || '',
+          criteria: data.criteria || '',
+          dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+          budget: data.budget ? parseFloat(data.budget.toString()) : null,
+          contactPerson: data.contactPerson || '',
+          status: data.status || 'draft',
+          attachments: attachments.length > 0 ? attachments : [],
+          termsAndConditionsRequired: data.termsAndConditionsRequired || false,
+          termsAndConditionsPath: data.termsAndConditionsPath || null,
+        };
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const rfxEvent = await response.json();
+        console.log('Submitting RFx data:', transformedData);
 
-      // Create vendor invitations
-      if (data.selectedVendors?.length) {
-        await Promise.all(
-          data.selectedVendors.map(vendorId =>
-            fetch("/api/rfx/invitations", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ rfxId: rfxEvent.id, vendorId }),
-              credentials: "include",
-            })
-          )
-        );
+        const response = await fetch("/api/rfx", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(transformedData),
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('Server error response:', errorData);
+          throw new Error(`Failed to create RFx: ${response.status}`);
+        }
+
+        const rfxEvent = await response.json();
+
+        // Create vendor invitations
+        if (data.selectedVendors?.length) {
+          await Promise.all(
+            data.selectedVendors.map(vendorId =>
+              fetch("/api/rfx/invitations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ rfxId: rfxEvent.id, vendorId }),
+                credentials: "include",
+              })
+            )
+          );
+        }
+
+        return rfxEvent;
+      } finally {
+        setIsSubmitting(false);
       }
-
-      return rfxEvent;
     },
     onSuccess: () => {
+      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
-      onSuccess();
+
+      // Close dialog and refresh data
+      onClose();
+      onSuccess?.();
     },
+    onError: (error) => {
+      console.error('Error creating RFx:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create RFx",
+        variant: "destructive",
+      });
+    }
   });
 
-  const onSubmit = (data: RfxFormData) => {
-    createRfxMutation.mutate(data);
+  const onSubmit = async (data: RfxFormData) => {
+    try {
+      setIsSubmitting(true);
+
+      // Transform data for API
+      const transformedData = {
+        title: data.title,
+        type: data.type,
+        scope: data.scope || '',
+        criteria: data.criteria || '',
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+        budget: data.budget ? parseFloat(data.budget.toString()) : null,
+        contactPerson: data.contactPerson || '',
+        status: data.status || 'draft',
+        attachments: attachments.length > 0 ? attachments : [],
+        termsAndConditionsRequired: data.termsAndConditionsRequired || false,
+        termsAndConditionsPath: data.termsAndConditionsPath || null,
+      };
+
+      console.log('Submitting RFx data:', transformedData);
+
+      const response = await fetch('/api/rfx', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(transformedData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Server error response:', errorData);
+        throw new Error(`Failed to create RFx: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('RFx created successfully:', result);
+
+      toast({
+        title: "Success",
+        description: "RFx created successfully",
+      });
+
+      // Reset form
+      form.reset();
+      setAttachments([]);
+
+      // Close dialog and refresh data
+      onClose();
+      onSuccess?.();
+
+    } catch (error) {
+      console.error('Error creating RFx:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create RFx",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (vendorsLoading) {
@@ -231,6 +324,9 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
                   placeholder="e.g., ₹50,000 - ₹100,000"
                   className="border-2 border-border focus:border-primary"
                 />
+                {form.formState.errors.budget && (
+                  <p className="text-sm text-destructive">{form.formState.errors.budget.message}</p>
+                )}
               </div>
             )}
           </div>
@@ -395,14 +491,14 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
           </Button>
           <Button 
             type="submit" 
-            disabled={createRfxMutation.isPending}
+            disabled={isSubmitting}
             className="bg-primary hover:bg-primary/90"
             onClick={(e) => {
               console.log("Create RFx button clicked");
               // Let the form handle submission
             }}
           >
-            {createRfxMutation.isPending ? "Creating..." : `Create ${selectedType.toUpperCase()}`}
+            {isSubmitting ? "Creating..." : `Create ${selectedType.toUpperCase()}`}
           </Button>
         </div>
       </form>
