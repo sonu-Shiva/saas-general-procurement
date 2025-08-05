@@ -258,6 +258,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Parsing AI response...');
       const vendors = parseVendorResponse(aiResponse);
       console.log(`Parsed ${vendors.length} valid vendors`);
+      if (vendors.length > 0) {
+        console.log('Sample parsed vendor:', JSON.stringify(vendors[0], null, 2));
+      }
       console.log(`Found ${vendors.length} vendors from AI discovery`);
 
       res.json(vendors);
@@ -300,30 +303,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   function extractField(text: string, fieldName: string): string | null {
-    const regex = new RegExp(`${fieldName}\\s*([^\\n-]+)`, 'i');
-    const match = text.match(regex);
-    if (match && match[1]) {
-      const value = match[1].trim().replace(/^[-\s]+/, '').trim();
-      
-      // Filter out common placeholder values
-      const invalidValues = [
-        'Not publicly listed',
-        'Not available',
-        'Not listed',
-        'Contact via platform',
-        'N/A',
-        '+91',
-        'info@',
-        '[email',
-        'contact@'
-      ];
-      
-      if (invalidValues.some(invalid => value.includes(invalid))) {
-        return null;
+    console.log(`Extracting field "${fieldName}" from text: ${text.substring(0, 200)}...`);
+    
+    // Try multiple patterns to extract field values
+    const patterns = [
+      new RegExp(`-\\s*${fieldName}\\s*([^\\n]+)`, 'i'),
+      new RegExp(`${fieldName}\\s*([^\\n]+)`, 'i'),
+      new RegExp(`${fieldName}:?\\s*([^\\n]+)`, 'i')
+    ];
+    
+    for (const regex of patterns) {
+      const match = text.match(regex);
+      if (match && match[1]) {
+        let value = match[1].trim();
+        
+        // Clean up the value
+        value = value.replace(/^[-:\s]+/, '').trim();
+        value = value.replace(/[.\s]+$/, '');
+        
+        console.log(`Found potential value for ${fieldName}: "${value}"`);
+        
+        // Filter out placeholder values
+        const invalidValues = [
+          'Not publicly listed',
+          'Not available',
+          'Not listed in search results',
+          'Contact via platform',
+          'N/A'
+        ];
+        
+        // Check for invalid values
+        if (invalidValues.some(invalid => value.toLowerCase().includes(invalid.toLowerCase()))) {
+          console.log(`Rejected "${value}" for ${fieldName} - invalid placeholder`);
+          continue;
+        }
+        
+        // Special validation for email
+        if (fieldName.toLowerCase().includes('email')) {
+          if (!value.includes('@') || value.length < 5) {
+            console.log(`Rejected "${value}" for email - invalid format`);
+            continue;
+          }
+        }
+        
+        // Special validation for phone
+        if (fieldName.toLowerCase().includes('phone')) {
+          if (value === '+91' || value.length < 8) {
+            console.log(`Rejected "${value}" for phone - incomplete`);
+            continue;
+          }
+        }
+        
+        // Ensure we have meaningful content
+        if (value.length > 3) {
+          console.log(`Accepted "${value}" for ${fieldName}`);
+          return value;
+        }
       }
-      
-      return value;
     }
+    
+    console.log(`No valid value found for ${fieldName}`);
     return null;
   }
 
