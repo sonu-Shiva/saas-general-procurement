@@ -750,6 +750,18 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
     (invitationStatus !== 'responded');
 
   console.log('RfxCard - Can Respond:', canRespond);
+  
+  // EXPLICIT STATUS DISPLAY CHECK
+  const vendorDisplayStatus = invitationStatus === 'responded' ? 'responded' : rfxStatus;
+  const vendorDisplayText = invitationStatus === 'responded' ? 'RESPONDED' : rfxStatus?.toUpperCase() || 'DRAFT';
+  console.log('🔍 VENDOR STATUS DISPLAY:', {
+    rfxId: rfx.id,
+    isVendor,
+    invitationStatus,
+    rfxStatus,
+    vendorDisplayStatus,
+    vendorDisplayText
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
