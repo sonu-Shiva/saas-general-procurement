@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import SinglePageRfxForm from "@/components/single-page-rfx-form";
@@ -34,8 +34,18 @@ import {
   Target,
   TrendingUp,
   X,
-  ShoppingCart
+  ShoppingCart,
+  Package
 } from "lucide-react";
+
+// Helper function to format currency
+const formatCurrency = (amount: number | null | undefined) => {
+  if (amount === null || amount === undefined) return 'N/A';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+};
 
 export default function RfxManagement() {
   const { user } = useAuth();
@@ -77,13 +87,46 @@ export default function RfxManagement() {
   // Ensure rfxEvents is always an array and define filteredRfxEvents
   const rfxEventsArray = Array.isArray(rfxEvents) ? rfxEvents : [];
 
-  const filteredRfxEvents = rfxEventsArray.filter((rfx: any) => {
-    const matchesSearch = rfx.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         rfx.scope?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || rfx.status === statusFilter;
-    const matchesType = typeFilter === "all" || rfx.type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Filter RFx events based on role and search criteria
+  const filteredRfxEvents = useMemo(() => {
+    if (!rfxEvents) return [];
+
+    return rfxEvents.filter((rfx: any) => {
+      // Search filter
+      const searchableText = [
+        rfx.title,
+        rfx.rfxTitle, // For vendor invitations
+        rfx.referenceNo,
+        rfx.rfxReferenceNo, // For vendor invitations
+        rfx.rfx?.title, // Nested rfx object
+        rfx.rfx?.referenceNo // Nested rfx object
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      if (searchQuery && !searchableText.includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // Type filter
+      const rfxType = rfx.type || rfx.rfxType || rfx.rfx?.type;
+      if (typeFilter !== 'all' && rfxType !== typeFilter) {
+        return false;
+      }
+
+      // Status filter
+      if (statusFilter !== 'all') {
+        if (isVendor) {
+          // For vendors, filter by invitation status
+          return (rfx.status || rfx.invitationStatus) === statusFilter;
+        } else {
+          // For buyers, filter by RFx status
+          const rfxStatus = rfx.status || rfx.rfxStatus || rfx.rfx?.status;
+          return rfxStatus === statusFilter;
+        }
+      }
+
+      return true;
+    });
+  }, [rfxEvents, searchQuery, typeFilter, statusFilter, isVendor]);
 
   const handleCloseRfx = async (rfxId: string) => {
     try {
@@ -128,6 +171,52 @@ export default function RfxManagement() {
     setIsResponsesDialogOpen(true);
   };
 
+  const handleCreateVendorInvitations = async () => {
+    try {
+      const response = await fetch('/api/dev/create-vendor-invitations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Vendor invitations created:', result);
+        // Refetch the data to update the UI
+        await queryClient.invalidateQueries({ queryKey: [isVendor ? "/api/vendor/rfx-invitations" : "/api/rfx"] });
+      } else {
+        console.error('Failed to create vendor invitations');
+      }
+    } catch (error) {
+      console.error('Error creating vendor invitations:', error);
+    }
+  };
+
+  const handleInviteCurrentVendor = async (rfxId: string) => {
+    try {
+      const response = await fetch(`/api/dev/invite-to-rfx/${rfxId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Development vendor invited:', result);
+        // Refetch the data to update the UI
+        await queryClient.invalidateQueries({ queryKey: ["/api/vendor/rfx-invitations"] });
+      } else {
+        console.error('Failed to invite development vendor');
+      }
+    } catch (error) {
+      console.error('Error inviting development vendor:', error);
+    }
+  };
+
   return (
     <div className="space-y-6 p-6">
       {/* Page Header */}
@@ -154,7 +243,7 @@ export default function RfxManagement() {
               </Badge>
               <Badge variant="outline" className="text-sm">
                 <Clock className="w-4 h-4 mr-1" />
-                {rfxEventsArray.filter((rfx: any) => rfx.status === 'open').length} Active
+                {rfxEventsArray.filter((rfx: any) => (rfx.status || rfx.invitationStatus) === 'active').length} Active
               </Badge>
             </div>
           )}
@@ -241,46 +330,27 @@ export default function RfxManagement() {
         )}
         {!isVendor && (
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/dev/create-vendor-invitations', { method: 'POST' });
-                  const data = await response.json();
-                  console.log('Vendor invitations created:', data);
-                  alert(`Created vendor invitations: ${data.message}`);
-                  refetch(); // Invalidate and refetch to show updated counts
-                } catch (error) {
-                  console.error('Error creating vendor invitations:', error);
-                  alert('Failed to create vendor invitations');
-                }
-              }}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              🧪 Create Vendor Invitations (Dev)
-            </Button>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-primary hover:bg-primary/90">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create RFx
+            {/* Development Test Buttons */}
+            {user?.email === 'dev@sclen.com' && rfxEvents && rfxEvents.length > 0 && (
+              <div className="mb-4 flex gap-2">
+                <Button 
+                  onClick={handleCreateVendorInvitations}
+                  variant="outline"
+                  className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+                >
+                  🧪 Test: Create Vendor Invitations (All)
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-                <DialogHeader>
-                  <DialogTitle>Create New RFx Request</DialogTitle>
-                </DialogHeader>
-                <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
-                  <EnhancedRfxForm 
-                    onClose={() => setIsCreateDialogOpen(false)}
-                    onSuccess={() => {
-                      setIsCreateDialogOpen(false);
-                      queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
-                    }}
-                  />
-                </div>
-              </DialogContent>
-            </Dialog>
+                {isVendor && (
+                  <Button 
+                    onClick={() => handleInviteCurrentVendor(rfxEvents[0]?.id)}
+                    variant="outline"
+                    className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
+                  >
+                    🧪 Test: Invite Me to Latest RFx
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -428,16 +498,20 @@ export default function RfxManagement() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Title:</span>
-                        <span className="font-medium">{selectedRfxForView.title}</span>
+                        <span className="font-medium">
+                          {selectedRfxForView.title || selectedRfxForView.rfxTitle || selectedRfxForView.rfx?.title || 'Untitled RFx'}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Reference No:</span>
-                        <span className="font-medium">{selectedRfxForView.referenceNo || 'N/A'}</span>
+                        <span className="font-medium">
+                          {selectedRfxForView.referenceNo || selectedRfxForView.rfxReferenceNo || selectedRfxForView.rfx?.referenceNo || 'No Reference'}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Type:</span>
                         <Badge className="bg-blue-100 text-blue-800">
-                          {selectedRfxForView.type?.toUpperCase()}
+                          {(selectedRfxForView.type || selectedRfxForView.rfxType || selectedRfxForView.rfx?.type || 'rfx').toUpperCase()}
                         </Badge>
                       </div>
                       <div className="flex justify-between">
@@ -538,12 +612,14 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
-            <h3 className="text-lg font-medium text-foreground">{rfx.title || 'Untitled RFx'}</h3>
-            <Badge className={getTypeColor(rfx.type)}>
-              {rfx.type?.toUpperCase() || 'RFX'}
+            <h3 className="text-lg font-medium text-foreground">
+              {rfx.title || rfx.rfxTitle || rfx.rfx?.title || 'Untitled RFx'}
+            </h3>
+            <Badge className={getTypeColor(rfx.type || rfx.rfxType || rfx.rfx?.type)}>
+              {(rfx.type || rfx.rfxType || rfx.rfx?.type || 'RFX').toUpperCase()}
             </Badge>
-            <Badge className={getStatusColor(rfx.status)}>
-              {rfx.status?.toUpperCase() || 'DRAFT'}
+            <Badge className={getStatusColor(rfx.status || rfx.invitationStatus)}>
+              {(rfx.status || rfx.invitationStatus)?.toUpperCase() || 'DRAFT'}
             </Badge>
           </div>
           <p className="text-muted-foreground mb-3">{rfx.scope || 'No description available'}</p>
@@ -552,15 +628,15 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
               <Calendar className="w-4 h-4" />
               <span>Created: {rfx.createdAt ? new Date(rfx.createdAt).toLocaleDateString() : 'N/A'}</span>
             </div>
-            {rfx.submissionDeadline && (
+            {(rfx.submissionDeadline || rfx.rfxSubmissionDeadline || rfx.rfx?.submissionDeadline) && (
               <div className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
-                <span>Deadline: {new Date(rfx.submissionDeadline).toLocaleDateString()}</span>
+                <span>Deadline: {new Date(rfx.submissionDeadline || rfx.rfxSubmissionDeadline || rfx.rfx?.submissionDeadline).toLocaleDateString()}</span>
               </div>
             )}
             <div className="flex items-center space-x-1">
               <Users className="w-4 h-4" />
-              <span>Vendors: {rfx.invitedVendorsCount || 0}</span>
+              <span>Vendors: {rfx.invitedVendorsCount || rfx.vendorCount || rfx.rfx?.invitedVendorsCount || 0}</span>
             </div>
           </div>
         </div>
@@ -569,7 +645,7 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
             <Eye className="w-4 h-4 mr-1" />
             View
           </Button>
-          {isVendor && rfx.status === 'active' && (
+          {isVendor && (rfx.status || rfx.invitationStatus) === 'active' && (
             <Button variant="ghost" size="sm" onClick={() => onRespond(rfx)}>
               <Send className="w-4 h-4 mr-1" />
               Respond
@@ -581,7 +657,7 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
                 <MessageSquare className="w-4 h-4 mr-1" />
                 Responses
               </Button>
-              {rfx.status === 'closed' && rfx.type === 'rfq' && (
+              {(rfx.status === 'closed' && (rfx.type || rfx.rfxType || rfx.rfx?.type) === 'rfq') && (
                 <Button variant="ghost" size="sm" onClick={() => onCreatePO(rfx)}>
                   <ShoppingCart className="w-4 h-4 mr-1" />
                   Create PO
@@ -591,7 +667,7 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
                 <Target className="w-4 h-4 mr-1" />
                 Convert
               </Button>
-              {rfx.status === 'active' && (
+              {(rfx.status || rfx.invitationStatus) === 'active' && (
                 <Button variant="ghost" size="sm" onClick={() => onClose(rfx.id)}>
                   <X className="w-4 h-4 mr-1" />
                   Close

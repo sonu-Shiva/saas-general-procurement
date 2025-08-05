@@ -441,8 +441,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
       
+      const { selectedVendors, ...rfxFields } = req.body;
+      
       const rfxData = {
-        ...req.body,
+        ...rfxFields,
         createdBy: userId,
         referenceNo: `RFX-${Date.now()}`,
         status: req.body.status || "draft",
@@ -452,7 +454,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Creating RFx with data:", rfxData);
       const rfx = await storage.createRfxEvent(rfxData);
       console.log("RFx created successfully:", rfx);
-      res.json(rfx);
+      
+      // Create invitations for selected vendors only
+      if (selectedVendors && selectedVendors.length > 0) {
+        console.log(`Creating invitations for ${selectedVendors.length} selected vendors`);
+        const invitations = [];
+        
+        for (const vendorId of selectedVendors) {
+          try {
+            const invitation = await storage.createRfxInvitation({
+              rfxId: rfx.id,
+              vendorId: vendorId,
+              status: 'invited'
+            });
+            invitations.push(invitation);
+            console.log(`Created invitation for vendor ${vendorId} to RFx ${rfx.id}`);
+          } catch (error) {
+            console.error(`Failed to create invitation for vendor ${vendorId}:`, error);
+          }
+        }
+        
+        console.log(`Successfully created ${invitations.length} invitations`);
+        res.json({ 
+          rfx, 
+          invitationsCreated: invitations.length,
+          selectedVendors: selectedVendors.length 
+        });
+      } else {
+        console.log("No vendors selected for invitation");
+        res.json(rfx);
+      }
     } catch (error) {
       console.error("Error creating RFx:", error);
       res.status(500).json({ message: "Failed to create RFx", error: error.message });
@@ -631,25 +662,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Development helper: Create vendor invitations for latest RFx
-  app.post('/api/dev/create-vendor-invitations', async (req: any, res) => {
+  // Development helper: Invite current development vendor to a specific RFx
+  app.post('/api/dev/invite-to-rfx/:rfxId', async (req: any, res) => {
     try {
-      console.log("Creating vendor invitations for development...");
+      const rfxId = req.params.rfxId;
+      console.log(`Creating invitation for development vendor to RFx ${rfxId}...`);
       
-      // Get the latest RFx
-      const rfxEvents = await storage.getRfxEvents();
-      if (rfxEvents.length === 0) {
-        return res.status(404).json({ message: "No RFx events found" });
-      }
-
-      const latestRfx = rfxEvents[0]; // Assuming they're ordered by creation date
-      console.log("Latest RFx:", latestRfx.id, latestRfx.title);
-
-      // Get all vendors
-      const vendors = await storage.getVendors();
-      console.log("Found vendors:", vendors.length);
-
-      // Also ensure the current development user has a vendor profile if in vendor role
+      // Ensure the current development user has a vendor profile if in vendor role
       if (currentDevUser.role === 'vendor') {
         let devVendor = await storage.getVendorByUserId(currentDevUser.id);
         if (!devVendor) {
@@ -669,40 +688,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           console.log("Created development vendor:", devVendor.id);
         }
-        
-        // Add the development vendor to the vendors list if not already there
-        const isDevVendorInList = vendors.some(v => v.id === devVendor.id);
-        if (!isDevVendorInList) {
-          vendors.push(devVendor);
-          console.log("Added development vendor to invitation list");
-        }
-      }
 
-      // Create invitations for all vendors to the latest RFx
-      const invitations = [];
-      for (const vendor of vendors) {
         try {
           const invitation = await storage.createRfxInvitation({
-            rfxId: latestRfx.id,
-            vendorId: vendor.id,
+            rfxId: rfxId,
+            vendorId: devVendor.id,
             status: 'invited'
           });
-          invitations.push(invitation);
-          console.log(`Created invitation for vendor ${vendor.id} to RFx ${latestRfx.id}`);
+          console.log(`Created invitation for development vendor ${devVendor.id} to RFx ${rfxId}`);
+          
+          res.json({ 
+            message: `Development vendor invited to RFx`,
+            rfxId: rfxId,
+            vendorId: devVendor.id,
+            invitation: invitation
+          });
         } catch (error) {
-          console.log(`Invitation already exists for vendor ${vendor.id} to RFx ${latestRfx.id}`);
+          if (error.message?.includes('duplicate') || error.code === '23505') {
+            res.json({ 
+              message: `Development vendor already invited to this RFx`,
+              rfxId: rfxId,
+              vendorId: devVendor.id
+            });
+          } else {
+            throw error;
+          }
         }
+      } else {
+        res.status(400).json({ message: "User must be in vendor role to create vendor invitations" });
       }
-
-      res.json({ 
-        message: `Created ${invitations.length} vendor invitations for RFx ${latestRfx.title}`,
-        rfxId: latestRfx.id,
-        invitations: invitations.length,
-        totalVendors: vendors.length
-      });
     } catch (error) {
-      console.error("Error creating vendor invitations:", error);
-      res.status(500).json({ message: "Failed to create vendor invitations" });
+      console.error("Error inviting development vendor:", error);
+      res.status(500).json({ message: "Failed to invite development vendor" });
     }
   });
 

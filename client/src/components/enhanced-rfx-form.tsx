@@ -27,6 +27,9 @@ const rfxFormSchema = z.object({
   status: z.enum(["draft", "published"]).default("draft"),
   termsAndConditionsRequired: z.boolean().default(false),
   termsAndConditionsPath: z.string().optional(),
+  selectedVendors: z.array(z.string()).optional(), // Added for vendor selection
+  bomId: z.string().optional(), // Added for BOM selection
+  evaluationParameters: z.string().optional(), // Added for evaluation parameters
 });
 
 type RfxFormData = z.infer<typeof rfxFormSchema>;
@@ -64,6 +67,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
       budget: "",
       criteria: "",
       termsAndConditionsPath: "",
+      selectedVendors: [],
     },
   });
 
@@ -87,6 +91,8 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
           attachments: attachments.length > 0 ? attachments : [],
           termsAndConditionsRequired: data.termsAndConditionsRequired || false,
           termsAndConditionsPath: data.termsAndConditionsPath || null,
+          bomId: data.bomId || null, // Include bomId
+          evaluationParameters: data.evaluationParameters || '', // Include evaluationParameters
         };
 
         console.log('Submitting RFx data:', transformedData);
@@ -106,8 +112,8 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
 
         const rfxEvent = await response.json();
 
-        // Create vendor invitations
-        if (data.selectedVendors?.length) {
+        // Create vendor invitations if selectedVendors exist
+        if (data.selectedVendors && data.selectedVendors.length > 0) {
           await Promise.all(
             data.selectedVendors.map(vendorId =>
               fetch("/api/rfx/invitations", {
@@ -118,7 +124,22 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
               })
             )
           );
+        } else if (data.type === "rfi") {
+          // If it's an RFI and no vendors are selected, invite all vendors
+          if (Array.isArray(vendors) && vendors.length > 0) {
+            await Promise.all(
+              vendors.map(vendor =>
+                fetch("/api/rfx/invitations", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ rfxId: rfxEvent.id, vendorId: vendor.id }),
+                  credentials: "include",
+                })
+              )
+            );
+          }
         }
+
 
         return rfxEvent;
       } finally {
@@ -128,6 +149,8 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
     onSuccess: () => {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfx/invitations"] });
+
 
       // Close dialog and refresh data
       onClose();
@@ -160,6 +183,8 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
         attachments: attachments.length > 0 ? attachments : [],
         termsAndConditionsRequired: data.termsAndConditionsRequired || false,
         termsAndConditionsPath: data.termsAndConditionsPath || null,
+        bomId: data.bomId || null, // Include bomId
+        evaluationParameters: data.evaluationParameters || '', // Include evaluationParameters
       };
 
       console.log('Submitting RFx data:', transformedData);
@@ -190,6 +215,8 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
       // Reset form
       form.reset();
       setAttachments([]);
+      setTermsAndConditionsPath('');
+
 
       // Close dialog and refresh data
       onClose();
@@ -342,7 +369,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
             </div>
             <div className="space-y-2">
               <Label htmlFor="bomId">Select BOM</Label>
-              <Select onValueChange={(value) => form.setValue("bomId", value)}>
+              <Select onValueChange={(value) => form.setValue("bomId", value)} defaultValue={form.getValues("bomId")}>
                 <SelectTrigger className="border-2 border-border focus:border-primary">
                   <SelectValue placeholder="Choose a BOM (optional)" />
                 </SelectTrigger>
@@ -389,6 +416,7 @@ export default function EnhancedRfxForm({ onClose, onSuccess }: EnhancedRfxFormP
                         type="checkbox"
                         value={vendor.id}
                         {...form.register("selectedVendors")}
+                        defaultChecked={form.getValues("selectedVendors")?.includes(vendor.id)}
                         className="h-4 w-4 mt-1 rounded border-2 border-border text-primary focus:ring-2 focus:ring-primary"
                       />
                       <div className="flex-1 min-w-0">
