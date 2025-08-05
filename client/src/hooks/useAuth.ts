@@ -1,38 +1,56 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export function useAuth() {
+  const queryClient = useQueryClient();
+  
   const { data: user, isLoading, error } = useQuery({
     queryKey: ['/api/auth/user'],
     retry: false,
     refetchOnWindowFocus: false,
-    onError: (err) => {
-      console.error('Auth check failed:', err);
-    },
   });
 
   const login = () => {
-    window.location.href = "/api/login";
+    if (process.env.NODE_ENV === 'development') {
+      // For development, just refresh to get the dev user
+      window.location.reload();
+    } else {
+      window.location.href = "/api/login";
+    }
   };
 
   const logout = async () => {
     try {
-      // Make a logout request to the correct endpoint
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
+      // Clear React Query cache first
+      queryClient.clear();
       
-      console.log('Logout response:', response.status);
+      // Make logout request
+      await apiRequest('POST', '/api/auth/logout', {});
       
       // Force page refresh to clear all state
       window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
       // Force redirect anyway
+      queryClient.clear();
       window.location.href = '/';
+    }
+  };
+
+  const switchRole = async (newRole: string) => {
+    try {
+      const updatedUser = await apiRequest('PATCH', '/api/auth/user/role', { role: newRole });
+      
+      // Update the cache with the new user data
+      queryClient.setQueryData(['/api/auth/user'], updatedUser);
+      
+      // Invalidate all queries to refresh data with new role
+      queryClient.invalidateQueries();
+      
+      return updatedUser;
+    } catch (error) {
+      console.error('Role switch error:', error);
+      throw error;
     }
   };
 
@@ -43,5 +61,6 @@ export function useAuth() {
     error,
     login,
     logout,
+    switchRole,
   };
 }

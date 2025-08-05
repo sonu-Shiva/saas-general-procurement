@@ -44,36 +44,76 @@ import { ObjectStorageService } from "./objectStorage";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Development authentication setup
+  if (process.env.NODE_ENV === 'development') {
+    console.log('DEVELOPMENT MODE: Setting up simple auth system');
+    
+    // Simple development authentication
+    let currentDevUser = {
+      id: 'dev-user-123',
+      email: 'dev@sclen.com',
+      firstName: 'Developer',
+      lastName: 'User',
+      role: 'buyer_admin'
+    };
+    let isLoggedIn = true;
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      
-      // For development mode, create/return a mock user with session-stored role
-      if (process.env.NODE_ENV === 'development' && userId === 'dev-user-123') {
-        const userRole = req.session?.userRole || 'buyer_admin';
-        return res.json({
-          id: 'dev-user-123',
-          email: 'dev@sclen.com',
-          firstName: 'Developer',
-          lastName: 'User',
-          role: userRole
-        });
+    // Auth routes
+    app.get('/api/auth/user', (req, res) => {
+      if (!isLoggedIn) {
+        return res.status(401).json({ message: 'Not authenticated' });
       }
+      res.json(currentDevUser);
+    });
+
+    app.post('/api/auth/logout', (req, res) => {
+      isLoggedIn = false;
+      res.json({ success: true, message: 'Logged out successfully' });
+    });
+
+    app.post('/api/auth/login', (req, res) => {
+      isLoggedIn = true;
+      res.json(currentDevUser);
+    });
+
+    app.patch('/api/auth/user/role', (req, res) => {
+      if (!isLoggedIn) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      const { role } = req.body;
+      const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
       
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ message: 'Invalid role' });
+      }
+
+      currentDevUser.role = role;
+      res.json(currentDevUser);
+    });
+
+    // Auth middleware for protected routes
+    app.use('/api', (req, res, next) => {
+      // Skip auth check for auth routes and vendor discovery
+      if (req.path.startsWith('/auth/') || req.path === '/vendors/discover') {
+        return next();
+      }
+
+      if (!isLoggedIn) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      // Add mock user to request
+      (req as any).user = { claims: { sub: currentDevUser.id } };
+      next();
+    });
+  } else {
+    // Production auth setup
+    await setupAuth(app);
+  }
 
   // Object storage routes for Terms & Conditions upload
-  app.post('/api/objects/upload', isAuthenticated, async (req, res) => {
+  app.post('/api/objects/upload', async (req, res) => {
     try {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
@@ -98,85 +138,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Development logout endpoint
-  app.post('/api/auth/logout', async (req, res) => {
-    try {
-      if (process.env.NODE_ENV === 'development') {
-        // Clear any session data
-        req.session?.destroy?.(() => {});
-        res.clearCookie('connect.sid');
-        return res.json({ success: true, message: 'Logged out successfully' });
-      }
-      
-      // In production, use proper logout
-      req.logout(() => {
-        res.json({ success: true, message: 'Logged out successfully' });
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-      res.status(500).json({ message: "Failed to logout" });
-    }
-  });
-
-  // Development role switching endpoint
-  app.patch('/api/auth/user/role', async (req: any, res) => {
-    try {
-      const { role } = req.body;
-      
-      if (process.env.NODE_ENV === 'development') {
-        // Validate role
-        const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
-        if (!validRoles.includes(role)) {
-          return res.status(400).json({ message: 'Invalid role' });
-        }
-        
-        // For development, store role in session or return updated user
-        req.session = req.session || {};
-        req.session.userRole = role;
-        
-        return res.json({
-          id: 'dev-user-123',
-          email: 'dev@sclen.com',
-          firstName: 'Developer',
-          lastName: 'User',
-          role: role
-        });
-      }
-      
-      const userId = req.user.claims.sub;
-
-      if (!['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Update user role
-      const updatedUser = await storage.upsertUser({
-        id: userId,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profileImageUrl: user.profileImageUrl,
-        role: role,
-        organizationId: user.organizationId,
-        isActive: user.isActive,
-      });
-
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      res.status(500).json({ message: "Failed to update user role" });
-    }
-  });
-
   // Dashboard routes
-  app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/dashboard/stats', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
       const stats = await storage.getDashboardStats(userId);
       res.json(stats);
     } catch (error) {

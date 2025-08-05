@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
@@ -73,7 +72,7 @@ const roleOptions = [
       "Manage product catalogue",
       "Respond to RFx requests",
       "Participate in auctions",
-      "View order history"
+      "View purchase orders"
     ],
     color: "bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300"
   }
@@ -81,32 +80,11 @@ const roleOptions = [
 
 export default function RoleSelector({ open, onClose, currentRole }: RoleSelectorProps) {
   const [selectedRole, setSelectedRole] = useState<string>(currentRole || "");
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
+  const { switchRole } = useAuth();
 
-
-  const updateRoleMutation = useMutation({
-    mutationFn: async (role: string) => {
-      console.log("Updating role to:", role);
-      return await apiRequest("PATCH", "/api/auth/user/role", { role });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "Role Updated",
-        description: "Your role has been successfully updated. You may need to refresh the page to see all changes.",
-      });
-      onClose();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update role",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleRoleSelect = () => {
+  const handleRoleSelect = async () => {
     if (!selectedRole) {
       toast({
         title: "No Role Selected",
@@ -115,7 +93,29 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
       });
       return;
     }
-    updateRoleMutation.mutate(selectedRole);
+
+    if (selectedRole === currentRole) {
+      onClose();
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await switchRole(selectedRole);
+      toast({
+        title: "Role Updated",
+        description: `Successfully switched to ${roleOptions.find(r => r.id === selectedRole)?.title}`,
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update role",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -167,11 +167,11 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Key Features:</p>
+                    <h4 className="font-medium text-sm">Key Features:</h4>
                     <ul className="space-y-1">
                       {role.features.map((feature, index) => (
                         <li key={index} className="text-sm text-muted-foreground flex items-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground mr-2"></div>
+                          <div className="w-1 h-1 rounded-full bg-muted-foreground mr-2"></div>
                           {feature}
                         </li>
                       ))}
@@ -182,16 +182,16 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
             );
           })}
         </div>
-        
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+
+        <div className="flex justify-end space-x-3 mt-8">
+          <Button variant="outline" onClick={onClose} disabled={isUpdating}>
             Cancel
           </Button>
           <Button 
-            onClick={handleRoleSelect}
-            disabled={!selectedRole || selectedRole === currentRole || updateRoleMutation.isPending}
+            onClick={handleRoleSelect} 
+            disabled={!selectedRole || isUpdating}
           >
-            {updateRoleMutation.isPending ? "Updating..." : "Update Role"}
+            {isUpdating ? "Updating..." : "Switch Role"}
           </Button>
         </div>
       </DialogContent>
