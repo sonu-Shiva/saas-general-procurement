@@ -570,8 +570,11 @@ export default function VendorPortal() {
                             <Badge className={getRfxTypeColor(invitation.rfx.type)}>
                               {invitation.rfx.type.toUpperCase()}
                             </Badge>
+                            <Badge className={invitation.status === 'responded' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}>
+                              {invitation.status === 'responded' ? 'RESPONDED' : (invitation.rfx.status?.toUpperCase() || 'ACTIVE')}
+                            </Badge>
                             {isExpired && <Badge variant="destructive">Expired</Badge>}
-                            {!isExpired && canRespond && <Badge className="bg-green-100 text-green-700">Action Required</Badge>}
+                            {!isExpired && canRespond && invitation.status !== 'responded' && <Badge className="bg-blue-100 text-blue-700">Action Required</Badge>}
                           </div>
                         </div>
                       </div>
