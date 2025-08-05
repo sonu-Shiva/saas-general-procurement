@@ -75,11 +75,8 @@ export default function VendorPortal() {
 
   const pendingInvitations = invitations.filter((inv: any) => {
     const invStatus = inv.status || 'invited';
-    const rfxStatus = inv.rfxStatus || 'active';
     const isNotExpired = inv.rfxDueDate ? new Date(inv.rfxDueDate) > new Date() : true;
-    return invStatus === 'invited' && 
-           ['active', 'draft'].includes(rfxStatus) && 
-           isNotExpired;
+    return invStatus === 'invited' && isNotExpired;
   });
   
   const respondedInvitations = invitations.filter((inv: any) => inv.status === 'responded');
