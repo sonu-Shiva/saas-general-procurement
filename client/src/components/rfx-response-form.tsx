@@ -41,9 +41,11 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Handle nested RFx data structure properly
   const rfxData = rfx.rfx || rfx;
-  const rfxType = (rfxData.type || rfx.type || rfx.rfxType || 'rfx').toUpperCase();
-  const termsPath = rfxData.termsAndConditionsPath || rfx.rfxTermsAndConditionsPath;
+  const rfxType = (rfxData.type || rfx.rfxType || rfx.type || 'rfx').toUpperCase();
+  const termsPath = rfxData.termsAndConditionsPath || rfx.rfxTermsAndConditionsPath || rfx.termsAndConditionsPath;
+  const rfxId = rfx.rfxId || rfx.id || rfxData.id;
 
   const form = useForm<RfxResponseFormData>({
     resolver: zodResolver(rfxResponseSchema),
@@ -60,9 +62,9 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
 
   // Check if terms are already accepted
   const { data: termsStatus } = useQuery({
-    queryKey: ['/api/terms/check', rfx.rfxId || rfx.id],
+    queryKey: ['/api/terms/check', rfxId],
     queryFn: async () => {
-      const response = await fetch(`/api/terms/check?entityType=rfx&entityId=${rfx.rfxId || rfx.id}`, {
+      const response = await fetch(`/api/terms/check?entityType=rfx&entityId=${rfxId}`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -70,7 +72,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
       }
       return { accepted: false };
     },
-    enabled: !!termsPath,
+    enabled: !!termsPath && !!rfxId,
   });
 
   useEffect(() => {
@@ -130,7 +132,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           entityType: 'rfx',
-          entityId: rfx.rfxId || rfx.id,
+          entityId: rfxId,
           termsAndConditionsPath: termsPath,
         }),
         credentials: 'include',
@@ -144,8 +146,11 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
           title: "Terms Accepted",
           description: "You can now submit your response",
         });
+      } else {
+        throw new Error('Failed to accept terms');
       }
     } catch (error) {
+      console.error('Terms acceptance error:', error);
       toast({
         title: "Error",
         description: "Failed to accept terms",
@@ -156,11 +161,13 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
 
   const submitResponseMutation = useMutation({
     mutationFn: async (data: RfxResponseFormData) => {
+      console.log('Submitting RFx response with data:', { rfxId, ...data, attachments });
+      
       const response = await fetch("/api/vendor/rfx-responses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          rfxId: rfx.rfxId || rfx.id,
+          rfxId: rfxId,
           ...data,
           attachments,
         }),
@@ -168,8 +175,14 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to submit response");
+        const errorText = await response.text();
+        console.error('Response submission failed:', response.status, errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || "Failed to submit response");
+        } catch {
+          throw new Error(`Failed to submit response: ${response.status}`);
+        }
       }
 
       return response.json();

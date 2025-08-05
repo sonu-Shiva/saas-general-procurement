@@ -59,6 +59,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql, like, inArray, isNull, or } from "drizzle-orm";
+import { nanoid } from "nanoid";
 
 export interface IStorage {
   // User operations - mandatory for Replit Auth
@@ -168,19 +169,21 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private db = db; // Assuming db is initialized and exported from ./db
+
   // User operations - mandatory for Replit Auth
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await this.db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
@@ -196,33 +199,33 @@ export class DatabaseStorage implements IStorage {
 
   // Organization operations
   async createOrganization(org: InsertOrganization): Promise<Organization> {
-    const [newOrg] = await db.insert(organizations).values(org).returning();
+    const [newOrg] = await this.db.insert(organizations).values(org).returning();
     return newOrg;
   }
 
   async getOrganization(id: string): Promise<Organization | undefined> {
-    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    const [org] = await this.db.select().from(organizations).where(eq(organizations.id, id));
     return org;
   }
 
   // Vendor operations
   async createVendor(vendor: InsertVendor): Promise<Vendor> {
-    const [newVendor] = await db.insert(vendors).values(vendor).returning();
+    const [newVendor] = await this.db.insert(vendors).values(vendor).returning();
     return newVendor;
   }
 
   async getVendor(id: string): Promise<Vendor | undefined> {
-    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id));
+    const [vendor] = await this.db.select().from(vendors).where(eq(vendors.id, id));
     return vendor;
   }
 
   async getVendorByUserId(userId: string): Promise<Vendor | undefined> {
-    const [vendor] = await db.select().from(vendors).where(eq(vendors.userId, userId));
+    const [vendor] = await this.db.select().from(vendors).where(eq(vendors.userId, userId));
     return vendor;
   }
 
   async getVendors(filters?: { status?: string; category?: string; search?: string }): Promise<Vendor[]> {
-    let query = db.select().from(vendors);
+    let query = this.db.select().from(vendors);
 
     const conditions = [];
 
@@ -252,7 +255,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateVendor(id: string, updates: Partial<InsertVendor>): Promise<Vendor> {
-    const [updatedVendor] = await db
+    const [updatedVendor] = await this.db
       .update(vendors)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(vendors.id, id))
@@ -261,7 +264,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteVendor(id: string): Promise<boolean> {
-    const result = await db.delete(vendors).where(eq(vendors.id, id));
+    const result = await this.db.delete(vendors).where(eq(vendors.id, id));
     return result.rowCount > 0;
   }
 
@@ -272,19 +275,19 @@ export class DatabaseStorage implements IStorage {
 
     if (category.parentId) {
       // Get parent category to build hierarchical code
-      const [parent] = await db.select().from(productCategories).where(eq(productCategories.id, category.parentId));
+      const [parent] = await this.db.select().from(productCategories).where(eq(productCategories.id, category.parentId));
       if (!parent) {
         throw new Error('Parent category not found');
       }
 
       // Get sibling count to determine next number
-      const siblings = await db.select().from(productCategories).where(eq(productCategories.parentId, category.parentId));
+      const siblings = await this.db.select().from(productCategories).where(eq(productCategories.parentId, category.parentId));
       const nextSiblingNumber = siblings.length + 1;
 
       hierarchicalCode = `${parent.code}.${nextSiblingNumber}`;
     } else {
       // Root category - get count of root categories
-      const rootCategories = await db.select().from(productCategories).where(isNull(productCategories.parentId));
+      const rootCategories = await this.db.select().from(productCategories).where(isNull(productCategories.parentId));
       const nextRootNumber = rootCategories.length + 1;
 
       hierarchicalCode = nextRootNumber.toString();
@@ -295,17 +298,17 @@ export class DatabaseStorage implements IStorage {
       code: hierarchicalCode
     };
 
-    const [newCategory] = await db.insert(productCategories).values(categoryWithCode).returning();
+    const [newCategory] = await this.db.insert(productCategories).values(categoryWithCode).returning();
     return newCategory;
   }
 
   async getProductCategory(id: string): Promise<ProductCategory | undefined> {
-    const [category] = await db.select().from(productCategories).where(eq(productCategories.id, id));
+    const [category] = await this.db.select().from(productCategories).where(eq(productCategories.id, id));
     return category;
   }
 
   async getProductCategories(filters?: { parentId?: string; level?: number; isActive?: boolean }): Promise<ProductCategory[]> {
-    let query = db.select().from(productCategories);
+    let query = this.db.select().from(productCategories);
 
     const conditions = [];
 
@@ -333,7 +336,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProductCategory(id: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory> {
-    const [updatedCategory] = await db
+    const [updatedCategory] = await this.db
       .update(productCategories)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(productCategories.id, id))
@@ -342,11 +345,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProductCategory(id: string): Promise<void> {
-    await db.delete(productCategories).where(eq(productCategories.id, id));
+    await this.db.delete(productCategories).where(eq(productCategories.id, id));
   }
 
   async getProductCategoryHierarchy(): Promise<any[]> {
-    const allCategories = await db.select().from(productCategories).orderBy(asc(productCategories.name));
+    const allCategories = await this.db.select().from(productCategories).orderBy(asc(productCategories.name));
 
     const rootCategories: any[] = [];
     const categoryMap = new Map();
@@ -371,17 +374,17 @@ export class DatabaseStorage implements IStorage {
 
   // Product operations
   async createProduct(product: InsertProduct): Promise<Product> {
-    const [newProduct] = await db.insert(products).values(product).returning();
+    const [newProduct] = await this.db.insert(products).values(product).returning();
     return newProduct;
   }
 
   async getProduct(id: string): Promise<Product | undefined> {
-    const [product] = await db.select().from(products).where(eq(products.id, id));
+    const [product] = await this.db.select().from(products).where(eq(products.id, id));
     return product;
   }
 
   async getProducts(filters?: { category?: string; categoryId?: string; search?: string; isActive?: boolean }): Promise<Product[]> {
-    let query = db.select().from(products);
+    let query = this.db.select().from(products);
 
     const conditions = [];
 
@@ -411,7 +414,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product> {
-    const [updatedProduct] = await db
+    const [updatedProduct] = await this.db
       .update(products)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(products.id, id))
@@ -420,22 +423,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProduct(id: string): Promise<void> {
-    await db.delete(products).where(eq(products.id, id));
+    await this.db.delete(products).where(eq(products.id, id));
   }
 
   // BOM operations
   async createBom(bom: InsertBom): Promise<Bom> {
-    const [newBom] = await db.insert(boms).values(bom).returning();
+    const [newBom] = await this.db.insert(boms).values(bom).returning();
     return newBom;
   }
 
   async getBom(id: string): Promise<Bom | undefined> {
-    const [bom] = await db.select().from(boms).where(eq(boms.id, id));
+    const [bom] = await this.db.select().from(boms).where(eq(boms.id, id));
     return bom;
   }
 
   async getBoms(createdBy?: string): Promise<Bom[]> {
-    let query = db.select().from(boms);
+    let query = this.db.select().from(boms);
 
     if (createdBy) {
       query = query.where(eq(boms.createdBy, createdBy));
@@ -445,7 +448,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkBomExists(name: string, version: string): Promise<boolean> {
-    const [existingBom] = await db
+    const [existingBom] = await this.db
       .select()
       .from(boms)
       .where(and(eq(boms.name, name), eq(boms.version, version)))
@@ -481,20 +484,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBomItem(bomItem: InsertBomItem): Promise<BomItem> {
-    const [newBomItem] = await db.insert(bomItems).values(bomItem).returning();
+    const [newBomItem] = await this.db.insert(bomItems).values(bomItem).returning();
     return newBomItem;
   }
 
   async getBomItems(bomId: string): Promise<BomItem[]> {
-    return await db.select().from(bomItems).where(eq(bomItems.bomId, bomId));
+    return await this.db.select().from(bomItems).where(eq(bomItems.bomId, bomId));
   }
 
   async deleteBomItems(bomId: string): Promise<void> {
-    await db.delete(bomItems).where(eq(bomItems.bomId, bomId));
+    await this.db.delete(bomItems).where(eq(bomItems.bomId, bomId));
   }
 
   async updateBom(id: string, updates: Partial<InsertBom>): Promise<Bom> {
-    const [updatedBom] = await db
+    const [updatedBom] = await this.db
       .update(boms)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(boms.id, id))
@@ -506,11 +509,11 @@ export class DatabaseStorage implements IStorage {
     // Delete BOM items first due to foreign key constraint
     await this.deleteBomItems(id);
     // Delete the BOM
-    await db.delete(boms).where(eq(boms.id, id));
+    await this.db.delete(boms).where(eq(boms.id, id));
   }
 
   async searchVendors(query: string, filters?: { location?: string; category?: string; certifications?: string[] }): Promise<Vendor[]> {
-    let dbQuery = db.select().from(vendors);
+    let dbQuery = this.db.select().from(vendors);
 
     const conditions = [];
 
@@ -540,17 +543,17 @@ export class DatabaseStorage implements IStorage {
 
   // RFx operations
   async createRfxEvent(rfx: InsertRfxEvent): Promise<RfxEvent> {
-    const [newRfx] = await db.insert(rfxEvents).values(rfx).returning();
+    const [newRfx] = await this.db.insert(rfxEvents).values(rfx).returning();
     return newRfx;
   }
 
   async getRfxEvent(id: string): Promise<RfxEvent | undefined> {
-    const [rfx] = await db.select().from(rfxEvents).where(eq(rfxEvents.id, id));
+    const [rfx] = await this.db.select().from(rfxEvents).where(eq(rfxEvents.id, id));
     return rfx;
   }
 
   async getRfxEvents(filters?: { status?: string; type?: string; createdBy?: string }): Promise<RfxEvent[]> {
-    let query = db.select().from(rfxEvents);
+    let query = this.db.select().from(rfxEvents);
 
     if (filters) {
       const conditions = [];
@@ -576,7 +579,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateRfxEvent(id: string, updates: Partial<InsertRfxEvent>): Promise<RfxEvent> {
-    const [rfx] = await db
+    const [rfx] = await this.db
       .update(rfxEvents)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(rfxEvents.id, id))
@@ -585,7 +588,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateRfxEventStatus(id: string, status: string): Promise<RfxEvent> {
-    const [updatedRfx] = await db
+    const [updatedRfx] = await this.db
       .update(rfxEvents)
       .set({
         status: status as any,
@@ -597,22 +600,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRfxInvitation(invitation: InsertRfxInvitation): Promise<RfxInvitation> {
-    const [newInvitation] = await db.insert(rfxInvitations).values(invitation).returning();
+    const [newInvitation] = await this.db.insert(rfxInvitations).values(invitation).returning();
     return newInvitation;
   }
 
   async getRfxInvitations(rfxId: string): Promise<RfxInvitation[]> {
-    return await db.select().from(rfxInvitations).where(eq(rfxInvitations.rfxId, rfxId));
+    return await this.db.select().from(rfxInvitations).where(eq(rfxInvitations.rfxId, rfxId));
   }
 
   async getRfxInvitation(rfxId: string, vendorId: string): Promise<RfxInvitation | undefined> {
-    const [invitation] = await db.select().from(rfxInvitations)
+    const [invitation] = await this.db.select().from(rfxInvitations)
       .where(and(eq(rfxInvitations.rfxId, rfxId), eq(rfxInvitations.vendorId, vendorId)));
     return invitation;
   }
 
   async getRfxInvitationsByVendor(vendorId: string): Promise<any[]> {
-    const invitations = await db.select({
+    const invitations = await this.db.select({
       rfxId: rfxInvitations.rfxId,
       vendorId: rfxInvitations.vendorId,
       status: rfxInvitations.status,
@@ -641,7 +644,7 @@ export class DatabaseStorage implements IStorage {
 
   async getRfxInvitationsForVendor(vendorId: string): Promise<any[]> {
     // Get RFx invitations with full RFx details for vendor portal
-    const results = await db
+    const results = await this.db
       .select({
         rfxId: rfxInvitations.rfxId,
         vendorId: rfxInvitations.vendorId,
@@ -670,9 +673,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateRfxInvitationStatus(rfxId: string, vendorId: string, status: string): Promise<void> {
-    await db
+    await this.db
       .update(rfxInvitations)
-      .set({ 
+      .set({
         status: status as any,
         respondedAt: status === 'responded' ? new Date() : undefined
       })
@@ -684,25 +687,29 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async createRfxResponse(data: any): Promise<RfxResponse> {
-    const [response] = await db.insert(rfxResponses).values({
-      rfxId: data.rfxId,
-      vendorId: data.vendorId,
-      response: {
-        proposedPrice: data.proposedPrice,
-        deliveryTime: data.deliveryTime,
-        technicalSpecification: data.technicalSpecification,
-        additionalNotes: data.additionalNotes,
-        isDraft: data.isDraft || false,
-      },
-      quotedPrice: data.proposedPrice?.toString(),
-      deliveryTerms: data.deliveryTime,
-      paymentTerms: data.additionalNotes,
-      leadTime: null,
-      attachments: data.attachments || [],
-    }).returning();
+  async createRfxResponse(responseData: any): Promise<RfxResponse> {
+    console.log('Storage: Creating RFx response with data:', responseData);
 
-    return response;
+    const responseId = nanoid();
+    const insertData = {
+      id: responseId,
+      rfxId: responseData.rfxId,
+      vendorId: responseData.vendorId,
+      response: responseData.response,
+      quotedPrice: responseData.quotedPrice ? parseFloat(responseData.quotedPrice.replace(/[^\d.-]/g, '')) : null,
+      deliveryTerms: responseData.deliveryTerms,
+      paymentTerms: responseData.paymentTerms,
+      leadTime: responseData.leadTime,
+      attachments: responseData.attachments ? JSON.stringify(responseData.attachments) : null,
+      termsAccepted: responseData.termsAccepted || false,
+      submittedAt: new Date(),
+    };
+
+    console.log('Storage: Insert data prepared:', insertData);
+
+    const response = await this.db.insert(rfxResponses).values(insertData).returning();
+    console.log('Storage: RFx response created successfully:', response[0]);
+    return response[0];
   }
 
   async getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]> {
@@ -716,7 +723,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(rfxResponses.vendorId, filters.vendorId));
     }
 
-    return await db
+    return await this.db
       .select()
       .from(rfxResponses)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -724,7 +731,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]> {
-    return await db
+    return await this.db
       .select()
       .from(rfxResponses)
       .where(eq(rfxResponses.vendorId, vendorId))
@@ -732,7 +739,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getChildRfxEvents(parentRfxId: string): Promise<RfxEvent[]> {
-    return await db
+    return await this.db
       .select()
       .from(rfxEvents)
       .where(eq(rfxEvents.parentRfxId, parentRfxId))
@@ -741,12 +748,12 @@ export class DatabaseStorage implements IStorage {
 
   // Auction operations
   async createAuction(auction: InsertAuction): Promise<Auction> {
-    const [newAuction] = await db.insert(auctions).values(auction).returning();
+    const [newAuction] = await this.db.insert(auctions).values(auction).returning();
     return newAuction;
   }
 
   async getAuction(id: string): Promise<Auction | undefined> {
-    const [auction] = await db.select().from(auctions).where(eq(auctions.id, id));
+    const [auction] = await this.db.select().from(auctions).where(eq(auctions.id, id));
 
     if (auction) {
       // Get the latest bid to update current bid information
@@ -772,7 +779,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(auctions.createdBy, filters.createdBy));
     }
 
-    const auctionList = await db
+    const auctionList = await this.db
       .select()
       .from(auctions)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -793,7 +800,7 @@ export class DatabaseStorage implements IStorage {
   async getAuctionsForVendor(vendorUserId: string): Promise<Auction[]> {
     // For now, return all live and scheduled auctions for vendor role users
     // In production, this would be filtered by proper vendor invitation/assignment
-    const auctionList = await db
+    const auctionList = await this.db
       .select()
       .from(auctions)
       .where(or(eq(auctions.status, 'live'), eq(auctions.status, 'scheduled')))
@@ -813,7 +820,7 @@ export class DatabaseStorage implements IStorage {
 
   async getRfxEventsForVendor(vendorId: string): Promise<RfxEvent[]> {
     // Get RFx events where the vendor is invited to participate
-    const results = await db
+    const results = await this.db
       .select({
         id: rfxEvents.id,
         title: rfxEvents.title,
@@ -844,7 +851,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]> {
-    return await db
+    return await this.db
       .select()
       .from(rfxResponses)
       .where(eq(rfxResponses.vendorId, vendorId))
@@ -852,7 +859,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAuction(id: string, updates: Partial<InsertAuction>): Promise<Auction> {
-    const [result] = await db.update(auctions)
+    const [result] = await this.db.update(auctions)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(auctions.id, id))
       .returning();
@@ -860,7 +867,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAuctionStatus(id: string, status: string): Promise<Auction> {
-    const [result] = await db.update(auctions)
+    const [result] = await this.db.update(auctions)
       .set({ status, updatedAt: new Date() })
       .where(eq(auctions.id, id))
       .returning();
@@ -868,22 +875,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAuctionCurrentBid(id: string, amount: string): Promise<void> {
-    await db.update(auctions)
+    await this.db.update(auctions)
       .set({ currentBid: amount, updatedAt: new Date() })
       .where(eq(auctions.id, id));
   }
 
   async createAuctionParticipant(participant: InsertAuctionParticipant): Promise<AuctionParticipant> {
-    const [newParticipant] = await db.insert(auctionParticipants).values(participant).returning();
+    const [newParticipant] = await this.db.insert(auctionParticipants).values(participant).returning();
     return newParticipant;
   }
 
   async getAuctionParticipants(auctionId: string): Promise<AuctionParticipant[]> {
-    return await db.select().from(auctionParticipants).where(eq(auctionParticipants.auctionId, auctionId));
+    return await this.db.select().from(auctionParticipants).where(eq(auctionParticipants.auctionId, auctionId));
   }
 
   async createBid(bid: InsertBid): Promise<Bid> {
-    const [newBid] = await db.insert(bids).values(bid).returning();
+    const [newBid] = await this.db.insert(bids).values(bid).returning();
     return newBid;
   }
 
@@ -898,7 +905,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(bids.vendorId, filters.vendorId));
     }
 
-    return await db
+    return await this.db
       .select()
       .from(bids)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -907,13 +914,13 @@ export class DatabaseStorage implements IStorage {
 
   async getAuctionBids(auctionId: string): Promise<Bid[]> {
     console.log(`DEBUG: Getting bids for auction ${auctionId}`);
-    const bidResults = await db.select().from(bids).where(eq(bids.auctionId, auctionId)).orderBy(desc(bids.timestamp));
+    const bidResults = await this.db.select().from(bids).where(eq(bids.auctionId, auctionId)).orderBy(desc(bids.timestamp));
     console.log(`DEBUG: Raw bid results from DB:`, bidResults);
     return bidResults;
   }
 
   async getLatestBid(auctionId: string): Promise<Bid | undefined> {
-    const [latestBid] = await db
+    const [latestBid] = await this.db
       .select()
       .from(bids)
       .where(eq(bids.auctionId, auctionId))
@@ -924,12 +931,12 @@ export class DatabaseStorage implements IStorage {
 
   // Purchase Order operations
   async createPurchaseOrder(po: InsertPurchaseOrder): Promise<PurchaseOrder> {
-    const [newPo] = await db.insert(purchaseOrders).values(po).returning();
+    const [newPo] = await this.db.insert(purchaseOrders).values(po).returning();
     return newPo;
   }
 
   async getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined> {
-    const [po] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id));
+    const [po] = await this.db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id));
     return po;
   }
 
@@ -948,7 +955,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(purchaseOrders.createdBy, filters.createdBy));
     }
 
-    return await db
+    return await this.db
       .select()
       .from(purchaseOrders)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -956,7 +963,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePurchaseOrder(id: string, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
-    const [po] = await db
+    const [po] = await this.db
       .update(purchaseOrders)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(purchaseOrders.id, id))
@@ -965,26 +972,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPoLineItem(lineItem: InsertPoLineItem): Promise<PoLineItem> {
-    const [newLineItem] = await db.insert(poLineItems).values(lineItem).returning();
+    const [newLineItem] = await this.db.insert(poLineItems).values(lineItem).returning();
     return newLineItem;
   }
 
   async getPoLineItems(poId: string): Promise<PoLineItem[]> {
-    return await db.select().from(poLineItems).where(eq(poLineItems.poId, poId));
+    return await this.db.select().from(poLineItems).where(eq(poLineItems.poId, poId));
   }
 
   // Approval operations
   async createApproval(approval: InsertApproval): Promise<Approval> {
-    const [newApproval] = await db.insert(approvals).values(approval).returning();
+    const [newApproval] = await this.db.insert(approvals).values(approval).returning();
     return newApproval;
   }
 
   async getApprovals(approverId: string): Promise<Approval[]> {
-    return await db.select().from(approvals).where(eq(approvals.approverId, approverId)).orderBy(desc(approvals.createdAt));
+    return await this.db.select().from(approvals).where(eq(approvals.approverId, approverId)).orderBy(desc(approvals.createdAt));
   }
 
   async updateApproval(id: string, updates: Partial<InsertApproval>): Promise<Approval> {
-    const [approval] = await db
+    const [approval] = await this.db
       .update(approvals)
       .set({ ...updates, approvedAt: updates.status === 'approved' ? new Date() : undefined })
       .where(eq(approvals.id, id))
@@ -994,33 +1001,33 @@ export class DatabaseStorage implements IStorage {
 
   // Notification operations
   async createNotification(notification: InsertNotification): Promise<Notification> {
-    const [newNotification] = await db.insert(notifications).values(notification).returning();
+    const [newNotification] = await this.db.insert(notifications).values(notification).returning();
     return newNotification;
   }
 
   async getNotifications(userId: string): Promise<Notification[]> {
-    return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+    return await this.db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
   }
 
   async markNotificationAsRead(id: string): Promise<void> {
-    await db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.id, id));
+    await this.db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.id, id));
   }
 
   async deletePurchaseOrder(id: string): Promise<void> {
     // Delete line items first (due to foreign key constraint)
-    await db.delete(poLineItems).where(eq(poLineItems.poId, id));
+    await this.db.delete(poLineItems).where(eq(poLineItems.poId, id));
     // Delete the purchase order
-    await db.delete(purchaseOrders).where(eq(purchaseOrders.id, id));
+    await this.db.delete(purchaseOrders).where(eq(purchaseOrders.id, id));
   }
 
   // Direct Procurement operations
   async createDirectProcurementOrder(order: InsertDirectProcurementOrder): Promise<DirectProcurementOrder> {
-    const [created] = await db.insert(directProcurementOrders).values(order).returning();
+    const [created] = await this.db.insert(directProcurementOrders).values(order).returning();
     return created;
   }
 
   async getDirectProcurementOrders(userId?: string): Promise<any[]> {
-    let query = db.select({
+    let query = this.db.select({
       id: directProcurementOrders.id,
       referenceNo: directProcurementOrders.referenceNo,
       bomId: directProcurementOrders.bomId,
@@ -1057,7 +1064,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDirectProcurementOrderById(id: string): Promise<DirectProcurementOrder | undefined> {
-    const [order] = await db.select({
+    const [order] = await this.db.select({
       id: directProcurementOrders.id,
       referenceNo: directProcurementOrders.referenceNo,
       bomId: directProcurementOrders.bomId,
@@ -1084,7 +1091,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateDirectProcurementOrderStatus(id: string, status: string): Promise<DirectProcurementOrder> {
-    const [updated] = await db.update(directProcurementOrders)
+    const [updated] = await this.db.update(directProcurementOrders)
       .set({
         status: status as any,
         updatedAt: new Date()
@@ -1095,7 +1102,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteDirectProcurementOrder(id: string): Promise<void> {
-    await db.delete(directProcurementOrders).where(eq(directProcurementOrders.id, id));
+    await this.db.delete(directProcurementOrders).where(eq(directProcurementOrders.id, id));
   }
 
   // Dashboard operations
@@ -1158,7 +1165,7 @@ export class DatabaseStorage implements IStorage {
 
   // Terms & Conditions operations
   async recordTermsAcceptance(acceptance: InsertTermsAcceptance): Promise<TermsAcceptance> {
-    const [newAcceptance] = await db
+    const [newAcceptance] = await this.db
       .insert(termsAcceptance)
       .values(acceptance)
       .onConflictDoUpdate({
@@ -1174,7 +1181,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkTermsAcceptance(vendorId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined> {
-    const [acceptance] = await db
+    const [acceptance] = await this.db
       .select()
       .from(termsAcceptance)
       .where(
@@ -1188,7 +1195,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTermsAcceptance(userId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined> {
-    const [acceptance] = await db
+    const [acceptance] = await this.db
       .select()
       .from(termsAcceptance)
       .where(
@@ -1202,7 +1209,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTermsAcceptances(vendorId: string): Promise<TermsAcceptance[]> {
-    return await db
+    return await this.db
       .select()
       .from(termsAcceptance)
       .where(eq(termsAcceptance.vendorId, vendorId))

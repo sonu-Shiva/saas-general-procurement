@@ -679,6 +679,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit RFx response
   app.post('/api/vendor/rfx-responses', async (req: any, res) => {
     try {
+      console.log('RFx response submission request:', req.body);
+      
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
@@ -693,20 +695,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Vendor profile not found" });
       }
 
+      if (!req.body.rfxId) {
+        return res.status(400).json({ message: "RFx ID is required" });
+      }
+
       const responseData = {
         ...req.body,
         vendorId: vendor.id,
       };
 
+      console.log('Creating RFx response with data:', responseData);
       const response = await storage.createRfxResponse(responseData);
+      console.log('RFx response created successfully:', response.id);
       
       // Update invitation status to 'responded'
-      await storage.updateRfxInvitationStatus(req.body.rfxId, vendor.id, 'responded');
+      try {
+        await storage.updateRfxInvitationStatus(req.body.rfxId, vendor.id, 'responded');
+        console.log('Updated invitation status to responded');
+      } catch (invitationError) {
+        console.error('Failed to update invitation status:', invitationError);
+        // Don't fail the entire request if invitation update fails
+      }
       
       res.json(response);
     } catch (error) {
       console.error("Error creating RFx response:", error);
-      res.status(500).json({ message: "Failed to create RFx response" });
+      res.status(500).json({ 
+        message: "Failed to create RFx response", 
+        error: error.message 
+      });
     }
   });
 
