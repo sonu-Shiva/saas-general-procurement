@@ -266,7 +266,35 @@ export class DatabaseStorage implements IStorage {
 
   // Product Category operations
   async createProductCategory(category: InsertProductCategory): Promise<ProductCategory> {
-    const [newCategory] = await db.insert(productCategories).values(category).returning();
+    // Generate hierarchical code automatically
+    let hierarchicalCode: string;
+    
+    if (category.parentId) {
+      // Get parent category to build hierarchical code
+      const [parent] = await db.select().from(productCategories).where(eq(productCategories.id, category.parentId));
+      if (!parent) {
+        throw new Error('Parent category not found');
+      }
+      
+      // Get sibling count to determine next number
+      const siblings = await db.select().from(productCategories).where(eq(productCategories.parentId, category.parentId));
+      const nextSiblingNumber = siblings.length + 1;
+      
+      hierarchicalCode = `${parent.code}.${nextSiblingNumber}`;
+    } else {
+      // Root category - get count of root categories
+      const rootCategories = await db.select().from(productCategories).where(isNull(productCategories.parentId));
+      const nextRootNumber = rootCategories.length + 1;
+      
+      hierarchicalCode = nextRootNumber.toString();
+    }
+    
+    const categoryWithCode = {
+      ...category,
+      code: hierarchicalCode
+    };
+    
+    const [newCategory] = await db.insert(productCategories).values(categoryWithCode).returning();
     return newCategory;
   }
 

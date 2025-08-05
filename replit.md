@@ -19,9 +19,10 @@ Development approach: Comprehensive testing and validation before any changes to
 
 ### Product Category Management Fix (August 5, 2025)
 - **FIXED**: Missing PUT endpoint for category updates - editing categories now works perfectly
-- **IMPROVED**: Auto-generated category codes from ugly "SECONDARY-CHILD-9037" to clean "office_equipment_123" format
+- **IMPLEMENTED**: Hierarchical numbering system - categories now use "1", "1.1", "1.1.1", "1.1.1.1" format
+- **AUTOMATED**: Server-side code generation - automatically creates proper hierarchical codes based on parent-child relationships
 - **RESOLVED**: Category creation and update API endpoints properly validated with Zod schemas
-- **CONFIRMED**: Both create and update operations working with proper JSON responses
+- **CONFIRMED**: Both create and update operations working with proper JSON responses and hierarchical structure
 
 ### Product Catalogue Regression Fix (January 5, 2025)
 - **FIXED**: Schema import errors in server/routes.ts (removed non-existent imports like auctionBids, purchaseOrderItems)
