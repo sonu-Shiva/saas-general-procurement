@@ -426,6 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: userId,
         referenceNo: `RFX-${Date.now()}`,
         status: req.body.status || "draft",
+        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : null,
       };
       
       console.log("Creating RFx with data:", rfxData);
