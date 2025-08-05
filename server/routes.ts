@@ -9,17 +9,17 @@ import {
   vendors,
   vendors as vendorsTable,
   products,
-  categories,
+  productCategories,
   bomItems,
   boms,
   rfxEvents,
   rfxResponses,
   auctions,
-  auctionBids,
+
   purchaseOrders,
-  purchaseOrderItems,
+  poLineItems,
   directProcurementOrders,
-  directProcurementOrderItems,
+  bids,
   notifications
 } from "@shared/schema";
 import {
@@ -449,7 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Product category routes
   app.get('/api/product-categories/hierarchy', async (req, res) => {
     try {
-      const categories = await storage.getProductCategoriesHierarchy();
+      const categories = await storage.getProductCategoryHierarchy();
       res.json(categories);
     } catch (error) {
       console.error("Error fetching product categories:", error);
