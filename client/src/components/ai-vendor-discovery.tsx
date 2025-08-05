@@ -49,6 +49,68 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const handleAddToNetwork = async (vendor: DiscoveredVendor) => {
+    try {
+      const response = await fetch('/api/vendors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: vendor.name,
+          email: vendor.email,
+          phone: vendor.phone,
+          address: vendor.address,
+          website: vendor.website,
+          category: vendor.category,
+          description: vendor.description,
+          status: 'active'
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `${vendor.name} has been added to your vendor network`,
+        });
+      } else {
+        throw new Error('Failed to add vendor');
+      }
+    } catch (error) {
+      console.error('Error adding vendor:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add vendor to network. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleContact = (vendor: DiscoveredVendor) => {
+    const contactMethods = [];
+    
+    if (vendor.email && vendor.email !== "Not publicly listed") {
+      contactMethods.push(`📧 Email: ${vendor.email}`);
+    }
+    if (vendor.phone && vendor.phone !== "Not publicly listed") {
+      contactMethods.push(`📞 Phone: ${vendor.phone}`);
+    }
+    if (vendor.website && vendor.website !== "Not available") {
+      contactMethods.push(`🌐 Website: ${vendor.website}`);
+    }
+    
+    const contactInfo = contactMethods.length > 0 
+      ? contactMethods.join('\n') 
+      : 'Contact information not publicly available. Try searching for their website or calling directory assistance.';
+    
+    toast({
+      title: `Contact ${vendor.name}`,
+      description: contactInfo,
+      duration: 8000,
+    });
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -177,16 +239,28 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
                     </div>
 
                     <div className="space-y-1 text-xs">
-                      {vendor.email && (
+                      {vendor.email && vendor.email !== "Not publicly listed" && (
                         <div className="flex items-center text-muted-foreground">
                           <Mail className="w-3 h-3 mr-1" />
                           <span>{vendor.email}</span>
                         </div>
                       )}
-                      {vendor.phone && (
+                      {vendor.phone && vendor.phone !== "Not publicly listed" && (
                         <div className="flex items-center text-muted-foreground">
                           <Phone className="w-3 h-3 mr-1" />
                           <span>{vendor.phone}</span>
+                        </div>
+                      )}
+                      {(!vendor.email || vendor.email === "Not publicly listed") && (
+                        <div className="flex items-center text-muted-foreground">
+                          <Mail className="w-3 h-3 mr-1" />
+                          <span className="text-xs italic">Not publicly listed</span>
+                        </div>
+                      )}
+                      {(!vendor.phone || vendor.phone === "Not publicly listed") && (
+                        <div className="flex items-center text-muted-foreground">
+                          <Phone className="w-3 h-3 mr-1" />
+                          <span className="text-xs italic">+91</span>
                         </div>
                       )}
                     </div>
@@ -198,10 +272,21 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
                     )}
 
                     <div className="flex space-x-2 pt-1">
-                      <Button size="sm" className="text-xs h-6 flex-1">
+                      <Button 
+                        size="sm" 
+                        className="text-xs h-6 flex-1"
+                        onClick={() => handleAddToNetwork(vendor)}
+                        data-testid={`button-add-network-${vendor.name.replace(/\s+/g, '-').toLowerCase()}`}
+                      >
                         Add to Network
                       </Button>
-                      <Button size="sm" variant="outline" className="text-xs h-6">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs h-6"
+                        onClick={() => handleContact(vendor)}
+                        data-testid={`button-contact-${vendor.name.replace(/\s+/g, '-').toLowerCase()}`}
+                      >
                         Contact
                       </Button>
                     </div>
