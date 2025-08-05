@@ -100,9 +100,12 @@ export default function ProductCatalogue() {
   });
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products", { isActive: true }],
+    queryKey: ["/api/products"],
     retry: false,
   });
+
+  console.log("DEBUG: Products data from API:", products);
+  console.log("DEBUG: Products count:", products?.length);
 
   const { data: categoryHierarchy = [] } = useQuery<ProductCategory[]>({
     queryKey: ["/api/product-categories/hierarchy"],
@@ -115,7 +118,10 @@ export default function ProductCatalogue() {
         data.categoryId = selectedCategory.id;
         data.category = selectedCategory.name; // Backward compatibility
       }
-      return await apiRequest("POST", "/api/products", data);
+      return await apiRequest("/api/products", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
@@ -148,7 +154,10 @@ export default function ProductCatalogue() {
 
   const updateProductMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("PUT", `/api/products/${selectedProduct?.id}`, data);
+      return await apiRequest(`/api/products/${selectedProduct?.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
@@ -181,7 +190,9 @@ export default function ProductCatalogue() {
 
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
-      return await apiRequest("DELETE", `/api/products/${productId}`, {});
+      return await apiRequest(`/api/products/${productId}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
