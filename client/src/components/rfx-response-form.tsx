@@ -162,7 +162,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
   const submitResponseMutation = useMutation({
     mutationFn: async (data: RfxResponseFormData) => {
       console.log('Submitting RFx response with data:', { rfxId, ...data, attachments });
-      
+
       const response = await fetch("/api/vendor/rfx-responses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

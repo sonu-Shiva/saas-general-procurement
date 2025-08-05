@@ -674,15 +674,18 @@ export default function RfxManagement() {
             <DialogTitle>Submit RFx Response</DialogTitle>
           </DialogHeader>
           {selectedRfxForResponse && (
-            <RfxResponseForm
-              rfx={selectedRfxForResponse}
-              onClose={() => setIsResponseDialogOpen(false)}
+            <RfxResponseForm 
+              rfx={selectedRfxForResponse} 
+              onClose={() => {
+                setIsResponseDialogOpen(false);
+                setSelectedRfxForResponse(null);
+              }}
               onSuccess={() => {
+                console.log('Response submitted successfully');
                 queryClient.invalidateQueries({ queryKey: ["/api/vendor/rfx-invitations"] });
-                toast({
-                  title: "Response Submitted",
-                  description: "Your RFx response has been submitted successfully.",
-                });
+                queryClient.invalidateQueries({ queryKey: ["/api/vendor/rfx-responses"] });
+                setIsResponseDialogOpen(false);
+                setSelectedRfxForResponse(null);
               }}
             />
           )}
@@ -717,7 +720,7 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
   const rfxData = rfx.rfx || rfx;
   const invitationStatus = rfx.status || rfx.invitationStatus;
   const rfxStatus = rfxData.status;
-  
+
   // Debug logging for vendor response logic
   console.log('RfxCard - Debug Info:', {
     isVendor,
@@ -731,13 +734,13 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
       notRespondedCheck: (invitationStatus !== 'responded')
     }
   });
-  
+
   // Determine if vendor can respond - check both invitation and RFx status
   const canRespond = isVendor && 
     (invitationStatus === 'invited' || invitationStatus === 'active') && 
     (rfxStatus === 'active') &&
     (invitationStatus !== 'responded');
-    
+
   console.log('RfxCard - Can Respond:', canRespond);
 
   const getStatusColor = (status: string) => {
@@ -810,10 +813,10 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
               variant="default" 
               size="sm" 
               onClick={() => {
-                console.log('Respond button clicked for:', rfx);
-                onRespond(rfx);
+                console.log('Respond button clicked for:', rfx.rfx || rfx);
+                onRespond(rfx.rfx || rfx);
               }}
-              className="bg-primary hover:bg-primary/90 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Send className="w-4 h-4 mr-1" />
               Respond
