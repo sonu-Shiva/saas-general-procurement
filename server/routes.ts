@@ -189,6 +189,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/vendors/:id', async (req, res) => {
+    try {
+      const vendorId = req.params.id;
+      const vendor = await storage.updateVendor(vendorId, req.body);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error updating vendor:", error);
+      res.status(500).json({ message: "Failed to update vendor" });
+    }
+  });
+
+  app.delete('/api/vendors/:id', async (req, res) => {
+    try {
+      const vendorId = req.params.id;
+      const result = await storage.deleteVendor(vendorId);
+      if (!result) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      res.json({ message: "Vendor deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      res.status(500).json({ message: "Failed to delete vendor" });
+    }
+  });
+
   // Vendor discovery route
   app.post('/api/vendors/discover', async (req, res) => {
     try {
