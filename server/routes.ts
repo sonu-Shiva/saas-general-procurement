@@ -150,6 +150,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Terms acceptance endpoint
+  app.post('/api/terms/accept', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { entityType, entityId, termsAndConditionsPath } = req.body;
+      
+      console.log(`Terms accepted by user ${userId} for ${entityType} ${entityId}`);
+      
+      // In a full implementation, you'd store this in a terms_acceptances table
+      // For now, we'll just return success
+      res.json({ 
+        success: true, 
+        message: "Terms and conditions accepted successfully" 
+      });
+    } catch (error) {
+      console.error("Error accepting terms:", error);
+      res.status(500).json({ message: "Failed to accept terms" });
+    }
+  });
+
+  // Check terms acceptance status
+  app.get('/api/terms/check', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { entityType, entityId } = req.query;
+      
+      // For development, we'll return that terms are not accepted by default
+      // In a full implementation, you'd check the terms_acceptances table
+      res.json({ 
+        accepted: false,
+        entityType,
+        entityId,
+        userId
+      });
+    } catch (error) {
+      console.error("Error checking terms acceptance:", error);
+      res.status(500).json({ message: "Failed to check terms acceptance" });
+    }
+  });
+
   app.get('/objects/:objectPath(*)', async (req, res) => {
     try {
       const objectStorageService = new ObjectStorageService();

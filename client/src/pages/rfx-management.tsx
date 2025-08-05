@@ -482,59 +482,184 @@ export default function RfxManagement() {
 
       {/* RFx View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <FileText className="w-5 h-5" />
-              <span>{selectedRfxForView?.type?.toUpperCase()} Details</span>
+              <span>{selectedRfxForView?.type?.toUpperCase() || selectedRfxForView?.rfxType?.toUpperCase() || selectedRfxForView?.rfx?.type?.toUpperCase()} Details</span>
             </DialogTitle>
           </DialogHeader>
           {selectedRfxForView && (
             <div className="overflow-y-auto max-h-[calc(90vh-100px)] space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Basic Information</h3>
-                    <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Information */}
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Title:</span>
+                      <span className="font-medium text-right">
+                        {selectedRfxForView.title || selectedRfxForView.rfxTitle || selectedRfxForView.rfx?.title || 'Untitled RFx'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Reference No:</span>
+                      <span className="font-medium">
+                        {selectedRfxForView.referenceNo || selectedRfxForView.rfxReferenceNo || selectedRfxForView.rfx?.referenceNo || 'No Reference'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Type:</span>
+                      <Badge className="bg-blue-100 text-blue-800">
+                        {(selectedRfxForView.type || selectedRfxForView.rfxType || selectedRfxForView.rfx?.type || 'rfx').toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      <Badge className={
+                        selectedRfxForView.status === 'active' ? 'bg-green-100 text-green-800' :
+                        selectedRfxForView.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }>
+                        {selectedRfxForView.status?.toUpperCase()}
+                      </Badge>
+                    </div>
+                    {(selectedRfxForView.dueDate || selectedRfxForView.rfxDueDate || selectedRfxForView.rfx?.dueDate) && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Title:</span>
+                        <span className="text-muted-foreground">Due Date:</span>
                         <span className="font-medium">
-                          {selectedRfxForView.title || selectedRfxForView.rfxTitle || selectedRfxForView.rfx?.title || 'Untitled RFx'}
+                          {new Date(selectedRfxForView.dueDate || selectedRfxForView.rfxDueDate || selectedRfxForView.rfx?.dueDate).toLocaleDateString()}
                         </span>
                       </div>
+                    )}
+                    {(selectedRfxForView.budget || selectedRfxForView.rfxBudget || selectedRfxForView.rfx?.budget) && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Reference No:</span>
+                        <span className="text-muted-foreground">Budget:</span>
                         <span className="font-medium">
-                          {selectedRfxForView.referenceNo || selectedRfxForView.rfxReferenceNo || selectedRfxForView.rfx?.referenceNo || 'No Reference'}
+                          ₹{(selectedRfxForView.budget || selectedRfxForView.rfxBudget || selectedRfxForView.rfx?.budget)?.toLocaleString()}
                         </span>
                       </div>
+                    )}
+                    {(selectedRfxForView.contactPerson || selectedRfxForView.rfxContactPerson || selectedRfxForView.rfx?.contactPerson) && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Type:</span>
-                        <Badge className="bg-blue-100 text-blue-800">
-                          {(selectedRfxForView.type || selectedRfxForView.rfxType || selectedRfxForView.rfx?.type || 'rfx').toUpperCase()}
-                        </Badge>
+                        <span className="text-muted-foreground">Contact Person:</span>
+                        <span className="font-medium">
+                          {selectedRfxForView.contactPerson || selectedRfxForView.rfxContactPerson || selectedRfxForView.rfx?.contactPerson}
+                        </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Status:</span>
-                        <Badge className={
-                          selectedRfxForView.status === 'active' ? 'bg-green-100 text-green-800' :
-                          selectedRfxForView.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }>
-                          {selectedRfxForView.status?.toUpperCase()}
-                        </Badge>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Scope and Requirements */}
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Scope & Requirements</h3>
+                  <div className="space-y-3">
+                    {(selectedRfxForView.scope || selectedRfxForView.rfxScope || selectedRfxForView.rfx?.scope) && (
+                      <div>
+                        <span className="text-muted-foreground text-sm">Scope:</span>
+                        <p className="text-sm mt-1 p-2 bg-gray-50 rounded">
+                          {selectedRfxForView.scope || selectedRfxForView.rfxScope || selectedRfxForView.rfx?.scope}
+                        </p>
                       </div>
+                    )}
+                    {(selectedRfxForView.criteria || selectedRfxForView.rfxCriteria || selectedRfxForView.rfx?.criteria) && (
+                      <div>
+                        <span className="text-muted-foreground text-sm">
+                          {(selectedRfxForView.type || selectedRfxForView.rfxType || selectedRfxForView.rfx?.type) === 'rfi' ? 'Information Required:' : 'Requirements:'}
+                        </span>
+                        <p className="text-sm mt-1 p-2 bg-gray-50 rounded">
+                          {selectedRfxForView.criteria || selectedRfxForView.rfxCriteria || selectedRfxForView.rfx?.criteria}
+                        </p>
+                      </div>
+                    )}
+                    {(selectedRfxForView.evaluationParameters || selectedRfxForView.rfxEvaluationParameters || selectedRfxForView.rfx?.evaluationParameters) && (
+                      <div>
+                        <span className="text-muted-foreground text-sm">Evaluation Criteria:</span>
+                        <p className="text-sm mt-1 p-2 bg-gray-50 rounded">
+                          {selectedRfxForView.evaluationParameters || selectedRfxForView.rfxEvaluationParameters || selectedRfxForView.rfx?.evaluationParameters}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Terms & Conditions */}
+              {(selectedRfxForView.termsAndConditionsPath || selectedRfxForView.rfxTermsAndConditionsPath || selectedRfxForView.rfx?.termsAndConditionsPath) && (
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Terms & Conditions</h3>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const termsPath = selectedRfxForView.termsAndConditionsPath || selectedRfxForView.rfxTermsAndConditionsPath || selectedRfxForView.rfx?.termsAndConditionsPath;
+                        if (termsPath) {
+                          window.open(termsPath, '_blank');
+                        }
+                      }}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      View Terms & Conditions
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              {/* BOM Integration */}
+              {(selectedRfxForView.bomId || selectedRfxForView.rfxBomId || selectedRfxForView.rfx?.bomId) && (
+                <Card className="p-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center space-x-2">
+                      <Package className="w-5 h-5 text-blue-600" />
+                      <p className="text-blue-800 font-medium">
+                        This RFx is linked to a Bill of Materials (BOM ID: {(selectedRfxForView.bomId || selectedRfxForView.rfxBomId || selectedRfxForView.rfx?.bomId)?.slice(-8)})
+                      </p>
                     </div>
                   </div>
-                </div>
-              </div>
-              {selectedRfxForView.bomId && (
-                <div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-blue-800 font-medium">
-                      This RFx is linked to a Bill of Materials (BOM ID: {selectedRfxForView.bomId?.slice(-8)})
-                    </p>
+                </Card>
+              )}
+
+              {/* Attachments */}
+              {(selectedRfxForView.attachments || selectedRfxForView.rfxAttachments || selectedRfxForView.rfx?.attachments) && 
+               (selectedRfxForView.attachments || selectedRfxForView.rfxAttachments || selectedRfxForView.rfx?.attachments)?.length > 0 && (
+                <Card className="p-4">
+                  <h3 className="text-lg font-semibold mb-4">Attachments</h3>
+                  <div className="space-y-2">
+                    {(selectedRfxForView.attachments || selectedRfxForView.rfxAttachments || selectedRfxForView.rfx?.attachments)?.map((attachment: string, index: number) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
+                        <a 
+                          href={attachment} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Attachment {index + 1}
+                        </a>
+                      </div>
+                    ))}
                   </div>
+                </Card>
+              )}
+
+              {/* Action Buttons */}
+              {isVendor && (selectedRfxForView.status || selectedRfxForView.invitationStatus) === 'active' && (
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setIsViewDialogOpen(false);
+                      handleRespondToRfx(selectedRfxForView);
+                    }}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Respond to {(selectedRfxForView.type || selectedRfxForView.rfxType || selectedRfxForView.rfx?.type || 'RFx').toUpperCase()}
+                  </Button>
                 </div>
               )}
             </div>
