@@ -206,31 +206,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Query is required' });
       }
 
-      // Construct comprehensive search prompt
-      let searchPrompt = `I need complete contact information for professional suppliers of ${query}`;
+      // Construct search prompt
+      let searchPrompt = `Find professional vendors and suppliers specializing in ${query}`;
       if (location && location !== 'all') {
         searchPrompt += ` in ${location}`;
       }
-      searchPrompt += ` in India. Search company websites, IndiaMART, JustDial, business directories, and company contact pages to find REAL contact details.
-
-MANDATORY: Only include suppliers with VERIFIED contact information:
-- Full phone numbers (like +91-80-22334455 or +91-9876543210)
-- Real email addresses (like info@company.com or sales@company.com)
-- Complete business addresses
-
-Format each supplier exactly as:
-
-**[Company Name]**
-- Contact Email: [verified email from company website/directory]
-- Phone Number: [complete phone number with area code]
-- Address: [full street address with city and state]
-- Website: [company website URL]
-- Logo URL: [logo URL if available]
-- Description: [company services and products]
-
-CRITICAL: Search each company's actual website and business listings to get real contact details. Do not include companies with missing phone numbers or email addresses. I need actionable contact information that I can actually use to reach these suppliers.`;
-
-      console.log('Enhanced Perplexity search prompt:', searchPrompt);
+      searchPrompt += ' in India. Please format the response as follows for each vendor:\n**[Company Name]**\n- Contact Email: [email address]  \n- Phone Number: [phone number]\n- Address: [full address]\n- Website: [website URL]\n- Logo URL: [company logo URL if available]\n- Description: [brief description of services/products]\nFocus on established businesses with verifiable contact information from business directories, company websites, and public listings.';
 
       console.log('Perplexity search prompt:', searchPrompt);
 
@@ -242,28 +223,29 @@ CRITICAL: Search each company's actual website and business listings to get real
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-sonar-large-128k-online',
+          model: 'sonar-pro',
           messages: [
             {
               role: 'system',
-              content: 'You are a business intelligence assistant that finds verified supplier contact information. Search company websites, business directories like IndiaMART, JustDial, and official contact pages to provide complete, actionable contact details. Always prioritize real phone numbers and email addresses that businesses can actually use to contact suppliers.'
+              content: 'You are a helpful assistant that finds real vendors and suppliers. Always provide accurate, up-to-date information with real contact details.'
             },
             {
               role: 'user',
               content: searchPrompt
             }
           ],
-          max_tokens: 3000,
-          temperature: 0.1,
+          max_tokens: 2000,
+          temperature: 0.2,
           return_citations: true,
           return_images: false,
           return_related_questions: false,
-          search_recency_filter: "month",
         }),
       });
 
       if (!perplexityResponse.ok) {
-        throw new Error(`Perplexity API error: ${perplexityResponse.status}`);
+        const errorText = await perplexityResponse.text();
+        console.error('Perplexity API error details:', errorText);
+        throw new Error(`Perplexity API error: ${perplexityResponse.status} - ${errorText}`);
       }
 
       const perplexityData = await perplexityResponse.json();
