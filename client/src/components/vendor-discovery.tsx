@@ -100,29 +100,41 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
   });
 
   // AI vendor discovery mutation
-  const discoverVendorsMutation = useMutation({
-    mutationFn: async (formData: AIDiscoveryData) => {
-      console.log("Making AI discovery request with data:", formData);
+  const aiVendorMutation = useMutation({
+    mutationFn: async (searchData: AIDiscoveryData) => {
+      console.log("Starting AI vendor discovery with:", searchData);
       
-      // Make the request directly with fetch to avoid any potential issues
-      const response = await fetch("/api/vendors/discover", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(formData),
-      });
+      try {
+        // Use a completely isolated fetch call
+        const fetchOptions = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include" as RequestCredentials,
+          body: JSON.stringify(searchData),
+        };
+        
+        console.log("Fetch options:", fetchOptions);
+        
+        const response = await fetch("/api/vendors/discover", fetchOptions);
+        
+        console.log("Response status:", response.status);
+        console.log("Response headers:", response.headers);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Response not OK:", response.status, errorText);
-        throw new Error(errorText || `HTTP ${response.status}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Response not OK:", response.status, errorText);
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log("Successfully got AI discovery result:", result);
+        return result;
+      } catch (err) {
+        console.error("Fetch error in AI discovery:", err);
+        throw err;
       }
-
-      const result = await response.json();
-      console.log("AI discovery result:", result);
-      return result;
     },
     onSuccess: (vendors) => {
       setDiscoveredVendors(vendors);
@@ -135,9 +147,16 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
       console.error("AI Discovery Error:", error);
       console.error("Error message:", error.message);
       console.error("Error stack:", error.stack);
+      console.error("Error type:", typeof error);
+      console.error("Error constructor:", error.constructor.name);
+      
+      // Show detailed error information
+      const errorMsg = error.message || error.toString() || "Failed to discover vendors";
+      console.error("Final error message:", errorMsg);
+      
       toast({
         title: "Discovery Failed",
-        description: error.message || "Failed to discover vendors",
+        description: errorMsg,
         variant: "destructive",
       });
     },
@@ -180,8 +199,8 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
 
   const onDiscoverySubmit = (data: AIDiscoveryData) => {
     console.log("Form submitted with data:", data);
-    console.log("About to call discoverVendorsMutation.mutate");
-    discoverVendorsMutation.mutate(data);
+    console.log("About to call aiVendorMutation.mutate");
+    aiVendorMutation.mutate(data);
   };
 
   const toggleVendorSelection = (index: number) => {
@@ -367,9 +386,9 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit" disabled={discoverVendorsMutation.isPending} className="flex items-center gap-2">
+                  <Button type="submit" disabled={aiVendorMutation.isPending} className="flex items-center gap-2">
                     <Search className="h-4 w-4" />
-                    {discoverVendorsMutation.isPending ? "Discovering..." : "Discover Vendors"}
+                    {aiVendorMutation.isPending ? "Discovering..." : "Discover Vendors"}
                   </Button>
                 </div>
               </form>
