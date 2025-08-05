@@ -25,7 +25,7 @@ export function useAuth() {
       queryClient.clear();
       
       // Make logout request
-      await apiRequest('POST', '/api/auth/logout', {});
+      await apiRequest('/api/auth/logout', { method: 'POST' });
       
       // Force page refresh to clear all state
       window.location.href = '/';
@@ -39,7 +39,11 @@ export function useAuth() {
 
   const switchRole = async (newRole: string) => {
     try {
-      const updatedUser = await apiRequest('PATCH', '/api/auth/user/role', { role: newRole });
+      const updatedUser = await apiRequest('/api/auth/user/role', { 
+        method: 'PATCH',
+        body: JSON.stringify({ role: newRole }),
+        headers: { 'Content-Type': 'application/json' }
+      });
       
       // Update the cache with the new user data
       queryClient.setQueryData(['/api/auth/user'], updatedUser);
