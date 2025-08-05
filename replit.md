@@ -8,6 +8,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Vendor Management Bug Fixes (January 5, 2025)
+- **FIXED**: Vendor delete and remove functionality regression issues
+- **RESOLVED**: Missing DELETE and PATCH API endpoints for vendor operations
+- **CORRECTED**: Database storage method returning wrong result format for delete operations
+- **TESTED**: Both "Remove Vendor" (status update) and "Delete Vendor" (permanent removal) working correctly
+- **IMPROVED**: Added proper vendor existence validation before update/delete operations
+
 ### AI Discovery Integration (January 2025)
 - **FULLY RESOLVED**: Complete AI vendor discovery with real contact information (January 5, 2025)
 - **COMPLETED**: Fixed Perplexity API integration with correct "sonar-pro" model

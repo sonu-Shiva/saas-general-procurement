@@ -261,7 +261,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVendor(id: string): Promise<boolean> {
     const result = await db.delete(vendors).where(eq(vendors.id, id));
-    return result.length > 0;
+    return result.rowCount > 0;
   }
 
   // Product Category operations

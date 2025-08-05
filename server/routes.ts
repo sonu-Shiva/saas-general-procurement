@@ -192,10 +192,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/vendors/:id', async (req, res) => {
     try {
       const vendorId = req.params.id;
-      const vendor = await storage.updateVendor(vendorId, req.body);
-      if (!vendor) {
+      
+      // Check if vendor exists first
+      const existingVendor = await storage.getVendor(vendorId);
+      if (!existingVendor) {
         return res.status(404).json({ message: "Vendor not found" });
       }
+      
+      const vendor = await storage.updateVendor(vendorId, req.body);
       res.json(vendor);
     } catch (error) {
       console.error("Error updating vendor:", error);
@@ -206,9 +210,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/vendors/:id', async (req, res) => {
     try {
       const vendorId = req.params.id;
+      
+      // Check if vendor exists first
+      const existingVendor = await storage.getVendor(vendorId);
+      if (!existingVendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      
       const result = await storage.deleteVendor(vendorId);
       if (!result) {
-        return res.status(404).json({ message: "Vendor not found" });
+        return res.status(500).json({ message: "Failed to delete vendor" });
       }
       res.json({ message: "Vendor deleted successfully" });
     } catch (error) {
