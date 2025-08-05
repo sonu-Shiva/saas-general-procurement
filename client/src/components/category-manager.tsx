@@ -201,6 +201,14 @@ export default function CategoryManager({
   const createCategoryMutation = useMutation({
     mutationFn: async (data: any) => {
       console.log("Creating category with data:", data);
+      
+      // Ensure code is included for creation
+      if (!data.code) {
+        const cleanName = data.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        data.code = `${cleanName}_${randomSuffix}`;
+      }
+      
       return await apiRequest("/api/product-categories", {
         method: "POST",
         body: JSON.stringify(data)

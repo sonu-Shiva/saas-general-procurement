@@ -17,6 +17,12 @@ Development approach: Comprehensive testing and validation before any changes to
 - **QUALITY GATES**: Added pre-deployment validation checks, interface consistency verification
 - **USER PRIORITY**: Zero tolerance for regression issues - all changes must maintain existing functionality
 
+### Product Category Management Fix (August 5, 2025)
+- **FIXED**: Missing PUT endpoint for category updates - editing categories now works perfectly
+- **IMPROVED**: Auto-generated category codes from ugly "SECONDARY-CHILD-9037" to clean "office_equipment_123" format
+- **RESOLVED**: Category creation and update API endpoints properly validated with Zod schemas
+- **CONFIRMED**: Both create and update operations working with proper JSON responses
+
 ### Product Catalogue Regression Fix (January 5, 2025)
 - **FIXED**: Schema import errors in server/routes.ts (removed non-existent imports like auctionBids, purchaseOrderItems)
 - **CORRECTED**: Method name mismatch getProductCategoriesHierarchy → getProductCategoryHierarchy
