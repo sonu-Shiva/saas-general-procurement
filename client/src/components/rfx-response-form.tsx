@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,8 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Send, FileText, Clock, Package, Upload, X, AlertTriangle } from "lucide-react";
+import { Send, FileText, Clock, Package, Upload, X, AlertTriangle, Trash2 } from "lucide-react";
 import { TermsAcceptanceDialog } from "./TermsAcceptanceDialog";
+import { RfxAttachmentUploader } from "./RfxAttachmentUploader";
 
 const rfxResponseSchema = z.object({
   response: z.string().min(1, "Response is required"),
@@ -34,12 +35,20 @@ interface RfxResponseFormProps {
   onSuccess: () => void;
 }
 
+interface AttachmentInfo {
+  id: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  fileType: string;
+  uploadedAt: Date;
+}
+
 export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProps) {
   const { toast } = useToast();
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentInfo[]>([]);
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
   // Handle nested RFx data structure properly
   const rfxData = rfx.rfx || rfx;
@@ -82,47 +91,37 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
     }
   }, [termsStatus, form]);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files?.length) return;
-
-    setIsUploading(true);
+  const handleGetUploadParameters = useCallback(async (fileName: string) => {
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/objects/upload', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
-        });
-
-        if (!response.ok) throw new Error('Upload failed');
-        const result = await response.json();
-        return result.url || result.path;
+      const response = await fetch('/api/objects/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName }),
+        credentials: 'include',
       });
 
-      const uploadedPaths = await Promise.all(uploadPromises);
-      setAttachments(prev => [...prev, ...uploadedPaths]);
+      if (!response.ok) {
+        throw new Error('Failed to get upload parameters');
+      }
 
-      toast({
-        title: "Success",
-        description: `${files.length} file(s) uploaded successfully`,
-      });
+      const data = await response.json();
+      return {
+        method: "PUT" as const,
+        url: data.uploadURL,
+        filePath: data.filePath || `/rfx-responses/${rfxId}/${fileName}`,
+      };
     } catch (error) {
-      toast({
-        title: "Upload Error",
-        description: "Failed to upload files",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
+      console.error('Error getting upload parameters:', error);
+      throw error;
     }
-  };
+  }, [rfxId]);
 
-  const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
+  const handleAttachmentsChange = useCallback((newAttachments: AttachmentInfo[]) => {
+    setAttachments(newAttachments);
+  }, []);
+
+  const removeAttachment = (attachmentId: string) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
   };
 
   const handleTermsAccepted = async () => {
@@ -161,7 +160,8 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
 
   const submitResponseMutation = useMutation({
     mutationFn: async (data: RfxResponseFormData) => {
-      console.log('Submitting RFx response with data:', { rfxId, ...data, attachments });
+      const attachmentPaths = attachments.map(att => att.filePath);
+      console.log('Submitting RFx response with data:', { rfxId, ...data, attachments: attachmentPaths });
 
       const response = await fetch("/api/vendor/rfx-responses", {
         method: "POST",
@@ -169,7 +169,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
         body: JSON.stringify({
           rfxId: rfxId,
           ...data,
-          attachments,
+          attachments: attachmentPaths,
         }),
         credentials: "include",
       });
@@ -399,52 +399,65 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
         {/* Attachments */}
         <Card>
           <CardHeader>
-            <CardTitle>Supporting Documents</CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+              <Package className="w-5 h-5" />
+              <span>Supporting Documents</span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Upload Attachments (Optional)</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="file-upload"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                />
-                <label htmlFor="file-upload" className="cursor-pointer">
+              <p className="text-sm text-muted-foreground">
+                Upload relevant documents to support your {rfxType.toLowerCase()} response. 
+                Maximum 10 files, 25MB each.
+              </p>
+              
+              <RfxAttachmentUploader
+                maxNumberOfFiles={10}
+                maxFileSize={26214400} // 25MB
+                attachments={attachments}
+                onAttachmentsChange={handleAttachmentsChange}
+                onGetUploadParameters={handleGetUploadParameters}
+                rfxId={rfxId}
+                buttonClassName="w-full"
+              >
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
                   <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 font-medium">
                     Click to upload files or drag and drop
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    PDF, DOC, XLS, Images (Max 10MB each)
+                    PDF, DOC, XLS, Images, ZIP (Max 25MB each)
                   </p>
-                </label>
-              </div>
-              {isUploading && (
-                <div className="text-sm text-blue-600">Uploading files...</div>
-              )}
+                </div>
+              </RfxAttachmentUploader>
             </div>
 
             {attachments.length > 0 && (
               <div className="space-y-2">
-                <Label>Uploaded Files</Label>
-                <div className="space-y-2">
-                  {attachments.map((attachment, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">Attachment {index + 1}</span>
+                <Label>Uploaded Files ({attachments.length}/10)</Label>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {attachment.fileName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {(attachment.fileSize / 1024 / 1024).toFixed(2)} MB • {attachment.fileType}
+                          </p>
+                        </div>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeAttachment(index)}
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="flex-shrink-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                       >
-                        <X className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   ))}

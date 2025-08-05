@@ -1,31 +1,18 @@
 
-import { useState, useCallback } from "react";
-import type { ReactNode } from "react";
-import Uppy from "@uppy/core";
-import { DashboardModal } from "@uppy/react";
-import "@uppy/core/dist/style.min.css";
-import "@uppy/dashboard/dist/style.min.css";
-import AwsS3 from "@uppy/aws-s3";
-import type { UploadResult } from "@uppy/core";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useCallback, ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  FileText, 
-  Upload, 
-  X, 
-  Download,
-  Eye,
-  Paperclip
-} from "lucide-react";
+import { ObjectUploader } from "./ObjectUploader";
+import { Button } from "@/components/ui/button";
+import { Upload, FileText, X, AlertCircle } from "lucide-react";
+import { nanoid } from "nanoid";
 
 interface AttachmentInfo {
+  id: string;
   fileName: string;
   filePath: string;
   fileSize: number;
-  uploadDate: string;
   fileType: string;
+  uploadedAt: Date;
 }
 
 interface RfxAttachmentUploaderProps {
@@ -99,7 +86,6 @@ export function RfxAttachmentUploader({
   disabled = false,
   rfxId
 }: RfxAttachmentUploaderProps) {
-  const [showModal, setShowModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
@@ -117,239 +103,213 @@ export function RfxAttachmentUploader({
     }
   }, [onGetUploadParameters]);
 
-  const [uppy] = useState(() =>
-    new Uppy({
-      restrictions: {
-        maxNumberOfFiles,
-        maxFileSize,
-        allowedFileTypes: ALLOWED_FILE_TYPES
-      },
-      autoProceed: false,
-    })
-      .use(AwsS3, {
-        shouldUseMultipart: false,
-        getUploadParameters: handleUploadParameters,
-      })
-      .on('upload', () => {
-        setIsUploading(true);
-      })
-      .on('complete', (result) => {
-        setIsUploading(false);
-        
-        if (result.successful && result.successful.length > 0) {
-          const newAttachments: AttachmentInfo[] = result.successful.map((file: any) => ({
-            fileName: file.name,
-            filePath: file.response?.uploadURL?.split('?')[0] || '',
-            fileSize: file.size,
-            uploadDate: new Date().toISOString(),
-            fileType: file.type
-          }));
-
-          const updatedAttachments = [...attachments, ...newAttachments];
-          onAttachmentsChange?.(updatedAttachments);
-          
-          toast({
-            title: "Files uploaded successfully",
-            description: `${result.successful.length} file(s) uploaded`,
-          });
-        }
-
-        if (result.failed && result.failed.length > 0) {
-          toast({
-            variant: "destructive",
-            title: "Some files failed to upload",
-            description: `${result.failed.length} file(s) failed. Please try again.`,
-          });
-        }
-
-        setShowModal(false);
-      })
-      .on('file-added', (file) => {
-        // Validate file type
-        if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-          uppy.removeFile(file.id);
-          toast({
-            variant: "destructive",
-            title: "Invalid file type",
-            description: `${file.name} is not an allowed file type. Please upload PDF, Office documents, images, or archives.`,
-          });
-          return false;
-        }
-
-        // Check if file already exists
-        const fileExists = attachments.some(att => att.fileName === file.name);
-        if (fileExists) {
-          uppy.removeFile(file.id);
-          toast({
-            variant: "destructive",
-            title: "Duplicate file",
-            description: `${file.name} has already been uploaded.`,
-          });
-          return false;
-        }
-
-        // Check total file limit
-        if (attachments.length >= maxNumberOfFiles) {
-          uppy.removeFile(file.id);
-          toast({
-            variant: "destructive",
-            title: "File limit exceeded",
-            description: `Maximum ${maxNumberOfFiles} files allowed.`,
-          });
-          return false;
-        }
-      })
-      .on('restriction-failed', (file, error) => {
-        toast({
-          variant: "destructive",
-          title: "File restriction failed",
-          description: error.message,
-        });
-      })
-  );
-
-  const removeAttachment = (filePath: string) => {
-    const updatedAttachments = attachments.filter(att => att.filePath !== filePath);
-    onAttachmentsChange?.(updatedAttachments);
-    
-    toast({
-      title: "File removed",
-      description: "Attachment has been removed from the response.",
-    });
-  };
-
-  const handlePreview = (attachment: AttachmentInfo) => {
-    if (attachment.fileType.includes('image/')) {
-      window.open(attachment.filePath, '_blank');
-    } else {
-      // For non-image files, trigger download
-      const link = document.createElement('a');
-      link.href = attachment.filePath;
-      link.download = attachment.fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const validateFile = useCallback((file: File): string | null => {
+    // Check file size
+    if (file.size > maxFileSize) {
+      return `File size exceeds ${formatFileSize(maxFileSize)} limit`;
     }
-  };
 
-  const hasAttachments = attachments.length > 0;
-  const remainingSlots = maxNumberOfFiles - attachments.length;
+    // Check file type
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    const isValidType = ALLOWED_FILE_TYPES.includes(fileExtension) || 
+                       ALLOWED_MIME_TYPES.includes(file.type);
+    
+    if (!isValidType) {
+      return 'File type not supported. Please use PDF, DOC, XLS, images, or ZIP files.';
+    }
+
+    // Check if already at max files
+    if (attachments.length >= maxNumberOfFiles) {
+      return `Maximum ${maxNumberOfFiles} files allowed`;
+    }
+
+    // Check for duplicate file names
+    if (attachments.some(att => att.fileName === file.name)) {
+      return 'A file with this name already exists';
+    }
+
+    return null;
+  }, [attachments, maxFileSize, maxNumberOfFiles]);
+
+  const handleFileSelect = useCallback(async (files: FileList) => {
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    Array.from(files).forEach(file => {
+      const error = validateFile(file);
+      if (error) {
+        errors.push(`${file.name}: ${error}`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errors.length > 0) {
+      toast({
+        title: "File Validation Errors",
+        description: errors.join('\n'),
+        variant: "destructive",
+      });
+    }
+
+    if (validFiles.length === 0) return;
+
+    setIsUploading(true);
+    
+    try {
+      const uploadPromises = validFiles.map(async (file) => {
+        const attachmentId = nanoid();
+        
+        // Create attachment info before upload
+        const attachmentInfo: AttachmentInfo = {
+          id: attachmentId,
+          fileName: file.name,
+          filePath: '', // Will be set after upload
+          fileSize: file.size,
+          fileType: file.type,
+          uploadedAt: new Date(),
+        };
+
+        try {
+          const uploadParams = await handleUploadParameters(file);
+          
+          // Upload file
+          const uploadResponse = await fetch(uploadParams.url, {
+            method: uploadParams.method,
+            body: file,
+            headers: {
+              'Content-Type': file.type,
+              ...uploadParams.headers,
+            },
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+          }
+
+          // Set the file path from upload parameters
+          attachmentInfo.filePath = `/objects/rfx-responses/${rfxId}/${file.name}`;
+          
+          return attachmentInfo;
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error);
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+      });
+
+      const uploadedAttachments = await Promise.all(uploadPromises);
+      const newAttachments = [...attachments, ...uploadedAttachments];
+      
+      onAttachmentsChange?.(newAttachments);
+      
+      toast({
+        title: "Upload Successful",
+        description: `${validFiles.length} file(s) uploaded successfully`,
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload files",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [attachments, validateFile, handleUploadParameters, onAttachmentsChange, toast, rfxId]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (disabled || isUploading) return;
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileSelect(files);
+    }
+  }, [disabled, isUploading, handleFileSelect]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileSelect(files);
+    }
+    // Reset input value to allow selecting the same file again
+    e.target.value = '';
+  }, [handleFileSelect]);
+
+  if (children) {
+    return (
+      <div 
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        className={disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+      >
+        <input
+          type="file"
+          multiple
+          accept={ALLOWED_FILE_TYPES.join(',')}
+          onChange={handleFileInputChange}
+          className="hidden"
+          id={`rfx-file-upload-${rfxId}`}
+          disabled={disabled || isUploading}
+        />
+        <label htmlFor={`rfx-file-upload-${rfxId}`} className="block">
+          {children}
+        </label>
+        {isUploading && (
+          <div className="mt-2 text-sm text-blue-600 flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span>Uploading files...</span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {/* Upload Button */}
-      <div className="flex items-center justify-between">
-        <Button 
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setShowModal(true);
-          }} 
-          className={buttonClassName}
-          variant={hasAttachments ? "outline" : "default"}
-          disabled={disabled || isUploading || remainingSlots <= 0}
-        >
-          {children || (
-            <div className="flex items-center gap-2">
-              {isUploading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  <span>Uploading...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  <span>
-                    {hasAttachments ? "Add More Files" : "Upload Attachments"}
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-        </Button>
-
-        {hasAttachments && (
-          <Badge variant="secondary" className="text-xs">
-            <Paperclip className="w-3 h-3 mr-1" />
-            {attachments.length} file{attachments.length !== 1 ? 's' : ''} attached
-          </Badge>
-        )}
+      <div 
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          disabled || isUploading 
+            ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
+            : 'border-gray-300 hover:border-primary cursor-pointer'
+        }`}
+      >
+        <input
+          type="file"
+          multiple
+          accept={ALLOWED_FILE_TYPES.join(',')}
+          onChange={handleFileInputChange}
+          className="hidden"
+          id={`rfx-file-upload-${rfxId}`}
+          disabled={disabled || isUploading}
+        />
+        <label htmlFor={`rfx-file-upload-${rfxId}`} className="block cursor-pointer">
+          <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-sm text-gray-600 font-medium">
+            {isUploading ? 'Uploading...' : 'Click to upload files or drag and drop'}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            PDF, DOC, XLS, Images, ZIP (Max {formatFileSize(maxFileSize)} each)
+          </p>
+          <p className="text-xs text-gray-400">
+            {attachments.length}/{maxNumberOfFiles} files
+          </p>
+        </label>
       </div>
-
-      {/* File Limit Info */}
-      <div className="text-xs text-muted-foreground">
-        {remainingSlots > 0 ? (
-          <>You can upload {remainingSlots} more file{remainingSlots !== 1 ? 's' : ''} (max {formatFileSize(maxFileSize)} each)</>
-        ) : (
-          <>Maximum file limit reached ({maxNumberOfFiles} files)</>
-        )}
-      </div>
-
-      {/* Attachments List */}
-      {hasAttachments && (
-        <Card>
-          <CardContent className="p-4">
-            <h4 className="text-sm font-medium mb-3">Attached Files</h4>
-            <div className="space-y-2">
-              {attachments.map((attachment, index) => (
-                <div key={index} className="flex items-center justify-between p-2 border rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="text-lg flex-shrink-0">
-                      {getFileIcon(attachment.fileType)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {attachment.fileName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFileSize(attachment.fileSize)} • {new Date(attachment.uploadDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handlePreview(attachment)}
-                      className="h-8 w-8 p-0"
-                      title={attachment.fileType.includes('image/') ? "Preview" : "Download"}
-                    >
-                      {attachment.fileType.includes('image/') ? (
-                        <Eye className="w-3 h-3" />
-                      ) : (
-                        <Download className="w-3 h-3" />
-                      )}
-                    </Button>
-                    
-                    {!disabled && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeAttachment(attachment.filePath)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        title="Remove file"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      
+      {isUploading && (
+        <div className="flex items-center justify-center space-x-2 text-blue-600">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          <span className="text-sm">Processing uploads...</span>
+        </div>
       )}
-
-      {/* Upload Modal */}
-      <DashboardModal
-        uppy={uppy}
-        open={showModal}
-        onRequestClose={() => setShowModal(false)}
-        proudlyDisplayPoweredByUppy={false}
-        note={`Upload business documents (PDF, Office files, images, archives). Max ${maxNumberOfFiles} files, ${formatFileSize(maxFileSize)} each.`}
-      />
     </div>
   );
 }

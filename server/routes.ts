@@ -154,12 +154,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return authMiddleware(req, res, next);
   });
 
-  // Object storage routes for Terms & Conditions upload
+  // Object storage routes for file uploads
   app.post('/api/objects/upload', async (req, res) => {
     try {
+      const { fileName, entityType = 'general', entityId } = req.body;
       const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      res.json({ uploadURL });
+      
+      let filePath = fileName;
+      if (entityType === 'rfx-response' && entityId) {
+        filePath = `rfx-responses/${entityId}/${fileName}`;
+      } else if (entityType === 'terms') {
+        filePath = `terms/${fileName}`;
+      } else if (fileName) {
+        filePath = `general/${fileName}`;
+      }
+      
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL(filePath);
+      res.json({ 
+        uploadURL, 
+        filePath: `/objects/${filePath}`,
+        method: 'PUT'
+      });
     } catch (error) {
       console.error("Error getting upload URL:", error);
       res.status(500).json({ error: "Failed to get upload URL" });
@@ -722,9 +737,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "RFx ID is required" });
       }
 
+      const { attachments = [], ...otherData } = req.body;
+      
+      // Ensure attachments is an array of strings (file paths)
+      const processedAttachments = Array.isArray(attachments) 
+        ? attachments.filter(att => typeof att === 'string' && att.trim().length > 0)
+        : [];
+
       const responseData = {
-        ...req.body,
+        ...otherData,
         vendorId: vendor.id,
+        attachments: processedAttachments,
       };
 
       console.log('Creating RFx response with data:', responseData);
