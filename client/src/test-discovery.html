@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test AI Discovery</title>
+</head>
+<body>
+    <h1>AI Discovery Test</h1>
+    <button onclick="testDiscovery()">Test AI Discovery</button>
+    <div id="result"></div>
+
+    <script>
+        async function testDiscovery() {
+            console.log("Starting test...");
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                const response = await fetch('/api/vendors/discover', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        query: 'electronic components',
+                        location: '',
+                        category: ''
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Success:', data);
+                resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
