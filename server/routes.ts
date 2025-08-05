@@ -452,6 +452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: 'Product deleted successfully' });
     } catch (error: any) {
       console.error("Error deleting product:", error);
+      console.error("Error code:", error?.code);
+      console.error("Error constraint:", error?.constraint);
       
       // Handle foreign key constraint violations with user-friendly messages
       if (error?.code === '23503') {
