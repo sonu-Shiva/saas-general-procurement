@@ -813,8 +813,8 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
               variant="default" 
               size="sm" 
               onClick={() => {
-                console.log('Respond button clicked for:', rfx.rfx || rfx);
-                onRespond(rfx.rfx || rfx);
+                console.log('Respond button clicked for RFx:', rfx);
+                onRespond(rfx);
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >

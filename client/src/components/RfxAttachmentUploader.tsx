@@ -1,4 +1,3 @@
-
 import { useState, useCallback, ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ObjectUploader } from "./ObjectUploader";
@@ -95,7 +94,7 @@ export function RfxAttachmentUploader({
       return {
         method: result.method,
         url: result.url,
-        headers: {}
+        filePath: result.filePath // Ensure filePath is returned and used
       };
     } catch (error) {
       console.error('Error getting upload parameters:', error);
@@ -113,7 +112,7 @@ export function RfxAttachmentUploader({
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     const isValidType = ALLOWED_FILE_TYPES.includes(fileExtension) || 
                        ALLOWED_MIME_TYPES.includes(file.type);
-    
+
     if (!isValidType) {
       return 'File type not supported. Please use PDF, DOC, XLS, images, or ZIP files.';
     }
@@ -155,11 +154,11 @@ export function RfxAttachmentUploader({
     if (validFiles.length === 0) return;
 
     setIsUploading(true);
-    
+
     try {
       const uploadPromises = validFiles.map(async (file) => {
         const attachmentId = nanoid();
-        
+
         // Create attachment info before upload
         const attachmentInfo: AttachmentInfo = {
           id: attachmentId,
@@ -172,7 +171,7 @@ export function RfxAttachmentUploader({
 
         try {
           const uploadParams = await handleUploadParameters(file);
-          
+
           // Upload file
           const uploadResponse = await fetch(uploadParams.url, {
             method: uploadParams.method,
@@ -184,12 +183,14 @@ export function RfxAttachmentUploader({
           });
 
           if (!uploadResponse.ok) {
-            throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+            const errorText = await uploadResponse.text();
+            console.error('Upload error response:', errorText);
+            throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`);
           }
 
           // Set the file path from upload parameters
-          attachmentInfo.filePath = `/objects/rfx-responses/${rfxId}/${file.name}`;
-          
+          attachmentInfo.filePath = uploadParams.filePath;
+
           return attachmentInfo;
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
@@ -199,9 +200,9 @@ export function RfxAttachmentUploader({
 
       const uploadedAttachments = await Promise.all(uploadPromises);
       const newAttachments = [...attachments, ...uploadedAttachments];
-      
+
       onAttachmentsChange?.(newAttachments);
-      
+
       toast({
         title: "Upload Successful",
         description: `${validFiles.length} file(s) uploaded successfully`,
@@ -216,12 +217,12 @@ export function RfxAttachmentUploader({
     } finally {
       setIsUploading(false);
     }
-  }, [attachments, validateFile, handleUploadParameters, onAttachmentsChange, toast, rfxId]);
+  }, [attachments, validateFile, handleUploadParameters, onAttachmentsChange, toast]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     if (disabled || isUploading) return;
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       handleFileSelect(files);
@@ -303,7 +304,7 @@ export function RfxAttachmentUploader({
           </p>
         </label>
       </div>
-      
+
       {isUploading && (
         <div className="flex items-center justify-center space-x-2 text-blue-600">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>

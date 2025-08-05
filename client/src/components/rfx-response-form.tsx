@@ -50,11 +50,19 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
   const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Handle nested RFx data structure properly
+  // Handle nested RFx data structure properly - vendor invitations come with rfx nested
   const rfxData = rfx.rfx || rfx;
   const rfxType = (rfxData.type || rfx.rfxType || rfx.type || 'rfx').toUpperCase();
   const termsPath = rfxData.termsAndConditionsPath || rfx.rfxTermsAndConditionsPath || rfx.termsAndConditionsPath;
   const rfxId = rfx.rfxId || rfx.id || rfxData.id;
+
+  console.log('RfxResponseForm - Debug data:', {
+    rfx,
+    rfxData,
+    rfxId,
+    rfxType,
+    termsPath
+  });
 
   const form = useForm<RfxResponseFormData>({
     resolver: zodResolver(rfxResponseSchema),
@@ -96,7 +104,11 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
       const response = await fetch('/api/objects/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName }),
+        body: JSON.stringify({ 
+          fileName, 
+          entityType: 'rfx-response',
+          entityId: rfxId 
+        }),
         credentials: 'include',
       });
 
@@ -105,10 +117,11 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
       }
 
       const data = await response.json();
+      console.log('Upload parameters received:', data);
       return {
         method: "PUT" as const,
         url: data.uploadURL,
-        filePath: data.filePath || `/rfx-responses/${rfxId}/${fileName}`,
+        filePath: data.filePath,
       };
     } catch (error) {
       console.error('Error getting upload parameters:', error);
@@ -161,16 +174,23 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
   const submitResponseMutation = useMutation({
     mutationFn: async (data: RfxResponseFormData) => {
       const attachmentPaths = attachments.map(att => att.filePath);
-      console.log('Submitting RFx response with data:', { rfxId, ...data, attachments: attachmentPaths });
+      
+      const submissionData = {
+        rfxId: rfxId,
+        response: data.response,
+        quotedPrice: data.quotedPrice || null,
+        deliveryTerms: data.deliveryTerms || null,
+        paymentTerms: data.paymentTerms || null,
+        leadTime: data.leadTime || null,
+        attachments: attachmentPaths,
+      };
+      
+      console.log('Submitting RFx response with data:', submissionData);
 
       const response = await fetch("/api/vendor/rfx-responses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rfxId: rfxId,
-          ...data,
-          attachments: attachmentPaths,
-        }),
+        body: JSON.stringify(submissionData),
         credentials: "include",
       });
 
