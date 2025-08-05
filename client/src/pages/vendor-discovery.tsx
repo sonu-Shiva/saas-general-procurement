@@ -56,9 +56,57 @@ export default function VendorDiscovery() {
     }
   };
 
-  const handleAiSearch = () => {
-    setAiSearchMode(true);
-    // AI search functionality would be implemented here
+  const handleAiSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    console.log("Starting AI search for:", searchQuery);
+    
+    try {
+      // Use XMLHttpRequest for AI discovery to bypass any corruption
+      const response = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/vendors/discover', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.withCredentials = true;
+        
+        xhr.onload = function() {
+          console.log('AI Search XHR Status:', xhr.status);
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              console.log(`AI Search Success: Found ${result.length} vendors`);
+              resolve(result);
+            } catch (e) {
+              reject(new Error('Failed to parse AI search response'));
+            }
+          } else {
+            reject(new Error(`AI Search failed: ${xhr.status} - ${xhr.responseText}`));
+          }
+        };
+        
+        xhr.onerror = function() {
+          reject(new Error('Network error during AI search'));
+        };
+        
+        const payload = JSON.stringify({
+          query: searchQuery,
+          location: locationFilter !== 'all' ? locationFilter : '',
+          category: categoryFilter !== 'all' ? categoryFilter : ''
+        });
+        
+        xhr.send(payload);
+      });
+      
+      console.log("AI discovered vendors:", response);
+      
+      // For now, log the results. In a full implementation, you'd display them
+      alert(`AI Discovery Success!\n\nFound ${response.length} vendors:\n${response.map((v: any) => `• ${v.name} - ${v.email}`).join('\n')}`);
+      
+    } catch (error) {
+      console.error("AI search error:", error);
+      alert(`AI Discovery Error: ${error.message}`);
+    }
   };
 
   const displayVendors = searchQuery.length > 2 ? (searchResults || []) : (allVendors || []).filter((vendor: Vendor) => {

@@ -46,11 +46,12 @@ function testDiscovery() {
   
   xhr.onload = function() {
     console.log('XHR Status:', xhr.status);
-    console.log('XHR Response:', xhr.responseText);
+    console.log('XHR Response length:', xhr.responseText.length);
     
     if (xhr.status === 200) {
       const result = JSON.parse(xhr.responseText);
-      alert(`SUCCESS! Found ${result.length} vendors:\n${result.map(v => v.name).join('\n')}`);
+      console.log('Parsed result:', result);
+      alert(`SUCCESS! Found ${result.length} vendors:\n${result.map((v: any) => `• ${v.name} (${v.category})`).join('\n')}`);
     } else {
       alert(`ERROR: ${xhr.status} - ${xhr.responseText}`);
     }
@@ -61,7 +62,7 @@ function testDiscovery() {
   };
   
   const payload = JSON.stringify({
-    query: 'electronic components',
+    query: 'textile manufacturers',
     location: '',
     category: ''
   });
@@ -120,7 +121,20 @@ function Router() {
           Test Discovery
         </button>
         <button
-          onClick={() => window.location.href = '/api/logout'}
+          onClick={() => {
+            fetch('/api/logout', { method: 'GET', credentials: 'include' })
+              .then(() => {
+                // Force clear browser state
+                localStorage.clear();
+                sessionStorage.clear();
+                // Force page reload to clear all React state
+                window.location.reload();
+              })
+              .catch(() => {
+                // Force reload anyway
+                window.location.reload();
+              });
+          }}
           className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
         >
           Test Logout

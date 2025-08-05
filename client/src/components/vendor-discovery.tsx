@@ -141,8 +141,9 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
         xhr.send(payload);
       });
     },
-    onSuccess: (vendors) => {
-      setDiscoveredVendors(vendors);
+    onSuccess: (vendors: any) => {
+      console.log("AI Discovery onSuccess called with:", vendors);
+      setDiscoveredVendors(vendors as any[]);
       toast({
         title: "Success",
         description: `Found ${vendors.length} potential vendors!`,
