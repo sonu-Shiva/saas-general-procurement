@@ -14,8 +14,23 @@ export function useAuth() {
     window.location.href = "/api/login";
   };
 
-  const logout = () => {
-    window.location.href = "/api/logout";
+  const logout = async () => {
+    try {
+      // Make a logout request
+      const response = await fetch('/api/logout', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      console.log('Logout response:', response.status);
+      
+      // Force page refresh to clear all state
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force redirect anyway
+      window.location.href = '/';
+    }
   };
 
   return {

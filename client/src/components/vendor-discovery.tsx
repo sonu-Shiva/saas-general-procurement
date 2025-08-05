@@ -103,15 +103,44 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
   // AI vendor discovery mutation using dedicated API
   const aiVendorMutation = useMutation({
     mutationFn: async (searchData: AIDiscoveryData) => {
-      console.log("🚀 Starting AI vendor discovery with dedicated API");
+      console.log("Starting AI vendor discovery with form data:", searchData);
       
-      const request: VendorDiscoveryRequest = {
-        query: searchData.query,
-        location: searchData.location || undefined,
-        category: searchData.category || undefined,
-      };
-      
-      return await discoverVendorsAPI(request);
+      // Use XMLHttpRequest as a fallback to bypass any fetch corruption
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/vendors/discover', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.withCredentials = true;
+        
+        xhr.onload = function() {
+          console.log('XHR Status:', xhr.status);
+          console.log('XHR Response:', xhr.responseText);
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              resolve(result);
+            } catch (e) {
+              reject(new Error('Failed to parse response'));
+            }
+          } else {
+            reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+          }
+        };
+        
+        xhr.onerror = function() {
+          reject(new Error('Network error'));
+        };
+        
+        const payload = JSON.stringify({
+          query: searchData.query,
+          location: searchData.location || "",
+          category: searchData.category || ""
+        });
+        
+        console.log('Sending XHR payload:', payload);
+        xhr.send(payload);
+      });
     },
     onSuccess: (vendors) => {
       setDiscoveredVendors(vendors);
