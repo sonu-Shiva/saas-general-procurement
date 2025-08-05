@@ -146,8 +146,21 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/logout", (req, res) => {
+    console.log("Logout request received");
+    
+    // In development mode, just clear everything and redirect
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Development logout - clearing session");
+      req.session.destroy((err) => {
+        if (err) console.error("Session destroy error:", err);
+        res.clearCookie('connect.sid');
+        res.redirect("/");
+      });
+      return;
+    }
+    
+    // Production logout with proper OIDC flow
     req.logout(() => {
-      // Clear the session cookie
       res.clearCookie('connect.sid');
       res.redirect("/");
     });

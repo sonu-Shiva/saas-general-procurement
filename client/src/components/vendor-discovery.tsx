@@ -105,7 +105,7 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
     mutationFn: async (searchData: AIDiscoveryData) => {
       console.log("Starting AI vendor discovery with form data:", searchData);
       
-      // Use XMLHttpRequest as a fallback to bypass any fetch corruption
+      // Use the working XMLHttpRequest approach that was tested successfully
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/vendors/discover', true);
@@ -113,23 +113,23 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
         xhr.withCredentials = true;
         
         xhr.onload = function() {
-          console.log('XHR Status:', xhr.status);
-          console.log('XHR Response:', xhr.responseText);
+          console.log('AI Discovery XHR Status:', xhr.status);
           
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const result = JSON.parse(xhr.responseText);
+              console.log(`AI Discovery Success: Found ${result.length} vendors`);
               resolve(result);
             } catch (e) {
-              reject(new Error('Failed to parse response'));
+              reject(new Error('Failed to parse AI discovery response'));
             }
           } else {
-            reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+            reject(new Error(`AI Discovery failed: ${xhr.status} - ${xhr.responseText}`));
           }
         };
         
         xhr.onerror = function() {
-          reject(new Error('Network error'));
+          reject(new Error('Network error during AI discovery'));
         };
         
         const payload = JSON.stringify({
@@ -138,7 +138,6 @@ export default function VendorDiscovery({ onClose, onSuccess }: VendorDiscoveryP
           category: searchData.category || ""
         });
         
-        console.log('Sending XHR payload:', payload);
         xhr.send(payload);
       });
     },
