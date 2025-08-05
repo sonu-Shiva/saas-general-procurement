@@ -207,11 +207,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Construct search prompt
-      let searchPrompt = `Find professional vendors and suppliers specializing in ${query}`;
+      let searchPrompt = `Find 5-8 professional vendors and suppliers specializing in ${query}`;
       if (location && location !== 'all') {
         searchPrompt += ` in ${location}`;
       }
-      searchPrompt += ' in India. Please format the response as follows for each vendor:\n**[Company Name]**\n- Contact Email: [email address]  \n- Phone Number: [phone number]\n- Address: [full address]\n- Website: [website URL]\n- Logo URL: [company logo URL if available]\n- Description: [brief description of services/products]\nFocus on established businesses with verifiable contact information.';
+      searchPrompt += ' in India. IMPORTANT: Only include vendors with REAL contact information (email addresses and phone numbers). Please format the response exactly as follows for each vendor:\n\n**[Company Name]**\n- Contact Email: [real email address - must be valid, not "Not publicly listed"]\n- Phone Number: [real phone number with country code like +91-80-12345678]\n- Address: [complete address]\n- Website: [website URL]\n- Logo URL: [company logo URL if available]\n- Description: [brief description]\n\nPrioritize vendors with publicly available contact details from their websites, business directories, or official listings. Skip vendors without real email addresses or phone numbers.';
 
       console.log('Perplexity search prompt:', searchPrompt);
 

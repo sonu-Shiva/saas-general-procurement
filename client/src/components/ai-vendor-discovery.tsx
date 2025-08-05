@@ -58,7 +58,7 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
         },
         credentials: 'include',
         body: JSON.stringify({
-          name: vendor.name,
+          companyName: vendor.name,
           email: vendor.email,
           phone: vendor.phone,
           address: vendor.address,
@@ -245,7 +245,10 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
                           <span>{vendor.email}</span>
                         </div>
                       )}
-                      {vendor.phone && vendor.phone !== "Not publicly listed" && (
+                      {vendor.phone && 
+                       vendor.phone !== "Not publicly listed" && 
+                       vendor.phone !== "Not listed (contact via ExportersIndia platform)" && 
+                       vendor.phone.trim() !== "" && (
                         <div className="flex items-center text-muted-foreground">
                           <Phone className="w-3 h-3 mr-1" />
                           <span>{vendor.phone}</span>
@@ -257,10 +260,10 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
                           <span className="text-xs italic">Not publicly listed</span>
                         </div>
                       )}
-                      {(!vendor.phone || vendor.phone === "Not publicly listed") && (
+                      {(!vendor.phone || vendor.phone === "Not publicly listed" || vendor.phone === "Not listed (contact via ExportersIndia platform)") && (
                         <div className="flex items-center text-muted-foreground">
                           <Phone className="w-3 h-3 mr-1" />
-                          <span className="text-xs italic">+91</span>
+                          <span className="text-xs italic">Not listed (contact via ExportersIndia platform)</span>
                         </div>
                       )}
                     </div>
