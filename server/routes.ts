@@ -516,6 +516,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: userId,
           });
           console.log("Created vendor:", vendor.id);
+          
+          // Automatically create invitations for this new vendor to all existing RFx events
+          console.log("Creating invitations for new vendor to existing RFx events...");
+          const existingRfxEvents = await storage.getRfxEvents();
+          for (const rfx of existingRfxEvents) {
+            try {
+              await storage.createRfxInvitation({
+                rfxId: rfx.id,
+                vendorId: vendor.id,
+                status: 'invited'
+              });
+              console.log(`Created invitation for new vendor ${vendor.id} to RFx ${rfx.id}`);
+            } catch (error) {
+              console.log(`Invitation may already exist for vendor ${vendor.id} to RFx ${rfx.id}`);
+            }
+          }
         }
       }
 
@@ -633,6 +649,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const vendors = await storage.getVendors();
       console.log("Found vendors:", vendors.length);
 
+      // Also ensure the current development user has a vendor profile if in vendor role
+      if (currentDevUser.role === 'vendor') {
+        let devVendor = await storage.getVendorByUserId(currentDevUser.id);
+        if (!devVendor) {
+          console.log("Creating development vendor profile...");
+          devVendor = await storage.createVendor({
+            companyName: `${currentDevUser.firstName} ${currentDevUser.lastName} Company`,
+            email: currentDevUser.email,
+            contactPerson: `${currentDevUser.firstName} ${currentDevUser.lastName}`,
+            phone: '1234567890',
+            address: 'Development Address',
+            city: 'Dev City',
+            state: 'Dev State',
+            country: 'India',
+            pincode: '123456',
+            gstNumber: 'DEV123456',
+            userId: currentDevUser.id,
+          });
+          console.log("Created development vendor:", devVendor.id);
+        }
+        
+        // Add the development vendor to the vendors list if not already there
+        const isDevVendorInList = vendors.some(v => v.id === devVendor.id);
+        if (!isDevVendorInList) {
+          vendors.push(devVendor);
+          console.log("Added development vendor to invitation list");
+        }
+      }
+
       // Create invitations for all vendors to the latest RFx
       const invitations = [];
       for (const vendor of vendors) {
@@ -652,7 +697,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         message: `Created ${invitations.length} vendor invitations for RFx ${latestRfx.title}`,
         rfxId: latestRfx.id,
-        invitations: invitations.length
+        invitations: invitations.length,
+        totalVendors: vendors.length
       });
     } catch (error) {
       console.error("Error creating vendor invitations:", error);
