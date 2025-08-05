@@ -1,0 +1,40 @@
+#!/bin/bash
+# Pre-commit validation hook to prevent regressions
+
+echo "🔍 Running pre-commit validation..."
+
+# Check TypeScript diagnostics
+echo "Checking TypeScript diagnostics..."
+if npx tsc --noEmit --skipLibCheck 2>/dev/null; then
+    echo "✅ TypeScript diagnostics clean"
+else
+    echo "❌ TypeScript errors found - commit blocked"
+    exit 1
+fi
+
+# Validate core API endpoints
+echo "Testing core API endpoints..."
+if ./validate-system.sh | grep -q "✗"; then
+    echo "❌ API endpoint validation failed - commit blocked"
+    exit 1
+else
+    echo "✅ All API endpoints working"
+fi
+
+# Check for common regression patterns
+echo "Checking for regression patterns..."
+
+# Check for incomplete API signature updates
+if grep -r "apiRequest.*POST\|apiRequest.*PUT\|apiRequest.*DELETE" client/src/ --include="*.tsx" --include="*.ts" 2>/dev/null; then
+    echo "❌ Found old API signature usage - update to new format"
+    exit 1
+fi
+
+# Check for schema import issues
+if grep -r "auctionBids\|purchaseOrderItems\|directProcurementOrderItems" server/ --include="*.ts" 2>/dev/null; then
+    echo "❌ Found non-existent schema imports"
+    exit 1
+fi
+
+echo "✅ Pre-commit validation passed"
+echo "🚀 Safe to commit changes"

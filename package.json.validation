@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "validate:system": "./validate-system.sh",
+    "validate:types": "npx tsc --noEmit --skipLibCheck",
+    "validate:full": "npm run validate:types && npm run validate:system",
+    "pre-deploy": "npm run validate:full"
+  }
+}

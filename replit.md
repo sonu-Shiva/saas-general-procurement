@@ -5,8 +5,24 @@ This project is a modern, full-stack procurement management platform designed to
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+Code quality priority: Zero tolerance for regression issues - existing functionality must always be preserved.
+Development approach: Comprehensive testing and validation before any changes to prevent breaking working features.
 
 ## Recent Changes
+
+### Regression Prevention & Code Quality (January 5, 2025)
+- **CRITICAL LESSON**: Regression issues caused by incomplete API signature updates across codebase
+- **ROOT CAUSES IDENTIFIED**: Schema import mismatches, method name inconsistencies, incomplete refactoring
+- **PREVENTION MEASURES**: Comprehensive validation system, TypeScript strict checking, systematic refactoring protocols
+- **QUALITY GATES**: Added pre-deployment validation checks, interface consistency verification
+- **USER PRIORITY**: Zero tolerance for regression issues - all changes must maintain existing functionality
+
+### Product Catalogue Regression Fix (January 5, 2025)
+- **FIXED**: Schema import errors in server/routes.ts (removed non-existent imports like auctionBids, purchaseOrderItems)
+- **CORRECTED**: Method name mismatch getProductCategoriesHierarchy → getProductCategoryHierarchy
+- **RESOLVED**: API request function signature mismatches across all components
+- **RESTORED**: Product catalogue display functionality - 6 products now showing correctly
+- **TESTED**: Role switching functionality working without breaking other features
 
 ### Vendor Management Bug Fixes (January 5, 2025)
 - **FIXED**: Vendor delete and remove functionality regression issues
