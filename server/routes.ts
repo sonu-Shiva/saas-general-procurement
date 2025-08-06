@@ -1341,6 +1341,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Purchase Order approval endpoint
+  app.patch('/api/purchase-orders/:id/approve', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { comments } = req.body;
+      const po = await storage.updatePurchaseOrder(req.params.id, {
+        status: 'approved',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        approvalComments: comments || 'Approved'
+      });
+      res.json(po);
+    } catch (error) {
+      console.error("Error approving purchase order:", error);
+      res.status(500).json({ message: "Failed to approve purchase order" });
+    }
+  });
+
+  // Purchase Order rejection endpoint
+  app.patch('/api/purchase-orders/:id/reject', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { comments } = req.body;
+
+      if (!comments || comments.trim() === '') {
+        return res.status(400).json({ message: "Comments are required for rejection" });
+      }
+
+      const po = await storage.updatePurchaseOrder(req.params.id, {
+        status: 'rejected',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        approvalComments: comments
+      });
+      res.json(po);
+    } catch (error) {
+      console.error("Error rejecting purchase order:", error);
+      res.status(500).json({ message: "Failed to reject purchase order" });
+    }
+  });
+
+  // Purchase Order issue endpoint (for moving from approved to issued)
+  app.patch('/api/purchase-orders/:id/issue', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { comments } = req.body;
+      const po = await storage.updatePurchaseOrder(req.params.id, {
+        status: 'issued',
+        approvalComments: comments || 'Purchase Order issued to vendor'
+      });
+      res.json(po);
+    } catch (error) {
+      console.error("Error issuing purchase order:", error);
+      res.status(500).json({ message: "Failed to issue purchase order" });
+    }
+  });
+
   // Product routes
   app.get('/api/products', async (req, res) => {
     try {

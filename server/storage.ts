@@ -1205,9 +1205,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePurchaseOrder(id: string, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
+    const updateData = {
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    // If status is being updated to approved, set approvedAt if not already set
+    if (updates.status === 'approved' && !updates.approvedAt) {
+      updateData.approvedAt = new Date();
+    }
+
     const [po] = await this.db
       .update(purchaseOrders)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(purchaseOrders.id, id))
       .returning();
     return po;
