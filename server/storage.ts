@@ -1120,7 +1120,46 @@ export class DatabaseStorage implements IStorage {
 
   // Purchase Order operations
   async createPurchaseOrder(po: InsertPurchaseOrder): Promise<PurchaseOrder> {
-    const [newPo] = await this.db.insert(purchaseOrders).values(po).returning();
+    // Get vendor details to populate PO format fields
+    let vendorDetails = null;
+    if (po.vendorId) {
+      vendorDetails = await this.getVendor(po.vendorId);
+    }
+
+    // Get buyer organization details
+    const buyerUser = await this.getUser(po.createdBy);
+    let buyerOrg = null;
+    if (buyerUser?.organizationId) {
+      buyerOrg = await this.getOrganization(buyerUser.organizationId);
+    }
+
+    // Enhance PO data with required format fields
+    const enhancedPo = {
+      ...po,
+      // Buyer Information
+      buyerName: buyerOrg?.name || "SCLEN Procurement",
+      buyerBranchName: buyerOrg?.name || "Head Office",
+      buyerAddress: buyerOrg?.address || "",
+      buyerGstin: buyerOrg?.gstNumber || "",
+      
+      // Vendor Information
+      vendorName: vendorDetails?.companyName || "",
+      vendorAddress: vendorDetails?.address || "",
+      vendorGstin: vendorDetails?.gstNumber || "",
+      
+      // Delivery defaults to buyer address unless specified
+      deliveryToAddress: po.deliveryToAddress || buyerOrg?.address || "",
+      deliveryGstin: po.deliveryGstin || buyerOrg?.gstNumber || "",
+      
+      // PO Details
+      poDate: new Date(),
+      taxAmount: po.taxAmount || "0",
+      authorizedSignatory: buyerUser?.firstName && buyerUser?.lastName 
+        ? `${buyerUser.firstName} ${buyerUser.lastName}` 
+        : "Authorized Signatory",
+    };
+
+    const [newPo] = await this.db.insert(purchaseOrders).values(enhancedPo).returning();
     return newPo;
   }
 
@@ -1224,7 +1263,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPoLineItem(lineItem: InsertPoLineItem): Promise<PoLineItem> {
-    const [newLineItem] = await this.db.insert(poLineItems).values(lineItem).returning();
+    // Calculate taxable value if not provided
+    const quantity = parseFloat(lineItem.quantity);
+    const unitPrice = parseFloat(lineItem.unitPrice);
+    const taxableValue = lineItem.taxableValue || (quantity * unitPrice).toString();
+    
+    const enhancedLineItem = {
+      ...lineItem,
+      taxableValue,
+      // Set HSN code if not provided (default for general goods)
+      hsnCode: lineItem.hsnCode || "9999",
+      // Set UOM if not provided
+      uom: lineItem.uom || "NOS",
+    };
+
+    const [newLineItem] = await this.db.insert(poLineItems).values(enhancedLineItem).returning();
     return newLineItem;
   }
 

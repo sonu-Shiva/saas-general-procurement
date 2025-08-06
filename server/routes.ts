@@ -2054,6 +2054,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const purchaseOrder = await storage.createPurchaseOrder(poData);
       console.log("Purchase Order created successfully:", purchaseOrder.id);
 
+      // Get auction items to create line items
+      const auctionItems = await storage.getAuctionItems(auctionId);
+
+      // Create line items from auction items
+      if (auctionItems && Array.isArray(auctionItems)) {
+        for (let index = 0; index < auctionItems.length; index++) {
+          const item = auctionItems[index];
+          const totalPrice = parseFloat(item.quantity) * parseFloat(item.unitPrice);
+          await storage.createPoLineItem({
+            poId: purchaseOrder.id,
+            slNo: index + 1,
+            itemName: item.itemName,
+            quantity: item.quantity.toString(),
+            unitPrice: item.unitPrice.toString(),
+            totalPrice: totalPrice.toString(),
+            taxableValue: totalPrice.toString(),
+            uom: item.uom || "NOS",
+            hsnCode: item.hsnCode || "9999",
+            specifications: item.specifications || "",
+          });
+        }
+      }
+
       // Update auction winner information
       await storage.updateAuction(auctionId, {
         winnerId: vendorId,

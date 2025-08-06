@@ -425,19 +425,19 @@ export default function PurchaseOrders() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                       <div>
                         <span className="font-medium">Vendor:</span>
-                        <p className="text-foreground">{po.vendorName || (po as any).vendorCompanyName || 'N/A'}</p>
+                        <p className="text-foreground">{(po as any).vendorName || po.vendorName || (po as any).vendorCompanyName || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="font-medium">Total Amount:</span>
                         <p className="text-foreground font-semibold">{formatCurrency(parseFloat(po.totalAmount || '0'))}</p>
                       </div>
                       <div>
-                        <span className="font-medium">Created:</span>
-                        <p className="text-foreground">{po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A'}</p>
+                        <span className="font-medium">PO Date:</span>
+                        <p className="text-foreground">{(po as any).poDate ? new Date((po as any).poDate).toLocaleDateString() : (po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A')}</p>
                       </div>
                       <div>
-                        <span className="font-medium">Expected Delivery:</span>
-                        <p className="text-foreground">{(po as any).expectedDeliveryDate ? new Date((po as any).expectedDeliveryDate).toLocaleDateString() : 'N/A'}</p>
+                        <span className="font-medium">Delivery Date:</span>
+                        <p className="text-foreground">{(po as any).deliveryDate ? new Date((po as any).deliveryDate).toLocaleDateString() : 'N/A'}</p>
                       </div>
                     </div>
                   </div>
@@ -498,28 +498,57 @@ export default function PurchaseOrders() {
                         <DialogHeader>
                           <DialogTitle>Purchase Order Details - {po.poNumber}</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <strong>Vendor:</strong> {po.vendorName || (po as any).vendorCompanyName || 'N/A'}
-                            </div>
-                            <div>
-                              <strong>Total Amount:</strong> {formatCurrency(parseFloat(po.totalAmount || '0'))}
-                            </div>
-                            <div>
-                              <strong>Status:</strong> <Badge className={getStatusColor(po.status || '')}>{po.status?.replace('_', ' ')}</Badge>
-                            </div>
-                            <div>
-                              <strong>Created:</strong> {po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A'}
+                        <div className="space-y-6">
+                          {/* Buyer Information */}
+                          <div>
+                            <h4 className="font-semibold text-lg mb-3">Buyer Information</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div><strong>Buyer Name:</strong> {(po as any).buyerName || 'SCLEN Procurement'}</div>
+                              <div><strong>Branch:</strong> {(po as any).buyerBranchName || 'Head Office'}</div>
+                              <div><strong>Address:</strong> {(po as any).buyerAddress || 'N/A'}</div>
+                              <div><strong>GSTIN:</strong> {(po as any).buyerGstin || 'N/A'}</div>
                             </div>
                           </div>
+
+                          {/* Vendor Information */}
                           <div>
-                            <strong>Terms & Conditions:</strong>
-                            <p className="text-sm text-muted-foreground mt-1">{(po as any).termsAndConditions || 'No terms specified'}</p>
+                            <h4 className="font-semibold text-lg mb-3">Vendor Information</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div><strong>Vendor Name:</strong> {(po as any).vendorName || po.vendorName || 'N/A'}</div>
+                              <div><strong>Address:</strong> {(po as any).vendorAddress || 'N/A'}</div>
+                              <div><strong>GSTIN:</strong> {(po as any).vendorGstin || 'N/A'}</div>
+                            </div>
                           </div>
+
+                          {/* PO Details */}
                           <div>
-                            <strong>Notes:</strong>
-                            <p className="text-sm text-muted-foreground mt-1">{(po as any).notes || 'No notes'}</p>
+                            <h4 className="font-semibold text-lg mb-3">Purchase Order Details</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div><strong>PO Number:</strong> {po.poNumber}</div>
+                              <div><strong>PO Date:</strong> {(po as any).poDate ? new Date((po as any).poDate).toLocaleDateString() : new Date(po.createdAt).toLocaleDateString()}</div>
+                              <div><strong>Status:</strong> <Badge className={getStatusColor(po.status || '')}>{po.status?.replace('_', ' ')}</Badge></div>
+                              <div><strong>Quotation Ref:</strong> {(po as any).quotationRef || 'N/A'}</div>
+                              <div><strong>Delivery Date:</strong> {(po as any).deliveryDate ? new Date((po as any).deliveryDate).toLocaleDateString() : 'N/A'}</div>
+                              <div><strong>Payment Terms:</strong> {(po as any).paymentTerms || 'N/A'}</div>
+                              <div><strong>Incoterms:</strong> {(po as any).incoterms || 'N/A'}</div>
+                            </div>
+                          </div>
+
+                          {/* Financial Details */}
+                          <div>
+                            <h4 className="font-semibold text-lg mb-3">Financial Details</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div><strong>Total Amount:</strong> {formatCurrency(parseFloat(po.totalAmount || '0'))}</div>
+                              <div><strong>Tax Amount:</strong> {formatCurrency(parseFloat((po as any).taxAmount || '0'))}</div>
+                              <div><strong>Amount in Words:</strong> {(po as any).totalAmountInWords || 'N/A'}</div>
+                              <div><strong>Authorized Signatory:</strong> {(po as any).authorizedSignatory || 'N/A'}</div>
+                            </div>
+                          </div>
+
+                          {/* Terms & Conditions */}
+                          <div>
+                            <h4 className="font-semibold text-lg mb-3">Terms & Conditions</h4>
+                            <p className="text-sm text-muted-foreground">{(po as any).termsAndConditions || 'Standard terms and conditions apply'}</p>
                           </div>
                         </div>
                       </DialogContent>

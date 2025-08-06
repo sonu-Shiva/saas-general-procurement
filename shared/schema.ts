@@ -238,17 +238,48 @@ export const purchaseOrders = pgTable("purchase_orders", {
   vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
   rfxId: uuid("rfx_id").references(() => rfxEvents.id),
   auctionId: uuid("auction_id").references(() => auctions.id),
+  
+  // Buyer Information
+  buyerName: varchar("buyer_name", { length: 255 }),
+  buyerBranchName: varchar("buyer_branch_name", { length: 255 }),
+  buyerAddress: text("buyer_address"),
+  buyerGstin: varchar("buyer_gstin", { length: 50 }),
+  
+  // Vendor Information (duplicated for PO format)
+  vendorName: varchar("vendor_name", { length: 255 }),
+  vendorAddress: text("vendor_address"),
+  vendorGstin: varchar("vendor_gstin", { length: 50 }),
+  
+  // Delivery Information
+  deliveryToAddress: text("delivery_to_address"),
+  deliveryGstin: varchar("delivery_gstin", { length: 50 }),
+  
+  // PO Details
+  poDate: timestamp("po_date").defaultNow(),
+  quotationRef: varchar("quotation_ref", { length: 255 }),
+  deliveryDate: timestamp("delivery_date"),
+  
+  // Financial Information
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-  status: varchar("status", { enum: ["draft", "pending_approval", "approved", "rejected", "issued", "acknowledged", "shipped", "delivered", "invoiced", "paid", "cancelled"] }).default("pending_approval"),
-  termsAndConditions: text("terms_and_conditions"),
-  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
-  deliverySchedule: jsonb("delivery_schedule"),
+  taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }).default("0"),
+  totalAmountInWords: text("total_amount_in_words"),
+  
+  // Terms and Conditions
   paymentTerms: text("payment_terms"),
+  incoterms: varchar("incoterms", { length: 100 }),
+  termsAndConditions: text("terms_and_conditions"),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }),
+  
+  // Status and Workflow
+  status: varchar("status", { enum: ["draft", "pending_approval", "approved", "rejected", "issued", "acknowledged", "shipped", "delivered", "invoiced", "paid", "cancelled"] }).default("pending_approval"),
+  deliverySchedule: jsonb("delivery_schedule"),
   attachments: text("attachments").array(),
   acknowledgedAt: timestamp("acknowledged_at"),
   approvedBy: varchar("approved_by").references(() => users.id),
   approvedAt: timestamp("approved_at"),
   approvalComments: text("approval_comments"),
+  authorizedSignatory: varchar("authorized_signatory", { length: 255 }),
+  
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -257,13 +288,18 @@ export const purchaseOrders = pgTable("purchase_orders", {
 export const poLineItems = pgTable("po_line_items", {
   id: uuid("id").primaryKey().defaultRandom(),
   poId: uuid("po_id").references(() => purchaseOrders.id, { onDelete: "cascade" }).notNull(),
+  slNo: integer("sl_no").notNull(), // Serial Number
   productId: uuid("product_id").references(() => products.id), // Allow null for BOM-based orders
-  itemName: varchar("item_name", { length: 255 }), // For BOM-based orders where productId is null
+  itemName: varchar("item_name", { length: 255 }).notNull(),
+  uom: varchar("uom", { length: 50 }), // Unit of Measurement
+  hsnCode: varchar("hsn_code", { length: 50 }), // HSN Code for tax purposes
   quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  taxableValue: decimal("taxable_value", { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   deliveryDate: timestamp("delivery_date"),
   status: varchar("status", { enum: ["pending", "shipped", "delivered"] }).default("pending"),
+  specifications: text("specifications"),
 });
 
 export const approvals = pgTable("approvals", {
