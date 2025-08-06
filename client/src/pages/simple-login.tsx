@@ -6,45 +6,44 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export default function SimpleLogin() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    role: ""
-  });
+  const [selectedRole, setSelectedRole] = useState("buyer_admin");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { login, switchRole } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.role) {
-      toast({
-        title: "Error",
-        description: "Please select a role",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
+
     try {
-      // First login to the system
-      await apiRequest('POST', '/api/auth/login', {});
-      
-      // Then set the role
-      await apiRequest('PATCH', '/api/auth/user/role', { role: formData.role });
-      
+      console.log("Attempting login with role:", selectedRole);
+
+      // First login to restore authentication
+      const user = await login();
+      console.log("Login successful, user:", user);
+
+      // Then switch to selected role if different from current
+      if (user && user.role !== selectedRole) {
+        console.log("Switching role from", user.role, "to", selectedRole);
+        await switchRole(selectedRole);
+      }
+
       toast({
-        title: "Success",
-        description: "Login successful! Redirecting...",
+        title: "Login Successful",
+        description: `Logged in as ${selectedRole.replace('_', ' ')}`,
       });
-      
-      // Redirect to main app
-      window.location.href = "/";
+
+      // Short delay to ensure state is updated
+      setTimeout(() => {
+        navigate("/");
+      }, 500);
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Login error:", error);
       toast({
         title: "Login Failed",
         description: "Please try again",
@@ -63,16 +62,16 @@ export default function SimpleLogin() {
           <CardDescription>Enter your details to access the platform</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg mb-4">
               <p className="text-sm text-blue-700 dark:text-blue-300">
                 Development Mode: Choose your role to access the platform
               </p>
             </div>
-            
+
             <div>
               <Label htmlFor="role">Role</Label>
-              <Select onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <Select onValueChange={(value) => setSelectedRole(value)} defaultValue={selectedRole}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
@@ -84,7 +83,7 @@ export default function SimpleLogin() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Logging in..." : "Login"}
             </Button>

@@ -12,8 +12,11 @@ export function useAuth() {
 
   const login = async () => {
     try {
+      console.log('Attempting to login...');
+      
       // Call the login API to restore authentication state
       const user = await apiRequest('/api/auth/login', { method: 'POST' });
+      console.log('Login API response:', user);
       
       // Update the cache with the returned user data
       queryClient.setQueryData(['/api/auth/user'], user);
@@ -24,8 +27,9 @@ export function useAuth() {
       return user;
     } catch (error) {
       console.error('Login error:', error);
-      // Fallback to page refresh for development
-      window.location.reload();
+      
+      // Re-throw the error so the calling component can handle it
+      throw new Error('Login failed. Please try again.');
     }
   };
 

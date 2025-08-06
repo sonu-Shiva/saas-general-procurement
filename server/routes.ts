@@ -110,10 +110,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
-  app.post('/api/auth/login', (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     console.log('Login requested');
-    isLoggedIn = true;
-    res.json(currentDevUser);
+    try {
+      // Restore login state
+      isLoggedIn = true;
+      
+      // Ensure the user exists in the database
+      const existingUser = await storage.getUser(currentDevUser.id);
+      if (!existingUser) {
+        console.log('User not found in database, creating...');
+        await storage.upsertUser({
+          id: currentDevUser.id,
+          email: currentDevUser.email,
+          firstName: currentDevUser.firstName,
+          lastName: currentDevUser.lastName,
+          role: currentDevUser.role as any,
+        });
+      }
+      
+      console.log('Login successful for user:', currentDevUser.email);
+      res.json(currentDevUser);
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
   });
 
   app.patch('/api/auth/user/role', async (req, res) => {
