@@ -1244,17 +1244,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePurchaseOrder(id: string, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
-    const updateData: any = {
-      updatedAt: new Date()
-    };
-
-    // Only include fields that exist in the database schema
+    // Only include fields that actually exist in the purchase_orders table schema
     const allowedFields = [
       'poNumber', 'vendorId', 'rfxId', 'auctionId', 'totalAmount', 'status',
       'termsAndConditions', 'termsAndConditionsPath', 'deliverySchedule', 
       'paymentTerms', 'attachments', 'acknowledgedAt', 'approvedBy', 
       'approvedAt', 'approvalComments', 'createdBy'
     ];
+
+    const updateData: any = {
+      updatedAt: new Date()
+    };
 
     // Only add fields that exist in the schema
     Object.keys(updates).forEach(key => {
