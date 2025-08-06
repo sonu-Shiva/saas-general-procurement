@@ -1118,6 +1118,18 @@ export class DatabaseStorage implements IStorage {
     return latestBid;
   }
 
+  async getAuctionItems(auctionId: string): Promise<any[]> {
+    // Get auction details to find BOM items
+    const auction = await this.getAuction(auctionId);
+    if (!auction || !auction.bomId) {
+      return [];
+    }
+
+    // Get BOM items for the auction
+    const bomItems = await this.getBomItems(auction.bomId);
+    return bomItems;
+  }
+
   // Purchase Order operations
   async createPurchaseOrder(po: InsertPurchaseOrder): Promise<PurchaseOrder> {
     // Get vendor details to populate PO format fields

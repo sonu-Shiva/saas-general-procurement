@@ -1974,7 +1974,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const order = await storage.createDirectProcurementOrder(orderData);
       console.log("Created order:", JSON.stringify(order, null, 2));
 
-      res.json(order);
+      // Create corresponding Purchase Order for approval workflow
+      try {
+        console.log("=== CREATING PURCHASE ORDER FROM DIRECT PROCUREMENT ===");
+        const poNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+        const poData = {
+          id: uuidv4(),
+          poNumber,
+          vendorId,
+          totalAmount: totalAmount.toString(),
+          status: "pending_approval" as const,
+          termsAndConditions: notes || "Purchase Order created from Direct Procurement Order",
+          paymentTerms: paymentTerms || "Net 30",
+          createdBy: userId,
+        };
+
+        console.log("Creating PO with data:", poData);
+        const purchaseOrder = await storage.createPurchaseOrder(poData);
+        console.log("Purchase Order created successfully:", purchaseOrder.id);
+
+        // Create line items from BOM items
+        if (bomItems && Array.isArray(bomItems)) {
+          for (let index = 0; index < bomItems.length; index++) {
+            const item = bomItems[index];
+            await storage.createPoLineItem({
+              poId: purchaseOrder.id,
+              slNo: index + 1,
+              itemName: item.productName || "Item",
+              quantity: item.requestedQuantity?.toString() || "1",
+              unitPrice: item.unitPrice?.toString() || "0",
+              totalPrice: item.totalPrice?.toString() || "0",
+              taxableValue: item.totalPrice?.toString() || "0",
+              uom: "NOS",
+              hsnCode: "9999",
+              specifications: item.specifications || "",
+            });
+          }
+        }
+
+        console.log("Purchase Order and line items created successfully");
+
+        res.json({
+          directProcurementOrder: order,
+          purchaseOrder: {
+            id: purchaseOrder.id,
+            poNumber: purchaseOrder.poNumber,
+            status: purchaseOrder.status,
+            totalAmount: purchaseOrder.totalAmount
+          }
+        });
+      } catch (poError) {
+        console.error("Error creating Purchase Order from Direct Procurement:", poError);
+        // Still return the DPO even if PO creation fails
+        res.json(order);
+      }
     } catch (error: any) {
       console.error("Error creating direct procurement order:", error);
       console.error("Error stack:", error.stack);
