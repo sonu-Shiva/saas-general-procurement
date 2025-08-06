@@ -429,8 +429,32 @@ export class DatabaseStorage implements IStorage {
 
   // BOM operations
   async createBom(bom: InsertBom): Promise<Bom> {
-    const [newBom] = await this.db.insert(boms).values(bom).returning();
-    return newBom;
+    try {
+      console.log("Storage - Creating BOM with data:", JSON.stringify(bom, null, 2));
+      
+      // Ensure all required fields are present and valid
+      const bomData = {
+        id: bom.id || undefined, // Let DB generate if not provided
+        name: bom.name,
+        version: bom.version,
+        description: bom.description || null,
+        category: bom.category || null,
+        validFrom: bom.validFrom || null,
+        validTo: bom.validTo || null,
+        tags: bom.tags || null,
+        createdBy: bom.createdBy,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      console.log("Storage - Inserting BOM data:", JSON.stringify(bomData, null, 2));
+      const [newBom] = await this.db.insert(boms).values(bomData).returning();
+      console.log("Storage - BOM created successfully:", newBom);
+      return newBom;
+    } catch (error) {
+      console.error("Storage - Error creating BOM:", error);
+      throw error;
+    }
   }
 
   async getBom(id: string): Promise<Bom | undefined> {

@@ -1156,20 +1156,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log("Creating BOM for user:", userId);
-      console.log("Request body:", req.body);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
 
+      // Validate required fields
+      const { name, version, description, category } = req.body;
+      
+      if (!name || !version) {
+        return res.status(400).json({ 
+          message: "Name and version are required fields" 
+        });
+      }
+
+      // Clean the data to ensure no invalid JSON strings
       const bomData = {
-        ...req.body,
+        name: String(name).trim(),
+        version: String(version).trim(),
+        description: description ? String(description).trim() : null,
+        category: category ? String(category).trim() : null,
+        validFrom: req.body.validFrom ? new Date(req.body.validFrom) : null,
+        validTo: req.body.validTo ? new Date(req.body.validTo) : null,
+        tags: req.body.tags || null,
         createdBy: userId,
       };
 
-      console.log("Creating BOM with data:", bomData);
+      console.log("Creating BOM with cleaned data:", JSON.stringify(bomData, null, 2));
       const bom = await storage.createBom(bomData);
       console.log("BOM created successfully:", bom);
       
       res.json(bom);
     } catch (error) {
       console.error("Error creating BOM:", error);
+      console.error("Error details:", error);
       res.status(500).json({ 
         message: "Failed to create BOM", 
         error: error instanceof Error ? error.message : 'Unknown error' 
