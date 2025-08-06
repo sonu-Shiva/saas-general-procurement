@@ -37,7 +37,9 @@ import {
   XCircle,
   Trash2,
   Check,
-  Loader2
+  Loader2,
+  Building,
+  User
 } from "lucide-react";
 import type { PurchaseOrder, PoLineItem } from "@shared/schema";
 
@@ -108,7 +110,7 @@ export default function PurchaseOrders() {
 
   const submitApproval = () => {
     if (!selectedPO || !approvalAction) return;
-    
+
     if (approvalAction === 'reject' && !approvalComments.trim()) {
       toast({
         title: "Error",
@@ -277,31 +279,52 @@ export default function PurchaseOrders() {
     }
   };
 
-  // Get visible buckets based on user role
-  const getVisibleBuckets = () => {
-    if (user?.role === 'vendor') {
-      return [
-        { id: 'issued', label: 'PO Received', status: 'issued' as const },
-        { id: 'acknowledged', label: 'PO Acknowledged', status: 'acknowledged' as const }
+  // Define buckets based on user role
+  const buckets = user?.role === 'vendor' 
+    ? [
+        { id: 'Issued', name: 'Issued', count: 0, color: 'bg-yellow-100 border-yellow-200', icon: FileText },
+        { id: 'Acknowledged', name: 'Acknowledged', count: 0, color: 'bg-green-100 border-green-200', icon: CheckCircle }
+      ]
+    : [
+        { id: 'Draft', name: 'Draft', count: 0, color: 'bg-gray-100 border-gray-200', icon: FileText },
+        { id: 'Pending Approval', name: 'Pending Approval', count: 0, color: 'bg-blue-100 border-blue-200', icon: Clock },
+        { id: 'Approved', name: 'Approved', count: 0, color: 'bg-green-100 border-green-200', icon: CheckCircle },
+        { id: 'Issued', name: 'Issued', count: 0, color: 'bg-yellow-100 border-yellow-200', icon: Building },
+        { id: 'Acknowledged', name: 'Acknowledged', count: 0, color: 'bg-purple-100 border-purple-200', icon: User }
       ];
-    }
-    
-    // For buyers/sourcing managers - show all buckets
-    return [
-      { id: 'pending_approval', label: 'Pending Approval', status: 'pending_approval' as const },
-      { id: 'approved', label: 'Approved', status: 'approved' as const },
-      { id: 'issued', label: 'Issued', status: 'issued' as const },
-      { id: 'acknowledged', label: 'Acknowledged', status: 'acknowledged' as const },
-      { id: 'rejected', label: 'Rejected', status: 'rejected' as const }
-    ];
+
+  // Filter orders by status with proper status mapping
+  const getFilteredOrders = (status: string) => {
+    if (!Array.isArray(purchaseOrders)) return [];
+
+    // Map display status to database status values
+    const statusMap: Record<string, string[]> = {
+      'Draft': ['draft'],
+      'Pending Approval': ['pending_approval', 'Pending Approval'],
+      'Approved': ['approved'],
+      'Issued': ['issued'],
+      'Acknowledged': ['acknowledged']
+    };
+
+    const validStatuses = statusMap[status] || [status.toLowerCase().replace(' ', '_')];
+    return purchaseOrders.filter(order => validStatuses.includes(order.status));
   };
 
-  const visibleBuckets = getVisibleBuckets();
+  // Calculate counts for each bucket
+  const updatedBuckets = buckets.map(bucket => ({
+    ...bucket,
+    count: getFilteredOrders(bucket.id).length
+  }));
+
+  const visibleBuckets = updatedBuckets;
 
   // Set default status filter based on role
-  if (user?.role === 'vendor' && !['issued', 'acknowledged'].includes(statusFilter)) {
-    setStatusFilter('issued');
+  if (user?.role === 'vendor' && !['Issued', 'Acknowledged'].includes(statusFilter)) {
+    setStatusFilter('Issued');
+  } else if (user?.role !== 'vendor' && !['Pending Approval'].includes(statusFilter)) {
+    setStatusFilter('Pending Approval');
   }
+
 
   // Filter POs based on current tab and search criteria
   const purchaseOrdersArray = Array.isArray(purchaseOrders) ? purchaseOrders : [];
@@ -309,7 +332,7 @@ export default function PurchaseOrders() {
     const matchesSearch = po.poNumber?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = po.status === statusFilter;
     const matchesVendor = vendorFilter === "all" || po.vendorId === vendorFilter;
-    
+
     return matchesSearch && matchesStatus && matchesVendor;
   });
 
@@ -399,32 +422,33 @@ export default function PurchaseOrders() {
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
         <TabsList className={`grid w-full ${user?.role === 'vendor' ? 'grid-cols-2' : 'grid-cols-5'}`}>
           {visibleBuckets.map((bucket) => {
-            const count = purchaseOrdersArray.filter(po => po.status === bucket.status).length;
-            const getTabColor = (status: string) => {
-              switch (status) {
-                case 'pending_approval': return 'text-yellow-600';
-                case 'approved': return 'text-green-600';
-                case 'issued': return 'text-blue-600';
-                case 'acknowledged': return 'text-green-700';
-                case 'rejected': return 'text-red-600';
+            const getTabColor = (statusId: string) => {
+              switch (statusId) {
+                case 'Pending Approval': return 'text-yellow-600';
+                case 'Approved': return 'text-green-600';
+                case 'Issued': return 'text-blue-600';
+                case 'Acknowledged': return 'text-green-700';
+                case 'Rejected': return 'text-red-600';
+                case 'Draft': return 'text-gray-600';
                 default: return 'text-gray-600';
               }
             };
-            const getTabIcon = (status: string) => {
-              switch (status) {
-                case 'pending_approval': return <Clock className="w-4 h-4 mr-2" />;
-                case 'approved': return <CheckCircle className="w-4 h-4 mr-2" />;
-                case 'issued': return <Send className="w-4 h-4 mr-2" />;
-                case 'acknowledged': return <Check className="w-4 h-4 mr-2" />;
-                case 'rejected': return <XCircle className="w-4 h-4 mr-2" />;
+            const getTabIcon = (statusId: string) => {
+              switch (statusId) {
+                case 'Pending Approval': return <Clock className="w-4 h-4 mr-2" />;
+                case 'Approved': return <CheckCircle className="w-4 h-4 mr-2" />;
+                case 'Issued': return <Send className="w-4 h-4 mr-2" />;
+                case 'Acknowledged': return <Check className="w-4 h-4 mr-2" />;
+                case 'Rejected': return <XCircle className="w-4 h-4 mr-2" />;
+                case 'Draft': return <Edit className="w-4 h-4 mr-2" />;
                 default: return <Clock className="w-4 h-4 mr-2" />;
               }
             };
 
             return (
-              <TabsTrigger key={bucket.id} value={bucket.status} className={getTabColor(bucket.status)}>
-                {getTabIcon(bucket.status)}
-                {bucket.label} ({count})
+              <TabsTrigger key={bucket.id} value={bucket.id} className={getTabColor(bucket.id)}>
+                {getTabIcon(bucket.id)}
+                {bucket.name} ({bucket.count})
               </TabsTrigger>
             );
           })}
@@ -477,13 +501,13 @@ export default function PurchaseOrders() {
             <ShoppingCart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">No Purchase Orders Found</h3>
             <p className="text-muted-foreground">
-              {statusFilter === 'pending_approval' 
+              {statusFilter === 'Pending Approval' 
                 ? "No purchase orders are currently pending approval."
-                : statusFilter === 'approved'
+                : statusFilter === 'Approved'
                 ? "No purchase orders have been approved yet."
-                : statusFilter === 'issued'
+                : statusFilter === 'Issued'
                 ? "No purchase orders have been received yet."
-                : statusFilter === 'acknowledged'
+                : statusFilter === 'Acknowledged'
                 ? "No purchase orders have been acknowledged yet."
                 : "No purchase orders have been rejected."
               }
@@ -524,7 +548,7 @@ export default function PurchaseOrders() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    {statusFilter === 'pending_approval' && (user as any)?.role === 'sourcing_manager' && (
+                    {statusFilter === 'Pending Approval' && (user as any)?.role === 'sourcing_manager' && (
                       <>
                         <Button
                           size="sm"
@@ -554,7 +578,7 @@ export default function PurchaseOrders() {
                         </Button>
                       </>
                     )}
-                    {statusFilter === 'approved' && (user as any)?.role === 'sourcing_manager' && (
+                    {statusFilter === 'Approved' && (user as any)?.role === 'sourcing_manager' && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -669,7 +693,7 @@ export default function PurchaseOrders() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Progress bar for PO status */}
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
