@@ -1244,14 +1244,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePurchaseOrder(id: string, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
-    const updateData = {
-      ...updates,
+    const updateData: any = {
       updatedAt: new Date()
     };
+
+    // Only include fields that exist in the database schema
+    const allowedFields = [
+      'poNumber', 'vendorId', 'rfxId', 'auctionId', 'totalAmount', 'status',
+      'termsAndConditions', 'termsAndConditionsPath', 'deliverySchedule', 
+      'paymentTerms', 'attachments', 'acknowledgedAt', 'approvedBy', 
+      'approvedAt', 'approvalComments', 'createdBy'
+    ];
+
+    // Only add fields that exist in the schema
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key)) {
+        updateData[key] = updates[key as keyof typeof updates];
+      }
+    });
 
     // If status is being updated to approved, set approvedAt if not already set
     if (updates.status === 'approved' && !updates.approvedAt) {
       updateData.approvedAt = new Date();
+    }
+
+    // If status is being updated to acknowledged, set acknowledgedAt
+    if (updates.status === 'acknowledged' && !updates.acknowledgedAt) {
+      updateData.acknowledgedAt = new Date();
     }
 
     const [po] = await this.db
