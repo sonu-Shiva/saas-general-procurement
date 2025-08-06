@@ -597,12 +597,13 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
 
   // Fetch BOM items when a BOM is selected
   const { data: bomItems = [] } = useQuery({
-    queryKey: ["/api/bom-items", formData.bomId],
+    queryKey: ["/api/boms", formData.bomId, "items"],
     queryFn: () => formData.bomId && formData.bomId !== 'none' 
-      ? apiRequest(`/api/bom-items/${formData.bomId}`)
+      ? apiRequest(`/api/boms/${formData.bomId}`)
       : Promise.resolve([]),
     enabled: !!formData.bomId && formData.bomId !== 'none',
     retry: false,
+    select: (data: any) => data?.items || []
   });
 
   const selectedBom = boms.find((bom: any) => bom.id === formData.bomId);
@@ -873,8 +874,11 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           <p className="text-sm text-muted-foreground mb-4">
             Select specific items from this BOM to include in the auction:
           </p>
-          {bomItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">Loading BOM items...</p>
+          {!bomItems || bomItems.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">No items found in this BOM</p>
+              <p className="text-xs text-gray-400 mt-2">Please add items to this BOM first or select a different BOM.</p>
+            </div>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {bomItems.map((item: any) => (

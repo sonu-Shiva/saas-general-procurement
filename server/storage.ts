@@ -489,8 +489,40 @@ export class DatabaseStorage implements IStorage {
     return newBomItem;
   }
 
-  async getBomItems(bomId: string): Promise<BomItem[]> {
-    return await this.db.select().from(bomItems).where(eq(bomItems.bomId, bomId));
+  async getBomItems(bomId: string): Promise<any[]> {
+    try {
+      console.log("Storage - Getting BOM items for BOM ID:", bomId);
+
+      // First check if BOM exists
+      const bom = await this.db
+        .select()
+        .from(boms)
+        .where(eq(boms.id, bomId))
+        .limit(1);
+
+      if (bom.length === 0) {
+        console.log("Storage - BOM not found:", bomId);
+        return [];
+      }
+
+      console.log("Storage - BOM found:", bom[0].name);
+
+      const items = await this.db
+        .select()
+        .from(bomItems)
+        .where(eq(bomItems.bomId, bomId))
+        .orderBy(bomItems.createdAt);
+
+      console.log("Storage - Found BOM items:", items.length);
+      if (items.length > 0) {
+        console.log("Storage - First BOM item sample:", items[0]);
+      }
+
+      return items;
+    } catch (error) {
+      console.error("Error fetching BOM items from storage:", error);
+      throw error;
+    }
   }
 
   async deleteBomItems(bomId: string): Promise<void> {

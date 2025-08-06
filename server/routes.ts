@@ -42,6 +42,25 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Mock authentication check - replace with actual auth middleware
+const isAuthenticated = async (req: any, res: any, next: any) => {
+  // For development, we assume the user is authenticated if a user ID is present in the JWT claims
+  // In a real application, you'd verify the JWT here.
+  if (req.user?.claims?.sub) {
+    // Ensure the user exists in our mock storage
+    try {
+      await storage.getUser(req.user.claims.sub);
+      next();
+    } catch (error) {
+      console.error("User not found in storage:", error);
+      res.status(401).json({ message: "Unauthorized: User not found" });
+    }
+  } else {
+    res.status(401).json({ message: "Unauthorized: No user ID found in token" });
+  }
+};
+
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple development authentication system
   let currentDevUser = {
@@ -118,11 +137,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: currentDevUser.lastName,
         role: role as any,
       });
-      
+
       // Update in-memory only after database update succeeds
       currentDevUser.role = role;
       console.log('Role updated in database and memory to:', role);
-      
+
       res.json(currentDevUser);
     } catch (error) {
       console.error('Failed to update role in database:', error);
@@ -159,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fileName, entityType = 'general', entityId } = req.body;
       const objectStorageService = new ObjectStorageService();
-      
+
       let filePath = fileName;
       if (entityType === 'rfx-response' && entityId) {
         filePath = `rfx-responses/${entityId}/${fileName}`;
@@ -168,10 +187,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (fileName) {
         filePath = `general/${fileName}`;
       }
-      
+
       const uploadURL = await objectStorageService.getObjectEntityUploadURL(filePath);
-      res.json({ 
-        uploadURL, 
+      res.json({
+        uploadURL,
         filePath: `/objects/${filePath}`,
         method: 'PUT'
       });
@@ -291,11 +310,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Creating vendor response:', responseData);
 
       const response = await storage.createRfxResponse(responseData);
-      
+
       // Update invitation status to 'responded'
       await storage.updateRfxInvitationStatus(
-        req.body.rfxId, 
-        vendor.id, 
+        req.body.rfxId,
+        vendor.id,
         'responded'
       );
 
@@ -815,9 +834,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { attachments = [], ...otherData } = req.body;
-      
+
       // Ensure attachments is an array of strings (file paths)
-      const processedAttachments = Array.isArray(attachments) 
+      const processedAttachments = Array.isArray(attachments)
         ? attachments.filter(att => typeof att === 'string' && att.trim().length > 0)
         : [];
 
@@ -1024,6 +1043,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch BOMs" });
     }
   });
+
+  // BOM items endpoint for auction form compatibility
+  app.get('/api/bom-items/:bomId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { bomId } = req.params;
+      console.log("=== FETCHING BOM ITEMS FOR AUCTION ===");
+      console.log("BOM ID:", bomId);
+      console.log("User ID:", req.user?.claims?.sub);
+
+      const items = await storage.getBomItems(bomId);
+      console.log("Found BOM items:", items.length);
+      console.log("Items:", items);
+
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching BOM items for auction:", error);
+      res.status(500).json({ message: "Failed to fetch BOM items" });
+    }
+  });
+
+  // Alternative endpoint that matches the BOM structure
+  app.get('/api/boms/:bomId/items', isAuthenticated, async (req: any, res) => {
+    try {
+      const { bomId } = req.params;
+      console.log("=== FETCHING BOM ITEMS VIA BOM ENDPOINT ===");
+      console.log("BOM ID:", bomId);
+
+      const items = await storage.getBomItems(bomId);
+      console.log("Found BOM items via BOM endpoint:", items.length);
+
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching BOM items via BOM endpoint:", error);
+      res.status(500).json({ message: "Failed to fetch BOM items" });
+    }
+  });
+
 
   // Direct procurement routes
   app.get('/api/direct-procurement', async (req, res) => {
