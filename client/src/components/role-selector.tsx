@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Package, Users, Settings } from "lucide-react";
+import { ShoppingCart, Package, Users, Settings, Mail, Phone, MapPin } from "lucide-react";
 
 interface RoleSelectorProps {
   open: boolean;
@@ -82,7 +84,14 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
   const [selectedRole, setSelectedRole] = useState<string>(currentRole || "");
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
-  const { switchRole } = useAuth();
+  const { switchRole, user } = useAuth();
+
+  // Fetch all vendors for testing purposes
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["/api/vendors"],
+    queryFn: () => apiRequest.get("/api/vendors").then((res) => res.data),
+    retry: false,
+  });
 
   const handleRoleSelect = async () => {
     if (!selectedRole) {
@@ -118,6 +127,9 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
     }
   };
 
+  // Extract vendor profile from user data if available
+  const vendorProfile = user?.role === 'vendor' ? (user as any)?.vendorProfile : null;
+
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -127,15 +139,15 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
             Choose your role in the procurement platform. This determines what features and permissions you'll have access to.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
           {roleOptions.map((role) => {
             const Icon = role.icon;
             const isSelected = selectedRole === role.id;
             const isCurrent = currentRole === role.id;
-            
+
             return (
-              <Card 
+              <Card
                 key={role.id}
                 className={`cursor-pointer transition-all duration-200 ${
                   isSelected ? 'ring-2 ring-primary' : 'hover:shadow-md'
@@ -183,12 +195,72 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
           })}
         </div>
 
+        {/* Display vendor profile information if the current role is 'vendor' */}
+        {currentRole === 'vendor' && vendorProfile && (
+          <div className="p-3 bg-muted rounded-lg space-y-2 mt-6">
+            <div className="font-medium text-sm flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              <span>Vendor Profile</span>
+            </div>
+            <div className="text-sm space-y-1">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-3 w-3" />
+                <span>{vendorProfile.companyName}</span>
+              </div>
+              {vendorProfile.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3 w-3" />
+                  <span>{vendorProfile.email}</span>
+                </div>
+              )}
+              {vendorProfile.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-3 w-3" />
+                  <span>{vendorProfile.phone}</span>
+                </div>
+              )}
+              {vendorProfile.address && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-3 w-3" />
+                  <span>{vendorProfile.address}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Display test vendor information */}
+        {vendors.length > 0 && (
+          <div className="space-y-2 mt-6">
+            <div className="font-medium text-sm">Test Vendors Available:</div>
+            <div className="space-y-2 max-h-32 overflow-y-auto border p-3 rounded-lg bg-muted/30">
+              {vendors.slice(0, 3).map((vendor: any) => (
+                <div key={vendor.id} className="p-2 bg-background rounded text-xs space-y-1 border">
+                  <div className="font-medium flex justify-between items-center">
+                    <span>{vendor.companyName}</span>
+                    <Badge variant="outline" className="text-xs">Vendor</Badge>
+                  </div>
+                  <div className="text-muted-foreground">
+                    ID: {vendor.id.substring(0, 8)}...
+                  </div>
+                  {vendor.email && (
+                    <div className="flex items-center gap-1 text-muted-foreground/80">
+                      <Mail className="h-2 w-2" />
+                      <span>{vendor.email}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end space-x-3 mt-8">
           <Button variant="outline" onClick={onClose} disabled={isUpdating}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleRoleSelect} 
+          <Button
+            onClick={handleRoleSelect}
             disabled={!selectedRole || isUpdating}
           >
             {isUpdating ? "Updating..." : "Switch Role"}
