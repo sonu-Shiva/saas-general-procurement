@@ -596,37 +596,73 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
   const [editableBomItems, setEditableBomItems] = useState<{[key: string]: {quantity: number, unitPrice: number}}>({});
 
   // Fetch BOM items when a BOM is selected
-  const { data: bomItems = [] } = useQuery({
+  const { data: bomItems = [], isLoading: bomItemsLoading, error: bomItemsError } = useQuery({
     queryKey: ["/api/boms", formData.bomId, "items"],
     queryFn: async () => {
       if (!formData.bomId || formData.bomId === 'none') {
+        console.log("No BOM ID selected, returning empty array");
         return [];
       }
       
-      console.log("Fetching BOM items for BOM ID:", formData.bomId);
+      console.log("=== AUCTION FORM: Fetching BOM items ===");
+      console.log("BOM ID:", formData.bomId);
+      console.log("BOM ID type:", typeof formData.bomId);
+      console.log("BOM ID length:", formData.bomId.length);
       
       try {
         // Try the dedicated BOM items endpoint first
+        console.log("Trying endpoint: /api/boms/" + formData.bomId + "/items");
         const itemsResponse = await apiRequest(`/api/boms/${formData.bomId}/items`);
         console.log("BOM items response:", itemsResponse);
+        console.log("Response type:", typeof itemsResponse);
+        console.log("Response is array:", Array.isArray(itemsResponse));
+        console.log("Response length:", itemsResponse?.length);
         
         if (Array.isArray(itemsResponse) && itemsResponse.length > 0) {
+          console.log("Found items via items endpoint:", itemsResponse.length);
+          console.log("First item sample:", itemsResponse[0]);
           return itemsResponse;
         }
+        
+        console.log("No items from items endpoint, trying full BOM endpoint");
         
         // Fallback: Try getting BOM with items
         const bomResponse = await apiRequest(`/api/boms/${formData.bomId}`);
         console.log("BOM response:", bomResponse);
+        console.log("BOM response items:", bomResponse?.items);
+        console.log("BOM response items type:", typeof bomResponse?.items);
+        console.log("BOM response items is array:", Array.isArray(bomResponse?.items));
         
-        return bomResponse?.items || [];
+        const items = bomResponse?.items || [];
+        console.log("Final items array:", items);
+        console.log("Final items length:", items.length);
+        
+        return items;
       } catch (error) {
         console.error("Error fetching BOM items:", error);
-        return [];
+        console.error("Error details:", {
+          message: error.message,
+          status: error.status,
+          response: error.response
+        });
+        throw error; // Re-throw to trigger error state
       }
     },
     enabled: !!formData.bomId && formData.bomId !== 'none',
     retry: false,
   });
+
+  // Debug log for bomItems state changes
+  useEffect(() => {
+    console.log("=== AUCTION FORM: bomItems state changed ===");
+    console.log("bomItems:", bomItems);
+    console.log("bomItems type:", typeof bomItems);
+    console.log("bomItems is array:", Array.isArray(bomItems));
+    console.log("bomItems length:", bomItems?.length);
+    console.log("bomItemsLoading:", bomItemsLoading);
+    console.log("bomItemsError:", bomItemsError);
+    console.log("formData.bomId:", formData.bomId);
+  }, [bomItems, bomItemsLoading, bomItemsError, formData.bomId]);
 
   const selectedBom = boms.find((bom: any) => bom.id === formData.bomId);
 
@@ -896,21 +932,32 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           <p className="text-sm text-muted-foreground mb-4">
             Select specific items from this BOM to include in the auction:
           </p>
-          {!bomItems || bomItems.length === 0 ? (
+          {bomItemsLoading ? (
             <div className="text-center py-8">
-              {formData.bomId && formData.bomId !== 'none' ? (
-                <>
-                  <p className="text-sm text-muted-foreground">Loading BOM items...</p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    If this persists, the selected BOM may not have any items.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">No items found in this BOM</p>
-                  <p className="text-xs text-gray-400 mt-2">Please add items to this BOM first or select a different BOM.</p>
-                </>
-              )}
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-sm text-muted-foreground">Loading BOM items...</p>
+            </div>
+          ) : bomItemsError ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-red-600">Error loading BOM items</p>
+              <p className="text-xs text-gray-400 mt-2">
+                Error: {bomItemsError?.message || 'Unknown error'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                BOM ID: {formData.bomId}
+              </p>
+            </div>
+          ) : !bomItems || bomItems.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">No items found in this BOM</p>
+              <p className="text-xs text-gray-400 mt-2">Please add items to this BOM first or select a different BOM.</p>
+              <div className="text-xs text-gray-300 mt-4 p-2 bg-gray-50 rounded">
+                <p>Debug info:</p>
+                <p>BOM ID: {formData.bomId}</p>
+                <p>bomItems: {JSON.stringify(bomItems)}</p>
+                <p>Loading: {String(bomItemsLoading)}</p>
+                <p>Error: {bomItemsError?.message || 'None'}</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">

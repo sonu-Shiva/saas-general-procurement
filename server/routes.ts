@@ -339,6 +339,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test data creation endpoint
+  app.post('/api/debug/create-test-bom', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || 'dev-user-123';
+      
+      console.log("Creating test BOM with items...");
+      
+      // Create a test BOM
+      const testBom = await storage.createBom({
+        name: "Test BOM for Auction",
+        version: "1.0",
+        description: "Test BOM with sample items for auction testing",
+        category: "Electronics",
+        createdBy: userId,
+      });
+      
+      console.log("Created test BOM:", testBom.id);
+      
+      // Add some test items to the BOM
+      const testItems = [
+        {
+          bomId: testBom.id,
+          itemName: "Resistor 10K",
+          itemCode: "RES-10K-001",
+          description: "10K Ohm resistor, 1/4W",
+          category: "Electronics",
+          quantity: 100,
+          uom: "pieces",
+          unitPrice: 0.50,
+          totalPrice: 50.00,
+          specifications: "10K Ohm, ±5%, 1/4W"
+        },
+        {
+          bomId: testBom.id,
+          itemName: "Capacitor 100uF",
+          itemCode: "CAP-100UF-001",
+          description: "100uF electrolytic capacitor",
+          category: "Electronics",
+          quantity: 50,
+          uom: "pieces",
+          unitPrice: 1.20,
+          totalPrice: 60.00,
+          specifications: "100uF, 25V, Electrolytic"
+        },
+        {
+          bomId: testBom.id,
+          itemName: "LED Red 5mm",
+          itemCode: "LED-RED-5MM",
+          description: "5mm red LED",
+          category: "Electronics",
+          quantity: 25,
+          uom: "pieces",
+          unitPrice: 0.25,
+          totalPrice: 6.25,
+          specifications: "5mm, Red, 20mA, 2V forward voltage"
+        }
+      ];
+      
+      const createdItems = [];
+      for (const item of testItems) {
+        const createdItem = await storage.createBomItem(item);
+        createdItems.push(createdItem);
+        console.log("Created BOM item:", createdItem.id, createdItem.itemName);
+      }
+      
+      console.log("Test BOM created successfully with", createdItems.length, "items");
+      
+      res.json({
+        message: "Test BOM created successfully",
+        bom: testBom,
+        items: createdItems,
+        itemCount: createdItems.length
+      });
+    } catch (error) {
+      console.error("Error creating test BOM:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Debug endpoint to check BOM data
+  app.get('/api/debug/boms', async (req, res) => {
+    try {
+      console.log("=== DEBUG: Checking BOM data ===");
+      
+      const allBoms = await storage.getBoms();
+      console.log("Total BOMs in database:", allBoms.length);
+      
+      const bomWithItemCounts = [];
+      for (const bom of allBoms) {
+        const items = await storage.getBomItems(bom.id);
+        bomWithItemCounts.push({
+          id: bom.id,
+          name: bom.name,
+          version: bom.version,
+          itemCount: items.length,
+          items: items.slice(0, 2) // Show first 2 items as sample
+        });
+      }
+      
+      console.log("BOMs with item counts:", bomWithItemCounts);
+      
+      res.json({
+        totalBoms: allBoms.length,
+        bomsWithItems: bomWithItemCounts.filter(b => b.itemCount > 0).length,
+        bomDetails: bomWithItemCounts
+      });
+    } catch (error) {
+      console.error("Error in debug endpoint:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Dashboard routes
   app.get('/api/dashboard/stats', async (req: any, res) => {
     try {
@@ -1078,15 +1190,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("=== FETCHING BOM ITEMS FOR AUCTION ===");
       console.log("BOM ID:", bomId);
       console.log("User ID:", req.user?.claims?.sub);
+      console.log("Request headers:", req.headers);
+      console.log("Request method:", req.method);
+
+      // First check if BOM exists
+      const bom = await storage.getBom(bomId);
+      console.log("BOM exists:", !!bom);
+      if (bom) {
+        console.log("BOM details:", { id: bom.id, name: bom.name, version: bom.version });
+      }
 
       const items = await storage.getBomItems(bomId);
       console.log("Found BOM items:", items.length);
-      console.log("Items:", items);
+      console.log("Items sample:", items.slice(0, 2));
+      console.log("Full items response:", JSON.stringify(items, null, 2));
 
       res.json(items);
     } catch (error) {
       console.error("Error fetching BOM items for auction:", error);
-      res.status(500).json({ message: "Failed to fetch BOM items" });
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: "Failed to fetch BOM items", error: error.message });
     }
   });
 
@@ -1096,14 +1219,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { bomId } = req.params;
       console.log("=== FETCHING BOM ITEMS VIA BOM ENDPOINT ===");
       console.log("BOM ID:", bomId);
+      console.log("Request URL:", req.url);
+      console.log("Request path:", req.path);
+
+      // First check if BOM exists
+      const bom = await storage.getBom(bomId);
+      console.log("BOM exists:", !!bom);
+      if (bom) {
+        console.log("BOM details:", { id: bom.id, name: bom.name, version: bom.version });
+      }
 
       const items = await storage.getBomItems(bomId);
       console.log("Found BOM items via BOM endpoint:", items.length);
+      console.log("Items sample:", items.slice(0, 2));
 
       res.json(items);
     } catch (error) {
       console.error("Error fetching BOM items via BOM endpoint:", error);
-      res.status(500).json({ message: "Failed to fetch BOM items" });
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: "Failed to fetch BOM items", error: error.message });
     }
   });
 
