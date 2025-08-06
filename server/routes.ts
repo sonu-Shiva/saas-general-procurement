@@ -61,6 +61,24 @@ const isAuthenticated = async (req: any, res: any, next: any) => {
   }
 };
 
+// Mock authorization check for sourcing managers
+const isSourcingManager = async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized: User not found" });
+    }
+    const user = await storage.getUser(userId);
+    if (!user || user.role !== 'sourcing_manager') {
+      return res.status(403).json({ message: "Forbidden: User is not a sourcing manager" });
+    }
+    next();
+  } catch (error) {
+    console.error("Authorization check error:", error);
+    res.status(500).json({ message: "Authorization error" });
+  }
+};
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple development authentication system
@@ -172,7 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth middleware for protected routes
-  const authMiddleware = (req: any, res: next, next: any) => {
+  const authMiddleware = (req: any, res: any, next: any) => {
     try {
       // Skip auth check for auth routes, vendor discovery, and auction bids (temporarily)
       if (req.path.startsWith('/auth/') || 
@@ -1391,22 +1409,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order issue endpoint (for moving from approved to issued)
-  app.patch('/api/purchase-orders/:id/issue', async (req: any, res) => {
+  app.patch('/api/purchase-orders/:id/issue', isAuthenticated, isSourcingManager, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not found" });
+      const poId = req.params.id;
+
+      // Get PO and verify it's approved
+      const po = await storage.getPurchaseOrder(poId);
+      if (!po) {
+        return res.status(404).json({ message: "Purchase Order not found" });
       }
 
-      const { comments } = req.body;
-      const po = await storage.updatePurchaseOrder(req.params.id, {
-        status: 'issued',
-        approvalComments: comments || 'Purchase Order issued to vendor'
+      if (po.status !== 'approved') {
+        return res.status(400).json({ message: "PO must be approved before issuing" });
+      }
+
+      // Issue the PO to vendor
+      const updatedPO = await storage.updatePurchaseOrder(poId, {
+        status: 'issued'
       });
-      res.json(po);
+
+      res.json(updatedPO);
     } catch (error) {
-      console.error("Error issuing purchase order:", error);
+      console.error("Error issuing PO:", error);
       res.status(500).json({ message: "Failed to issue purchase order" });
+    }
+  });
+
+  // Purchase Order acknowledge endpoint
+  app.patch('/api/purchase-orders/:id/acknowledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const poId = req.params.id;
+      const userId = req.user.claims.sub;
+
+      // Get PO and verify it's issued
+      const po = await storage.getPurchaseOrder(poId);
+      if (!po) {
+        return res.status(404).json({ message: "Purchase Order not found" });
+      }
+
+      if (po.status !== 'issued') {
+        return res.status(400).json({ message: "PO must be issued before acknowledgment" });
+      }
+
+      // Acknowledge the PO
+      const updatedPO = await storage.updatePurchaseOrder(poId, {
+        status: 'acknowledged',
+        acknowledgedAt: new Date()
+      });
+
+      res.json(updatedPO);
+    } catch (error) {
+      console.error("Error acknowledging PO:", error);
+      res.status(500).json({ message: "Failed to acknowledge purchase order" });
     }
   });
 
