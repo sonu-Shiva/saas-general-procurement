@@ -7,14 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 export default function SimpleLogin() {
   const [selectedRole, setSelectedRole] = useState("buyer_admin");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { login, switchRole } = useAuth();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +40,7 @@ export default function SimpleLogin() {
 
       // Short delay to ensure state is updated
       setTimeout(() => {
-        navigate("/");
+        setLocation("/");
       }, 500);
     } catch (error) {
       console.error("Login error:", error);
