@@ -882,8 +882,39 @@ export class DatabaseStorage implements IStorage {
 
   // Auction operations
   async createAuction(auction: InsertAuction): Promise<Auction> {
-    const [newAuction] = await this.db.insert(auctions).values(auction).returning();
-    return newAuction;
+    try {
+      console.log("Storage - Creating auction with data:", JSON.stringify(auction, null, 2));
+      
+      // Ensure all required fields are present and properly formatted
+      const auctionData = {
+        id: auction.id || nanoid(),
+        name: auction.name,
+        description: auction.description,
+        bomId: auction.bomId || null,
+        selectedBomItems: auction.selectedBomItems || [],
+        selectedVendors: auction.selectedVendors || [],
+        reservePrice: auction.reservePrice,
+        startTime: auction.startTime,
+        endTime: auction.endTime,
+        status: auction.status || 'scheduled',
+        termsAndConditionsPath: auction.termsAndConditionsPath || null,
+        currentBid: auction.currentBid || null,
+        leadingVendorId: auction.leadingVendorId || null,
+        winnerId: auction.winnerId || null,
+        winningBid: auction.winningBid || null,
+        createdBy: auction.createdBy,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      console.log("Storage - Inserting auction data:", JSON.stringify(auctionData, null, 2));
+      const [newAuction] = await this.db.insert(auctions).values(auctionData).returning();
+      console.log("Storage - Auction created successfully:", newAuction.id);
+      return newAuction;
+    } catch (error) {
+      console.error("Storage - Error creating auction:", error);
+      throw error;
+    }
   }
 
   async getAuction(id: string): Promise<Auction | undefined> {

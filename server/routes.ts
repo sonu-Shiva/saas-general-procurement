@@ -1045,6 +1045,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/auctions', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      console.log("Creating auction with data:", JSON.stringify(req.body, null, 2));
+
+      const { 
+        name, 
+        description, 
+        bomId, 
+        selectedBomItems = [], 
+        selectedVendors = [], 
+        reservePrice, 
+        startTime, 
+        endTime, 
+        status = 'scheduled',
+        termsUrl 
+      } = req.body;
+
+      // Validate required fields
+      if (!name || !description) {
+        return res.status(400).json({ message: "Name and description are required" });
+      }
+
+      if (!startTime || !endTime) {
+        return res.status(400).json({ message: "Start time and end time are required" });
+      }
+
+      if (!termsUrl) {
+        return res.status(400).json({ message: "Terms and conditions are required" });
+      }
+
+      // Validate that end time is after start time
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
+      if (endDate <= startDate) {
+        return res.status(400).json({ message: "End time must be after start time" });
+      }
+
+      // Generate a unique auction ID
+      const auctionId = nanoid();
+
+      const auctionData = {
+        id: auctionId,
+        name: name.trim(),
+        description: description.trim(),
+        bomId: bomId || null,
+        selectedBomItems: Array.isArray(selectedBomItems) ? selectedBomItems : [],
+        selectedVendors: Array.isArray(selectedVendors) ? selectedVendors : [],
+        reservePrice: reservePrice ? parseFloat(reservePrice).toString() : null,
+        startTime: startDate,
+        endTime: endDate,
+        status: status as any,
+        termsAndConditionsPath: termsUrl,
+        currentBid: null,
+        leadingVendorId: null,
+        winnerId: null,
+        winningBid: null,
+        createdBy: userId,
+      };
+
+      console.log("Processed auction data:", JSON.stringify(auctionData, null, 2));
+
+      const auction = await storage.createAuction(auctionData);
+      console.log("Auction created successfully:", auction.id);
+
+      // Create auction participants for selected vendors
+      if (selectedVendors && selectedVendors.length > 0) {
+        console.log(`Creating auction participants for ${selectedVendors.length} vendors`);
+        for (const vendorId of selectedVendors) {
+          try {
+            await storage.createAuctionParticipant({
+              auctionId: auction.id,
+              vendorId: vendorId,
+            });
+            console.log(`Added vendor ${vendorId} as participant to auction ${auction.id}`);
+          } catch (error) {
+            console.error(`Failed to add vendor ${vendorId} as participant:`, error);
+          }
+        }
+      }
+
+      res.json(auction);
+    } catch (error: any) {
+      console.error("Error creating auction:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ 
+        message: "Failed to create auction", 
+        error: error.message || "Unknown error" 
+      });
+    }
+  });
+
   // Purchase Order routes
   app.get('/api/purchase-orders', async (req, res) => {
     try {
