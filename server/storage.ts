@@ -1124,12 +1124,39 @@ export class DatabaseStorage implements IStorage {
     return newPo;
   }
 
-  async getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined> {
-    const [po] = await this.db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id));
+  async getPurchaseOrder(id: string): Promise<any | undefined> {
+    const [po] = await this.db
+      .select({
+        id: purchaseOrders.id,
+        poNumber: purchaseOrders.poNumber,
+        vendorId: purchaseOrders.vendorId,
+        rfxId: purchaseOrders.rfxId,
+        auctionId: purchaseOrders.auctionId,
+        totalAmount: purchaseOrders.totalAmount,
+        status: purchaseOrders.status,
+        termsAndConditions: purchaseOrders.termsAndConditions,
+        termsAndConditionsPath: purchaseOrders.termsAndConditionsPath,
+        deliverySchedule: purchaseOrders.deliverySchedule,
+        paymentTerms: purchaseOrders.paymentTerms,
+        attachments: purchaseOrders.attachments,
+        acknowledgedAt: purchaseOrders.acknowledgedAt,
+        approvedBy: purchaseOrders.approvedBy,
+        approvedAt: purchaseOrders.approvedAt,
+        approvalComments: purchaseOrders.approvalComments,
+        createdBy: purchaseOrders.createdBy,
+        createdAt: purchaseOrders.createdAt,
+        updatedAt: purchaseOrders.updatedAt,
+        vendorName: vendors.companyName,
+        vendorEmail: vendors.email,
+        vendorContactPerson: vendors.contactPerson,
+      })
+      .from(purchaseOrders)
+      .leftJoin(vendors, eq(purchaseOrders.vendorId, vendors.id))
+      .where(eq(purchaseOrders.id, id));
     return po;
   }
 
-  async getPurchaseOrders(filters?: { status?: string; vendorId?: string; createdBy?: string }): Promise<PurchaseOrder[]> {
+  async getPurchaseOrders(filters?: { status?: string; vendorId?: string; createdBy?: string }): Promise<any[]> {
     const conditions = [];
 
     if (filters?.status) {
@@ -1144,11 +1171,37 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(purchaseOrders.createdBy, filters.createdBy));
     }
 
-    return await this.db
-      .select()
+    const results = await this.db
+      .select({
+        id: purchaseOrders.id,
+        poNumber: purchaseOrders.poNumber,
+        vendorId: purchaseOrders.vendorId,
+        rfxId: purchaseOrders.rfxId,
+        auctionId: purchaseOrders.auctionId,
+        totalAmount: purchaseOrders.totalAmount,
+        status: purchaseOrders.status,
+        termsAndConditions: purchaseOrders.termsAndConditions,
+        termsAndConditionsPath: purchaseOrders.termsAndConditionsPath,
+        deliverySchedule: purchaseOrders.deliverySchedule,
+        paymentTerms: purchaseOrders.paymentTerms,
+        attachments: purchaseOrders.attachments,
+        acknowledgedAt: purchaseOrders.acknowledgedAt,
+        approvedBy: purchaseOrders.approvedBy,
+        approvedAt: purchaseOrders.approvedAt,
+        approvalComments: purchaseOrders.approvalComments,
+        createdBy: purchaseOrders.createdBy,
+        createdAt: purchaseOrders.createdAt,
+        updatedAt: purchaseOrders.updatedAt,
+        vendorName: vendors.companyName,
+        vendorEmail: vendors.email,
+        vendorContactPerson: vendors.contactPerson,
+      })
       .from(purchaseOrders)
+      .leftJoin(vendors, eq(purchaseOrders.vendorId, vendors.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(purchaseOrders.createdAt));
+
+    return results;
   }
 
   async updatePurchaseOrder(id: string, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {

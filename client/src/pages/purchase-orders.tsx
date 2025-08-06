@@ -425,7 +425,7 @@ export default function PurchaseOrders() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                       <div>
                         <span className="font-medium">Vendor:</span>
-                        <p className="text-foreground">{(po as any).vendorName || 'N/A'}</p>
+                        <p className="text-foreground">{po.vendorName || (po as any).vendorCompanyName || 'N/A'}</p>
                       </div>
                       <div>
                         <span className="font-medium">Total Amount:</span>
@@ -501,7 +501,7 @@ export default function PurchaseOrders() {
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <strong>Vendor:</strong> {(po as any).vendorName || 'N/A'}
+                              <strong>Vendor:</strong> {po.vendorName || (po as any).vendorCompanyName || 'N/A'}
                             </div>
                             <div>
                               <strong>Total Amount:</strong> {formatCurrency(parseFloat(po.totalAmount || '0'))}
