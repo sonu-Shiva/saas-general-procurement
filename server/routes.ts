@@ -172,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth middleware for protected routes
-  const authMiddleware = (req: any, res: any, next: any) => {
+  const authMiddleware = (req: any, res: next, next: any) => {
     try {
       // Skip auth check for auth routes, vendor discovery, and auction bids (temporarily)
       if (req.path.startsWith('/auth/') || 
@@ -1910,6 +1910,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching approvals:", error);
       res.status(500).json({ message: "Failed to fetch approvals" });
+    }
+  });
+
+  // Route to create Purchase Order from Auction
+  app.post('/api/auctions/:id/create-po', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const auctionId = req.params.id;
+      const { vendorId, bidAmount, paymentTerms, deliverySchedule, notes } = req.body;
+
+      console.log("Creating PO from auction:", auctionId, "for vendor:", vendorId, "with data:", req.body);
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Validate required fields
+      if (!vendorId) {
+        return res.status(400).json({ message: "Vendor ID is required" });
+      }
+
+      if (!bidAmount) {
+        return res.status(400).json({ message: "Bid amount is required" });
+      }
+
+      // Verify auction exists and user has permission
+      const auction = await storage.getAuction(auctionId);
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+
+      if (auction.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only create POs for your own auctions" });
+      }
+
+      // Get vendor details
+      const vendor = await storage.getVendor(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+
+      // Get bids for this vendor
+      const bids = await storage.getBids({ auctionId, vendorId });
+      console.log("Found bids for vendor:", bids.length);
+
+      if (bids.length === 0) {
+        return res.status(400).json({ message: "No bids found for this vendor in this auction" });
+      }
+
+      const winningBid = bids.sort((a: any, b: any) => Number(a.amount) - Number(b.amount))[0];
+      console.log("Using winning bid:", winningBid);
+
+      // Generate PO number
+      const poNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      console.log("Generated PO number:", poNumber);
+
+      // Prepare PO data
+      const poData = {
+        id: uuidv4(),
+        poNumber,
+        vendorId,
+        auctionId,
+        totalAmount: bidAmount.toString(),
+        status: "pending_approval" as const,
+        termsAndConditions: notes || `Purchase Order created from Auction: ${auction.name}`,
+        paymentTerms: paymentTerms || "Net 30",
+        createdBy: userId,
+      };
+
+      console.log("Creating PO with data:", poData);
+
+      // Create Purchase Order
+      const purchaseOrder = await storage.createPurchaseOrder(poData);
+      console.log("Purchase Order created successfully:", purchaseOrder.id);
+
+      // Update auction winner information
+      await storage.updateAuction(auctionId, {
+        winnerId: vendorId,
+        winningBid: bidAmount.toString(),
+        status: 'completed'
+      });
+      console.log("Updated auction status to completed");
+
+      res.json({
+        success: true,
+        purchaseOrder: {
+          id: purchaseOrder.id,
+          poNumber: purchaseOrder.poNumber,
+          vendorId: purchaseOrder.vendorId,
+          totalAmount: purchaseOrder.totalAmount,
+          status: purchaseOrder.status,
+          createdAt: purchaseOrder.createdAt
+        },
+        message: `Purchase Order ${purchaseOrder.poNumber} created successfully`
+      });
+    } catch (error: any) {
+      console.error("Error creating PO from auction:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ 
+        message: "Failed to create purchase order from auction",
+        error: error.message || "Unknown error"
+      });
     }
   });
 

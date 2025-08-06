@@ -66,41 +66,61 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
       return;
     }
 
+    if (!bidAmount || parseFloat(bidAmount) <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid purchase amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
+      console.log('Submitting PO creation with data:', {
+        vendorId: selectedVendor,
+        bidAmount: parseFloat(bidAmount),
+        paymentTerms,
+        deliverySchedule,
+        notes
+      });
+
       const response = await fetch(`/api/auctions/${auction.id}/create-po`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           vendorId: selectedVendor,
-          bidAmount,
+          bidAmount: parseFloat(bidAmount),
           paymentTerms,
           deliverySchedule,
           notes
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
+      const result = await response.json();
+      console.log('PO creation response:', result);
+
+      if (response.ok && result.success) {
         toast({
           title: "Success",
-          description: `Purchase Order ${result.purchaseOrder.poNumber} created successfully`,
+          description: result.message || `Purchase Order ${result.purchaseOrder?.poNumber} created successfully`,
         });
         onSuccess();
       } else {
-        const error = await response.json();
+        console.error('PO creation failed:', result);
         toast({
           title: "Error",
-          description: error.message || "Failed to create purchase order",
+          description: result.message || result.error || "Failed to create purchase order",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('PO creation error:', error);
       toast({
         title: "Error",
-        description: "Failed to create purchase order",
+        description: error.message || "Network error - failed to create purchase order",
         variant: "destructive",
       });
     } finally {
