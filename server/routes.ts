@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { nanoid } from "nanoid";
+import { v4 as uuidv4 } from 'uuid';
 import { storage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import {
@@ -1087,8 +1088,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "End time must be after start time" });
       }
 
-      // Generate a unique auction ID
-      const auctionId = nanoid();
+      // Generate a unique auction ID using UUID format
+      const auctionId = uuidv4();
 
       const auctionData = {
         id: auctionId,

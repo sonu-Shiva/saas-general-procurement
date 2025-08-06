@@ -887,7 +887,7 @@ export class DatabaseStorage implements IStorage {
       
       // Ensure all required fields are present and properly formatted
       const auctionData = {
-        id: auction.id || nanoid(),
+        id: auction.id || uuidv4(),
         name: auction.name,
         description: auction.description,
         bomId: auction.bomId || null,
