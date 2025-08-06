@@ -1493,6 +1493,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/direct-procurement', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      console.log("=== CREATING DIRECT PROCUREMENT ORDER ===");
+      console.log("User ID:", userId);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+      const { bomId, vendorId, bomItems, deliveryDate, paymentTerms, priority, notes } = req.body;
+
+      // Validate required fields
+      if (!bomId) {
+        console.error("Missing bomId");
+        return res.status(400).json({ message: "BOM ID is required" });
+      }
+      if (!vendorId) {
+        console.error("Missing vendorId");
+        return res.status(400).json({ message: "Vendor ID is required" });
+      }
+      if (!bomItems || !Array.isArray(bomItems) || bomItems.length === 0) {
+        console.error("Missing or invalid bomItems");
+        return res.status(400).json({ message: "At least one BOM item is required" });
+      }
+      if (!deliveryDate) {
+        console.error("Missing deliveryDate");
+        return res.status(400).json({ message: "Delivery date is required" });
+      }
+
+      // Calculate total amount from BOM items
+      const totalAmount = bomItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
+      console.log("Calculated total amount:", totalAmount);
+
+      // Generate reference number
+      const referenceNo = `DPO-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+      console.log("Generated reference number:", referenceNo);
+
+      const orderData = {
+        referenceNo,
+        bomId,
+        vendorId,
+        bomItems,
+        totalAmount: totalAmount.toString(),
+        status: "pending_approval" as const,
+        priority: (priority || "medium"),
+        deliveryDate: new Date(deliveryDate),
+        paymentTerms,
+        notes: notes || null,
+        createdBy: userId,
+      };
+
+      console.log("Order data to insert:", JSON.stringify(orderData, null, 2));
+
+      const order = await storage.createDirectProcurementOrder(orderData);
+      console.log("Created order:", JSON.stringify(order, null, 2));
+
+      res.json(order);
+    } catch (error: any) {
+      console.error("Error creating direct procurement order:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ message: "Failed to create direct procurement order", error: error.message });
+    }
+  });
+
+  app.get('/api/direct-procurement/:id', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const order = await storage.getDirectProcurementOrderById(id);
+
+      if (!order) {
+        return res.status(404).json({ message: "Direct procurement order not found" });
+      }
+
+      res.json(order);
+    } catch (error) {
+      console.error("Error fetching direct procurement order:", error);
+      res.status(500).json({ message: "Failed to fetch direct procurement order" });
+    }
+  });
+
+  app.patch('/api/direct-procurement/:id/status', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const order = await storage.updateDirectProcurementOrderStatus(id, status);
+      res.json(order);
+    } catch (error) {
+      console.error("Error updating direct procurement order status:", error);
+      res.status(500).json({ message: "Failed to update direct procurement order status" });
+    }
+  });
+
+  app.delete('/api/direct-procurement/:id', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+
+      // Check if order exists and user has permission to delete
+      const order = await storage.getDirectProcurementOrderById(id);
+      if (!order) {
+        return res.status(404).json({ message: "Direct procurement order not found" });
+      }
+
+      // Only allow deletion of draft or pending_approval orders
+      if (!['draft', 'pending_approval'].includes(order.status)) {
+        return res.status(400).json({ message: "Cannot delete orders that are not in draft or pending approval status" });
+      }
+
+      // Only allow creator or admin to delete
+      if (order.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only delete orders you created" });
+      }
+
+      await storage.deleteDirectProcurementOrder(id);
+      res.json({ message: "Direct procurement order deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting direct procurement order:", error);
+      res.status(500).json({ message: "Failed to delete direct procurement order" });
+    }
+  });
+
   // Approval routes
   app.get('/api/approvals', async (req, res) => {
     try {
