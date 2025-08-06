@@ -2026,6 +2026,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (poError) {
         console.error("Error creating Purchase Order from Direct Procurement:", poError);
+        console.error("PO Error details:", poError.message);
+        console.error("PO Error stack:", poError.stack);
         // Still return the DPO even if PO creation fails
         res.json(order);
       }
