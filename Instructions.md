@@ -1,334 +1,396 @@
-# Vendor RFx Respond Feature Implementation Plan
+# Vendor Purchase Order View Implementation Plan
+
+## Requirement Summary
+
+**Current Issue**: Vendors can see all PO buckets (Pending Approval, Approved, Issued, Acknowledged, Rejected) which should not be visible to them.
+
+**Required Changes**:
+1. Vendors should only see **"Issued"** and **"Acknowledged"** buckets
+2. Add **"Acknowledge"** button for vendors on Issued POs
+3. When vendor clicks "Acknowledge", PO moves from Issued to Acknowledged bucket
 
 ## Current State Analysis
 
 ### ✅ **What's Already Working:**
-- **File Upload Infrastructure**: `ObjectUploader.tsx` component supports multiple files with Uppy + AWS S3
-- **Object Storage**: Google Cloud Storage fully operational with bucket and ACL policies
-- **Database Schema**: `rfxResponses` table exists with `attachments` array field
-- **Response Form UI**: `rfx-response-form.tsx` exists with form fields and file upload UI
-- **Storage Methods**: `createRfxResponse()`, `getRfxResponses()`, `getRfxResponsesByVendor()` exist
-- **Terms Acceptance**: Working T&C acceptance workflow
+- Purchase Orders page exists with bucket-based view
+- Database schema has PO status field supporting multiple states
+- Role-based authentication system is operational
+- Storage methods for PO CRUD operations exist
 
-### ❌ **Critical Gaps Identified:**
-- **Missing Backend API Endpoints**: No `/api/vendor/rfx-responses` routes in `server/routes.ts`
-- **Broken Form Submission**: Response form has UI but submission fails (404 error)
-- **Storage Implementation Issues**: Multiple LSP errors in storage methods need fixing
-- **Incomplete Vendor Workflow**: Vendors can view invitations but cannot submit responses
+### ❌ **What Needs to Be Fixed:**
+- All buckets are visible to vendors (should only show Issued/Acknowledged)
+- No "Acknowledge" button for vendors on Issued POs
+- No API endpoint for PO acknowledgment
+- No role-based filtering of PO buckets in UI
 
 ## Step-by-Step Implementation Plan
 
-### Phase 1: Fix Backend API Infrastructure (Priority: CRITICAL)
+### Phase 1: Update UI for Vendor Role (Priority: CRITICAL)
 
-#### Step 1.1: Create Vendor Response API Endpoints
-**File**: `server/routes.ts`
-**Estimated Time**: 30 minutes
-
-Add missing vendor response endpoints:
-
-```typescript
-// Vendor RFx Response endpoints
-app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
-  try {
-    const userId = req.user?.claims?.sub;
-    if (!userId) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    // Get vendor profile for current user
-    const vendor = await storage.getVendorByUserId(userId);
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor profile not found" });
-    }
-
-    const invitations = await storage.getRfxInvitationsForVendor(vendor.id);
-    res.json(invitations);
-  } catch (error) {
-    console.error("Error fetching vendor RFx invitations:", error);
-    res.status(500).json({ message: "Failed to fetch RFx invitations" });
-  }
-});
-
-app.get('/api/vendor/rfx-responses', async (req: any, res) => {
-  try {
-    const userId = req.user?.claims?.sub;
-    if (!userId) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    const vendor = await storage.getVendorByUserId(userId);
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor profile not found" });
-    }
-
-    const responses = await storage.getRfxResponsesByVendor(vendor.id);
-    res.json(responses);
-  } catch (error) {
-    console.error("Error fetching vendor responses:", error);
-    res.status(500).json({ message: "Failed to fetch responses" });
-  }
-});
-
-app.post('/api/vendor/rfx-responses', async (req: any, res) => {
-  try {
-    const userId = req.user?.claims?.sub;
-    if (!userId) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    const vendor = await storage.getVendorByUserId(userId);
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor profile not found" });
-    }
-
-    const responseData = {
-      ...req.body,
-      vendorId: vendor.id,
-    };
-
-    console.log('Creating vendor response:', responseData);
-
-    const response = await storage.createRfxResponse(responseData);
-    
-    // Update invitation status to 'responded'
-    await storage.updateRfxInvitationStatus(
-      req.body.rfxId, 
-      vendor.id, 
-      'responded'
-    );
-
-    res.json(response);
-  } catch (error) {
-    console.error("Error creating RFx response:", error);
-    res.status(500).json({ message: "Failed to create response" });
-  }
-});
-```
-
-#### Step 1.2: Fix Storage Layer Issues
-**File**: `server/storage.ts`
+#### Step 1.1: Modify Purchase Orders Page Component
+**File**: `client/src/pages/purchase-orders.tsx`
 **Estimated Time**: 45 minutes
 
-Fix the critical LSP errors in storage methods:
-
-1. Fix `createRfxResponse()` method - correct the insert syntax
-2. Fix duplicate function implementations
-3. Add missing `getVendorByUserId()` method
-4. Correct schema mismatches
-
-#### Step 1.3: Add Missing Storage Method
-**File**: `server/storage.ts`
-
-Add the missing `getVendorByUserId()` method:
+**Current Implementation**: Shows all 5 buckets to all users
+**Required Change**: Filter buckets based on user role
 
 ```typescript
-async getVendorByUserId(userId: string): Promise<Vendor | undefined> {
-  const [vendor] = await this.db
-    .select()
-    .from(vendors)
-    .where(eq(vendors.userId, userId));
-  return vendor;
-}
-```
-
-### Phase 2: Enhance File Upload Capability (Priority: HIGH)
-
-#### Step 2.1: Upgrade Response Form File Upload
-**File**: `client/src/components/rfx-response-form.tsx`
-**Estimated Time**: 30 minutes
-
-Current form already has file upload but needs enhancement:
-
-1. **Replace existing file upload with ObjectUploader component**:
-```typescript
-// Replace existing file upload with:
-<ObjectUploader
-  maxNumberOfFiles={10}
-  maxFileSize={25 * 1024 * 1024} // 25MB
-  onGetUploadParameters={handleGetUploadParameters}
-  onComplete={handleUploadComplete}
-  buttonClassName="w-full"
->
-  <div className="flex items-center gap-2">
-    <Upload className="w-4 h-4" />
-    <span>Upload Supporting Documents</span>
-  </div>
-</ObjectUploader>
-```
-
-2. **Update attachment handling**:
-```typescript
-const handleUploadComplete = (result: UploadResult) => {
-  if (result.successful && result.successful.length > 0) {
-    const newAttachments = result.successful.map(file => ({
-      id: nanoid(),
-      fileName: file.name,
-      filePath: file.uploadURL,
-      fileSize: file.size,
-      fileType: file.type,
-      uploadedAt: new Date().toISOString(),
-    }));
-    
-    setAttachments(prev => [...prev, ...newAttachments]);
+// Add role-based bucket filtering
+const getVisibleBuckets = (userRole: string) => {
+  if (userRole === 'vendor') {
+    return [
+      { id: 'issued', label: 'Issued', status: 'issued' as const },
+      { id: 'acknowledged', label: 'Acknowledged', status: 'acknowledged' as const }
+    ];
   }
+  
+  // For buyers/sourcing managers - show all buckets
+  return [
+    { id: 'pending', label: 'Pending Approval', status: 'pending_approval' as const },
+    { id: 'approved', label: 'Approved', status: 'approved' as const },
+    { id: 'issued', label: 'Issued', status: 'issued' as const },
+    { id: 'acknowledged', label: 'Acknowledged', status: 'acknowledged' as const },
+    { id: 'rejected', label: 'Rejected', status: 'rejected' as const }
+  ];
 };
 ```
 
-#### Step 2.2: Create Attachment Manager Component
-**File**: `client/src/components/RfxAttachmentManager.tsx`
-**Estimated Time**: 45 minutes
+#### Step 1.2: Add Acknowledge Button for Vendors
+**File**: `client/src/pages/purchase-orders.tsx`
+**Estimated Time**: 30 minutes
 
-Create a specialized component for managing RFx response attachments:
+**Implementation**: Add vendor-specific action button
 
 ```typescript
-interface AttachmentInfo {
-  id: string;
-  fileName: string;
-  filePath: string;
-  fileSize: number;
-  fileType: string;
-  uploadedAt: string;
-}
-
-export function RfxAttachmentManager({
-  attachments,
-  onAttachmentsChange,
-  maxFiles = 10,
-  maxFileSize = 25 * 1024 * 1024,
-}) {
-  // Component logic for:
-  // - File upload using ObjectUploader
-  // - Attachment list display
-  // - File removal
-  // - File preview/download
-}
+// Add acknowledge button in PO card for vendors
+const renderVendorActions = (po: PurchaseOrder) => {
+  if (user?.role === 'vendor' && po.status === 'issued') {
+    return (
+      <Button
+        onClick={() => handleAcknowledgePO(po.id)}
+        disabled={acknowledgeMutation.isPending}
+        className="w-full bg-green-600 hover:bg-green-700"
+        data-testid={`button-acknowledge-${po.id}`}
+      >
+        {acknowledgeMutation.isPending ? 'Acknowledging...' : 'Acknowledge'}
+      </Button>
+    );
+  }
+  return null;
+};
 ```
 
-### Phase 3: Complete Integration & Testing (Priority: MEDIUM)
+### Phase 2: Backend API Implementation (Priority: CRITICAL)
 
-#### Step 3.1: Test End-to-End Workflow
+#### Step 2.1: Add PO Acknowledgment Endpoint
+**File**: `server/routes.ts`
 **Estimated Time**: 30 minutes
 
-1. **Test Response Submission**:
-   - Vendor can view RFx invitations
-   - Vendor can open response form
-   - Vendor can upload multiple files
-   - Vendor can submit response successfully
-   - Files are saved and accessible
+**New Endpoint**: `PATCH /api/purchase-orders/:id/acknowledge`
 
-2. **Verify Data Persistence**:
-   - Response data saved to database
-   - Attachments properly stored in object storage
-   - Invitation status updated to 'responded'
+```typescript
+// PO Acknowledgment endpoint for vendors
+app.patch('/api/purchase-orders/:id/acknowledge', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.claims?.sub;
+    
+    if (!userId) {
+      return res.status(401).json({ message: "User not found" });
+    }
 
-#### Step 3.2: Update Vendor Portal Display
-**File**: `client/src/pages/vendor-portal.tsx`
+    // Verify user is a vendor
+    const user = await storage.getUser(userId);
+    if (!user || user.role !== 'vendor') {
+      return res.status(403).json({ message: "Only vendors can acknowledge POs" });
+    }
+
+    // Get vendor profile
+    const vendor = await storage.getVendorByUserId(userId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor profile not found" });
+    }
+
+    // Get PO and verify it belongs to this vendor
+    const po = await storage.getPurchaseOrder(id);
+    if (!po) {
+      return res.status(404).json({ message: "Purchase order not found" });
+    }
+
+    if (po.vendorId !== vendor.id) {
+      return res.status(403).json({ message: "You can only acknowledge your own POs" });
+    }
+
+    if (po.status !== 'issued') {
+      return res.status(400).json({ message: "Only issued POs can be acknowledged" });
+    }
+
+    // Update PO status to acknowledged
+    const updatedPO = await storage.updatePurchaseOrder(id, { status: 'acknowledged' });
+
+    res.json(updatedPO);
+  } catch (error) {
+    console.error("Error acknowledging PO:", error);
+    res.status(500).json({ message: "Failed to acknowledge purchase order" });
+  }
+});
+```
+
+#### Step 2.2: Add Vendor-Specific PO Filter Endpoint
+**File**: `server/routes.ts`
 **Estimated Time**: 20 minutes
 
-Enhance vendor portal to show:
-- Attachment count in invitation cards
-- Response status indicators
-- Quick file preview options
+**Enhanced Endpoint**: Update existing `GET /api/purchase-orders` to filter by vendor
 
-#### Step 3.3: Error Handling & Validation
-**Estimated Time**: 30 minutes
+```typescript
+// Update existing PO endpoint to filter by vendor for vendor role
+app.get('/api/purchase-orders', async (req, res) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    const user = await storage.getUser(userId);
+    
+    let purchaseOrders;
+    
+    if (user?.role === 'vendor') {
+      // For vendors, only show their POs in 'issued' or 'acknowledged' status
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+      
+      purchaseOrders = await storage.getPurchaseOrdersByVendor(vendor.id, ['issued', 'acknowledged']);
+    } else {
+      // For buyers/sourcing managers, show all POs
+      purchaseOrders = await storage.getPurchaseOrders();
+    }
 
-1. **Frontend Validation**:
-   - File type restrictions (PDF, DOC, DOCX, XLS, XLSX, images)
-   - File size limits
-   - Maximum file count
-
-2. **Backend Validation**:
-   - Request data validation
-   - User authorization checks
-   - File upload security
-
-### Phase 4: Advanced Features (Priority: LOW)
-
-#### Step 4.1: File Preview System
-**File**: `client/src/components/FilePreview.tsx`
-**Estimated Time**: 45 minutes
-
-- Thumbnail generation for images
-- File type icons for documents
-- Quick preview modal
-- Download functionality
-
-#### Step 4.2: Draft Response Capability
-**Estimated Time**: 30 minutes
-
-- Save responses as drafts
-- Auto-save functionality
-- Resume editing capability
-
-## Technical Requirements
-
-### File Upload Specifications:
-- **Supported Types**: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, ZIP
-- **Maximum Files**: 10 per response
-- **File Size Limit**: 25MB per file
-- **Total Upload Limit**: 250MB per response
-
-### Security Requirements:
-- User authentication required
-- Vendor authorization validation
-- File type validation (client + server)
-- Secure object storage with proper ACL policies
-
-### Database Schema (Already Exists):
-```sql
-rfx_responses:
-  - id (UUID)
-  - rfx_id (UUID)
-  - vendor_id (UUID)
-  - response (JSONB)
-  - quoted_price (DECIMAL)
-  - delivery_terms (TEXT)
-  - payment_terms (TEXT)
-  - lead_time (INTEGER)
-  - attachments (TEXT[]) -- Array of file paths
-  - submitted_at (TIMESTAMP)
+    res.json(purchaseOrders);
+  } catch (error) {
+    console.error("Error fetching purchase orders:", error);
+    res.status(500).json({ message: "Failed to fetch purchase orders" });
+  }
+});
 ```
+
+### Phase 3: Database Layer Enhancement (Priority: HIGH)
+
+#### Step 3.1: Add Vendor-Specific Storage Methods
+**File**: `server/storage.ts`
+**Estimated Time**: 30 minutes
+
+**New Methods**: Add vendor-specific PO retrieval methods
+
+```typescript
+// Add method to get POs for specific vendor with status filter
+async getPurchaseOrdersByVendor(vendorId: string, statuses?: string[]): Promise<PurchaseOrder[]> {
+  let query = this.db.select().from(purchaseOrders).where(eq(purchaseOrders.vendorId, vendorId));
+  
+  if (statuses && statuses.length > 0) {
+    query = query.where(inArray(purchaseOrders.status, statuses));
+  }
+  
+  return await query.orderBy(desc(purchaseOrders.createdAt));
+}
+
+// Add method to update PO status specifically for acknowledgment
+async acknowledgePurchaseOrder(id: string): Promise<PurchaseOrder> {
+  const [updatedPO] = await this.db
+    .update(purchaseOrders)
+    .set({ status: 'acknowledged', updatedAt: new Date() })
+    .where(eq(purchaseOrders.id, id))
+    .returning();
+    
+  if (!updatedPO) {
+    throw new Error('Purchase order not found');
+  }
+  
+  return updatedPO;
+}
+```
+
+### Phase 4: Frontend Integration (Priority: HIGH)
+
+#### Step 4.1: Update React Query Integration
+**File**: `client/src/pages/purchase-orders.tsx`
+**Estimated Time**: 25 minutes
+
+**Add Mutation**: For PO acknowledgment
+
+```typescript
+// Add acknowledge mutation
+const acknowledgeMutation = useMutation({
+  mutationFn: async (poId: string) => {
+    return await apiRequest(`/api/purchase-orders/${poId}/acknowledge`, {
+      method: 'PATCH'
+    });
+  },
+  onSuccess: () => {
+    // Invalidate and refetch PO data
+    queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
+    
+    toast({
+      title: "Success",
+      description: "Purchase order acknowledged successfully",
+    });
+  },
+  onError: (error) => {
+    toast({
+      title: "Error",
+      description: error.message || "Failed to acknowledge purchase order",
+      variant: "destructive",
+    });
+  },
+});
+
+const handleAcknowledgePO = (poId: string) => {
+  acknowledgeMutation.mutate(poId);
+};
+```
+
+#### Step 4.2: Add Loading States and Error Handling
+**File**: `client/src/pages/purchase-orders.tsx`
+**Estimated Time**: 15 minutes
+
+**UI Enhancements**: Better UX for acknowledge action
+
+```typescript
+// Add loading states for acknowledge button
+<Button
+  onClick={() => handleAcknowledgePO(po.id)}
+  disabled={acknowledgeMutation.isPending}
+  className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
+  data-testid={`button-acknowledge-${po.id}`}
+>
+  {acknowledgeMutation.isPending ? (
+    <>
+      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      Acknowledging...
+    </>
+  ) : (
+    <>
+      <Check className="w-4 h-4 mr-2" />
+      Acknowledge
+    </>
+  )}
+</Button>
+```
+
+### Phase 5: Database Schema Update (Priority: MEDIUM)
+
+#### Step 5.1: Ensure 'acknowledged' Status Exists
+**File**: `shared/schema.ts`
+**Estimated Time**: 10 minutes
+
+**Verification**: Ensure PO status enum includes 'acknowledged'
+
+```typescript
+// Verify purchase order status enum includes all required states
+export const poStatusEnum = pgEnum('po_status', [
+  'draft',
+  'pending_approval', 
+  'approved',
+  'rejected',
+  'issued',        // ✓ Required for vendors
+  'acknowledged',  // ✓ Required for vendors  
+  'delivered',
+  'cancelled'
+]);
+```
+
+### Phase 6: Testing & Validation (Priority: MEDIUM)
+
+#### Step 6.1: Manual Testing Workflow
+**Estimated Time**: 30 minutes
+
+**Test Cases**:
+1. **Vendor Login**: Switch to vendor role and verify only 2 buckets show
+2. **Issued POs**: Verify "Acknowledge" button appears on issued POs
+3. **Acknowledge Action**: Click acknowledge and verify PO moves to acknowledged bucket
+4. **Buyer View**: Switch back to buyer role and verify all 5 buckets still show
+5. **Authorization**: Ensure vendors can't acknowledge other vendors' POs
+
+#### Step 6.2: Error Scenarios Testing
+**Estimated Time**: 20 minutes
+
+**Error Test Cases**:
+1. Try to acknowledge already acknowledged PO (should fail)
+2. Try to acknowledge PO from different vendor (should fail)  
+3. Network error during acknowledge (should show error toast)
+4. Unauthorized access (should show 401/403 errors)
+
+## Database Schema Requirements
+
+### Purchase Orders Table (Already Exists):
+```sql
+purchase_orders:
+  - id (UUID)
+  - vendor_id (UUID) -- Foreign key to vendors table
+  - status (ENUM) -- Must include 'issued' and 'acknowledged' 
+  - total_amount (DECIMAL)
+  - created_at (TIMESTAMP)
+  - updated_at (TIMESTAMP)
+  -- ... other PO fields
+```
+
+### Required Status Values:
+- `issued`: PO has been issued to vendor (vendor can see)
+- `acknowledged`: PO has been acknowledged by vendor (vendor can see)
+- Other statuses: Only visible to buyers/sourcing managers
+
+## Security Considerations
+
+### Authorization Rules:
+1. **Vendor Role Verification**: Only users with role='vendor' can acknowledge POs
+2. **Vendor Ownership**: Vendors can only acknowledge their own POs (vendorId match)
+3. **Status Validation**: Only POs with status='issued' can be acknowledged
+4. **API Endpoint Protection**: All endpoints require authentication
+
+### Data Access Rules:
+1. **Vendors**: Can only see POs where vendorId matches their profile
+2. **Buyers**: Can see all POs regardless of vendor
+3. **Status Filter**: Vendors only see 'issued' and 'acknowledged' POs
 
 ## Implementation Timeline
 
-**Total Estimated Time: 4-5 hours**
+**Total Estimated Time: 3.5 hours**
 
-1. **Phase 1 (Critical)**: 2 hours - Fix backend API and storage issues
-2. **Phase 2 (High)**: 1.5 hours - Enhance file upload capability
-3. **Phase 3 (Medium)**: 1 hour - Integration and testing
-4. **Phase 4 (Low)**: 1.5 hours - Advanced features (optional)
+1. **Phase 1 (UI Changes)**: 1.25 hours - Update purchase orders page for vendor role
+2. **Phase 2 (Backend API)**: 50 minutes - Add acknowledgment endpoint and filtering
+3. **Phase 3 (Database)**: 30 minutes - Add vendor-specific storage methods
+4. **Phase 4 (Frontend)**: 40 minutes - Add mutation and error handling
+5. **Phase 5 (Schema)**: 10 minutes - Verify status enum
+6. **Phase 6 (Testing)**: 50 minutes - Manual testing and validation
 
 ## Success Criteria
 
-1. ✅ Vendors can view their RFx invitations
-2. ✅ Vendors can open and fill out response forms
-3. ✅ Vendors can upload multiple supporting documents
-4. ✅ Response submission works end-to-end
-5. ✅ Files are securely stored and accessible
-6. ✅ Invitation status updates to 'responded'
-7. ✅ Form validation works properly
-8. ✅ Error handling provides clear feedback
+1. ✅ Vendors see only "Issued" and "Acknowledged" buckets
+2. ✅ "Acknowledge" button appears for vendors on issued POs
+3. ✅ Clicking acknowledge moves PO from Issued to Acknowledged bucket
+4. ✅ Buyers still see all 5 buckets unchanged
+5. ✅ Authorization works correctly (vendors can't acknowledge others' POs)
+6. ✅ Error handling provides clear feedback
+7. ✅ Loading states work during acknowledge action
+8. ✅ Data persistence works correctly
 
 ## Risk Mitigation
 
 **High Risk Items:**
-- Storage layer LSP errors must be fixed first
-- API endpoints must be created before frontend testing
-- File upload integration requires careful testing
+- Role-based UI filtering must not break buyer experience
+- Authorization checks must be thorough to prevent security issues
+- Database status updates must be atomic
 
 **Mitigation Strategy:**
-- Fix backend issues in Phase 1 before proceeding
-- Test each component individually before integration
-- Use existing working file upload infrastructure
-- Implement comprehensive error handling
+- Test both vendor and buyer roles thoroughly
+- Implement comprehensive authorization checks
+- Use database transactions for status updates
+- Add proper error handling for all edge cases
 
 ## Next Steps
 
-1. **Start with Phase 1.2**: Fix storage layer LSP errors
-2. **Then Phase 1.1**: Create missing API endpoints
-3. **Test basic response submission**: Ensure end-to-end flow works
-4. **Enhance file upload**: Upgrade to multiple file support
-5. **Polish and test**: Complete integration and validation
+1. **Start with Phase 1**: Update UI to filter buckets by role
+2. **Add Phase 2**: Implement backend acknowledgment endpoint
+3. **Test Incrementally**: Verify each phase works before proceeding
+4. **Complete Integration**: Ensure frontend and backend work together
+5. **Comprehensive Testing**: Test all user roles and edge cases
 
-This plan leverages your existing robust file upload infrastructure while addressing the critical gaps in the vendor response workflow. The phased approach ensures we build on a solid foundation and deliver working functionality incrementally.
+This implementation ensures vendors have a clean, focused experience while maintaining full functionality for buyers and sourcing managers.

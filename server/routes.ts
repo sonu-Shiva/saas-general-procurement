@@ -1331,10 +1331,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order routes
-  app.get('/api/purchase-orders', async (req, res) => {
+  app.get('/api/purchase-orders', async (req: any, res) => {
     try {
-      const pos = await storage.getPurchaseOrders();
-      res.json(pos);
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      
+      let purchaseOrders;
+      
+      if (user?.role === 'vendor') {
+        // For vendors, only show their POs in 'issued' or 'acknowledged' status
+        const vendor = await storage.getVendorByUserId(userId);
+        if (!vendor) {
+          return res.status(404).json({ message: "Vendor profile not found" });
+        }
+        
+        // Use filter to get only issued and acknowledged POs for this vendor
+        purchaseOrders = await storage.getPurchaseOrders({ vendorId: vendor.id });
+        // Client-side filtering will handle status filtering since getPurchaseOrders doesn't support status array filtering yet
+        purchaseOrders = purchaseOrders.filter((po: any) => ['issued', 'acknowledged'].includes(po.status));
+      } else {
+        // For buyers/sourcing managers, show all POs
+        purchaseOrders = await storage.getPurchaseOrders();
+      }
+
+      res.json(purchaseOrders);
     } catch (error) {
       console.error("Error fetching purchase orders:", error);
       res.status(500).json({ message: "Failed to fetch purchase orders" });
@@ -1407,6 +1427,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error issuing purchase order:", error);
       res.status(500).json({ message: "Failed to issue purchase order" });
+    }
+  });
+
+  // Purchase Order acknowledge endpoint (for vendors to acknowledge issued POs)
+  app.patch('/api/purchase-orders/:id/acknowledge', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Verify user is a vendor
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'vendor') {
+        return res.status(403).json({ message: "Only vendors can acknowledge POs" });
+      }
+
+      // Get vendor profile
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      // Get PO and verify it belongs to this vendor
+      const po = await storage.getPurchaseOrder(id);
+      if (!po) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+
+      if (po.vendorId !== vendor.id) {
+        return res.status(403).json({ message: "You can only acknowledge your own POs" });
+      }
+
+      if (po.status !== 'issued') {
+        return res.status(400).json({ message: "Only issued POs can be acknowledged" });
+      }
+
+      // Update PO status to acknowledged
+      const updatedPO = await storage.updatePurchaseOrder(id, { 
+        status: 'acknowledged',
+        acknowledgedAt: new Date()
+      });
+
+      res.json(updatedPO);
+    } catch (error) {
+      console.error("Error acknowledging PO:", error);
+      res.status(500).json({ message: "Failed to acknowledge purchase order" });
     }
   });
 

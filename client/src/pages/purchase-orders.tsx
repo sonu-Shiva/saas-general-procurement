@@ -35,7 +35,9 @@ import {
   ThumbsDown,
   Send,
   XCircle,
-  Trash2
+  Trash2,
+  Check,
+  Loader2
 } from "lucide-react";
 import type { PurchaseOrder, PoLineItem } from "@shared/schema";
 
@@ -162,6 +164,44 @@ export default function PurchaseOrders() {
     }
   };
 
+  // Add acknowledge mutation for vendors
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (poId: string) => {
+      return await apiRequest(`/api/purchase-orders/${poId}/acknowledge`, {
+        method: 'PATCH'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
+      toast({
+        title: "Success",
+        description: "Purchase order acknowledged successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: (error as Error).message || "Failed to acknowledge purchase order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAcknowledgePO = (poId: string) => {
+    acknowledgeMutation.mutate(poId);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "draft":
@@ -236,6 +276,32 @@ export default function PurchaseOrders() {
       default: return 0;
     }
   };
+
+  // Get visible buckets based on user role
+  const getVisibleBuckets = () => {
+    if (user?.role === 'vendor') {
+      return [
+        { id: 'issued', label: 'Issued', status: 'issued' as const },
+        { id: 'acknowledged', label: 'Acknowledged', status: 'acknowledged' as const }
+      ];
+    }
+    
+    // For buyers/sourcing managers - show all buckets
+    return [
+      { id: 'pending_approval', label: 'Pending Approval', status: 'pending_approval' as const },
+      { id: 'approved', label: 'Approved', status: 'approved' as const },
+      { id: 'issued', label: 'Issued', status: 'issued' as const },
+      { id: 'acknowledged', label: 'Acknowledged', status: 'acknowledged' as const },
+      { id: 'rejected', label: 'Rejected', status: 'rejected' as const }
+    ];
+  };
+
+  const visibleBuckets = getVisibleBuckets();
+
+  // Set default status filter based on role
+  if (user?.role === 'vendor' && !['issued', 'acknowledged'].includes(statusFilter)) {
+    setStatusFilter('issued');
+  }
 
   // Filter POs based on current tab and search criteria
   const purchaseOrdersArray = Array.isArray(purchaseOrders) ? purchaseOrders : [];
@@ -329,25 +395,39 @@ export default function PurchaseOrders() {
         </Card>
       </div>
 
-      {/* 4-Bucket Status Tabs for Purchase Orders */}
+      {/* Dynamic Status Tabs based on user role */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="pending_approval" className="text-yellow-600">
-            <Clock className="w-4 h-4 mr-2" />
-            Pending Approval ({purchaseOrdersArray.filter(po => po.status === 'pending_approval').length})
-          </TabsTrigger>
-          <TabsTrigger value="approved" className="text-green-600">
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Approved ({purchaseOrdersArray.filter(po => po.status === 'approved').length})
-          </TabsTrigger>
-          <TabsTrigger value="issued" className="text-blue-600">
-            <Send className="w-4 h-4 mr-2" />
-            Issued ({purchaseOrdersArray.filter(po => po.status === 'issued').length})
-          </TabsTrigger>
-          <TabsTrigger value="rejected" className="text-red-600">
-            <XCircle className="w-4 h-4 mr-2" />
-            Rejected ({purchaseOrdersArray.filter(po => po.status === 'rejected').length})
-          </TabsTrigger>
+        <TabsList className={`grid w-full ${user?.role === 'vendor' ? 'grid-cols-2' : 'grid-cols-5'}`}>
+          {visibleBuckets.map((bucket) => {
+            const count = purchaseOrdersArray.filter(po => po.status === bucket.status).length;
+            const getTabColor = (status: string) => {
+              switch (status) {
+                case 'pending_approval': return 'text-yellow-600';
+                case 'approved': return 'text-green-600';
+                case 'issued': return 'text-blue-600';
+                case 'acknowledged': return 'text-green-700';
+                case 'rejected': return 'text-red-600';
+                default: return 'text-gray-600';
+              }
+            };
+            const getTabIcon = (status: string) => {
+              switch (status) {
+                case 'pending_approval': return <Clock className="w-4 h-4 mr-2" />;
+                case 'approved': return <CheckCircle className="w-4 h-4 mr-2" />;
+                case 'issued': return <Send className="w-4 h-4 mr-2" />;
+                case 'acknowledged': return <Check className="w-4 h-4 mr-2" />;
+                case 'rejected': return <XCircle className="w-4 h-4 mr-2" />;
+                default: return <Clock className="w-4 h-4 mr-2" />;
+              }
+            };
+
+            return (
+              <TabsTrigger key={bucket.id} value={bucket.status} className={getTabColor(bucket.status)}>
+                {getTabIcon(bucket.status)}
+                {bucket.label} ({count})
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
       </Tabs>
 
@@ -485,6 +565,28 @@ export default function PurchaseOrders() {
                       >
                         <Send className="w-4 h-4 mr-1" />
                         Issue
+                      </Button>
+                    )}
+                    {/* Add acknowledge button for vendors on issued POs */}
+                    {user?.role === 'vendor' && po.status === 'issued' && (
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleAcknowledgePO(po.id)}
+                        disabled={acknowledgeMutation.isPending}
+                        data-testid={`button-acknowledge-${po.id}`}
+                      >
+                        {acknowledgeMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            Acknowledging...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4 mr-1" />
+                            Acknowledge
+                          </>
+                        )}
                       </Button>
                     )}
                     <Dialog>
