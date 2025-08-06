@@ -1,9 +1,10 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = ["nodejs-20", "web", "postgresql-16", "python-3.11", "python3"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-25_05"
+packages = ["openssl", "postgresql"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -14,8 +15,12 @@ run = ["npm", "run", "start"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
 [workflows]
-runButton = "Project"
+runButton = "Node.js Backend + Frontend"
 
 [[workflows.workflow]]
 name = "Project"
@@ -34,3 +39,50 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Django Backend"
+author = 45057916
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+
+[[workflows.workflow]]
+name = "Full Stack (Node + Django)"
+author = 45057916
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && python manage.py runserver 0.0.0.0:8000"
+
+[[workflows.workflow]]
+name = "Django + Frontend"
+author = 45057916
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Node.js Backend + Frontend"
+author = 45057916
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[agent]
+integrations = ["javascript_database==1.0.0", "javascript_websocket==1.0.0", "javascript_log_in_with_replit==1.0.0", "javascript_object_storage==1.0.0", "perplexity_v0==1.0.0"]

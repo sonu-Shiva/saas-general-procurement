@@ -1,25 +1,21 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertPurchaseOrderSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { formatCurrency } from "@/lib/utils";
 import { 
-  Plus, 
   Search, 
   Filter, 
   ShoppingCart, 
@@ -30,96 +26,64 @@ import {
   Clock,
   Truck,
   FileText,
-  DollarSign,
   Package,
   Calendar,
   AlertTriangle,
   Mail,
-  Phone
+  Phone,
+  ThumbsUp,
+  ThumbsDown,
+  Send,
+  XCircle,
+  Trash2,
+  Check,
+  Loader2
 } from "lucide-react";
 import type { PurchaseOrder, PoLineItem } from "@shared/schema";
 
 export default function PurchaseOrders() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending_approval");
   const [vendorFilter, setVendorFilter] = useState("all");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<string | null>(null);
+  const [approvalComments, setApprovalComments] = useState("");
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | "issue" | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const form = useForm({
-    resolver: zodResolver(insertPurchaseOrderSchema),
-    defaultValues: {
-      vendorId: "",
-      totalAmount: "",
-      termsAndConditions: "",
-      paymentTerms: "",
-      deliverySchedule: {},
-    },
-  });
-
-  const { data: purchaseOrders, isLoading } = useQuery({
-    queryKey: ["/api/purchase-orders", { status: statusFilter, vendorId: vendorFilter }],
+  // Fetch purchase orders
+  const { data: purchaseOrders = [], isLoading } = useQuery({
+    queryKey: ["/api/purchase-orders"],
     retry: false,
   });
 
-  const { data: vendors } = useQuery({
-    queryKey: ["/api/vendors", { status: "approved" }],
+  // Fetch vendors for filter dropdown
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["/api/vendors"],
     retry: false,
   });
 
-  const { data: selectedPODetails } = useQuery({
-    queryKey: ["/api/purchase-orders", selectedPO],
-    enabled: !!selectedPO,
-    retry: false,
-  });
-
-  const createPOMutation = useMutation({
-    mutationFn: async (data: any) => {
-      await apiRequest("POST", "/api/purchase-orders", {
-        ...data,
-        totalAmount: parseFloat(data.totalAmount),
+  const approvalMutation = useMutation({
+    mutationFn: async ({ poId, action, comments }: { poId: string; action: string; comments: string }) => {
+      const endpoint = action === 'approve' ? 'approve' : action === 'reject' ? 'reject' : 'issue';
+      await apiRequest(`/api/purchase-orders/${poId}/${endpoint}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          comments
+        })
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
+      setIsApprovalDialogOpen(false);
+      setApprovalComments("");
+      setSelectedPO(null);
+      setApprovalAction(null);
       toast({
         title: "Success",
-        description: "Purchase Order created successfully",
-      });
-      setIsCreateDialogOpen(false);
-      form.reset();
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to create Purchase Order",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updatePOStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      await apiRequest("PATCH", `/api/purchase-orders/${id}`, { status });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
-      toast({
-        title: "Success",
-        description: "Purchase Order status updated",
+        description: "Purchase Order updated successfully",
       });
     },
     onError: (error) => {
@@ -136,18 +100,116 @@ export default function PurchaseOrders() {
       }
       toast({
         title: "Error",
-        description: "Failed to update status",
+        description: "Failed to update Purchase Order",
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: any) => {
-    createPOMutation.mutate(data);
+  const submitApproval = () => {
+    if (!selectedPO || !approvalAction) return;
+    
+    if (approvalAction === 'reject' && !approvalComments.trim()) {
+      toast({
+        title: "Error",
+        description: "Comments are required when rejecting a PO",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    approvalMutation.mutate({
+      poId: selectedPO,
+      action: approvalAction,
+      comments: approvalComments
+    });
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (poId: string) => {
+      await apiRequest(`/api/purchase-orders/${poId}`, {
+        method: "DELETE"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
+      toast({
+        title: "Success",
+        description: "Purchase Order deleted successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete Purchase Order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = (poId: string) => {
+    if (confirm("Are you sure you want to delete this Purchase Order? This action cannot be undone.")) {
+      deleteMutation.mutate(poId);
+    }
+  };
+
+  // Add acknowledge mutation for vendors
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (poId: string) => {
+      return await apiRequest(`/api/purchase-orders/${poId}/acknowledge`, {
+        method: 'PATCH'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
+      toast({
+        title: "Success",
+        description: "Purchase order acknowledged successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: (error as Error).message || "Failed to acknowledge purchase order",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAcknowledgePO = (poId: string) => {
+    acknowledgeMutation.mutate(poId);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "draft":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+      case "pending_approval":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "approved":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "issued":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case "acknowledged":
@@ -160,6 +222,8 @@ export default function PurchaseOrders() {
         return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
       case "paid":
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+      case "rejected":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "cancelled":
         return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       default:
@@ -169,6 +233,12 @@ export default function PurchaseOrders() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case "draft":
+        return <Edit className="w-4 h-4" />;
+      case "pending_approval":
+        return <Clock className="w-4 h-4" />;
+      case "approved":
+        return <CheckCircle className="w-4 h-4" />;
       case "issued":
         return <FileText className="w-4 h-4" />;
       case "acknowledged":
@@ -178,9 +248,11 @@ export default function PurchaseOrders() {
       case "delivered":
         return <Package className="w-4 h-4" />;
       case "invoiced":
-        return <DollarSign className="w-4 h-4" />;
+        return <div className="w-4 h-4 flex items-center justify-center font-bold text-xs">₹</div>;
       case "paid":
         return <CheckCircle className="w-4 h-4" />;
+      case "rejected":
+        return <XCircle className="w-4 h-4" />;
       case "cancelled":
         return <AlertTriangle className="w-4 h-4" />;
       default:
@@ -190,472 +262,496 @@ export default function PurchaseOrders() {
 
   const getProgressValue = (status: string) => {
     switch (status) {
-      case "draft": return 10;
-      case "issued": return 25;
-      case "acknowledged": return 40;
-      case "shipped": return 60;
-      case "delivered": return 80;
-      case "invoiced": return 90;
+      case "draft": return 5;
+      case "pending_approval": return 15;
+      case "approved": return 25;
+      case "issued": return 35;
+      case "acknowledged": return 50;
+      case "shipped": return 70;
+      case "delivered": return 85;
+      case "invoiced": return 95;
       case "paid": return 100;
+      case "rejected": return 0;
       case "cancelled": return 0;
       default: return 0;
     }
   };
 
-  const filteredPOs = purchaseOrders?.filter((po: PurchaseOrder) => {
-    const matchesSearch = po.poNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || po.status === statusFilter;
+  // Get visible buckets based on user role
+  const getVisibleBuckets = () => {
+    if (user?.role === 'vendor') {
+      return [
+        { id: 'issued', label: 'PO Received', status: 'issued' as const },
+        { id: 'acknowledged', label: 'PO Acknowledged', status: 'acknowledged' as const }
+      ];
+    }
+    
+    // For buyers/sourcing managers - show all buckets
+    return [
+      { id: 'pending_approval', label: 'Pending Approval', status: 'pending_approval' as const },
+      { id: 'approved', label: 'Approved', status: 'approved' as const },
+      { id: 'issued', label: 'Issued', status: 'issued' as const },
+      { id: 'acknowledged', label: 'Acknowledged', status: 'acknowledged' as const },
+      { id: 'rejected', label: 'Rejected', status: 'rejected' as const }
+    ];
+  };
+
+  const visibleBuckets = getVisibleBuckets();
+
+  // Set default status filter based on role
+  if (user?.role === 'vendor' && !['issued', 'acknowledged'].includes(statusFilter)) {
+    setStatusFilter('issued');
+  }
+
+  // Filter POs based on current tab and search criteria
+  const purchaseOrdersArray = Array.isArray(purchaseOrders) ? purchaseOrders : [];
+  const filteredPOs = purchaseOrdersArray.filter((po: PurchaseOrder) => {
+    const matchesSearch = po.poNumber?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = po.status === statusFilter;
     const matchesVendor = vendorFilter === "all" || po.vendorId === vendorFilter;
     
     return matchesSearch && matchesStatus && matchesVendor;
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Page Header */}
-            <div className="flex justify-between items-center mb-8">
+    <div className="space-y-6 p-6">
+      {/* Page Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Purchase Orders</h1>
+          <p className="text-muted-foreground">Track and manage all purchase orders and fulfillment</p>
+          <p className="text-sm text-blue-600 mt-2">
+            💡 Create new POs through Direct Procurement, RFx Management, or Auction Center
+          </p>
+        </div>
+        <div className="flex space-x-3">
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Purchase Orders</h1>
-                <p className="text-muted-foreground">Track and manage all purchase orders and fulfillment</p>
+                <p className="text-sm text-muted-foreground mb-1">Total POs</p>
+                <p className="text-2xl font-bold">{Array.isArray(purchaseOrders) ? purchaseOrders.length : 0}</p>
               </div>
-              <div className="flex space-x-3">
-                <Button variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create PO
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Create Purchase Order</DialogTitle>
-                    </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="vendorId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Vendor</FormLabel>
-                              <FormControl>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select vendor" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {vendors?.map((vendor: any) => (
-                                      <SelectItem key={vendor.id} value={vendor.id}>
-                                        {vendor.companyName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="totalAmount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Total Amount</FormLabel>
-                              <FormControl>
-                                <Input type="number" step="0.01" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="paymentTerms"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Payment Terms</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="termsAndConditions"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Terms & Conditions</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div className="flex justify-end space-x-3">
-                          <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={createPOMutation.isPending}>
-                            {createPOMutation.isPending ? "Creating..." : "Create PO"}
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
+              <ShoppingCart className="w-8 h-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Active POs</p>
+                <p className="text-2xl font-bold text-success">
+                  {Array.isArray(purchaseOrders) ? purchaseOrders.filter((po: PurchaseOrder) => 
+                    ['issued', 'acknowledged', 'shipped'].includes(po.status || '')
+                  ).length : 0}
+                </p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-success" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total Value</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(Array.isArray(purchaseOrders) ? 
+                    (purchaseOrders.reduce((sum: number, po: PurchaseOrder) => 
+                      sum + parseFloat(po.totalAmount || '0'), 0
+                    )) : 0)}
+                </p>
+              </div>
+              <div className="w-8 h-8 text-accent flex items-center justify-center font-bold text-xl">₹</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">This Month</p>
+                <p className="text-2xl font-bold">
+                  {purchaseOrdersArray.filter((po: PurchaseOrder) => {
+                    const poDate = new Date(po.createdAt || '');
+                    const now = new Date();
+                    return poDate.getMonth() === now.getMonth() && poDate.getFullYear() === now.getFullYear();
+                  }).length || 0}
+                </p>
+              </div>
+              <Calendar className="w-8 h-8 text-secondary" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Dynamic Status Tabs based on user role */}
+      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
+        <TabsList className={`grid w-full ${user?.role === 'vendor' ? 'grid-cols-2' : 'grid-cols-5'}`}>
+          {visibleBuckets.map((bucket) => {
+            const count = purchaseOrdersArray.filter(po => po.status === bucket.status).length;
+            const getTabColor = (status: string) => {
+              switch (status) {
+                case 'pending_approval': return 'text-yellow-600';
+                case 'approved': return 'text-green-600';
+                case 'issued': return 'text-blue-600';
+                case 'acknowledged': return 'text-green-700';
+                case 'rejected': return 'text-red-600';
+                default: return 'text-gray-600';
+              }
+            };
+            const getTabIcon = (status: string) => {
+              switch (status) {
+                case 'pending_approval': return <Clock className="w-4 h-4 mr-2" />;
+                case 'approved': return <CheckCircle className="w-4 h-4 mr-2" />;
+                case 'issued': return <Send className="w-4 h-4 mr-2" />;
+                case 'acknowledged': return <Check className="w-4 h-4 mr-2" />;
+                case 'rejected': return <XCircle className="w-4 h-4 mr-2" />;
+                default: return <Clock className="w-4 h-4 mr-2" />;
+              }
+            };
+
+            return (
+              <TabsTrigger key={bucket.id} value={bucket.status} className={getTabColor(bucket.status)}>
+                {getTabIcon(bucket.status)}
+                {bucket.label} ({count})
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
+
+      {/* Search and Filters */}
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Search by PO number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
             </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Total POs</p>
-                      <p className="text-2xl font-bold">{purchaseOrders?.length || 0}</p>
-                    </div>
-                    <ShoppingCart className="w-8 h-8 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Active POs</p>
-                      <p className="text-2xl font-bold text-success">
-                        {purchaseOrders?.filter((po: PurchaseOrder) => 
-                          ['issued', 'acknowledged', 'shipped'].includes(po.status || '')
-                        ).length || 0}
-                      </p>
-                    </div>
-                    <CheckCircle className="w-8 h-8 text-success" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Total Value</p>
-                      <p className="text-2xl font-bold">
-                        ₹{purchaseOrders ? 
-                          (purchaseOrders.reduce((sum: number, po: PurchaseOrder) => 
-                            sum + parseFloat(po.totalAmount || '0'), 0
-                          )).toLocaleString() : '0'}
-                      </p>
-                    </div>
-                    <DollarSign className="w-8 h-8 text-accent" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">This Month</p>
-                      <p className="text-2xl font-bold">
-                        {purchaseOrders?.filter((po: PurchaseOrder) => {
-                          const poDate = new Date(po.createdAt || '');
-                          const now = new Date();
-                          return poDate.getMonth() === now.getMonth() && poDate.getFullYear() === now.getFullYear();
-                        }).length || 0}
-                      </p>
-                    </div>
-                    <Calendar className="w-8 h-8 text-secondary" />
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="w-48">
+              <Select value={vendorFilter} onValueChange={setVendorFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Vendors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Vendors</SelectItem>
+                  {Array.isArray(vendors) ? vendors.map((vendor: any) => (
+                    <SelectItem key={vendor.id} value={vendor.id}>
+                      {vendor.companyName}
+                    </SelectItem>
+                  )) : []}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Filters and Search */}
-            <Card className="mb-6">
+      {/* Purchase Orders List */}
+      {isLoading ? (
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading purchase orders...</p>
+        </div>
+      ) : filteredPOs.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <ShoppingCart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">No Purchase Orders Found</h3>
+            <p className="text-muted-foreground">
+              {statusFilter === 'pending_approval' 
+                ? "No purchase orders are currently pending approval."
+                : statusFilter === 'approved'
+                ? "No purchase orders have been approved yet."
+                : statusFilter === 'issued'
+                ? "No purchase orders have been received yet."
+                : statusFilter === 'acknowledged'
+                ? "No purchase orders have been acknowledged yet."
+                : "No purchase orders have been rejected."
+              }
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredPOs.map((po: PurchaseOrder) => (
+            <Card key={po.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
-                  <div className="flex-1 max-w-md">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by PO number..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-semibold text-foreground">{po.poNumber}</h3>
+                      <Badge className={getStatusColor(po.status || '')}>
+                        {getStatusIcon(po.status || '')}
+                        <span className="ml-1 capitalize">{po.status?.replace('_', ' ')}</span>
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                      <div>
+                        <span className="font-medium">Vendor:</span>
+                        <p className="text-foreground">{(po as any).vendorName || po.vendorName || (po as any).vendorCompanyName || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Total Amount:</span>
+                        <p className="text-foreground font-semibold">{formatCurrency(parseFloat(po.totalAmount || '0'))}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">PO Date:</span>
+                        <p className="text-foreground">{(po as any).poDate ? new Date((po as any).poDate).toLocaleDateString() : (po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A')}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Delivery Date:</span>
+                        <p className="text-foreground">{(po as any).deliveryDate ? new Date((po as any).deliveryDate).toLocaleDateString() : 'N/A'}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex space-x-3">
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40">
-                        <Filter className="w-4 h-4 mr-2" />
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="issued">Issued</SelectItem>
-                        <SelectItem value="acknowledged">Acknowledged</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                        <SelectItem value="invoiced">Invoiced</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={vendorFilter} onValueChange={setVendorFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Vendor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Vendors</SelectItem>
-                        {vendors?.map((vendor: any) => (
-                          <SelectItem key={vendor.id} value={vendor.id}>
-                            {vendor.companyName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex items-center gap-2 ml-4">
+                    {statusFilter === 'pending_approval' && (user as any)?.role === 'sourcing_manager' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-green-600 border-green-200 hover:bg-green-50"
+                          onClick={() => {
+                            setSelectedPO(po.id);
+                            setApprovalAction('approve');
+                            setIsApprovalDialogOpen(true);
+                          }}
+                        >
+                          <ThumbsUp className="w-4 h-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => {
+                            setSelectedPO(po.id);
+                            setApprovalAction('reject');
+                            setIsApprovalDialogOpen(true);
+                          }}
+                        >
+                          <ThumbsDown className="w-4 h-4 mr-1" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    {statusFilter === 'approved' && (user as any)?.role === 'sourcing_manager' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                        onClick={() => {
+                          setSelectedPO(po.id);
+                          setApprovalAction('issue');
+                          setIsApprovalDialogOpen(true);
+                        }}
+                      >
+                        <Send className="w-4 h-4 mr-1" />
+                        Issue
+                      </Button>
+                    )}
+                    {/* Add acknowledge button for vendors on issued POs */}
+                    {user?.role === 'vendor' && po.status === 'issued' && (
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleAcknowledgePO(po.id)}
+                        disabled={acknowledgeMutation.isPending}
+                        data-testid={`button-acknowledge-${po.id}`}
+                      >
+                        {acknowledgeMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            Acknowledging...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4 mr-1" />
+                            Acknowledge
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl">
+                        <DialogHeader>
+                          <DialogTitle>Purchase Order Details - {po.poNumber}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-6">
+                          {/* Buyer Information */}
+                          <div>
+                            <h4 className="font-semibold text-lg mb-3">Buyer Information</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div><strong>Buyer Name:</strong> {(po as any).buyerName || 'SCLEN Procurement'}</div>
+                              <div><strong>Branch:</strong> {(po as any).buyerBranchName || 'Head Office'}</div>
+                              <div><strong>Address:</strong> {(po as any).buyerAddress || 'N/A'}</div>
+                              <div><strong>GSTIN:</strong> {(po as any).buyerGstin || 'N/A'}</div>
+                            </div>
+                          </div>
+
+                          {/* Vendor Information */}
+                          <div>
+                            <h4 className="font-semibold text-lg mb-3">Vendor Information</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div><strong>Vendor Name:</strong> {(po as any).vendorName || po.vendorName || 'N/A'}</div>
+                              <div><strong>Address:</strong> {(po as any).vendorAddress || 'N/A'}</div>
+                              <div><strong>GSTIN:</strong> {(po as any).vendorGstin || 'N/A'}</div>
+                            </div>
+                          </div>
+
+                          {/* PO Details */}
+                          <div>
+                            <h4 className="font-semibold text-lg mb-3">Purchase Order Details</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div><strong>PO Number:</strong> {po.poNumber}</div>
+                              <div><strong>PO Date:</strong> {(po as any).poDate ? new Date((po as any).poDate).toLocaleDateString() : new Date(po.createdAt).toLocaleDateString()}</div>
+                              <div><strong>Status:</strong> <Badge className={getStatusColor(po.status || '')}>{po.status?.replace('_', ' ')}</Badge></div>
+                              <div><strong>Quotation Ref:</strong> {(po as any).quotationRef || 'N/A'}</div>
+                              <div><strong>Delivery Date:</strong> {(po as any).deliveryDate ? new Date((po as any).deliveryDate).toLocaleDateString() : 'N/A'}</div>
+                              <div><strong>Payment Terms:</strong> {(po as any).paymentTerms || 'N/A'}</div>
+                              <div><strong>Incoterms:</strong> {(po as any).incoterms || 'N/A'}</div>
+                            </div>
+                          </div>
+
+                          {/* Financial Details */}
+                          <div>
+                            <h4 className="font-semibold text-lg mb-3">Financial Details</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div><strong>Total Amount:</strong> {formatCurrency(parseFloat(po.totalAmount || '0'))}</div>
+                              <div><strong>Tax Amount:</strong> {formatCurrency(parseFloat((po as any).taxAmount || '0'))}</div>
+                              <div><strong>Amount in Words:</strong> {(po as any).totalAmountInWords || 'N/A'}</div>
+                              <div><strong>Authorized Signatory:</strong> {(po as any).authorizedSignatory || 'N/A'}</div>
+                            </div>
+                          </div>
+
+                          {/* Terms & Conditions */}
+                          <div>
+                            <h4 className="font-semibold text-lg mb-3">Terms & Conditions</h4>
+                            <p className="text-sm text-muted-foreground">{(po as any).termsAndConditions || 'Standard terms and conditions apply'}</p>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    {po.status === 'draft' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => handleDelete(po.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
+                </div>
+                
+                {/* Progress bar for PO status */}
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>Progress</span>
+                    <span>{getProgressValue(po.status || '')}%</span>
+                  </div>
+                  <Progress value={getProgressValue(po.status || '')} className="h-2" />
                 </div>
               </CardContent>
             </Card>
+          ))}
+        </div>
+      )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Purchase Orders List */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Purchase Orders</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {isLoading ? (
-                      <div className="p-6">
-                        <div className="animate-pulse space-y-4">
-                          {[...Array(5)].map((_, i) => (
-                            <div key={i} className="h-20 bg-muted rounded"></div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : filteredPOs && filteredPOs.length > 0 ? (
-                      <div className="divide-y">
-                        {filteredPOs.map((po: PurchaseOrder) => (
-                          <div
-                            key={po.id}
-                            className={`p-6 cursor-pointer hover:bg-muted/50 ${
-                              selectedPO === po.id ? 'bg-primary/5 border-l-4 border-primary' : ''
-                            }`}
-                            onClick={() => setSelectedPO(po.id)}
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <h3 className="font-semibold text-foreground">{po.poNumber}</h3>
-                              <Badge className={getStatusColor(po.status || 'draft')}>
-                                {getStatusIcon(po.status || 'draft')}
-                                <span className="ml-1 capitalize">{po.status}</span>
-                              </Badge>
-                            </div>
-                            
-                            <div className="mb-4">
-                              <Progress value={getProgressValue(po.status || 'draft')} className="h-2" />
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {getProgressValue(po.status || 'draft')}% Complete
-                              </p>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <p className="text-muted-foreground">Amount</p>
-                                <p className="font-semibold">
-                                  ₹{parseFloat(po.totalAmount || '0').toLocaleString()}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Vendor</p>
-                                <p className="font-semibold truncate">Vendor {po.vendorId?.slice(-4)}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Created</p>
-                                <p className="font-semibold">
-                                  {new Date(po.createdAt || '').toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-
-                            {po.acknowledgedAt && (
-                              <div className="mt-3 flex items-center text-sm text-success">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Acknowledged on {new Date(po.acknowledgedAt).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-12 text-center">
-                        <ShoppingCart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-foreground mb-2">No purchase orders found</h3>
-                        <p className="text-muted-foreground">
-                          {searchQuery || statusFilter !== "all" || vendorFilter !== "all"
-                            ? "Try adjusting your search criteria or filters"
-                            : "Create your first purchase order to get started"
-                          }
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* PO Details */}
-              <div className="lg:col-span-1">
-                {selectedPO && selectedPODetails ? (
-                  <div className="space-y-6">
-                    {/* PO Summary */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <FileText className="w-5 h-5 mr-2" />
-                          PO Details
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">PO Number</p>
-                            <p className="font-semibold">{selectedPODetails.poNumber}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Total Amount</p>
-                            <p className="text-2xl font-bold text-primary">
-                              ₹{parseFloat(selectedPODetails.totalAmount || '0').toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Payment Terms</p>
-                            <p className="font-medium">{selectedPODetails.paymentTerms || 'Not specified'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Status</p>
-                            <Badge className={getStatusColor(selectedPODetails.status || 'draft')}>
-                              {getStatusIcon(selectedPODetails.status || 'draft')}
-                              <span className="ml-1 capitalize">{selectedPODetails.status}</span>
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Actions */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Actions</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <Button className="w-full" variant="outline">
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </Button>
-                          <Button className="w-full" variant="outline">
-                            <Download className="w-4 h-4 mr-2" />
-                            Download PDF
-                          </Button>
-                          {selectedPODetails.status === 'draft' && (
-                            <Button 
-                              className="w-full bg-primary hover:bg-primary/90"
-                              onClick={() => updatePOStatusMutation.mutate({ 
-                                id: selectedPO, 
-                                status: 'issued' 
-                              })}
-                            >
-                              <Mail className="w-4 h-4 mr-2" />
-                              Issue PO
-                            </Button>
-                          )}
-                          {selectedPODetails.status === 'issued' && (
-                            <Button 
-                              className="w-full bg-success hover:bg-success/90"
-                              onClick={() => updatePOStatusMutation.mutate({ 
-                                id: selectedPO, 
-                                status: 'acknowledged' 
-                              })}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Mark Acknowledged
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Line Items */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center">
-                          <Package className="w-5 h-5 mr-2" />
-                          Line Items
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {selectedPODetails.lineItems && selectedPODetails.lineItems.length > 0 ? (
-                            selectedPODetails.lineItems.map((item: PoLineItem) => (
-                              <div key={item.id} className="p-3 bg-muted rounded-lg">
-                                <div className="flex justify-between items-start mb-2">
-                                  <p className="font-medium">Product {item.productId?.slice(-4)}</p>
-                                  <Badge variant="outline">{item.status}</Badge>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                  <div>
-                                    <p className="text-muted-foreground">Quantity</p>
-                                    <p>{item.quantity}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">Unit Price</p>
-                                    <p>₹{parseFloat(item.unitPrice || '0').toLocaleString()}</p>
-                                  </div>
-                                </div>
-                                <div className="mt-2">
-                                  <p className="text-muted-foreground text-sm">Total</p>
-                                  <p className="font-semibold">₹{parseFloat(item.totalPrice || '0').toLocaleString()}</p>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-muted-foreground text-center py-4">No line items</p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+      {/* Approval Dialog */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              {approvalAction === 'approve' && <ThumbsUp className="w-5 h-5 text-green-600" />}
+              {approvalAction === 'reject' && <ThumbsDown className="w-5 h-5 text-red-600" />}
+              {approvalAction === 'issue' && <Send className="w-5 h-5 text-blue-600" />}
+              <span>
+                {approvalAction === 'approve' && 'Approve Purchase Order'}
+                {approvalAction === 'reject' && 'Reject Purchase Order'}
+                {approvalAction === 'issue' && 'Issue Purchase Order'}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="comments">
+                Comments {approvalAction === 'reject' && <span className="text-red-500">*</span>}
+              </Label>
+              <Textarea
+                id="comments"
+                placeholder={
+                  approvalAction === 'approve' ? "Optional approval comments..." :
+                  approvalAction === 'reject' ? "Please provide reason for rejection..." :
+                  "Optional issue comments..."
+                }
+                value={approvalComments}
+                onChange={(e) => setApprovalComments(e.target.value)}
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+            <div className="flex space-x-3">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setIsApprovalDialogOpen(false)}
+                disabled={approvalMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className={`flex-1 ${
+                  approvalAction === 'approve' ? 'bg-green-600 hover:bg-green-700' :
+                  approvalAction === 'reject' ? 'bg-red-600 hover:bg-red-700' :
+                  'bg-blue-600 hover:bg-blue-700'
+                } text-white`}
+                onClick={submitApproval}
+                disabled={approvalMutation.isPending || (approvalAction === 'reject' && !approvalComments.trim())}
+              >
+                {approvalMutation.isPending ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-foreground mb-2">Select a Purchase Order</h3>
-                      <p className="text-muted-foreground">
-                        Choose a PO from the list to view details and manage fulfillment
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <>
+                    {approvalAction === 'approve' && <ThumbsUp className="w-4 h-4 mr-2" />}
+                    {approvalAction === 'reject' && <ThumbsDown className="w-4 h-4 mr-2" />}
+                    {approvalAction === 'issue' && <Send className="w-4 h-4 mr-2" />}
+                    {approvalAction === 'approve' && 'Approve'}
+                    {approvalAction === 'reject' && 'Reject'}
+                    {approvalAction === 'issue' && 'Issue'}
+                  </>
                 )}
-              </div>
+              </Button>
             </div>
           </div>
-        </main>
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

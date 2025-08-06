@@ -1,0 +1,162 @@
+{
+  "search_electronics": {
+    "query": "electronics",
+    "results": [
+      {
+        "name": "TechFlow Electronics",
+        "category": "Electronics",
+        "email": "sales@techflow.co.in",
+        "phone": "+91-9876543210",
+        "location": "Mumbai, Maharashtra",
+        "website": "www.techflow.co.in",
+        "description": "Leading supplier of semiconductors, PCBs, and electronic components with ISO 9001 certification."
+      },
+      {
+        "name": "Digital Components Hub",
+        "category": "Electronics",
+        "email": "info@digitalcomponents.in",
+        "phone": "+91-8765432109",
+        "location": "Bangalore, Karnataka",
+        "website": "www.digitalcomponents.in",
+        "description": "Specialized in microcontrollers, sensors, and IoT components for industrial applications."
+      }
+    ]
+  },
+  "search_manufacturing": {
+    "query": "manufacturing",
+    "results": [
+      {
+        "name": "Precision Manufacturing Ltd",
+        "category": "Manufacturing",
+        "email": "orders@precisionmfg.com",
+        "phone": "+91-9123456789",
+        "location": "Chennai, Tamil Nadu",
+        "website": "www.precisionmfg.com",
+        "description": "Automotive parts manufacturer with TS 16949 certification and 20+ years experience."
+      },
+      {
+        "name": "Industrial Systems Co",
+        "category": "Manufacturing",
+        "email": "contact@industrialsystems.in",
+        "phone": "+91-7654321098",
+        "location": "Pune, Maharashtra",
+        "website": "www.industrialsystems.in",
+        "description": "Heavy machinery and industrial equipment supplier for construction and mining sectors."
+      }
+    ]
+  },
+  "search_services": {
+    "query": "services",
+    "results": [
+      {
+        "name": "Business Solutions Inc",
+        "category": "Services",
+        "email": "hello@businesssolutions.co.in",
+        "phone": "+91-6543210987",
+        "location": "Delhi, NCR",
+        "website": "www.businesssolutions.co.in",
+        "description": "IT consulting, digital transformation, and business process outsourcing services."
+      },
+      {
+        "name": "Professional Services Group",
+        "category": "Services",
+        "email": "info@proservices.in",
+        "phone": "+91-5432109876",
+        "location": "Hyderabad, Telangana",
+        "website": "www.proservices.in",
+        "description": "Financial consulting, legal services, and compliance management for enterprises."
+      }
+    ]
+  },
+  "search_mumbai": {
+    "query": "mumbai",
+    "results": [
+      {
+        "name": "TechFlow Electronics",
+        "category": "Electronics",
+        "email": "sales@techflow.co.in",
+        "phone": "+91-9876543210",
+        "location": "Mumbai, Maharashtra",
+        "website": "www.techflow.co.in",
+        "description": "Leading supplier of semiconductors, PCBs, and electronic components with ISO 9001 certification."
+      }
+    ]
+  },
+  "all_vendors": {
+    "query": "",
+    "results": [
+      {
+        "name": "TechFlow Electronics",
+        "category": "Electronics",
+        "email": "sales@techflow.co.in",
+        "phone": "+91-9876543210",
+        "location": "Mumbai, Maharashtra",
+        "website": "www.techflow.co.in",
+        "description": "Leading supplier of semiconductors, PCBs, and electronic components with ISO 9001 certification."
+      },
+      {
+        "name": "Digital Components Hub",
+        "category": "Electronics",
+        "email": "info@digitalcomponents.in",
+        "phone": "+91-8765432109",
+        "location": "Bangalore, Karnataka",
+        "website": "www.digitalcomponents.in",
+        "description": "Specialized in microcontrollers, sensors, and IoT components for industrial applications."
+      },
+      {
+        "name": "Precision Manufacturing Ltd",
+        "category": "Manufacturing",
+        "email": "orders@precisionmfg.com",
+        "phone": "+91-9123456789",
+        "location": "Chennai, Tamil Nadu",
+        "website": "www.precisionmfg.com",
+        "description": "Automotive parts manufacturer with TS 16949 certification and 20+ years experience."
+      },
+      {
+        "name": "Industrial Systems Co",
+        "category": "Manufacturing",
+        "email": "contact@industrialsystems.in",
+        "phone": "+91-7654321098",
+        "location": "Pune, Maharashtra",
+        "website": "www.industrialsystems.in",
+        "description": "Heavy machinery and industrial equipment supplier for construction and mining sectors."
+      },
+      {
+        "name": "Business Solutions Inc",
+        "category": "Services",
+        "email": "hello@businesssolutions.co.in",
+        "phone": "+91-6543210987",
+        "location": "Delhi, NCR",
+        "website": "www.businesssolutions.co.in",
+        "description": "IT consulting, digital transformation, and business process outsourcing services."
+      },
+      {
+        "name": "Professional Services Group",
+        "category": "Services",
+        "email": "info@proservices.in",
+        "phone": "+91-5432109876",
+        "location": "Hyderabad, Telangana",
+        "website": "www.proservices.in",
+        "description": "Financial consulting, legal services, and compliance management for enterprises."
+      },
+      {
+        "name": "Green Energy Solutions",
+        "category": "Energy",
+        "email": "sales@greenenergy.co.in",
+        "phone": "+91-4321098765",
+        "location": "Ahmedabad, Gujarat",
+        "website": "www.greenenergy.co.in",
+        "description": "Solar panels, wind energy systems, and renewable energy solutions provider."
+      },
+      {
+        "name": "LogiTech Supply Chain",
+        "category": "Logistics",
+        "email": "operations@logitechsc.com",
+        "phone": "+91-3210987654",
+        "location": "Kolkata, West Bengal",
+        "website": "www.logitechsc.com",
+        "description": "End-to-end supply chain management, warehousing, and transportation services."
+      }
+    ]
+  }
+}

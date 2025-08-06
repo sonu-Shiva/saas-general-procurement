@@ -1,17 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { formatCurrency } from "@/lib/utils";
 import { 
   BarChart3, 
   TrendingUp, 
   TrendingDown, 
-  DollarSign, 
+ 
   Users, 
   ShoppingCart,
   Calendar,
@@ -96,14 +96,9 @@ export default function Analytics() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Page Header */}
-            <div className="flex justify-between items-center mb-8">
+    <div className="space-y-6 p-6">
+      {/* Page Header */}
+      <div className="flex justify-between items-center mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">Analytics & Reports</h1>
                 <p className="text-muted-foreground">Comprehensive insights into your procurement performance</p>
@@ -135,13 +130,13 @@ export default function Analytics() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total Spend</p>
-                      <p className="text-2xl font-bold">₹{totalSpend.toLocaleString()}</p>
+                      <p className="text-2xl font-bold">{formatCurrency(totalSpend)}</p>
                       <div className="flex items-center mt-1">
                         <TrendingUp className="w-3 h-3 text-success mr-1" />
                         <span className="text-sm text-success">+12.5%</span>
                       </div>
                     </div>
-                    <DollarSign className="w-8 h-8 text-primary" />
+                    <div className="w-8 h-8 text-primary flex items-center justify-center font-bold text-xl">₹</div>
                   </div>
                 </CardContent>
               </Card>
@@ -150,7 +145,7 @@ export default function Analytics() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Cost Savings</p>
-                      <p className="text-2xl font-bold">₹340K</p>
+                      <p className="text-2xl font-bold">{formatCurrency(340000)}</p>
                       <div className="flex items-center mt-1">
                         <TrendingUp className="w-3 h-3 text-success mr-1" />
                         <span className="text-sm text-success">14.2%</span>
@@ -222,7 +217,7 @@ export default function Analytics() {
                               }}
                             ></div>
                             <div className="mt-2 text-sm text-muted-foreground">{data.month}</div>
-                            <div className="text-xs font-medium">₹{(data.amount / 1000).toFixed(0)}K</div>
+                            <div className="text-xs font-medium">{formatCurrency(data.amount)}</div>
                           </div>
                         ))}
                       </div>
@@ -292,7 +287,7 @@ export default function Analytics() {
                           <ShoppingCart className="w-8 h-8 text-secondary mx-auto mb-2" />
                           <p className="text-2xl font-bold">{purchaseOrders?.length || 0}</p>
                           <p className="text-sm text-muted-foreground">Purchase Orders</p>
-                          <p className="text-xs text-success">₹{totalSpend.toLocaleString()}</p>
+                          <p className="text-xs text-success">{formatCurrency(totalSpend)}</p>
                         </div>
                         <div className="text-center p-4 bg-muted rounded-lg">
                           <Users className="w-8 h-8 text-info mx-auto mb-2" />
@@ -358,7 +353,7 @@ export default function Analytics() {
                           <div key={category.category}>
                             <div className="flex justify-between text-sm mb-2">
                               <span>{category.category}</span>
-                              <span className="font-semibold">₹{category.amount.toLocaleString()}</span>
+                              <span className="font-semibold">{formatCurrency(category.amount)}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Progress value={category.percentage} className="flex-1 h-2" />
@@ -378,11 +373,11 @@ export default function Analytics() {
                     <CardContent>
                       <div className="space-y-6">
                         <div className="text-center">
-                          <p className="text-3xl font-bold">₹2.4M</p>
+                          <p className="text-3xl font-bold">{formatCurrency(2400000)}</p>
                           <p className="text-muted-foreground">Total Spend</p>
                           <div className="flex items-center justify-center mt-2">
                             <TrendingDown className="w-4 h-4 text-success mr-1" />
-                            <span className="text-success">₹200K under budget</span>
+                            <span className="text-success">{formatCurrency(200000)} under budget</span>
                           </div>
                         </div>
                         <div>
@@ -394,11 +389,11 @@ export default function Analytics() {
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-center">
                           <div className="p-3 bg-muted rounded-lg">
-                            <p className="text-lg font-bold">₹2.9M</p>
+                            <p className="text-lg font-bold">{formatCurrency(2900000)}</p>
                             <p className="text-sm text-muted-foreground">Budget</p>
                           </div>
                           <div className="p-3 bg-muted rounded-lg">
-                            <p className="text-lg font-bold">₹2.4M</p>
+                            <p className="text-lg font-bold">{formatCurrency(2400000)}</p>
                             <p className="text-sm text-muted-foreground">Actual</p>
                           </div>
                         </div>
@@ -511,7 +506,7 @@ export default function Analytics() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-center mb-6">
-                        <p className="text-4xl font-bold text-success">₹340K</p>
+                        <p className="text-4xl font-bold text-success">{formatCurrency(340000)}</p>
                         <p className="text-muted-foreground">Total savings this year</p>
                         <div className="flex items-center justify-center mt-2">
                           <TrendingUp className="w-4 h-4 text-success mr-1" />
@@ -521,19 +516,19 @@ export default function Analytics() {
                       <div className="space-y-3">
                         <div className="flex justify-between">
                           <span className="text-sm">Q1 2024</span>
-                          <span className="font-semibold">₹75K</span>
+                          <span className="font-semibold">{formatCurrency(75000)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm">Q2 2024</span>
-                          <span className="font-semibold">₹95K</span>
+                          <span className="font-semibold">{formatCurrency(95000)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm">Q3 2024</span>
-                          <span className="font-semibold">₹85K</span>
+                          <span className="font-semibold">{formatCurrency(85000)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm">Q4 2024 (partial)</span>
-                          <span className="font-semibold">₹85K</span>
+                          <span className="font-semibold">{formatCurrency(85000)}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -615,10 +610,7 @@ export default function Analytics() {
                   </Card>
                 </div>
               </TabsContent>
-            </Tabs>
-          </div>
-        </main>
-      </div>
+        </Tabs>
     </div>
   );
 }

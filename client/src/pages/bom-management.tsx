@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+import { useAuth } from "@/hooks/useAuth";
 import BomBuilder from "@/components/bom-builder";
+import BomView from "@/components/bom-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, 
   Search, 
@@ -22,37 +23,215 @@ import {
   Bot,
   FileText,
   Calendar,
-  Package
+  Package,
+  Trash2
 } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { Bom } from "@shared/schema";
 
 export default function BomManagement() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
+  const [editingBom, setEditingBom] = useState<Bom | null>(null);
+  const [viewingBom, setViewingBom] = useState<Bom | null>(null);
+  const [copyingBom, setCopyingBom] = useState<Bom | null>(null);
+  const [copyForm, setCopyForm] = useState({ name: '', version: '' });
+  const [deletingBom, setDeletingBom] = useState<Bom | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: boms, isLoading } = useQuery({
+  // Restrict access to vendor users
+  if ((user as any)?.role === 'vendor') {
+    return (
+      <div className="max-w-2xl mx-auto text-center p-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
+        <p className="text-gray-600 mb-6">
+          BOM Management is not available for vendor users. As a vendor, you can access your product catalogue and participate in RFx and auctions.
+        </p>
+        <Button onClick={() => window.history.back()}>
+          Go Back
+        </Button>
+      </div>
+    );
+  }
+
+  // Check if user is a buyer (can create BOMs)
+  const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
+  const isVendor = (user as any)?.role === 'vendor';
+
+  const { data: boms = [], isLoading } = useQuery({
     queryKey: ["/api/boms"],
     retry: false,
   });
 
-  const filteredBoms = boms?.filter((bom: Bom) => {
-    const matchesSearch = bom.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  // Debug logging for BOM data
+  console.log("BOM Management - Raw boms data:", boms);
+
+  const filteredBoms = (boms as Bom[])?.filter((bom: Bom) => {
+    const matchesSearch = bom.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          bom.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === "all" || bom.category === categoryFilter;
     
     return matchesSearch && matchesCategory;
+  }) || [];
+
+  // Debug logging for filtered BOMs
+  console.log("BOM Management - Filtered boms:", filteredBoms);
+  console.log("BOM Management - Active BOMs count:", (boms as Bom[])?.filter((b: Bom) => b.isActive).length);
+
+  const handleEditBom = (bom: Bom) => {
+    setEditingBom(bom);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleViewBom = (bom: Bom) => {
+    setViewingBom(bom);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setEditingBom(null);
+  };
+
+  const handleCloseViewDialog = () => {
+    setIsViewDialogOpen(false);
+    setViewingBom(null);
+  };
+
+  const handleDeleteBom = (bom: Bom) => {
+    setDeletingBom(bom);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Delete BOM mutation
+  const deleteBomMutation = useMutation({
+    mutationFn: async (bomId: string) => {
+      const response = await apiRequest(`/api/boms/${bomId}`, { method: "DELETE" });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "BOM deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/boms"] });
+      setIsDeleteDialogOpen(false);
+      setDeletingBom(null);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete BOM",
+        variant: "destructive",
+      });
+    },
   });
 
+  const handleCopyBom = (bom: Bom) => {
+    setCopyingBom(bom);
+    // Smart copy naming - avoid duplicate "(Copy)" text
+    let copyName = bom.name;
+    if (copyName.endsWith(' (Copy)')) {
+      // If it already ends with (Copy), replace it with (Copy 2)
+      copyName = copyName.replace(' (Copy)', ' (Copy 2)');
+    } else {
+      // Otherwise just add (Copy)
+      copyName = `${copyName} (Copy)`;
+    }
+    
+    setCopyForm({ 
+      name: copyName, 
+      version: "1.0" 
+    });
+    setIsCopyDialogOpen(true);
+  };
+
+  const copyBomMutation = useMutation({
+    mutationFn: async ({ bomId, name, version }: { bomId: string; name: string; version: string }) => {
+      const response = await apiRequest(`/api/boms/${bomId}/copy`, {
+        method: "POST",
+        body: JSON.stringify({ name, version })
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/boms"] });
+      toast({
+        title: "Success",
+        description: "BOM copied successfully",
+      });
+      setIsCopyDialogOpen(false);
+      setCopyingBom(null);
+      setCopyForm({ name: '', version: '' });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to copy BOM",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmitCopy = () => {
+    if (!copyingBom || !copyForm.name || !copyForm.version) {
+      toast({
+        title: "Error", 
+        description: "Please enter both name and version",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    copyBomMutation.mutate({ 
+      bomId: copyingBom.id, 
+      name: copyForm.name, 
+      version: copyForm.version 
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 py-8">
+    <>
+    <div className="max-w-7xl mx-auto px-6 py-8">
             {/* Page Header */}
             <div className="flex justify-between items-center mb-8">
               <div>
@@ -60,13 +239,25 @@ export default function BomManagement() {
                 <p className="text-muted-foreground">Create and manage Bills of Materials for grouped procurement</p>
               </div>
               <div className="flex space-x-3">
-                <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-                      <Bot className="w-4 h-4 mr-2" />
-                      AI BOM Builder
-                    </Button>
-                  </DialogTrigger>
+                {!isBuyer && (
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {isVendor 
+                        ? "BOM creation is restricted to buyers. Switch to a buyer role to create BOMs."
+                        : "Please select a buyer role to access BOM management features."
+                      }
+                    </p>
+                  </div>
+                )}
+                {isBuyer && (
+                  <>
+                    <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+                          <Bot className="w-4 h-4 mr-2" />
+                          AI BOM Builder
+                        </Button>
+                      </DialogTrigger>
                   <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle className="flex items-center">
@@ -129,22 +320,55 @@ export default function BomManagement() {
                         </div>
                       </div>
                     </div>
-                  </DialogContent>
-                </Dialog>
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-primary hover:bg-primary/90">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create BOM
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Create New BOM</DialogTitle>
-                    </DialogHeader>
-                    <BomBuilder onClose={() => setIsCreateDialogOpen(false)} />
-                  </DialogContent>
-                </Dialog>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-primary hover:bg-primary/90">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create BOM
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>{editingBom && !isEditDialogOpen ? 'Copy BOM' : 'Create New BOM'}</DialogTitle>
+                        </DialogHeader>
+                        <BomBuilder 
+                          existingBom={editingBom && !isEditDialogOpen ? editingBom : undefined}
+                          onClose={() => {
+                            setIsCreateDialogOpen(false);
+                            setEditingBom(null);
+                          }} 
+                        />
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* Edit BOM Dialog */}
+                    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Edit BOM: {editingBom?.name}</DialogTitle>
+                        </DialogHeader>
+                        {editingBom && (
+                          <BomBuilder 
+                            onClose={handleCloseEditDialog} 
+                            existingBom={editingBom}
+                          />
+                        )}
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* View BOM Dialog */}
+                    <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>BOM Details: {viewingBom?.name}</DialogTitle>
+                        </DialogHeader>
+                        {viewingBom && <BomView bom={viewingBom} onClose={handleCloseViewDialog} />}
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                )}
               </div>
             </div>
 
@@ -155,7 +379,7 @@ export default function BomManagement() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Total BOMs</p>
-                      <p className="text-2xl font-bold">{boms?.length || 0}</p>
+                      <p className="text-2xl font-bold">{(boms as Bom[])?.length || 0}</p>
                     </div>
                     <Layers className="w-8 h-8 text-primary" />
                   </div>
@@ -167,7 +391,7 @@ export default function BomManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Active BOMs</p>
                       <p className="text-2xl font-bold text-success">
-                        {boms?.filter((b: Bom) => b.isActive).length || 0}
+                        {(boms as Bom[])?.filter((b: Bom) => b.isActive).length || 0}
                       </p>
                     </div>
                     <FileText className="w-8 h-8 text-success" />
@@ -180,7 +404,7 @@ export default function BomManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Categories</p>
                       <p className="text-2xl font-bold">
-                        {boms ? new Set(boms.map((b: Bom) => b.category)).size : 0}
+                        {(boms as Bom[]) ? new Set((boms as Bom[]).map((b: Bom) => b.category)).size : 0}
                       </p>
                     </div>
                     <Package className="w-8 h-8 text-accent" />
@@ -193,7 +417,7 @@ export default function BomManagement() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">This Month</p>
                       <p className="text-2xl font-bold">
-                        {boms?.filter((b: Bom) => {
+                        {(boms as Bom[])?.filter((b: Bom) => {
                           const bomDate = new Date(b.createdAt || '');
                           const now = new Date();
                           return bomDate.getMonth() === now.getMonth() && bomDate.getFullYear() === now.getFullYear();
@@ -316,16 +540,42 @@ export default function BomManagement() {
                       )}
 
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleViewBom(bom)}
+                        >
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleEditBom(bom)}
+                          disabled={!isBuyer}
+                        >
                           <Edit className="w-3 h-3 mr-1" />
                           Edit
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleCopyBom(bom)}
+                          title="Copy BOM"
+                        >
                           <Copy className="w-3 h-3" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeleteBom(bom)}
+                          title="Delete BOM"
+                          disabled={!isBuyer}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </CardContent>
@@ -358,9 +608,69 @@ export default function BomManagement() {
                 </CardContent>
               </Card>
             )}
-          </div>
-        </main>
       </div>
-    </div>
+
+      {/* Copy BOM Dialog */}
+      <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Copy BOM</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">New BOM Name</label>
+              <Input
+                value={copyForm.name}
+                onChange={(e) => setCopyForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter BOM name"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Version</label>
+              <Input
+                value={copyForm.version}
+                onChange={(e) => setCopyForm(prev => ({ ...prev, version: e.target.value }))}
+                placeholder="Enter version"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsCopyDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmitCopy}
+                disabled={copyBomMutation.isPending}
+              >
+                {copyBomMutation.isPending ? "Copying..." : "Copy BOM"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete BOM Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete BOM</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "<strong>{deletingBom?.name}</strong>" (v{deletingBom?.version})?
+              <br />
+              <span className="text-destructive font-medium">This action cannot be undone and will also delete all associated BOM items.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteBomMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingBom && deleteBomMutation.mutate(deletingBom.id)}
+              disabled={deleteBomMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteBomMutation.isPending ? "Deleting..." : "Delete BOM"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

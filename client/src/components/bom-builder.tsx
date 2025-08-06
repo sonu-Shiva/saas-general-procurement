@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,74 +33,194 @@ import {
 
 interface BomBuilderProps {
   onClose: () => void;
+  existingBom?: any;
 }
 
 interface BomLineItem {
-  productId: string;
-  productName: string;
+  productId?: string;
+  itemName: string;
+  itemCode?: string;
+  description?: string;
+  category?: string;
   quantity: number;
   uom: string;
   unitPrice: number;
   totalPrice: number;
+  specifications?: any;
+  isCustomItem: boolean;
 }
 
-export default function BomBuilder({ onClose }: BomBuilderProps) {
+export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
   const [bomItems, setBomItems] = useState<BomLineItem[]>([]);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
+  const [isAddCustomItemDialogOpen, setIsAddCustomItemDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [productQuantity, setProductQuantity] = useState<number>(1);
+  const [customItemForm, setCustomItemForm] = useState({
+    itemName: '',
+    itemCode: '',
+    description: '',
+    category: '',
+    quantity: 1,
+    uom: 'units',
+    unitPrice: 0,
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm({
     resolver: zodResolver(insertBomSchema),
     defaultValues: {
-      name: "",
-      version: "1.0",
-      description: "",
-      category: "",
-      validFrom: "",
-      validTo: "",
-      tags: [],
+      name: existingBom?.name || "",
+      version: existingBom?.version || "1.0",
+      description: existingBom?.description || "",
+      category: existingBom?.category || "",
+      validFrom: existingBom?.validFrom ? new Date(existingBom.validFrom).toISOString().split('T')[0] : "",
+      validTo: existingBom?.validTo ? new Date(existingBom.validTo).toISOString().split('T')[0] : "",
+      tags: existingBom?.tags || [],
     },
   });
 
-  const { data: products } = useQuery({
+  const { data: products = [] } = useQuery<any[]>({
     queryKey: ["/api/products", { isActive: true }],
     retry: false,
   });
 
+  // Load existing BOM items when editing
+  useEffect(() => {
+    if (existingBom?.id) {
+      const fetchBomItems = async () => {
+        try {
+          console.log("BOM Builder - Loading items for existing BOM:", existingBom.id);
+          const response = await apiRequest(`/api/boms/${existingBom.id}`);
+          console.log("BOM Builder - API response:", response);
+          console.log("BOM Builder - Items from response:", response?.items);
+          if (response?.items) {
+            const loadedItems = response.items.map((item: any) => ({
+              productId: item.productId,
+              itemName: item.itemName,
+              itemCode: item.itemCode,
+              description: item.description,
+              category: item.category,
+              quantity: parseFloat(item.quantity),
+              uom: item.uom || 'units',
+              unitPrice: parseFloat(item.unitPrice || '0'),
+              totalPrice: parseFloat(item.totalPrice || '0'),
+              specifications: item.specifications,
+              isCustomItem: !item.productId,
+            }));
+            console.log("BOM Builder - Setting BOM items:", loadedItems);
+            console.log("BOM Builder - Items count:", loadedItems.length);
+            console.log("BOM Builder - Items with productId:", loadedItems.filter((item: any) => item.productId));
+            console.log("BOM Builder - Custom items:", loadedItems.filter((item: any) => !item.productId));
+            setBomItems(loadedItems);
+          }
+        } catch (error) {
+          console.error('Error loading BOM items:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load BOM items",
+            variant: "destructive",
+          });
+        }
+      };
+      fetchBomItems();
+    }
+  }, [existingBom?.id, toast]);
+
   const createBomMutation = useMutation({
     mutationFn: async (data: any) => {
-      // First create the BOM
-      const bomResponse = await apiRequest("POST", "/api/boms", {
+      console.log("Creating BOM with data:", data);
+      console.log("BOM items to be added:", bomItems);
+
+      const isEditing = !!existingBom?.id;
+
+      // Create or update the BOM
+      const bomPayload = {
         ...data,
-        validFrom: data.validFrom ? new Date(data.validFrom).toISOString() : undefined,
-        validTo: data.validTo ? new Date(data.validTo).toISOString() : undefined,
-      });
-      
-      // Then add all BOM items
-      for (const item of bomItems) {
-        await apiRequest("POST", `/api/boms/${bomResponse.id}/items`, {
-          productId: item.productId,
-          quantity: item.quantity.toString(),
-          uom: item.uom,
-          unitPrice: item.unitPrice.toString(),
-          totalPrice: item.totalPrice.toString(),
-        });
+        validFrom: data.validFrom || undefined,
+        validTo: data.validTo || undefined,
+      };
+
+      console.log("BOM payload:", bomPayload);
+
+      const bomResponse = await apiRequest(
+        existingBom ? `/api/boms/${existingBom.id}` : "/api/boms",
+        {
+          method: existingBom ? "PUT" : "POST",
+          body: JSON.stringify(bomPayload),
+        }
+      );
+      console.log("BOM response:", bomResponse);
+
+      const bomId = bomResponse ? bomResponse.id || existingBom?.id : null;
+      console.log("Extracted BOM ID:", bomId);
+
+      // Handle BOM items
+      if (bomId && bomItems.length > 0) {
+        // If editing, we'll clear existing items and add new ones
+        // For now, let's just add new items (in a real app, you'd want to handle updates/deletes properly)
+        if (isEditing) {
+          // Clear existing items first
+          try {
+            await apiRequest(`/api/boms/${bomId}/items`, {
+              method: "DELETE",
+            });
+          } catch (error) {
+            // Ignore if endpoint doesn't exist, we'll handle this by creating new items
+            console.log("Could not clear existing items, adding new ones");
+          }
+        }
+
+        // Add all BOM items
+        for (const item of bomItems) {
+          const itemPayload = {
+            productId: item.productId || undefined,
+            itemName: item.itemName,
+            itemCode: item.itemCode || undefined,
+            description: item.description || undefined,
+            category: item.category || undefined,
+            quantity: item.quantity.toString(),
+            uom: item.uom,
+            unitPrice: item.unitPrice.toString(),
+            totalPrice: item.totalPrice.toString(),
+            specifications: item.specifications || undefined,
+          };
+          console.log("Adding BOM item:", itemPayload);
+          console.log("Item type:", item.productId ? 'Product Catalogue Item' : 'Custom Item');
+          console.log("ProductId:", item.productId);
+
+          try {
+            const itemResponse = await apiRequest(`/api/boms/${bomId}/items`, {
+              method: "POST",
+              body: JSON.stringify(itemPayload),
+            });
+            console.log("BOM item added successfully:", itemResponse);
+          } catch (itemError) {
+            console.error("Failed to add BOM item:", itemError);
+            console.error("Item error details:", itemError);
+            throw itemError;
+          }
+        }
       }
-      
+
       return bomResponse;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("BOM creation/update successful:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/boms"] });
+      // Also invalidate specific BOM queries
+      if (existingBom?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/boms", existingBom.id] });
+      }
       toast({
         title: "Success",
-        description: "BOM created successfully",
+        description: existingBom ? "BOM updated successfully" : "BOM created successfully",
       });
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("BOM creation/update error:", error);
       if (isUnauthorizedError(error as Error)) {
         toast({
           title: "Unauthorized",
@@ -114,14 +234,18 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
       }
       toast({
         title: "Error",
-        description: "Failed to create BOM",
+        description: `${existingBom ? "Failed to update BOM" : "Failed to create BOM"}: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: any) => {
-    if (bomItems.length === 0) {
+    console.log("Form submitted with data:", data);
+    console.log("Current BOM items:", bomItems);
+    console.log("Form validation errors:", form.formState.errors);
+
+    if (bomItems.length === 0 && data.isActive !== false) {
       toast({
         title: "Error",
         description: "Please add at least one item to the BOM",
@@ -129,14 +253,37 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
       });
       return;
     }
-    createBomMutation.mutate(data);
+
+    const submitData = {
+      ...data,
+      isActive: true, // Explicitly set as active when creating/updating BOM
+      validFrom: data.validFrom || undefined,
+      validTo: data.validTo || undefined,
+    };
+
+    console.log("Submitting BOM data:", submitData);
+    createBomMutation.mutate(submitData);
+  };
+
+  const saveDraft = () => {
+    const formData = form.getValues();
+    console.log("Saving draft with form data:", formData);
+    console.log("Current BOM items:", bomItems);
+    createBomMutation.mutate({
+      ...formData,
+      isActive: false,
+      validFrom: formData.validFrom || undefined,
+      validTo: formData.validTo || undefined,
+    });
   };
 
   const addProductToBom = () => {
     if (!selectedProduct) return;
 
-    const existingItemIndex = bomItems.findIndex(item => item.productId === selectedProduct.id);
-    
+    const existingItemIndex = bomItems.findIndex(item => 
+      item.productId === selectedProduct.id && !item.isCustomItem
+    );
+
     if (existingItemIndex >= 0) {
       // Update existing item quantity
       setBomItems(prev => prev.map((item, index) => 
@@ -152,11 +299,16 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
       // Add new item
       const newItem: BomLineItem = {
         productId: selectedProduct.id,
-        productName: selectedProduct.itemName,
+        itemName: selectedProduct.itemName,
+        itemCode: selectedProduct.internalCode || selectedProduct.externalCode,
+        description: selectedProduct.description,
+        category: selectedProduct.category,
         quantity: productQuantity,
         uom: selectedProduct.uom || 'units',
         unitPrice: parseFloat(selectedProduct.basePrice || '0'),
         totalPrice: productQuantity * parseFloat(selectedProduct.basePrice || '0'),
+        specifications: selectedProduct.specifications,
+        isCustomItem: false,
       };
       setBomItems(prev => [...prev, newItem]);
     }
@@ -164,6 +316,36 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
     setSelectedProduct(null);
     setProductQuantity(1);
     setIsAddProductDialogOpen(false);
+  };
+
+  const addCustomItemToBom = () => {
+    if (!customItemForm.itemName) return;
+
+    const newItem: BomLineItem = {
+      itemName: customItemForm.itemName,
+      itemCode: customItemForm.itemCode,
+      description: customItemForm.description,
+      category: customItemForm.category,
+      quantity: customItemForm.quantity,
+      uom: customItemForm.uom,
+      unitPrice: customItemForm.unitPrice,
+      totalPrice: customItemForm.quantity * customItemForm.unitPrice,
+      isCustomItem: true,
+    };
+
+    setBomItems(prev => [...prev, newItem]);
+
+    // Reset form
+    setCustomItemForm({
+      itemName: '',
+      itemCode: '',
+      description: '',
+      category: '',
+      quantity: 1,
+      uom: 'units',
+      unitPrice: 0,
+    });
+    setIsAddCustomItemDialogOpen(false);
   };
 
   const removeItemFromBom = (index: number) => {
@@ -323,97 +505,229 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
                       <Package className="w-5 h-5 mr-2" />
                       BOM Items
                     </div>
-                    <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Item
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Add Product to BOM</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="text-sm font-medium text-foreground mb-2 block">
-                              Search Products
-                            </label>
-                            <div className="relative">
-                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <Input placeholder="Search by product name..." className="pl-10" />
-                            </div>
-                          </div>
-                          
-                          <div className="max-h-64 overflow-y-auto space-y-2">
-                            {products?.map((product: any) => (
-                              <div
-                                key={product.id}
-                                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                  selectedProduct?.id === product.id
-                                    ? 'border-primary bg-primary/5'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                                onClick={() => setSelectedProduct(product)}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <h4 className="font-medium">{product.itemName}</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                      {product.internalCode} • {product.category}
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="font-semibold">
-                                      ₹{parseFloat(product.basePrice || '0').toLocaleString()}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">per {product.uom}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                    <div className="flex space-x-2">
+                      <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline">
+                            <Package className="w-4 h-4 mr-2" />
+                            From Catalogue
+                          </Button>
+                        </DialogTrigger>
+                      </Dialog>
+                      <Dialog open={isAddCustomItemDialogOpen} onOpenChange={setIsAddCustomItemDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Custom Item
+                          </Button>
+                        </DialogTrigger>
+                      </Dialog>
+                    </div>
+                  </CardTitle>
 
-                          {selectedProduct && (
-                            <div className="p-4 bg-muted rounded-lg">
-                              <h4 className="font-medium mb-3">Selected: {selectedProduct.itemName}</h4>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label className="text-sm font-medium text-foreground mb-1 block">
-                                    Quantity
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    value={productQuantity}
-                                    onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-foreground mb-1 block">
-                                    Total Price
-                                  </label>
-                                  <Input
-                                    readOnly
-                                    value={`₹${(productQuantity * parseFloat(selectedProduct.basePrice || '0')).toLocaleString()}`}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex justify-end space-x-2">
-                            <Button variant="outline" onClick={() => setIsAddProductDialogOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button onClick={addProductToBom} disabled={!selectedProduct}>
-                              Add to BOM
-                            </Button>
+                  {/* Product Catalogue Dialog */}
+                  <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Add Product to BOM</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium text-foreground mb-2 block">
+                            Search Products
+                          </label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input placeholder="Search by product name..." className="pl-10" />
                           </div>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  </CardTitle>
+
+                        <div className="max-h-64 overflow-y-auto space-y-2">
+                          {products.map((product: any) => (
+                            <div
+                              key={product.id}
+                              className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                selectedProduct?.id === product.id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                              onClick={() => setSelectedProduct(product)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">{product.itemName}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {product.internalCode} • {product.category}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-semibold">
+                                    ₹{parseFloat(product.basePrice || '0').toLocaleString()}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">per {product.uom}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {selectedProduct && (
+                          <div className="p-4 bg-muted rounded-lg">
+                            <h4 className="font-medium mb-3">Selected: {selectedProduct.itemName}</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-foreground mb-1 block">
+                                  Quantity
+                                </label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={productQuantity}
+                                  onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-foreground mb-1 block">
+                                  Total Price
+                                </label>
+                                <Input
+                                  readOnly
+                                  value={`₹${(productQuantity * parseFloat(selectedProduct.basePrice || '0')).toLocaleString()}`}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-end space-x-2">
+                          <Button variant="outline" onClick={() => setIsAddProductDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={addProductToBom} disabled={!selectedProduct}>
+                            Add to BOM
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Custom Item Dialog */}
+                  <Dialog open={isAddCustomItemDialogOpen} onOpenChange={setIsAddCustomItemDialogOpen}>
+                    <DialogContent className="max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>Add Custom Item to BOM</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Item Name *
+                            </label>
+                            <Input
+                              value={customItemForm.itemName}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, itemName: e.target.value}))}
+                              placeholder="Enter item name"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Item Code
+                            </label>
+                            <Input
+                              value={customItemForm.itemCode}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, itemCode: e.target.value}))}
+                              placeholder="Enter item code"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-foreground mb-2 block">
+                            Description
+                          </label>
+                          <Input
+                            value={customItemForm.description}
+                            onChange={(e) => setCustomItemForm(prev => ({...prev, description: e.target.value}))}
+                            placeholder="Enter description"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Category
+                            </label>
+                            <Input
+                              value={customItemForm.category}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, category: e.target.value}))}
+                              placeholder="Enter category"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              UOM
+                            </label>
+                            <Select 
+                              value={customItemForm.uom} 
+                              onValueChange={(value) => setCustomItemForm(prev => ({...prev, uom: value}))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="units">Units</SelectItem>
+                                <SelectItem value="kg">Kilograms</SelectItem>
+                                <SelectItem value="m">Meters</SelectItem>
+                                <SelectItem value="pieces">Pieces</SelectItem>
+                                <SelectItem value="liters">Liters</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Quantity
+                            </label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={customItemForm.quantity}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, quantity: parseInt(e.target.value) || 1}))}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">
+                              Unit Price
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={customItemForm.unitPrice}
+                              onChange={(e) => setCustomItemForm(prev => ({...prev, unitPrice: parseFloat(e.target.value) || 0}))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-muted rounded-lg">
+                          <div className="text-sm text-muted-foreground">Total Price</div>
+                          <div className="text-lg font-semibold">
+                            ₹{(customItemForm.quantity * customItemForm.unitPrice).toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end space-x-2">
+                          <Button variant="outline" onClick={() => setIsAddCustomItemDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={addCustomItemToBom} disabled={!customItemForm.itemName}>
+                            Add to BOM
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </CardHeader>
                 <CardContent>
                   {bomItems.length > 0 ? (
@@ -433,7 +747,12 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
                             <tr key={index}>
                               <td className="py-3 px-4">
                                 <div>
-                                  <p className="font-medium">{item.productName}</p>
+                                  <p className="font-medium">{item.itemName}</p>
+                                  {item.isCustomItem && (
+                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                      Custom
+                                    </span>
+                                  )}
                                   <p className="text-sm text-muted-foreground">per {item.uom}</p>
                                 </div>
                               </td>
@@ -531,7 +850,7 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
                       {bomItems.length > 0 ? (
                         Object.entries(
                           bomItems.reduce((acc, item) => {
-                            const product = products?.find((p: any) => p.id === item.productId);
+                            const product = products.find((p: any) => p.id === item.productId);
                             const category = product?.category || 'Uncategorized';
                             acc[category] = (acc[category] || 0) + item.totalPrice;
                             return acc;
@@ -558,7 +877,12 @@ export default function BomBuilder({ onClose }: BomBuilderProps) {
               Cancel
             </Button>
             <div className="flex space-x-2">
-              <Button type="button" variant="outline">
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={saveDraft}
+                disabled={createBomMutation.isPending}
+              >
                 <Save className="w-4 h-4 mr-2" />
                 Save Draft
               </Button>

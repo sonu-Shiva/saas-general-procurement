@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   Users,
@@ -17,28 +18,57 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Vendor Management", href: "/vendors", icon: Users },
-  { name: "Vendor Discovery", href: "/vendor-discovery", icon: Search },
+  { name: "Vendor Management", href: "/vendors", icon: Users, buyerOnly: true },
   { name: "Product Catalogue", href: "/products", icon: Package },
-  { name: "BOM Management", href: "/boms", icon: Layers },
-  { name: "RFx Management", href: "/rfx", icon: FileText },
-  { name: "Auction Center", href: "/auctions", icon: Gavel },
-  { name: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "BOM Management", href: "/boms", icon: Layers, buyerOnly: true },
+  { name: "RFx Invitations", href: "/vendor-portal", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management", vendorHref: "/vendor-portal", buyerHref: "/rfx" },
+  { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center" },
+  { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, buyerOnly: true },
+  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders" },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, buyerOnly: true },
 ];
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
 
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-border shadow-sm">
       <div className="p-6">
         <nav className="space-y-2">
-          {navigation.map((item) => {
-            const isActive = location === item.href;
-            return (
-              <Link key={item.name} href={item.href}>
-                <a
+          {navigation
+            .filter((item) => {
+              const isVendor = (user as any)?.role === 'vendor';
+              
+              // Hide buyer-only items from vendors
+              if (isVendor && item.buyerOnly) {
+                return false;
+              }
+              return true;
+            })
+            .map((item) => {
+              const isVendor = (user as any)?.role === 'vendor';
+              
+              // Use appropriate href based on user role
+              const href = isVendor && item.vendorHref 
+                ? item.vendorHref 
+                : !isVendor && item.buyerHref 
+                  ? item.buyerHref 
+                  : item.href;
+              
+              const isActive = location === href;
+              
+              // Use appropriate label based on user role
+              const displayName = isVendor && item.vendorLabel 
+                ? item.vendorLabel 
+                : !isVendor && item.buyerLabel 
+                  ? item.buyerLabel 
+                  : item.name;
+              
+              return (
+                <Link 
+                  key={item.name} 
+                  href={href}
                   className={cn(
                     "sidebar-nav",
                     isActive
@@ -47,11 +77,10 @@ export default function Sidebar() {
                   )}
                 >
                   <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.name}</span>
-                </a>
-              </Link>
-            );
-          })}
+                  <span className="font-medium">{displayName}</span>
+                </Link>
+              );
+            })}
         </nav>
         
         {/* AI Assistant Quick Access */}

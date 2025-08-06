@@ -1,7 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  DollarSign, 
   Users, 
   Clock, 
   TrendingUp, 
@@ -41,7 +40,8 @@ export default function DashboardCards({ stats, isLoading }: DashboardCardsProps
     );
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (!amount && amount !== 0) return '₹0';
     if (amount >= 1000000) {
       return `₹${(amount / 1000000).toFixed(1)}M`;
     }
@@ -95,7 +95,7 @@ export default function DashboardCards({ stats, isLoading }: DashboardCardsProps
               </div>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-primary" />
+              <div className="w-6 h-6 text-primary flex items-center justify-center font-bold text-lg">₹</div>
             </div>
           </div>
         </CardContent>

@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -11,10 +12,12 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { ShoppingCart, Search, Bot, Bell, Moon, Sun, ChevronDown, User, Settings, LogOut } from "lucide-react";
+import RoleSelector from "@/components/role-selector";
 
 export default function Header() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isRoleSelectorOpen, setIsRoleSelectorOpen] = useState(false);
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
@@ -72,14 +75,24 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 p-2">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || "User"} />
+                    <AvatarImage src={(user as any)?.profileImageUrl || ""} alt={(user as any)?.firstName || "User"} />
                     <AvatarFallback>
-                      {user?.firstName?.[0]?.toUpperCase() || "U"}
+                      {(user as any)?.firstName?.[0]?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium hidden md:block">
-                    {user?.firstName || "User"}
-                  </span>
+                  <div className="hidden md:block">
+                    <span className="text-sm font-medium">
+                      {(user as any)?.firstName || "User"}
+                    </span>
+                    {(user as any)?.role && (
+                      <Badge variant="secondary" className="text-xs ml-2">
+                        {(user as any).role === 'buyer_admin' ? 'Buyer Admin' :
+                         (user as any).role === 'buyer_user' ? 'Buyer' :
+                         (user as any).role === 'sourcing_manager' ? 'Sourcing Manager' :
+                         (user as any).role === 'vendor' ? 'Vendor' : (user as any).role}
+                      </Badge>
+                    )}
+                  </div>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
@@ -88,12 +101,12 @@ export default function Header() {
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsRoleSelectorOpen(true)}>
                   <Settings className="w-4 h-4 mr-2" />
-                  Settings
+                  Change Role
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.location.href = '/api/logout'}>
+                <DropdownMenuItem onClick={logout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </DropdownMenuItem>
@@ -102,6 +115,12 @@ export default function Header() {
           </div>
         </div>
       </div>
+      
+      <RoleSelector 
+        open={isRoleSelectorOpen} 
+        onClose={() => setIsRoleSelectorOpen(false)}
+        currentRole={(user as any)?.role}
+      />
     </header>
   );
 }

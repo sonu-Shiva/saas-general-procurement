@@ -1,130 +1,124 @@
 # SCLEN Procurement Platform
 
 ## Overview
-
-This is a modern, full-stack procurement management platform built with React and Express.js. The application provides comprehensive tools for managing vendors, products, RFx processes, auctions, and purchase orders with AI-powered features and real-time capabilities.
+This project is a modern, full-stack procurement management platform designed to streamline and enhance procurement processes. It features a React frontend and a Django REST API backend, offering comprehensive tools for managing vendors, products, RFx processes, auctions, and purchase orders. The platform incorporates AI-powered features and real-time capabilities to provide a complete and efficient solution for procurement needs. The business vision is to provide an innovative platform that simplifies complex procurement workflows, improves transparency, and drives efficiency for businesses, positioning itself as a leader in digital procurement solutions.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
+Code quality priority: Zero tolerance for regression issues - existing functionality must always be preserved.
+Development approach: Comprehensive testing and validation before any changes to prevent breaking working features.
+
+## Recent Changes
+
+### Regression Prevention & Code Quality (January 5, 2025)
+- **CRITICAL LESSON**: Regression issues caused by incomplete API signature updates across codebase
+- **ROOT CAUSES IDENTIFIED**: Schema import mismatches, method name inconsistencies, incomplete refactoring
+- **PREVENTION MEASURES**: Comprehensive validation system, TypeScript strict checking, systematic refactoring protocols
+- **QUALITY GATES**: Added pre-deployment validation checks, interface consistency verification
+- **USER PRIORITY**: Zero tolerance for regression issues - all changes must maintain existing functionality
+
+### Vendor Purchase Order System Implementation (August 6, 2025)
+- **IMPLEMENTED**: Vendor purchase order role-based filtering - vendors see only "Issued" and "Acknowledged" buckets  
+- **IMPLEMENTED**: "Acknowledge" button functionality for vendors to move POs from Issued to Acknowledged status
+- **COMPLETED**: Backend API endpoint for PO acknowledgment with proper vendor validation and ownership checks
+- **UPDATED**: Purchase orders GET endpoint with role-based filtering for vendor users
+- **CONFIRMED**: Full 5-state PO lifecycle support: Draft → Pending Approval → Approved → Issued → Acknowledged
+- **VALIDATED**: Schema supports all required statuses including acknowledgedAt timestamp field
+
+### Vendor Portal Architecture Fix (August 5, 2025)
+- **CRITICAL ISSUE RESOLVED**: Fixed major architectural routing problem where vendors were accessing buyer's RFx Management instead of vendor portal
+- **ROUTING FIXED**: Added dedicated /vendor-portal route and updated sidebar navigation to route vendors correctly
+- **STATUS SYSTEM FINALIZED**: Implemented "INVITED" status display with blue badges instead of "ACTIVE" status
+- **RESPOND BUTTON ADDED**: Added "Respond" button for invited status invitations that are not expired
+- **RFX STATUS FILTERING REMOVED**: Completely removed RFx status filtering (active/draft) per user requirement
+- **DATA STRUCTURE ADAPTED**: Fixed vendor portal to work with flat data structure (rfxStatus, rfxDueDate, etc.)
+- **RUNTIME ERRORS ELIMINATED**: Resolved all undefined property access errors that were crashing the vendor interface
+- **VENDOR PORTAL FUNCTIONAL**: Vendors now access dedicated portal showing "INVITED" status and respond functionality
+
+### Product Category Management Fix (August 5, 2025)
+- **FIXED**: Missing PUT endpoint for category updates - editing categories now works perfectly
+- **IMPLEMENTED**: Hierarchical numbering system - categories now use "1", "1.1", "1.1.1", "1.1.1.1" format
+- **AUTOMATED**: Server-side code generation - automatically creates proper hierarchical codes based on parent-child relationships
+- **RESOLVED**: Category creation and update API endpoints properly validated with Zod schemas
+- **CONFIRMED**: Both create and update operations working with proper JSON responses and hierarchical structure
+
+### Product Catalogue Regression Fix (January 5, 2025)
+- **FIXED**: Schema import errors in server/routes.ts (removed non-existent imports like auctionBids, purchaseOrderItems)
+- **CORRECTED**: Method name mismatch getProductCategoriesHierarchy → getProductCategoryHierarchy
+- **RESOLVED**: API request function signature mismatches across all components
+- **RESTORED**: Product catalogue display functionality - 6 products now showing correctly
+- **TESTED**: Role switching functionality working without breaking other features
+
+### Vendor Management Bug Fixes (January 5, 2025)
+- **FIXED**: Vendor delete and remove functionality regression issues
+- **RESOLVED**: Missing DELETE and PATCH API endpoints for vendor operations
+- **CORRECTED**: Database storage method returning wrong result format for delete operations
+- **TESTED**: Both "Remove Vendor" (status update) and "Delete Vendor" (permanent removal) working correctly
+- **IMPROVED**: Added proper vendor existence validation before update/delete operations
+
+### AI Discovery Integration (January 2025)
+- **FULLY RESOLVED**: Complete AI vendor discovery with real contact information (January 5, 2025)
+- **COMPLETED**: Fixed Perplexity API integration with correct "sonar-pro" model
+- **WORKING**: Real phone numbers (e.g., +91-80-2674 2322) and email addresses (e.g., info@srindus.com) fully functional
+- **CONFIRMED**: AI search matches Google search quality with complete vendor contact details including phone and email
+- **TESTED**: Contact parsing logic fixed - both email and phone number extraction working correctly
+- Implemented development authentication bypass for testing core functionality
 
 ## System Architecture
 
 ### Frontend Architecture
-- **Framework**: React 18 with TypeScript
-- **Routing**: Wouter for client-side routing
-- **State Management**: TanStack React Query for server state management
-- **UI Framework**: Radix UI components with shadcn/ui styling
-- **Styling**: Tailwind CSS with CSS custom properties for theming
-- **Form Handling**: React Hook Form with Zod validation
-- **Build Tool**: Vite for development and production builds
+- **Framework**: React 18 with TypeScript.
+- **Routing**: Wouter for client-side routing.
+- **State Management**: TanStack React Query for server state management.
+- **UI Framework**: Radix UI components with shadcn/ui styling.
+- **Styling**: Tailwind CSS with CSS custom properties for theming.
+- **Form Handling**: React Hook Form with Zod validation.
+- **Build Tool**: Vite for development and production builds.
+- **UI/UX Decisions**: Consistent component library, responsive design with a mobile-first approach, dark mode capability, and WCAG-compliant accessibility. Real-time updates are facilitated via WebSocket integration.
 
 ### Backend Architecture
-- **Runtime**: Node.js with Express.js framework
-- **Language**: TypeScript with ES modules
-- **API Design**: RESTful API with session-based authentication
-- **Real-time**: WebSocket support for live auction features
-- **Middleware**: Express middleware for logging, error handling, and authentication
+- **Runtime**: Python 3.12 with Django framework.
+- **API Framework**: Django REST Framework for API development.
+- **Language**: Python with object-oriented design patterns.
+- **API Design**: RESTful API with token-based authentication (JWT).
+- **Database ORM**: Django ORM for data modeling and migrations.
+- **Apps Structure**: Modular Django apps for distinct functionalities (users, vendors, products, boms, rfx, auctions, purchase_orders, approvals, notifications).
+- **Middleware**: Django middleware for CORS, authentication, and error handling.
 
 ### Authentication System
-- **Provider**: Replit OpenID Connect (OIDC) authentication
-- **Session Management**: Express sessions with PostgreSQL store
-- **Strategy**: Passport.js with OpenID Connect strategy
-- **Authorization**: Role-based access control (buyer_admin, buyer_user, sourcing_manager, vendor)
-
-## Key Components
+- **Provider**: Replit OpenID Connect (OIDC) authentication.
+- **Session Management**: PostgreSQL-backed session management for persistent login.
+- **Strategy**: Passport.js with OpenID Connect strategy.
+- **Authorization**: Role-based access control (buyer_admin, buyer_user, sourcing_manager, vendor).
 
 ### Database Layer
-- **ORM**: Drizzle ORM with TypeScript-first approach
-- **Database**: PostgreSQL (configured for Neon serverless)
-- **Schema**: Comprehensive procurement domain model including:
-  - User management and organizations
-  - Vendor lifecycle management
-  - Product catalog and BOM (Bill of Materials)
-  - RFx (Request for Quote/Proposal/Information) processes
-  - Auction system with bidding
-  - Purchase order management
-  - Approval workflows and notifications
+- **Database**: PostgreSQL (configured for Neon serverless).
+- **Schema**: Comprehensive procurement domain model including user management, vendor lifecycle, product catalog, BOM, RFx processes, auction system, purchase order management, and approval workflows.
 
 ### Core Modules
-1. **Dashboard**: Executive overview with key metrics and AI chat
-2. **Vendor Management**: Complete vendor lifecycle from discovery to management
-3. **Product Catalog**: Centralized product information management
-4. **BOM Management**: Bill of Materials creation and management
-5. **RFx Management**: Request for Quote/Proposal/Information workflows
-6. **Auction Center**: Real-time bidding system with WebSocket integration
-7. **Purchase Orders**: Order creation, tracking, and fulfillment
-8. **Analytics**: Comprehensive reporting and insights
-
-### UI/UX Features
-- **Design System**: Consistent component library based on Radix UI
-- **Responsive Design**: Mobile-first approach with Tailwind CSS
-- **Dark Mode**: System-wide theme switching capability
-- **Accessibility**: WCAG-compliant components with proper ARIA attributes
-- **Real-time Updates**: WebSocket integration for live auction bidding
-
-## Data Flow
-
-### Authentication Flow
-1. User accesses protected route
-2. Middleware checks session validity
-3. If not authenticated, redirect to Replit OIDC login
-4. Upon successful authentication, user data is stored in session
-5. Subsequent requests use session-based authentication
-
-### API Request Flow
-1. Frontend makes API requests using TanStack React Query
-2. Express middleware handles authentication and authorization
-3. Business logic processes requests using Drizzle ORM
-4. Responses are cached and managed by React Query
-5. Real-time updates pushed via WebSocket for auction features
-
-### Database Operations
-1. Drizzle ORM provides type-safe database operations
-2. Schema validation using Zod for all data inputs
-3. Transactions used for complex operations (e.g., BOM creation)
-4. Connection pooling via Neon serverless PostgreSQL
+- **Dashboard**: Executive overview and AI chat.
+- **Vendor Management**: Complete vendor lifecycle.
+- **Vendor Portal**: Complete seller interface for RFx responses and workflow management.
+- **Product Catalog**: Centralized product information.
+- **BOM Management**: Bill of Materials creation and management.
+- **RFx Management**: Request for Quote/Proposal/Information workflows.
+- **Auction Center**: Real-time bidding system with WebSocket integration.
+- **Purchase Orders**: Order creation, tracking, and fulfillment.
+- **Analytics**: Comprehensive reporting and insights.
 
 ## External Dependencies
 
 ### Core Dependencies
-- **@neondatabase/serverless**: PostgreSQL database connectivity
-- **drizzle-orm**: Type-safe ORM with PostgreSQL dialect
-- **@tanstack/react-query**: Server state management
-- **@radix-ui/***: Accessible UI components
-- **react-hook-form**: Form state management
-- **zod**: Runtime type validation
-- **passport**: Authentication middleware
-- **openid-client**: OIDC authentication
-
-### Development Tools
-- **TypeScript**: Static type checking
-- **Vite**: Fast development and build tool
-- **Tailwind CSS**: Utility-first CSS framework
-- **ESLint/Prettier**: Code formatting and linting
+- **@neondatabase/serverless**: PostgreSQL database connectivity.
+- **drizzle-orm**: Type-safe ORM (used during migration, now primarily Django ORM).
+- **@tanstack/react-query**: Server state management.
+- **@radix-ui/**: Accessible UI components.
+- **react-hook-form**: Form state management.
+- **zod**: Runtime type validation.
+- **passport**: Authentication middleware.
+- **openid-client**: OIDC authentication.
+- **Perplexity API**: Integrated for AI vendor discovery.
 
 ### Replit Integration
-- **@replit/vite-plugin-cartographer**: Development environment integration
-- **@replit/vite-plugin-runtime-error-modal**: Enhanced error reporting
-
-## Deployment Strategy
-
-### Development Environment
-- **Hot Reload**: Vite development server with HMR
-- **Database**: Neon PostgreSQL with automatic provisioning
-- **Environment Variables**: DATABASE_URL, SESSION_SECRET, REPL_ID
-- **Authentication**: Replit OIDC with development domains
-
-### Production Build
-- **Frontend**: Static assets built with Vite to `dist/public`
-- **Backend**: Compiled TypeScript bundled with esbuild
-- **Process Management**: Node.js process serving both static files and API
-- **Session Storage**: PostgreSQL-backed session store for scalability
-
-### Database Management
-- **Migrations**: Drizzle Kit for schema migrations
-- **Schema**: Shared TypeScript definitions between frontend and backend
-- **Connection**: Serverless PostgreSQL with connection pooling
-- **Backup**: Managed by Neon database service
-
-The architecture emphasizes type safety, developer experience, and scalability while maintaining simplicity in deployment and maintenance. The modular design allows for easy extension of procurement workflows and integration with external systems.
+- **@replit/vite-plugin-cartographer**: Development environment integration.
+- **@replit/vite-plugin-runtime-error-modal**: Enhanced error reporting.

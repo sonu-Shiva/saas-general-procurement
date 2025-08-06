@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
+
 import VendorCard from "@/components/vendor-card";
+import AIVendorDiscovery from "@/components/ai-vendor-discovery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
   Filter, 
@@ -21,19 +22,20 @@ import {
   Globe,
   Users,
   Building,
-  CheckCircle
+  CheckCircle,
+  MessageSquare
 } from "lucide-react";
 import type { Vendor } from "@shared/schema";
 
 export default function VendorDiscovery() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [certificationFilters, setCertificationFilters] = useState<string[]>([]);
   const [performanceRange, setPerformanceRange] = useState([4.0]);
   const [aiSearchMode, setAiSearchMode] = useState(false);
 
-  const { data: searchResults, isLoading } = useQuery({
+  const { data: searchResults, isLoading } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors/search", { 
       q: searchQuery, 
       location: locationFilter, 
@@ -44,7 +46,7 @@ export default function VendorDiscovery() {
     retry: false,
   });
 
-  const { data: allVendors } = useQuery({
+  const { data: allVendors } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors", { status: "approved" }],
     retry: false,
   });
@@ -57,14 +59,75 @@ export default function VendorDiscovery() {
     }
   };
 
-  const handleAiSearch = () => {
-    setAiSearchMode(true);
-    // AI search functionality would be implemented here
+  const handleAiSearch = async () => {
+    console.log("=== AI SEARCH BUTTON CLICKED ===");
+    console.log("Search query:", searchQuery);
+    
+    if (!searchQuery.trim()) {
+      console.log("Empty search query, returning");
+      alert("Please enter a search query first!");
+      return;
+    }
+    
+    console.log("Starting AI search for:", searchQuery);
+    
+    try {
+      // Use XMLHttpRequest for AI discovery to bypass any corruption
+      const response = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/vendors/discover', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.withCredentials = true;
+        
+        xhr.onload = function() {
+          console.log('AI Search XHR Status:', xhr.status);
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              console.log(`AI Search Success: Found ${result.length} vendors`);
+              resolve(result);
+            } catch (e) {
+              reject(new Error('Failed to parse AI search response'));
+            }
+          } else {
+            reject(new Error(`AI Search failed: ${xhr.status} - ${xhr.responseText}`));
+          }
+        };
+        
+        xhr.onerror = function() {
+          reject(new Error('Network error during AI search'));
+        };
+        
+        const payload = JSON.stringify({
+          query: searchQuery,
+          location: locationFilter !== 'all' ? locationFilter : '',
+          category: categoryFilter !== 'all' ? categoryFilter : ''
+        });
+        
+        xhr.send(payload);
+      });
+      
+      console.log("AI discovered vendors:", response);
+      
+      // Show the results in a clear alert
+      const vendorList = response.map((v: any) => 
+        `• ${v.name}\n  ${v.email || 'No email'}\n  ${v.phone || 'No phone'}\n  ${v.category || 'General'}\n`
+      ).join('\n');
+      
+      alert(`🎉 AI Discovery Success!\n\nFound ${response.length} verified suppliers:\n\n${vendorList}`);
+      
+      console.log("Full vendor details:", response);
+      
+    } catch (error) {
+      console.error("AI search error:", error);
+      alert(`AI Discovery Error: ${(error as Error).message}`);
+    }
   };
 
-  const displayVendors = searchQuery.length > 2 ? searchResults : allVendors?.filter((vendor: Vendor) => {
-    const matchesLocation = !locationFilter || vendor.officeLocations?.includes(locationFilter);
-    const matchesCategory = !categoryFilter || vendor.categories?.includes(categoryFilter);
+  const displayVendors = searchQuery.length > 2 ? (searchResults || []) : (allVendors || []).filter((vendor: Vendor) => {
+    const matchesLocation = locationFilter === "all" || vendor.officeLocations?.includes(locationFilter);
+    const matchesCategory = categoryFilter === "all" || vendor.categories?.includes(categoryFilter);
     const matchesCertifications = certificationFilters.length === 0 || 
       certificationFilters.some(cert => vendor.certifications?.includes(cert));
     const matchesPerformance = !vendor.performanceScore || 
@@ -74,76 +137,33 @@ export default function VendorDiscovery() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Page Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Vendor Discovery</h1>
-              <p className="text-muted-foreground">
-                Find and connect with suppliers using AI-powered search and intelligent recommendations
-              </p>
-            </div>
+    <div className="space-y-6 p-6">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-foreground mb-2">Vendor Discovery</h1>
+        <p className="text-muted-foreground">
+          Find and connect with suppliers using AI-powered chat and intelligent search
+        </p>
+      </div>
 
-            {/* AI Search Section */}
-            <Card className="mb-8 bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Bot className="w-6 h-6 mr-2 text-primary" />
-                  AI-Powered Vendor Discovery
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex space-x-4">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Describe what you need... e.g., 'Find stainless steel pipe suppliers in Gujarat with ISO certification'"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="text-lg py-3"
-                      />
-                    </div>
-                    <Button 
-                      onClick={handleAiSearch}
-                      className="bg-primary hover:bg-primary/90 px-8"
-                      disabled={!searchQuery}
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      AI Search
-                    </Button>
-                  </div>
-                  
-                  {/* Sample AI Queries */}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge 
-                      variant="outline" 
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => setSearchQuery("Electronic components suppliers with ISO 9001 certification")}
-                    >
-                      Electronic components with ISO 9001
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => setSearchQuery("Bulk cotton yarn suppliers in Tamil Nadu")}
-                    >
-                      Bulk cotton yarn in Tamil Nadu
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => setSearchQuery("Office furniture suppliers with delivery within 7 days")}
-                    >
-                      Quick delivery office furniture
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Discovery Tabs */}
+      <Tabs defaultValue="ai-chat" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ai-chat" className="flex items-center space-x-2">
+            <MessageSquare className="w-4 h-4" />
+            <span>AI Chat Discovery</span>
+          </TabsTrigger>
+          <TabsTrigger value="search" className="flex items-center space-x-2">
+            <Search className="w-4 h-4" />
+            <span>Search & Filters</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ai-chat" className="mt-6">
+          <AIVendorDiscovery />
+        </TabsContent>
+
+        <TabsContent value="search" className="mt-6">
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               {/* Filters Sidebar */}
@@ -167,7 +187,7 @@ export default function VendorDiscovery() {
                           <SelectValue placeholder="Select location" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Locations</SelectItem>
+                          <SelectItem value="all">All Locations</SelectItem>
                           <SelectItem value="Mumbai">Mumbai</SelectItem>
                           <SelectItem value="Delhi">Delhi</SelectItem>
                           <SelectItem value="Bangalore">Bangalore</SelectItem>
@@ -191,7 +211,7 @@ export default function VendorDiscovery() {
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Categories</SelectItem>
+                          <SelectItem value="all">All Categories</SelectItem>
                           <SelectItem value="electronics">Electronics & IT</SelectItem>
                           <SelectItem value="raw-materials">Raw Materials</SelectItem>
                           <SelectItem value="office-supplies">Office Supplies</SelectItem>
@@ -263,8 +283,8 @@ export default function VendorDiscovery() {
                       variant="outline" 
                       className="w-full"
                       onClick={() => {
-                        setLocationFilter("");
-                        setCategoryFilter("");
+                        setLocationFilter("all");
+                        setCategoryFilter("all");
                         setCertificationFilters([]);
                         setPerformanceRange([4.0]);
                       }}
@@ -378,16 +398,15 @@ export default function VendorDiscovery() {
                           </Button>
                         </>
                       )}
-                    </CardContent>
-                  </Card>
-                )}
+                  </CardContent>
+                </Card>
+              )}
 
-                {/* Pagination could be added here if needed */}
-              </div>
+              {/* Pagination could be added here if needed */}
             </div>
           </div>
-        </main>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

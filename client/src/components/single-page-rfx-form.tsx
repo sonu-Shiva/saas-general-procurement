@@ -1,0 +1,485 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const rfxFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  scope: z.string().min(1, "Scope is required"),
+  type: z.enum(["rfi", "rfp", "rfq"]),
+  dueDate: z.string().min(1, "Due date is required"),
+  budget: z.string().optional(),
+  bomId: z.string().optional(),
+  selectedVendors: z.array(z.string()).min(1, "At least one vendor must be selected"),
+  criteria: z.string().optional(),
+  evaluationParameters: z.string().optional(),
+});
+
+type RfxFormData = z.infer<typeof rfxFormSchema>;
+
+interface SinglePageRfxFormProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxFormProps) {
+  console.log("SinglePageRfxForm component rendering...");
+  
+  // Simple test first - no queries
+  try {
+    const queryClient = useQueryClient();
+    console.log("QueryClient initialized successfully");
+    
+    // Test queries step by step
+    console.log("About to initialize vendors query...");
+    const vendorsQuery = useQuery({
+      queryKey: ["/api/vendors"],
+      retry: false,
+    });
+    console.log("Vendors query initialized:", vendorsQuery.isLoading, vendorsQuery.error);
+    
+    console.log("About to initialize BOMs query...");
+    const bomsQuery = useQuery({
+      queryKey: ["/api/boms"],
+      retry: false,
+    });
+    console.log("BOMs query initialized:", bomsQuery.isLoading, bomsQuery.error);
+    
+    const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError } = vendorsQuery;
+    const { data: boms = [], isLoading: bomsLoading, error: bomsError } = bomsQuery;
+
+    console.log("About to initialize form...");
+    const form = useForm<RfxFormData>({
+      resolver: zodResolver(rfxFormSchema),
+      defaultValues: {
+        title: "",
+        scope: "",
+        type: "rfi",
+        dueDate: "",
+        budget: "",
+        bomId: "",
+        selectedVendors: [],
+        criteria: "",
+        evaluationParameters: "",
+      },
+    });
+    console.log("Form initialized successfully");
+
+    console.log("About to watch form type...");
+    const selectedType = form.watch("type");
+    console.log("Form type watch initialized:", selectedType);
+
+    const createRfxMutation = useMutation({
+    mutationFn: async (data: RfxFormData) => {
+      // First create the RFx event
+      const rfxPayload = {
+        title: data.title,
+        scope: data.scope,
+        type: data.type,
+        dueDate: data.dueDate,
+        budget: data.budget || undefined,
+        bomId: data.bomId || undefined,
+        criteria: data.criteria || undefined,
+        evaluationParameters: data.evaluationParameters || undefined,
+        status: "draft",
+      };
+      
+      console.log("RFx payload before API call:", rfxPayload);
+      console.log("Selected vendors:", data.selectedVendors);
+      
+      const response = await fetch("/api/rfx", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(rfxPayload),
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const rfxEvent = await response.json();
+      console.log("RFx event created:", rfxEvent);
+      
+      // Create vendor invitations
+      if (data.selectedVendors && data.selectedVendors.length > 0) {
+        const invitePromises = data.selectedVendors.map(async (vendorId) => {
+          const inviteResponse = await fetch("/api/rfx/invitations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              rfxId: rfxEvent.id,
+              vendorId: vendorId,
+            }),
+            credentials: "include",
+          });
+          
+          if (!inviteResponse.ok) {
+            console.error(`Failed to invite vendor ${vendorId}`);
+          }
+          
+          return inviteResponse.json();
+        });
+        
+        await Promise.all(invitePromises);
+        console.log("Vendor invitations sent");
+      }
+      
+      return rfxEvent;
+    },
+    onSuccess: () => {
+      console.log("RFx created successfully!");
+      queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+      onSuccess();
+      onClose();
+    },
+    onError: (error: any) => {
+      console.error("Error creating RFx:", error);
+      console.error("Error details:", error.message);
+    },
+    });
+
+    const onSubmit = (data: RfxFormData) => {
+      console.log("Form submission data:", data);
+      console.log("Form errors:", form.formState.errors);
+      createRfxMutation.mutate(data);
+    };
+
+  if (vendorsLoading || bomsLoading) {
+    console.log("Showing loading state...");
+    return (
+      <div className="w-full p-6 space-y-6 bg-white">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading RFx form...</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Vendors: {vendorsLoading ? 'Loading...' : 'Loaded'} | 
+            BOMs: {bomsLoading ? 'Loading...' : 'Loaded'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (vendorsError || bomsError) {
+    console.log("Showing error state...", { vendorsError, bomsError });
+    return (
+      <div className="w-full p-6 space-y-6 bg-white">
+        <div className="text-center py-8">
+          <p className="text-red-600">Error loading form data</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {vendorsError && `Vendors: ${vendorsError.message}`}
+            {bomsError && `BOMs: ${bomsError.message}`}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("Rendering main form...");
+  return (
+    <div className="w-full p-4 space-y-6 bg-white min-h-[500px] border border-gray-300">
+      <div className="bg-blue-50 p-4 border border-blue-200 rounded">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Create {selectedType.toUpperCase()} Request
+        </h2>
+        <p className="text-gray-600 mt-2">Form is now visible!</p>
+        <p className="text-muted-foreground">
+          {selectedType === "rfi" 
+            ? "Request information from vendors to understand their capabilities"
+            : selectedType === "rfp" 
+            ? "Request detailed proposals from qualified vendors"
+            : "Request quotes for specific products or services"}
+        </p>
+      </div>
+
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Type Selection */}
+        <Card className="p-6 border-2 border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-foreground">Request Type</h3>
+              <p className="text-sm text-muted-foreground">Choose the type of request you want to create</p>
+            </div>
+            <div className="flex gap-3">
+              {[
+                { value: "rfi", label: "RFI", desc: "Request for Information" },
+                { value: "rfp", label: "RFP", desc: "Request for Proposal" },
+                { value: "rfq", label: "RFQ", desc: "Request for Quote" }
+              ].map((type) => (
+                <Button
+                  key={type.value}
+                  type="button"
+                  variant={selectedType === type.value ? "default" : "outline"}
+                  className={`flex-1 h-auto p-4 text-left ${
+                    selectedType === type.value ? "border-2 border-primary" : "border-2 border-border"
+                  }`}
+                  onClick={() => form.setValue("type", type.value as any)}
+                >
+                  <div>
+                    <div className="font-medium">{type.label}</div>
+                    <div className="text-xs opacity-75">{type.desc}</div>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Basic Information */}
+        <Card className="p-6 border-2 border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-foreground">Basic Information</h3>
+              <p className="text-sm text-muted-foreground">Provide the essential details for your request</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  {...form.register("title")}
+                  placeholder={`Enter ${selectedType.toUpperCase()} title`}
+                  className="border-2 border-border focus:border-primary"
+                />
+                {form.formState.errors.title && (
+                  <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Due Date *</Label>
+                <Input
+                  id="dueDate"
+                  type="datetime-local"
+                  {...form.register("dueDate")}
+                  className="border-2 border-border focus:border-primary"
+                />
+                {form.formState.errors.dueDate && (
+                  <p className="text-sm text-destructive">{form.formState.errors.dueDate.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="scope">Scope/Description *</Label>
+              <Textarea
+                id="scope"
+                {...form.register("scope")}
+                rows={4}
+                placeholder={
+                  selectedType === "rfi" 
+                    ? "Describe what information you need from vendors"
+                    : selectedType === "rfp"
+                    ? "Describe the project requirements and objectives"
+                    : "Describe the products or services you need quotes for"
+                }
+                className="border-2 border-border focus:border-primary"
+              />
+              {form.formState.errors.scope && (
+                <p className="text-sm text-destructive">{form.formState.errors.scope.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="budget">Budget (Optional)</Label>
+              <Input
+                id="budget"
+                {...form.register("budget")}
+                placeholder="₹ Budget range or maximum amount"
+                className="border-2 border-border focus:border-primary"
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* BOM Selection */}
+        <Card className="p-6 border-2 border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-foreground">BOM Connection (Optional)</h3>
+              <p className="text-sm text-muted-foreground">
+                Link this {selectedType.toUpperCase()} to a specific Bill of Materials (BOM) for structured procurement.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="bomId">Select BOM</Label>
+              <Select
+                value={form.watch("bomId") || ""}
+                onValueChange={(value) => form.setValue("bomId", value || "")}
+              >
+                <SelectTrigger className="border-2 border-border focus:border-primary">
+                  <SelectValue placeholder="Choose a BOM (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No BOM - General Request</SelectItem>
+                  {Array.isArray(boms) && boms.map((bom: any) => (
+                    <SelectItem key={bom.id} value={bom.id}>
+                      <div>
+                        <div className="font-medium">{bom.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          v{bom.version} • {bom.category || 'General'}
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.watch("bomId") && Array.isArray(boms) && (
+                <div className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-xs">
+                    BOM Linked: {boms.find((b: any) => b.id === form.watch("bomId"))?.name || 'Selected BOM'}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Vendor Selection */}
+        <Card className="p-6 border-2 border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-foreground">Vendor Selection</h3>
+              <p className="text-sm text-muted-foreground">
+                Choose vendors to send this {selectedType.toUpperCase()} to. At least one vendor must be selected.
+              </p>
+            </div>
+            
+            {vendorsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading vendors...</p>
+              </div>
+            ) : (vendors as any[]).length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No vendors available for selection.</p>
+                <p className="text-sm text-muted-foreground mt-2">Add some vendors first to create RFx requests.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-80 overflow-y-auto">
+                {(vendors as any[]).map((vendor: any) => (
+                  <Card key={vendor.id} className="p-4 border-2 border-border hover:border-primary/50 transition-colors cursor-pointer">
+                    <label className="flex items-start space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        value={vendor.id}
+                        {...form.register("selectedVendors")}
+                        className="h-4 w-4 mt-1 rounded border-2 border-border text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-foreground">{vendor.companyName || vendor.name}</div>
+                        <div className="text-sm text-muted-foreground">{vendor.categories || vendor.category}</div>
+                        {vendor.contactPerson && (
+                          <div className="text-xs text-muted-foreground mt-1">Contact: {vendor.contactPerson}</div>
+                        )}
+                        {vendor.email && (
+                          <div className="text-xs text-muted-foreground">{vendor.email}</div>
+                        )}
+                      </div>
+                    </label>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            {form.formState.errors.selectedVendors && (
+              <p className="text-sm text-destructive">{form.formState.errors.selectedVendors.message}</p>
+            )}
+          </div>
+        </Card>
+
+        {/* Requirements and Criteria */}
+        <Card className="p-6 border-2 border-border">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-foreground">
+                {selectedType === "rfi" ? "Information Requirements" : "Requirements & Criteria"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {selectedType === "rfi" 
+                  ? "Specify what information you need from vendors"
+                  : "Define your requirements and evaluation criteria"}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="criteria">
+                  {selectedType === "rfi" ? "Information Required" : "Requirements"} (Optional)
+                </Label>
+                <Textarea
+                  id="criteria"
+                  {...form.register("criteria")}
+                  rows={4}
+                  placeholder={
+                    selectedType === "rfi" 
+                      ? "What specific information do you need from vendors? (e.g., company capabilities, certifications, experience)"
+                      : "Detailed requirements and specifications"
+                  }
+                  className="border-2 border-border focus:border-primary"
+                />
+              </div>
+
+              {selectedType !== "rfi" && (
+                <div className="space-y-2">
+                  <Label htmlFor="evaluationParameters">Evaluation Criteria (Optional)</Label>
+                  <Textarea
+                    id="evaluationParameters"
+                    {...form.register("evaluationParameters")}
+                    rows={3}
+                    placeholder="How will proposals be evaluated? (e.g., price 40%, quality 30%, delivery 30%)"
+                    className="border-2 border-border focus:border-primary"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Form Actions */}
+        <div className="flex justify-between items-center pt-4 border-t border-border">
+          <Button type="button" variant="outline" onClick={onClose} className="border-2 border-border">
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={createRfxMutation.isPending}
+            className="bg-primary hover:bg-primary/90"
+          >
+            {createRfxMutation.isPending ? "Creating..." : `Create ${selectedType.toUpperCase()}`}
+          </Button>
+        </div>
+      </form>
+    </div>
+    );
+  } catch (error) {
+    console.error("Error rendering RFx form:", error);
+    return (
+      <div className="w-full p-6 space-y-6 bg-white">
+        <div className="text-center py-8">
+          <p className="text-red-600">Error rendering form</p>
+          <p className="text-sm text-gray-500 mt-2">{(error as Error).message}</p>
+          <Button onClick={onClose} className="mt-4">Close</Button>
+        </div>
+      </div>
+    );
+  }
+}

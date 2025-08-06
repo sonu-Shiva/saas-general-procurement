@@ -11,6 +11,7 @@ import {
   boolean,
   uuid,
   primaryKey,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -65,14 +66,32 @@ export const vendors = pgTable("vendors", {
   tanNumber: varchar("tan_number", { length: 50 }),
   bankDetails: jsonb("bank_details"),
   address: text("address"),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  website: varchar("website", { length: 255 }),
+  description: text("description"),
   categories: text("categories").array(),
   certifications: text("certifications").array(),
   yearsOfExperience: integer("years_of_experience"),
   officeLocations: text("office_locations").array(),
-  status: varchar("status", { enum: ["pending", "approved", "rejected", "suspended"] }).default("pending"),
+  status: varchar("status", { enum: ["pending", "approved", "rejected", "suspended", "inactive"] }).default("pending"),
   tags: text("tags").array(),
   performanceScore: decimal("performance_score", { precision: 3, scale: 2 }),
   userId: varchar("user_id").references(() => users.id),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Product Categories - Hierarchical category system
+export const productCategories = pgTable("product_categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 100 }).unique().notNull(), // e.g., "1.1.1", "1.2", etc.
+  description: text("description"),
+  parentId: uuid("parent_id"),
+  level: integer("level").notNull().default(1), // 1 = top level, 2 = second level, etc.
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -84,8 +103,9 @@ export const products = pgTable("products", {
   internalCode: varchar("internal_code", { length: 100 }),
   externalCode: varchar("external_code", { length: 100 }),
   description: text("description"),
-  category: varchar("category", { length: 255 }),
-  subCategory: varchar("sub_category", { length: 255 }),
+  categoryId: uuid("category_id").references(() => productCategories.id),
+  category: varchar("category", { length: 255 }), // Legacy field, keep for backward compatibility
+  subCategory: varchar("sub_category", { length: 255 }), // Legacy field
   uom: varchar("uom", { length: 50 }),
   basePrice: decimal("base_price", { precision: 10, scale: 2 }),
   specifications: jsonb("specifications"),
@@ -110,16 +130,23 @@ export const boms = pgTable("boms", {
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  uniqueNameVersion: unique("unique_bom_name_version").on(table.name, table.version),
+}));
 
 export const bomItems = pgTable("bom_items", {
   id: uuid("id").primaryKey().defaultRandom(),
   bomId: uuid("bom_id").references(() => boms.id, { onDelete: "cascade" }).notNull(),
-  productId: uuid("product_id").references(() => products.id).notNull(),
+  productId: uuid("product_id").references(() => products.id),
+  itemName: varchar("item_name", { length: 255 }).notNull(),
+  itemCode: varchar("item_code", { length: 100 }),
+  description: text("description"),
+  category: varchar("category", { length: 255 }),
   quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
   uom: varchar("uom", { length: 50 }),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }),
+  specifications: jsonb("specifications"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -137,6 +164,9 @@ export const rfxEvents = pgTable("rfx_events", {
   bomId: uuid("bom_id").references(() => boms.id),
   contactPerson: varchar("contact_person", { length: 255 }),
   budget: decimal("budget", { precision: 12, scale: 2 }),
+  parentRfxId: uuid("parent_rfx_id"),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
+  termsAndConditionsRequired: boolean("terms_and_conditions_required").default(false),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -161,7 +191,7 @@ export const rfxResponses = pgTable("rfx_responses", {
   deliveryTerms: text("delivery_terms"),
   paymentTerms: text("payment_terms"),
   leadTime: integer("lead_time"),
-  attachments: text("attachments").array(),
+  attachments: text("attachments").array().default([]),
   submittedAt: timestamp("submitted_at").defaultNow(),
 });
 
@@ -178,6 +208,8 @@ export const auctions = pgTable("auctions", {
   status: varchar("status", { enum: ["scheduled", "live", "completed", "cancelled"] }).default("scheduled"),
   winnerId: uuid("winner_id").references(() => vendors.id),
   winningBid: decimal("winning_bid", { precision: 12, scale: 2 }),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
+  termsAndConditionsRequired: boolean("terms_and_conditions_required").default(false),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -206,13 +238,48 @@ export const purchaseOrders = pgTable("purchase_orders", {
   vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
   rfxId: uuid("rfx_id").references(() => rfxEvents.id),
   auctionId: uuid("auction_id").references(() => auctions.id),
+  
+  // Buyer Information
+  buyerName: varchar("buyer_name", { length: 255 }),
+  buyerBranchName: varchar("buyer_branch_name", { length: 255 }),
+  buyerAddress: text("buyer_address"),
+  buyerGstin: varchar("buyer_gstin", { length: 50 }),
+  
+  // Vendor Information (duplicated for PO format)
+  vendorName: varchar("vendor_name", { length: 255 }),
+  vendorAddress: text("vendor_address"),
+  vendorGstin: varchar("vendor_gstin", { length: 50 }),
+  
+  // Delivery Information
+  deliveryToAddress: text("delivery_to_address"),
+  deliveryGstin: varchar("delivery_gstin", { length: 50 }),
+  
+  // PO Details
+  poDate: timestamp("po_date").defaultNow(),
+  quotationRef: varchar("quotation_ref", { length: 255 }),
+  deliveryDate: timestamp("delivery_date"),
+  
+  // Financial Information
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-  status: varchar("status", { enum: ["draft", "issued", "acknowledged", "shipped", "delivered", "invoiced", "paid", "cancelled"] }).default("draft"),
-  termsAndConditions: text("terms_and_conditions"),
-  deliverySchedule: jsonb("delivery_schedule"),
+  taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }).default("0"),
+  totalAmountInWords: text("total_amount_in_words"),
+  
+  // Terms and Conditions
   paymentTerms: text("payment_terms"),
+  incoterms: varchar("incoterms", { length: 100 }),
+  termsAndConditions: text("terms_and_conditions"),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }),
+  
+  // Status and Workflow
+  status: varchar("status", { enum: ["draft", "pending_approval", "approved", "rejected", "issued", "acknowledged", "shipped", "delivered", "invoiced", "paid", "cancelled"] }).default("pending_approval"),
+  deliverySchedule: jsonb("delivery_schedule"),
   attachments: text("attachments").array(),
   acknowledgedAt: timestamp("acknowledged_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  approvalComments: text("approval_comments"),
+  authorizedSignatory: varchar("authorized_signatory", { length: 255 }),
+  
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -221,12 +288,18 @@ export const purchaseOrders = pgTable("purchase_orders", {
 export const poLineItems = pgTable("po_line_items", {
   id: uuid("id").primaryKey().defaultRandom(),
   poId: uuid("po_id").references(() => purchaseOrders.id, { onDelete: "cascade" }).notNull(),
-  productId: uuid("product_id").references(() => products.id).notNull(),
+  slNo: integer("sl_no").notNull(), // Serial Number
+  productId: uuid("product_id").references(() => products.id), // Allow null for BOM-based orders
+  itemName: varchar("item_name", { length: 255 }).notNull(),
+  uom: varchar("uom", { length: 50 }), // Unit of Measurement
+  hsnCode: varchar("hsn_code", { length: 50 }), // HSN Code for tax purposes
   quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  taxableValue: decimal("taxable_value", { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   deliveryDate: timestamp("delivery_date"),
   status: varchar("status", { enum: ["pending", "shipped", "delivered"] }).default("pending"),
+  specifications: text("specifications"),
 });
 
 export const approvals = pgTable("approvals", {
@@ -252,6 +325,40 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Direct Procurement Orders Table (BOM-based)
+export const directProcurementOrders = pgTable("direct_procurement_orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  referenceNo: varchar("reference_no", { length: 100 }).unique(),
+  bomId: uuid("bom_id").references(() => boms.id).notNull(),
+  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  bomItems: jsonb("bom_items").notNull(), // Array of BOM items with pricing: bomItemId, productName, requestedQuantity, unitPrice, totalPrice, specifications
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  status: varchar("status", { enum: ["draft", "pending_approval", "submitted", "approved", "rejected", "delivered", "cancelled"] }).default("pending_approval"),
+  priority: varchar("priority", { enum: ["low", "medium", "high", "urgent"] }).default("medium"),
+  deliveryDate: timestamp("delivery_date").notNull(),
+  paymentTerms: varchar("payment_terms", { length: 100 }).notNull(),
+  notes: text("notes"),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
+  approvalWorkflow: jsonb("approval_workflow"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Terms & Conditions Acceptance Tracking
+export const termsAcceptance = pgTable("terms_acceptance", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  entityType: varchar("entity_type", { enum: ["rfx", "auction", "purchase_order", "direct_procurement"] }).notNull(),
+  entityId: uuid("entity_id").notNull(),
+  termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }).notNull(),
+  acceptedAt: timestamp("accepted_at").defaultNow(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+}, (table) => ({
+  uniqueAcceptance: unique("unique_vendor_entity_acceptance").on(table.vendorId, table.entityType, table.entityId),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   organization: one(organizations, {
@@ -269,6 +376,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdRfxEvents: many(rfxEvents),
   createdAuctions: many(auctions),
   createdPurchaseOrders: many(purchaseOrders),
+  createdDirectProcurementOrders: many(directProcurementOrders),
   approvals: many(approvals),
   notifications: many(notifications),
 }));
@@ -288,9 +396,44 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
   auctionParticipants: many(auctionParticipants),
   bids: many(bids),
   purchaseOrders: many(purchaseOrders),
+  directProcurementOrders: many(directProcurementOrders),
+}));
+
+// Direct Procurement Orders Relations
+export const directProcurementOrdersRelations = relations(directProcurementOrders, ({ one }) => ({
+  bom: one(boms, {
+    fields: [directProcurementOrders.bomId],
+    references: [boms.id],
+  }),
+  vendor: one(vendors, {
+    fields: [directProcurementOrders.vendorId],
+    references: [vendors.id],
+  }),
+  createdBy: one(users, {
+    fields: [directProcurementOrders.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const productCategoriesRelations = relations(productCategories, ({ one, many }) => ({
+  parent: one(productCategories, {
+    fields: [productCategories.parentId],
+    references: [productCategories.id],
+    relationName: "categoryParent",
+  }),
+  children: many(productCategories, { relationName: "categoryParent" }),
+  products: many(products),
+  createdBy: one(users, {
+    fields: [productCategories.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const productsRelations = relations(products, ({ one, many }) => ({
+  category: one(productCategories, {
+    fields: [products.categoryId],
+    references: [productCategories.id],
+  }),
   createdBy: one(users, {
     fields: [products.createdBy],
     references: [users.id],
@@ -312,6 +455,7 @@ export const bomsRelations = relations(boms, ({ one, many }) => ({
   }),
   bomItems: many(bomItems),
   rfxEvents: many(rfxEvents),
+
 }));
 
 export const bomItemsRelations = relations(bomItems, ({ one }) => ({
@@ -334,6 +478,12 @@ export const rfxEventsRelations = relations(rfxEvents, ({ one, many }) => ({
     fields: [rfxEvents.bomId],
     references: [boms.id],
   }),
+  parent: one(rfxEvents, {
+    fields: [rfxEvents.parentRfxId],
+    references: [rfxEvents.id],
+    relationName: "parentChild"
+  }),
+  children: many(rfxEvents, { relationName: "parentChild" }),
   invitations: many(rfxInvitations),
   responses: many(rfxResponses),
   purchaseOrders: many(purchaseOrders),
@@ -413,6 +563,12 @@ export const purchaseOrdersRelations = relations(purchaseOrders, ({ one, many })
   createdBy: one(users, {
     fields: [purchaseOrders.createdBy],
     references: [users.id],
+    relationName: "createdPurchaseOrders",
+  }),
+  approvedBy: one(users, {
+    fields: [purchaseOrders.approvedBy],
+    references: [users.id],
+    relationName: "approvedPurchaseOrders",
   }),
   lineItems: many(poLineItems),
 }));
@@ -459,33 +615,74 @@ export const insertVendorSchema = createInsertSchema(vendors).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  performanceScore: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
+});
+
+export const insertProductCategorySchema = createInsertSchema(productCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial({
+  code: true,  // Make code optional since it's auto-generated
+  level: true, // Make level optional since it's auto-generated
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  itemName: z.string().min(1, "Item name is required"),
+  basePrice: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
 });
 
 export const insertBomSchema = createInsertSchema(boms).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  validFrom: z.union([z.string(), z.date()]).optional().transform((val) =>
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
+  validTo: z.union([z.string(), z.date()]).optional().transform((val) =>
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
 });
 
 export const insertBomItemSchema = createInsertSchema(bomItems).omit({
   id: true,
   createdAt: true,
+}).extend({
+  quantity: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  unitPrice: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
+  totalPrice: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
+  productId: z.string().uuid().optional(),
+  itemName: z.string().min(1, "Item name is required"),
 });
 
 export const insertRfxEventSchema = createInsertSchema(rfxEvents).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  budget: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
+  dueDate: z.union([z.string(), z.date()]).optional().transform((val) =>
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
 });
 
 export const insertRfxInvitationSchema = createInsertSchema(rfxInvitations).omit({
-  id: true,
   invitedAt: true,
 });
 
@@ -498,26 +695,53 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  ceilingPrice: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
+  reservePrice: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
+  currentBid: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
+  startTime: z.union([z.string(), z.date()]).optional().transform((val) =>
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
+  endTime: z.union([z.string(), z.date()]).optional().transform((val) =>
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
+  bomId: z.string().nullable().optional(),
+  selectedBomItems: z.array(z.string()).optional(),
+  selectedVendors: z.array(z.string()).optional(),
+  termsUrl: z.string().optional(),
 });
 
 export const insertAuctionParticipantSchema = createInsertSchema(auctionParticipants).omit({
-  id: true,
   registeredAt: true,
 });
 
 export const insertBidSchema = createInsertSchema(bids).omit({
   id: true,
   timestamp: true,
+}).extend({
+  amount: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
 export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  totalAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
 export const insertPoLineItemSchema = createInsertSchema(poLineItems).omit({
   id: true,
+}).extend({
+  quantity: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  unitPrice: z.union([z.string(), z.number()]).transform((val) => String(val)),
+  lineTotal: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
 export const insertApprovalSchema = createInsertSchema(approvals).omit({
@@ -530,13 +754,24 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+export const insertTermsAcceptanceSchema = createInsertSchema(termsAcceptance).omit({
+  id: true,
+  acceptedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Direct Procurement Order Types
+export type DirectProcurementOrder = typeof directProcurementOrders.$inferSelect;
+export type InsertDirectProcurementOrder = typeof directProcurementOrders.$inferInsert;
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
+export type ProductCategory = typeof productCategories.$inferSelect;
+export type InsertProductCategory = z.infer<typeof insertProductCategorySchema>;
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Bom = typeof boms.$inferSelect;
@@ -563,3 +798,5 @@ export type Approval = typeof approvals.$inferSelect;
 export type InsertApproval = z.infer<typeof insertApprovalSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type TermsAcceptance = typeof termsAcceptance.$inferSelect;
+export type InsertTermsAcceptance = z.infer<typeof insertTermsAcceptanceSchema>;
