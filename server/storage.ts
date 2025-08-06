@@ -1085,10 +1085,26 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(bids.timestamp));
   }
 
-  async getAuctionBids(auctionId: string): Promise<Bid[]> {
+  async getAuctionBids(auctionId: string): Promise<any[]> {
     console.log(`DEBUG: Getting bids for auction ${auctionId}`);
-    const bidResults = await this.db.select().from(bids).where(eq(bids.auctionId, auctionId)).orderBy(desc(bids.timestamp));
-    console.log(`DEBUG: Raw bid results from DB:`, bidResults);
+    const bidResults = await this.db
+      .select({
+        id: bids.id,
+        auctionId: bids.auctionId,
+        vendorId: bids.vendorId,
+        amount: bids.amount,
+        timestamp: bids.timestamp,
+        isWinning: bids.isWinning,
+        vendorCompanyName: vendors.companyName,
+        vendorEmail: vendors.email,
+        vendorContactPerson: vendors.contactPerson
+      })
+      .from(bids)
+      .leftJoin(vendors, eq(bids.vendorId, vendors.id))
+      .where(eq(bids.auctionId, auctionId))
+      .orderBy(desc(bids.timestamp));
+    
+    console.log(`DEBUG: Raw bid results from DB with vendor info:`, bidResults);
     return bidResults;
   }
 
