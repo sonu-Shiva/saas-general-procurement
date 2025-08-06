@@ -1046,6 +1046,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get auction bids
+  app.get('/api/auctions/:auctionId/bids', async (req, res) => {
+    try {
+      const { auctionId } = req.params;
+      const bids = await storage.getAuctionBids(auctionId);
+      res.json(bids);
+    } catch (error) {
+      console.error("Error fetching auction bids:", error);
+      res.status(500).json({ message: "Failed to fetch auction bids" });
+    }
+  });
+
+  // Place bid in auction
+  app.post('/api/auctions/:auctionId/bid', async (req: any, res) => {
+    try {
+      const { auctionId } = req.params;
+      const { amount } = req.body;
+      const userId = req.user?.claims?.sub;
+
+      console.log('Bid request received:', { auctionId, amount, userId });
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Get user and ensure they are a vendor
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'vendor') {
+        return res.status(403).json({ message: "Only vendors can place bids" });
+      }
+
+      // Get vendor profile
+      let vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        // For development, create vendor profile if it doesn't exist
+        console.log("Creating vendor profile for development user");
+        vendor = await storage.createVendor({
+          companyName: `${user.firstName} ${user.lastName} Company`,
+          email: user.email,
+          contactPerson: `${user.firstName} ${user.lastName}`,
+          phone: '1234567890',
+          address: 'Development Address, Dev City, Dev State, India - 123456',
+          gstNumber: 'DEV123456',
+          userId: userId,
+        });
+      }
+
+      // Get auction and validate
+      const auction = await storage.getAuction(auctionId);
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+
+      if (auction.status !== 'live') {
+        return res.status(400).json({ message: "Auction is not live" });
+      }
+
+      // Validate bid amount
+      const bidAmount = parseFloat(amount);
+      if (isNaN(bidAmount) || bidAmount <= 0) {
+        return res.status(400).json({ message: "Invalid bid amount" });
+      }
+
+      // For reverse auction, bid should be below ceiling price
+      if (auction.reservePrice && bidAmount >= parseFloat(auction.reservePrice)) {
+        return res.status(400).json({ message: "Bid must be below ceiling price" });
+      }
+
+      // Create the bid
+      const bid = await storage.createBid({
+        auctionId: auctionId,
+        vendorId: vendor.id,
+        amount: bidAmount.toString(),
+        status: 'active' as const,
+      });
+
+      console.log('Bid created successfully:', bid);
+
+      // Update auction current bid if this is the lowest bid
+      const allBids = await storage.getAuctionBids(auctionId);
+      const lowestBid = allBids.reduce((lowest: any, current: any) => 
+        parseFloat(current.amount) < parseFloat(lowest.amount) ? current : lowest, bid);
+
+      if (lowestBid.id === bid.id) {
+        await storage.updateAuction(auctionId, {
+          currentBid: bidAmount.toString(),
+          leadingVendorId: vendor.id
+        });
+      }
+
+      res.json({
+        success: true,
+        bid: bid,
+        message: "Bid placed successfully"
+      });
+    } catch (error: any) {
+      console.error("Error placing bid:", error);
+      res.status(500).json({ 
+        message: "Failed to place bid", 
+        error: error.message 
+      });
+    }
+  });
+
   app.post('/api/auctions', async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;

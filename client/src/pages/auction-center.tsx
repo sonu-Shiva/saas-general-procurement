@@ -1324,10 +1324,21 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
     }
 
     try {
-      await apiRequest(`/api/auctions/${auction.id}/bid`, {
+      const response = await fetch(`/api/auctions/${auction.id}/bid`, {
         method: "POST",
-        body: JSON.stringify({ amount: bidAmount })
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amount: bidAmount }),
+        credentials: "include",
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to place bid" }));
+        throw new Error(errorData.message || "Failed to place bid");
+      }
+
+      const result = await response.json();
       
       toast({
         title: "Success",
@@ -1335,7 +1346,11 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
       });
       
       setCurrentBid('');
+      
+      // Refresh bids immediately
+      await fetchBids();
     } catch (error: any) {
+      console.error("Bid submission error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to place bid",

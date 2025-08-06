@@ -1055,7 +1055,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBid(bid: InsertBid): Promise<Bid> {
-    const [newBid] = await this.db.insert(bids).values(bid).returning();
+    const bidData = {
+      id: bid.id || uuidv4(),
+      auctionId: bid.auctionId,
+      vendorId: bid.vendorId,
+      amount: bid.amount,
+      status: bid.status || 'active',
+      timestamp: new Date(),
+    };
+    const [newBid] = await this.db.insert(bids).values(bidData).returning();
     return newBid;
   }
 
