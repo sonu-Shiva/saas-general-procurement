@@ -483,6 +483,8 @@ export default function PurchaseOrders() {
                 ? "No purchase orders have been approved yet."
                 : statusFilter === 'issued'
                 ? "No purchase orders have been issued yet."
+                : statusFilter === 'acknowledged'
+                ? "No purchase orders have been acknowledged yet."
                 : "No purchase orders have been rejected."
               }
             </p>
