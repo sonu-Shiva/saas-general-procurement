@@ -39,16 +39,16 @@ function ErrorFallback({ error }: { error: Error }) {
 
 function testDiscovery() {
   console.log("Testing AI Discovery...");
-  
+
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/vendors/discover', true);
   xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.withCredentials = true;
-  
+
   xhr.onload = function() {
     console.log('XHR Status:', xhr.status);
     console.log('XHR Response length:', xhr.responseText.length);
-    
+
     if (xhr.status === 200) {
       const result = JSON.parse(xhr.responseText);
       console.log('Parsed result:', result);
@@ -57,17 +57,17 @@ function testDiscovery() {
       alert(`ERROR: ${xhr.status} - ${xhr.responseText}`);
     }
   };
-  
+
   xhr.onerror = function() {
     alert('Network error occurred');
   };
-  
+
   const payload = JSON.stringify({
     query: 'textile manufacturers',
     location: '',
     category: ''
   });
-  
+
   console.log('Sending payload:', payload);
   xhr.send(payload);
 }
@@ -113,34 +113,6 @@ function Router() {
           </Route>
         </Switch>
       </main>
-      </div>
-      {/* Test buttons */}
-      <div className="fixed top-4 right-4 flex gap-2 z-50">
-        <button
-          onClick={testDiscovery}
-          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-        >
-          Test Discovery
-        </button>
-        <button
-          onClick={() => {
-            fetch('/api/logout', { method: 'GET', credentials: 'include' })
-              .then(() => {
-                // Force clear browser state
-                localStorage.clear();
-                sessionStorage.clear();
-                // Force page reload to clear all React state
-                window.location.reload();
-              })
-              .catch(() => {
-                // Force reload anyway
-                window.location.reload();
-              });
-          }}
-          className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-        >
-          Test Logout
-        </button>
       </div>
     </div>
   );
