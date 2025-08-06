@@ -1044,6 +1044,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/boms/:id', async (req, res) => {
+    try {
+      const bomId = req.params.id;
+      console.log("Getting BOM with ID:", bomId);
+      
+      const bom = await storage.getBom(bomId);
+      if (!bom) {
+        return res.status(404).json({ message: "BOM not found" });
+      }
+      
+      console.log("Found BOM:", bom.name);
+      
+      // Get BOM items
+      const items = await storage.getBomItems(bomId);
+      console.log("Found BOM items:", items.length);
+      
+      // Return BOM with items
+      res.json({
+        ...bom,
+        items: items
+      });
+    } catch (error) {
+      console.error("Error fetching BOM:", error);
+      res.status(500).json({ message: "Failed to fetch BOM" });
+    }
+  });
+
   // BOM items endpoint for auction form compatibility
   app.get('/api/bom-items/:bomId', isAuthenticated, async (req: any, res) => {
     try {

@@ -598,12 +598,34 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
   // Fetch BOM items when a BOM is selected
   const { data: bomItems = [] } = useQuery({
     queryKey: ["/api/boms", formData.bomId, "items"],
-    queryFn: () => formData.bomId && formData.bomId !== 'none' 
-      ? apiRequest(`/api/boms/${formData.bomId}`)
-      : Promise.resolve([]),
+    queryFn: async () => {
+      if (!formData.bomId || formData.bomId === 'none') {
+        return [];
+      }
+      
+      console.log("Fetching BOM items for BOM ID:", formData.bomId);
+      
+      try {
+        // Try the dedicated BOM items endpoint first
+        const itemsResponse = await apiRequest(`/api/boms/${formData.bomId}/items`);
+        console.log("BOM items response:", itemsResponse);
+        
+        if (Array.isArray(itemsResponse) && itemsResponse.length > 0) {
+          return itemsResponse;
+        }
+        
+        // Fallback: Try getting BOM with items
+        const bomResponse = await apiRequest(`/api/boms/${formData.bomId}`);
+        console.log("BOM response:", bomResponse);
+        
+        return bomResponse?.items || [];
+      } catch (error) {
+        console.error("Error fetching BOM items:", error);
+        return [];
+      }
+    },
     enabled: !!formData.bomId && formData.bomId !== 'none',
     retry: false,
-    select: (data: any) => data?.items || []
   });
 
   const selectedBom = boms.find((bom: any) => bom.id === formData.bomId);
@@ -876,8 +898,19 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           </p>
           {!bomItems || bomItems.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">No items found in this BOM</p>
-              <p className="text-xs text-gray-400 mt-2">Please add items to this BOM first or select a different BOM.</p>
+              {formData.bomId && formData.bomId !== 'none' ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Loading BOM items...</p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    If this persists, the selected BOM may not have any items.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">No items found in this BOM</p>
+                  <p className="text-xs text-gray-400 mt-2">Please add items to this BOM first or select a different BOM.</p>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">

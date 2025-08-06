@@ -515,7 +515,25 @@ export class DatabaseStorage implements IStorage {
 
       console.log("Storage - Found BOM items:", items.length);
       if (items.length > 0) {
-        console.log("Storage - First BOM item sample:", items[0]);
+        console.log("Storage - First BOM item sample:", JSON.stringify(items[0], null, 2));
+        console.log("Storage - All items:", items.map(item => ({
+          id: item.id,
+          itemName: item.itemName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice
+        })));
+      } else {
+        console.log("Storage - No BOM items found for BOM:", bomId);
+        
+        // Check if there are any BOM items at all
+        const allItems = await this.db.select().from(bomItems).limit(5);
+        console.log("Storage - Total BOM items in database:", allItems.length);
+        if (allItems.length > 0) {
+          console.log("Storage - Sample items from other BOMs:", allItems.map(item => ({
+            bomId: item.bomId,
+            itemName: item.itemName
+          })));
+        }
       }
 
       return items;
