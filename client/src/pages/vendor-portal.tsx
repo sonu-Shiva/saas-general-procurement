@@ -76,7 +76,7 @@ export default function VendorPortal() {
   const pendingInvitations = invitations.filter((inv: any) => {
     const invStatus = inv.status || 'invited';
     const isNotExpired = inv.rfxDueDate ? new Date(inv.rfxDueDate) > new Date() : true;
-    return invStatus === 'invited' && isNotExpired;
+    return (invStatus === 'invited' || invStatus === 'active') && invStatus !== 'responded' && isNotExpired;
   });
   
   const respondedInvitations = invitations.filter((inv: any) => inv.status === 'responded');
@@ -212,7 +212,9 @@ export default function VendorPortal() {
                           </div>
                           
                           <div className="flex items-center gap-2 ml-4">
-                            {invitation.status === 'invited' && !isExpired && (
+                            {(invitation.status === 'invited' || invitation.status === 'active') && 
+                             !isExpired && 
+                             invitation.status !== 'responded' && (
                               <Button 
                                 variant="default" 
                                 size="sm" 
