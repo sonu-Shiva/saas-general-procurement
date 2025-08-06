@@ -365,10 +365,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           itemCode: "RES-10K-001",
           description: "10K Ohm resistor, 1/4W",
           category: "Electronics",
-          quantity: 100,
+          quantity: "100.000",
           uom: "pieces",
-          unitPrice: 0.50,
-          totalPrice: 50.00,
+          unitPrice: "0.50",
+          totalPrice: "50.00",
           specifications: "10K Ohm, ±5%, 1/4W"
         },
         {
@@ -377,10 +377,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           itemCode: "CAP-100UF-001",
           description: "100uF electrolytic capacitor",
           category: "Electronics",
-          quantity: 50,
+          quantity: "50.000",
           uom: "pieces",
-          unitPrice: 1.20,
-          totalPrice: 60.00,
+          unitPrice: "1.20",
+          totalPrice: "60.00",
           specifications: "100uF, 25V, Electrolytic"
         },
         {
@@ -389,10 +389,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           itemCode: "LED-RED-5MM",
           description: "5mm red LED",
           category: "Electronics",
-          quantity: 25,
+          quantity: "25.000",
           uom: "pieces",
-          unitPrice: 0.25,
-          totalPrice: 6.25,
+          unitPrice: "0.25",
+          totalPrice: "6.25",
           specifications: "5mm, Red, 20mA, 2V forward voltage"
         }
       ];
@@ -414,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error creating test BOM:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -447,7 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error in debug endpoint:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -773,7 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Error creating RFx:", error);
-      res.status(500).json({ message: "Failed to create RFx", error: error.message });
+      res.status(500).json({ message: "Failed to create RFx", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -830,11 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             email: currentDevUser.email,
             contactPerson: `${currentDevUser.firstName} ${currentDevUser.lastName}`,
             phone: '1234567890',
-            address: 'Development Address',
-            city: 'Dev City',
-            state: 'Dev State',
-            country: 'India',
-            pincode: '123456',
+            address: 'Development Address, Dev City, Dev State, India - 123456',
             gstNumber: 'DEV123456',
             userId: userId,
           });
@@ -976,7 +972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating RFx response:", error);
       res.status(500).json({
         message: "Failed to create RFx response",
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
@@ -997,11 +993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             email: currentDevUser.email,
             contactPerson: `${currentDevUser.firstName} ${currentDevUser.lastName}`,
             phone: '1234567890',
-            address: 'Development Address',
-            city: 'Dev City',
-            state: 'Dev State',
-            country: 'India',
-            pincode: '123456',
+            address: 'Development Address, Dev City, Dev State, India - 123456',
             gstNumber: 'DEV123456',
             userId: currentDevUser.id,
           });
@@ -1023,7 +1015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             invitation: invitation
           });
         } catch (error) {
-          if (error.message?.includes('duplicate') || error.code === '23505') {
+          if ((error as any).message?.includes('duplicate') || (error as any).code === '23505') {
             res.json({
               message: `Development vendor already invited to this RFx`,
               rfxId: rfxId,
@@ -1208,8 +1200,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(items);
     } catch (error) {
       console.error("Error fetching BOM items for auction:", error);
-      console.error("Error stack:", error.stack);
-      res.status(500).json({ message: "Failed to fetch BOM items", error: error.message });
+      console.error("Error stack:", (error as any).stack);
+      res.status(500).json({ message: "Failed to fetch BOM items", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -1236,8 +1228,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(items);
     } catch (error) {
       console.error("Error fetching BOM items via BOM endpoint:", error);
-      console.error("Error stack:", error.stack);
-      res.status(500).json({ message: "Failed to fetch BOM items", error: error.message });
+      console.error("Error stack:", (error as any).stack);
+      res.status(500).json({ message: "Failed to fetch BOM items", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
