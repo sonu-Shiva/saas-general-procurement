@@ -91,71 +91,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else {
       console.log('Development user already exists in database');
     }
-
-    // Create test vendors for development
-    const testVendors = [
-      {
-        id: 'test-vendor-001',
-        companyName: 'TechCorp Solutions Ltd',
-        email: 'contact@techcorp.com',
-        contactPerson: 'John Smith',
-        phone: '+91-80-12345678',
-        address: '123 Tech Park, Bangalore, Karnataka, India - 560001',
-        gstNumber: 'TECH123456789',
-        status: 'approved' as const,
-        categories: ['Technology', 'Software'],
-        userId: null,
-      },
-      {
-        id: 'test-vendor-002',
-        companyName: 'Global Manufacturing Co',
-        email: 'sales@globalmanufacturing.com',
-        contactPerson: 'Sarah Johnson',
-        phone: '+91-80-87654321',
-        address: '456 Industrial Area, Mumbai, Maharashtra, India - 400001',
-        gstNumber: 'GLOB987654321',
-        status: 'approved' as const,
-        categories: ['Manufacturing', 'Automotive'],
-        userId: null,
-      }
-    ];
-
-    for (const vendorData of testVendors) {
-      try {
-        const existingVendor = await storage.getVendor(vendorData.id);
-        if (!existingVendor) {
-          await storage.createVendor(vendorData);
-          console.log(`Created test vendor: ${vendorData.companyName}`);
-        }
-      } catch (error) {
-        console.log(`Test vendor ${vendorData.companyName} already exists or error occurred:`, error);
-      }
-    }
   } catch (error) {
     console.error('Error ensuring development user exists:', error);
   }
 
   // Auth routes
-  app.get('/api/auth/user', async (req, res) => {
+  app.get('/api/auth/user', (req, res) => {
     console.log('Auth check - isLoggedIn:', isLoggedIn);
     if (!isLoggedIn) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
-
-    // If user is a vendor, include vendor profile information
-    let vendorProfile = null;
-    if (currentDevUser.role === 'vendor') {
-      try {
-        vendorProfile = await storage.getVendorByUserId(currentDevUser.id);
-      } catch (error) {
-        console.log('Error fetching vendor profile:', error);
-      }
-    }
-
-    res.json({
-      ...currentDevUser,
-      vendorProfile
-    });
+    res.json(currentDevUser);
   });
 
   app.post('/api/auth/logout', (req, res) => {
