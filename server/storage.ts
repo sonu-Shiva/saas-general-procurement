@@ -1244,6 +1244,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePurchaseOrder(id: string, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
+    // For acknowledge operation, only update specific fields to avoid column mismatch
+    if (updates.status === 'acknowledged') {
+      const [po] = await this.db
+        .update(purchaseOrders)
+        .set({
+          status: 'acknowledged',
+          acknowledgedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(purchaseOrders.id, id))
+        .returning();
+      return po;
+    }
+
+    // For other operations, handle normally
     const updateData: any = {
       updatedAt: new Date(),
       ...updates
@@ -1252,11 +1267,6 @@ export class DatabaseStorage implements IStorage {
     // If status is being updated to approved, set approvedAt if not already set
     if (updates.status === 'approved' && !updates.approvedAt) {
       updateData.approvedAt = new Date();
-    }
-
-    // If status is being updated to acknowledged, set acknowledgedAt
-    if (updates.status === 'acknowledged' && !updates.acknowledgedAt) {
-      updateData.acknowledgedAt = new Date();
     }
 
     const [po] = await this.db
