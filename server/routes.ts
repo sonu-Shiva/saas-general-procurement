@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Restore login state
       isLoggedIn = true;
-      
+
       // Ensure the user exists in the database
       const existingUser = await storage.getUser(currentDevUser.id);
       if (!existingUser) {
@@ -128,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: currentDevUser.role as any,
         });
       }
-      
+
       console.log('Login successful for user:', currentDevUser.email);
       res.json(currentDevUser);
     } catch (error) {
@@ -365,9 +365,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/debug/create-test-bom', async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || 'dev-user-123';
-      
+
       console.log("Creating test BOM with items...");
-      
+
       // Create a test BOM
       const testBom = await storage.createBom({
         name: "Test BOM for Auction",
@@ -376,9 +376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category: "Electronics",
         createdBy: userId,
       });
-      
+
       console.log("Created test BOM:", testBom.id);
-      
+
       // Add some test items to the BOM
       const testItems = [
         {
@@ -418,16 +418,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           specifications: "5mm, Red, 20mA, 2V forward voltage"
         }
       ];
-      
+
       const createdItems = [];
       for (const item of testItems) {
         const createdItem = await storage.createBomItem(item);
         createdItems.push(createdItem);
         console.log("Created BOM item:", createdItem.id, createdItem.itemName);
       }
-      
+
       console.log("Test BOM created successfully with", createdItems.length, "items");
-      
+
       res.json({
         message: "Test BOM created successfully",
         bom: testBom,
@@ -444,10 +444,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/debug/boms', async (req, res) => {
     try {
       console.log("=== DEBUG: Checking BOM data ===");
-      
+
       const allBoms = await storage.getBoms();
       console.log("Total BOMs in database:", allBoms.length);
-      
+
       const bomWithItemCounts = [];
       for (const bom of allBoms) {
         const items = await storage.getBomItems(bom.id);
@@ -459,9 +459,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           items: items.slice(0, 2) // Show first 2 items as sample
         });
       }
-      
+
       console.log("BOMs with item counts:", bomWithItemCounts);
-      
+
       res.json({
         totalBoms: allBoms.length,
         bomsWithItems: bomWithItemCounts.filter(b => b.itemCount > 0).length,
@@ -1080,7 +1080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Place bid in auction
-  app.post('/api/auctions/:auctionId/bid', async (req: any, res) => {
+  app.post("/api/auctions/:auctionId/bid", async (req: any, res) => {
     try {
       const { auctionId } = req.params;
       const { amount } = req.body;
@@ -1382,7 +1382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate required fields
       const { name, version, description, category } = req.body;
-      
+
       if (!name || !version) {
         return res.status(400).json({ 
           message: "Name and version are required fields" 
@@ -1404,7 +1404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Creating BOM with cleaned data:", JSON.stringify(bomData, null, 2));
       const bom = await storage.createBom(bomData);
       console.log("BOM created successfully:", bom);
-      
+
       res.json(bom);
     } catch (error) {
       console.error("Error creating BOM:", error);
@@ -1429,7 +1429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedBom = await storage.updateBom(bomId, req.body);
       console.log("BOM updated successfully:", updatedBom);
-      
+
       res.json(updatedBom);
     } catch (error) {
       console.error("Error updating BOM:", error);
@@ -1458,7 +1458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.deleteBom(bomId);
       console.log("BOM deleted successfully:", bomId);
-      
+
       res.json({ message: "BOM deleted successfully" });
     } catch (error) {
       console.error("Error deleting BOM:", error);
@@ -1546,18 +1546,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bomId = req.params.id;
       console.log("Getting BOM with ID:", bomId);
-      
+
       const bom = await storage.getBom(bomId);
       if (!bom) {
         return res.status(404).json({ message: "BOM not found" });
       }
-      
+
       console.log("Found BOM:", bom.name);
-      
+
       // Get BOM items
       const items = await storage.getBomItems(bomId);
       console.log("Found BOM items:", items.length);
-      
+
       // Return BOM with items
       res.json({
         ...bom,
@@ -1645,7 +1645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newItem = await storage.createBomItem(itemData);
       console.log("BOM item created successfully:", newItem);
-      
+
       res.json(newItem);
     } catch (error) {
       console.error("Error adding BOM item:", error);
@@ -1669,7 +1669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedItem = await storage.updateBomItem(itemId, req.body);
       console.log("BOM item updated successfully:", updatedItem);
-      
+
       res.json(updatedItem);
     } catch (error) {
       console.error("Error updating BOM item:", error);
@@ -1692,7 +1692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.deleteBomItem(itemId);
       console.log("BOM item deleted successfully:", itemId);
-      
+
       res.json({ message: "BOM item deleted successfully" });
     } catch (error) {
       console.error("Error deleting BOM item:", error);

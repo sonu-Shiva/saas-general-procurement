@@ -1264,6 +1264,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
   const [bids, setBids] = useState<any[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Fetch current bids
   const { data: auctionBids = [] } = useQuery({
@@ -1323,6 +1324,17 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
       return;
     }
 
+    // Validate bid amount against ceiling price
+    const ceilingPrice = parseFloat(auction.reservePrice || '0');
+    if (ceilingPrice > 0 && bidAmount >= ceilingPrice) {
+      toast({
+        title: "Error",
+        description: `Bid amount must be less than ceiling price of ₹${ceilingPrice.toLocaleString('en-IN')}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const response = await fetch(`/api/auctions/${auction.id}/bid`, {
         method: "POST",
@@ -1347,8 +1359,9 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
       
       setCurrentBid('');
       
-      // Refresh bids immediately
-      await fetchBids();
+      // Refresh bids immediately using query client
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions", auction.id, "bids"] });
+      
     } catch (error: any) {
       console.error("Bid submission error:", error);
       toast({
@@ -1410,18 +1423,32 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
         </Card>
       </div>
 
-      <div className="flex space-x-4">
-        <div className="flex-1">
-          <Input
-            type="number"
-            placeholder="Enter your bid amount"
-            value={currentBid}
-            onChange={(e) => setCurrentBid(e.target.value)}
-          />
+      <div className="space-y-4">
+        <div className="flex space-x-4">
+          <div className="flex-1">
+            <Input
+              type="number"
+              placeholder="Enter your bid amount"
+              value={currentBid}
+              onChange={(e) => setCurrentBid(e.target.value)}
+              step="0.01"
+              min="0"
+              max={auction.reservePrice ? parseFloat(auction.reservePrice) - 0.01 : undefined}
+            />
+            <div className="text-sm text-muted-foreground mt-1">
+              {auction.reservePrice && (
+                <span>Must be less than ceiling price of ₹{parseFloat(auction.reservePrice).toLocaleString('en-IN')}</span>
+              )}
+            </div>
+          </div>
+          <Button 
+            onClick={submitBid}
+            disabled={!currentBid || parseFloat(currentBid || '0') <= 0 || 
+                     (auction.reservePrice && parseFloat(currentBid || '0') >= parseFloat(auction.reservePrice))}
+          >
+            Submit Bid
+          </Button>
         </div>
-        <Button onClick={submitBid}>
-          Submit Bid
-        </Button>
       </div>
 
       <Card>
