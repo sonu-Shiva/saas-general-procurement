@@ -281,8 +281,8 @@ export default function PurchaseOrders() {
   const getVisibleBuckets = () => {
     if (user?.role === 'vendor') {
       return [
-        { id: 'issued', label: 'Issued', status: 'issued' as const },
-        { id: 'acknowledged', label: 'Acknowledged', status: 'acknowledged' as const }
+        { id: 'issued', label: 'PO Received', status: 'issued' as const },
+        { id: 'acknowledged', label: 'PO Acknowledged', status: 'acknowledged' as const }
       ];
     }
     
@@ -482,7 +482,7 @@ export default function PurchaseOrders() {
                 : statusFilter === 'approved'
                 ? "No purchase orders have been approved yet."
                 : statusFilter === 'issued'
-                ? "No purchase orders have been issued yet."
+                ? "No purchase orders have been received yet."
                 : statusFilter === 'acknowledged'
                 ? "No purchase orders have been acknowledged yet."
                 : "No purchase orders have been rejected."
