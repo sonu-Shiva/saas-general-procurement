@@ -1068,14 +1068,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get auction bids
-  app.get('/api/auctions/:auctionId/bids', async (req, res) => {
+  app.get("/api/auctions/:id/bids", async (req: any, res) => {
     try {
-      const { auctionId } = req.params;
-      const bids = await storage.getAuctionBids(auctionId);
+      const { id } = req.params;
+      console.log('Backend: Fetching bids for auction:', id);
+
+      const bids = await storage
+        .select({
+          id: auctions.bids.id,
+          amount: auctions.bids.amount,
+          vendorId: auctions.bids.vendorId,
+          timestamp: auctions.bids.timestamp,
+          createdAt: auctions.bids.createdAt,
+          vendor: {
+            id: vendors.id,
+            companyName: vendors.companyName,
+            contactPerson: vendors.contactPerson,
+          }
+        })
+        .from(auctions.bids)
+        .leftJoin(vendors, eq(auctions.bids.vendorId, vendors.id))
+        .where(eq(auctions.bids.auctionId, id))
+        .orderBy(desc(auctions.bids.createdAt));
+
+      console.log('Backend: Found bids:', bids.length);
+      console.log('Backend: First bid details:', bids[0]);
+
       res.json(bids);
     } catch (error) {
       console.error("Error fetching auction bids:", error);
-      res.status(500).json({ message: "Failed to fetch auction bids" });
+      res.status(500).json({ error: "Failed to fetch auction bids" });
     }
   });
 

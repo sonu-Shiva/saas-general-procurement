@@ -37,18 +37,40 @@ import {
 
 // Auction Results Component  
 function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreatePO?: (auction: any) => void }) {
-  const { data: bids = [], isLoading } = useQuery({
+  const { data: bids = [], isLoading, error } = useQuery({
     queryKey: ["/api/auctions", auctionId, "bids"],
+    queryFn: async () => {
+      const response = await fetch(`/api/auctions/${auctionId}/bids`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      console.log('Fetched auction results:', data);
+      return data;
+    },
     retry: false,
   });
 
   console.log('Frontend: Received bids data:', bids);
   console.log('Frontend: First bid details:', bids[0]);
-
-
+  console.log('Frontend: Query error:', error);
 
   if (isLoading) {
     return <div className="text-center py-4">Loading results...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-red-600">
+          <Trophy className="w-12 h-12 mx-auto mb-4 text-red-300" />
+          <h3 className="text-lg font-medium mb-2">Error Loading Results</h3>
+          <p className="text-sm">{error.message || 'Failed to load auction results'}</p>
+        </div>
+      </div>
+    );
   }
 
   // Ensure bids is always an array
@@ -74,8 +96,8 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
   // Sort bids by amount (ascending - lowest first)  
   const sortedBids = [...validBids].sort((a: any, b: any) => {
-    const amountA = Number(a.amount) || 999999;
-    const amountB = Number(b.amount) || 999999;
+    const amountA = Number(a.amount || a.bidAmount) || 999999;
+    const amountB = Number(b.amount || b.bidAmount) || 999999;
     return amountA - amountB;
   });
 
@@ -117,15 +139,20 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                       {index + 1}
                     </div>
                     <div>
-                      <div className="font-medium">{bid.vendor?.companyName || bid.vendorName || 'Unknown Vendor'}</div>
+                      <div className="font-medium">
+                        {bid.vendor?.companyName || 
+                         bid.vendorName || 
+                         bid.vendorCompanyName || 
+                         (bid.vendorId ? `Vendor ${bid.vendorId}` : 'Unknown Vendor')}
+                      </div>
                       <div className="text-sm text-muted-foreground">
-                        {formatBidDateTime(bid.timestamp || bid.createdAt)}
+                        {formatBidDateTime(bid.timestamp || bid.createdAt || bid.submittedAt)}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-semibold">
-                      ₹{parseFloat(bid.amount || '0').toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{parseFloat(bid.amount || bid.bidAmount || '0').toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <Badge className={`${
                       index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
