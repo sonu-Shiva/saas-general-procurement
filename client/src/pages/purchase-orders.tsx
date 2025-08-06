@@ -41,7 +41,7 @@ import type { PurchaseOrder, PoLineItem } from "@shared/schema";
 
 export default function PurchaseOrders() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState((user as any)?.role === 'vendor' ? "issued" : "pending_approval");
+  const [statusFilter, setStatusFilter] = useState("pending_approval");
   const [vendorFilter, setVendorFilter] = useState("all");
   const [selectedPO, setSelectedPO] = useState<string | null>(null);
   const [approvalComments, setApprovalComments] = useState("");
@@ -122,39 +122,6 @@ export default function PurchaseOrders() {
       comments: approvalComments
     });
   };
-
-  const acknowledgeMutation = useMutation({
-    mutationFn: async (poId: string) => {
-      await apiRequest(`/api/purchase-orders/${poId}/acknowledge`, {
-        method: "PATCH"
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/purchase-orders"] });
-      toast({
-        title: "Success",
-        description: "Purchase Order acknowledged successfully",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to acknowledge Purchase Order",
-        variant: "destructive",
-      });
-    },
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async (poId: string) => {
@@ -362,35 +329,25 @@ export default function PurchaseOrders() {
         </Card>
       </div>
 
-      {/* Status Tabs for Purchase Orders - Different for Vendors */}
+      {/* 4-Bucket Status Tabs for Purchase Orders */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mb-6">
-        <TabsList className={`grid w-full ${(user as any)?.role === 'vendor' ? 'grid-cols-2' : 'grid-cols-4'}`}>
-          {(user as any)?.role !== 'vendor' && (
-            <>
-              <TabsTrigger value="pending_approval" className="text-yellow-600">
-                <Clock className="w-4 h-4 mr-2" />
-                Pending Approval ({purchaseOrdersArray.filter(po => po.status === 'pending_approval').length})
-              </TabsTrigger>
-              <TabsTrigger value="approved" className="text-green-600">
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Approved ({purchaseOrdersArray.filter(po => po.status === 'approved').length})
-              </TabsTrigger>
-            </>
-          )}
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="pending_approval" className="text-yellow-600">
+            <Clock className="w-4 h-4 mr-2" />
+            Pending Approval ({purchaseOrdersArray.filter(po => po.status === 'pending_approval').length})
+          </TabsTrigger>
+          <TabsTrigger value="approved" className="text-green-600">
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Approved ({purchaseOrdersArray.filter(po => po.status === 'approved').length})
+          </TabsTrigger>
           <TabsTrigger value="issued" className="text-blue-600">
             <Send className="w-4 h-4 mr-2" />
             Issued ({purchaseOrdersArray.filter(po => po.status === 'issued').length})
           </TabsTrigger>
-          <TabsTrigger value="acknowledged" className="text-green-600">
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Acknowledged ({purchaseOrdersArray.filter(po => po.status === 'acknowledged').length})
+          <TabsTrigger value="rejected" className="text-red-600">
+            <XCircle className="w-4 h-4 mr-2" />
+            Rejected ({purchaseOrdersArray.filter(po => po.status === 'rejected').length})
           </TabsTrigger>
-          {(user as any)?.role !== 'vendor' && (
-            <TabsTrigger value="rejected" className="text-red-600">
-              <XCircle className="w-4 h-4 mr-2" />
-              Rejected ({purchaseOrdersArray.filter(po => po.status === 'rejected').length})
-            </TabsTrigger>
-          )}
         </TabsList>
       </Tabs>
 
@@ -446,8 +403,6 @@ export default function PurchaseOrders() {
                 ? "No purchase orders have been approved yet."
                 : statusFilter === 'issued'
                 ? "No purchase orders have been issued yet."
-                : statusFilter === 'acknowledged'
-                ? "No purchase orders have been acknowledged yet."
                 : "No purchase orders have been rejected."
               }
             </p>
@@ -530,24 +485,6 @@ export default function PurchaseOrders() {
                       >
                         <Send className="w-4 h-4 mr-1" />
                         Issue
-                      </Button>
-                    )}
-                    {statusFilter === 'issued' && (user as any)?.role === 'vendor' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-200 hover:bg-green-50"
-                        onClick={() => acknowledgeMutation.mutate(po.id)}
-                        disabled={acknowledgeMutation.isPending}
-                      >
-                        {acknowledgeMutation.isPending ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                        ) : (
-                          <>
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Acknowledge
-                          </>
-                        )}
                       </Button>
                     )}
                     <Dialog>
