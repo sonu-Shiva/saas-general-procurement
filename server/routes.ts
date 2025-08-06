@@ -1107,6 +1107,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get auction results
+  app.get('/api/auctions/:id/results', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+
+      // Get auction details
+      const auction = await storage.getAuction(id); // Using storage instead of direct db query
+
+      if (!auction) {
+        return res.status(404).json({ error: 'Auction not found' });
+      }
+
+      // Get all bids for this auction with vendor details
+      const bids = await storage.getAuctionBids(id); // Using storage instead of direct db query
+
+      // Mark the winning bid (lowest amount for reverse auction)
+      const results = bids.map((bid, index) => ({
+        ...bid,
+        rank: index + 1,
+        isWinner: index === 0,
+        vendorName: bid.vendorCompanyName || `Vendor ${bid.vendorId.substring(0, 8)}`,
+        companyName: bid.vendorCompanyName // Explicitly include companyName as vendorName
+      }));
+
+      res.json({
+        auction,
+        results
+      });
+    } catch (error) {
+      console.error('Error getting auction results:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
 
   // Place bid in auction

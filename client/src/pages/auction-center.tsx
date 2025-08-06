@@ -75,7 +75,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
   // Ensure bids is always an array
   const bidsArray = Array.isArray(bids) ? bids : [];
-  
+
   // Check if we have any bids
   if (bidsArray.length === 0) {
     return (
@@ -143,7 +143,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                         {bid.vendor?.companyName || 
                          bid.vendorName || 
                          bid.vendorCompanyName || 
-                         (bid.vendorId ? `Vendor ${bid.vendorId}` : 'Unknown Vendor')}
+                         (bid.vendorId ? `Vendor ${bid.vendorId.substring(0, 8)}` : 'Unknown Vendor')}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {formatBidDateTime(bid.timestamp || bid.createdAt || bid.submittedAt)}
@@ -168,7 +168,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
             </Card>
           ))}
         </div>
-        
+
         {/* Create PO Button for completed auctions */}
         {sortedBids.length > 0 && onCreatePO && (
           <div className="text-center mt-6 pt-4 border-t">
@@ -235,7 +235,7 @@ export default function AuctionCenter() {
         const data = JSON.parse(event.data);
         if (data.type === 'auction_status_change') {
           queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
-          
+
           if (data.status === 'live') {
             setLiveAuctions(prev => new Set(prev).add(data.auctionId));
           } else {
@@ -269,7 +269,7 @@ export default function AuctionCenter() {
 
   // Ensure auctions is always an array and define filteredAuctions
   const auctionsArray = Array.isArray(auctions) ? auctions : [];
-  
+
   const filteredAuctions = auctionsArray.filter((auction: any) => {
     const matchesSearch = auction.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          auction.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -283,7 +283,7 @@ export default function AuctionCenter() {
         method: 'PATCH',
         credentials: "include",
       });
-      
+
       if (response.ok) {
         toast({
           title: "Success",
@@ -502,12 +502,12 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
     const end = new Date(endTime);
     const now = new Date();
     const diff = end.getTime() - now.getTime();
-    
+
     if (diff <= 0) return "Ended";
-    
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     return `${hours}h ${minutes}m remaining`;
   };
 
@@ -630,12 +630,12 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         console.log("No BOM ID selected, returning empty array");
         return [];
       }
-      
+
       console.log("=== AUCTION FORM: Fetching BOM items ===");
       console.log("BOM ID:", formData.bomId);
       console.log("BOM ID type:", typeof formData.bomId);
       console.log("BOM ID length:", formData.bomId.length);
-      
+
       try {
         // Try the dedicated BOM items endpoint first
         console.log("Trying endpoint: /api/boms/" + formData.bomId + "/items");
@@ -644,26 +644,26 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         console.log("Response type:", typeof itemsResponse);
         console.log("Response is array:", Array.isArray(itemsResponse));
         console.log("Response length:", itemsResponse?.length);
-        
+
         if (Array.isArray(itemsResponse) && itemsResponse.length > 0) {
           console.log("Found items via items endpoint:", itemsResponse.length);
           console.log("First item sample:", itemsResponse[0]);
           return itemsResponse;
         }
-        
+
         console.log("No items from items endpoint, trying full BOM endpoint");
-        
+
         // Fallback: Try getting BOM with items
         const bomResponse = await apiRequest(`/api/boms/${formData.bomId}`);
         console.log("BOM response:", bomResponse);
         console.log("BOM response items:", bomResponse?.items);
         console.log("BOM response items type:", typeof bomResponse?.items);
         console.log("BOM response items is array:", Array.isArray(bomResponse?.items));
-        
+
         const items = bomResponse?.items || [];
         console.log("Final items array:", items);
         console.log("Final items length:", items.length);
-        
+
         return items;
       } catch (error) {
         console.error("Error fetching BOM items:", error);
@@ -739,7 +739,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!formData.name || !formData.description) {
       toast({
@@ -1017,7 +1017,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Editable quantity and price for selected items */}
                       {formData.selectedBomItems.includes(item.id) && (
                         <div className="grid grid-cols-3 gap-2 mt-2 p-2 bg-blue-50 rounded">
@@ -1057,7 +1057,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
               ))}
             </div>
           )}
-          
+
           {/* Display calculated ceiling price */}
           {formData.selectedBomItems.length > 0 && (
             <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
@@ -1144,13 +1144,13 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
     const end = new Date(endTime);
     const now = new Date();
     const diff = end.getTime() - now.getTime();
-    
+
     if (diff <= 0) return "Auction Ended";
-    
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
+
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
@@ -1222,14 +1222,14 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
               (() => {
                 // Sort bids by amount (lowest first for ranking)
                 const sortedByAmount = [...bids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
-                
+
                 // Sort bids by timestamp (latest first for display)
                 const sortedByTime = [...bids].sort((a: any, b: any) => new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime());
-                
+
                 return sortedByTime.map((bid: any, index: number) => {
                   // Find the ranking based on amount
                   const rankIndex = sortedByAmount.findIndex(b => b.id === bid.id);
-                  
+
                   return (
                     <div key={bid.id} className="flex justify-between items-center p-3 bg-muted/30 rounded">
                       <div className="flex items-center space-x-3">
@@ -1330,7 +1330,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
     const sortedBids = [...bids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
     const userBids = sortedBids.filter((bid: any) => bid.vendorId === (user as any)?.id);
     if (userBids.length === 0) return null;
-    
+
     const bestUserBid = userBids[0];
     const rankIndex = sortedBids.findIndex(bid => bid.id === bestUserBid.id);
     return rankIndex + 1;
@@ -1378,17 +1378,17 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
       }
 
       const result = await response.json();
-      
+
       toast({
         title: "Success",
         description: "Your bid has been placed successfully",
       });
-      
+
       setCurrentBid('');
-      
+
       // Refresh bids immediately using query client
       queryClient.invalidateQueries({ queryKey: ["/api/auctions", auction.id, "bids"] });
-      
+
     } catch (error: any) {
       console.error("Bid submission error:", error);
       toast({
@@ -1495,15 +1495,15 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
               (() => {
                 // Sort bids by amount (lowest first for ranking)
                 const sortedByAmount = [...bids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
-                
+
                 // Sort bids by timestamp (latest first for display)
                 const sortedByTime = [...bids].sort((a: any, b: any) => new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime());
-                
+
                 return sortedByTime.map((bid: any, index: number) => {
                   // Find the ranking based on amount
                   const rankIndex = sortedByAmount.findIndex(b => b.id === bid.id);
                   const isCurrentUser = bid.vendorId === (user as any)?.id;
-                  
+
                   return (
                     <div key={bid.id} className={`flex justify-between items-center p-3 rounded ${
                       isCurrentUser ? 'bg-blue-50 border border-blue-200' : 'bg-muted/30'
