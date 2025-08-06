@@ -1148,6 +1148,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/boms', async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      console.log("Creating BOM for user:", userId);
+      console.log("Request body:", req.body);
+
+      const bomData = {
+        ...req.body,
+        createdBy: userId,
+      };
+
+      console.log("Creating BOM with data:", bomData);
+      const bom = await storage.createBom(bomData);
+      console.log("BOM created successfully:", bom);
+      
+      res.json(bom);
+    } catch (error) {
+      console.error("Error creating BOM:", error);
+      res.status(500).json({ 
+        message: "Failed to create BOM", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  app.put('/api/boms/:id', async (req: any, res) => {
+    try {
+      const bomId = req.params.id;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      console.log("Updating BOM:", bomId, "for user:", userId);
+      console.log("Update data:", req.body);
+
+      const updatedBom = await storage.updateBom(bomId, req.body);
+      console.log("BOM updated successfully:", updatedBom);
+      
+      res.json(updatedBom);
+    } catch (error) {
+      console.error("Error updating BOM:", error);
+      res.status(500).json({ 
+        message: "Failed to update BOM", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  app.delete('/api/boms/:id', async (req: any, res) => {
+    try {
+      const bomId = req.params.id;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      console.log("Deleting BOM:", bomId, "for user:", userId);
+
+      // Check if BOM exists and belongs to user
+      const existingBom = await storage.getBom(bomId);
+      if (!existingBom) {
+        return res.status(404).json({ message: "BOM not found" });
+      }
+
+      await storage.deleteBom(bomId);
+      console.log("BOM deleted successfully:", bomId);
+      
+      res.json({ message: "BOM deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting BOM:", error);
+      res.status(500).json({ 
+        message: "Failed to delete BOM", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  app.post('/api/boms/:id/copy', async (req: any, res) => {
+    try {
+      const bomId = req.params.id;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { name, version } = req.body;
+      if (!name || !version) {
+        return res.status(400).json({ message: "Both name and version are required for copying BOM" });
+      }
+
+      console.log("Copying BOM:", bomId, "with new name:", name, "version:", version);
+
+      // Check if BOM with same name/version exists
+      const existingBoms = await storage.getBoms();
+      const duplicate = existingBoms.find(bom => bom.name === name && bom.version === version);
+      if (duplicate) {
+        return res.status(400).json({ message: "BOM with this name and version already exists" });
+      }
+
+      // Get original BOM
+      const originalBom = await storage.getBom(bomId);
+      if (!originalBom) {
+        return res.status(404).json({ message: "Original BOM not found" });
+      }
+
+      // Create copy
+      const newBomData = {
+        name,
+        version,
+        description: `Copy of ${originalBom.name} v${originalBom.version}`,
+        category: originalBom.category,
+        validFrom: originalBom.validFrom,
+        validTo: originalBom.validTo,
+        tags: originalBom.tags,
+        createdBy: userId,
+      };
+
+      const newBom = await storage.createBom(newBomData);
+      console.log("BOM copy created:", newBom.id);
+
+      // Copy BOM items
+      const originalItems = await storage.getBomItems(bomId);
+      for (const item of originalItems) {
+        const itemData = {
+          bomId: newBom.id,
+          productId: item.productId,
+          itemName: item.itemName,
+          itemCode: item.itemCode,
+          description: item.description,
+          category: item.category,
+          quantity: item.quantity,
+          uom: item.uom,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          specifications: item.specifications,
+        };
+        await storage.createBomItem(itemData);
+      }
+
+      console.log("BOM copied successfully with", originalItems.length, "items");
+      res.json(newBom);
+    } catch (error) {
+      console.error("Error copying BOM:", error);
+      res.status(500).json({ 
+        message: "Failed to copy BOM", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
   app.get('/api/boms/:id', async (req, res) => {
     try {
       const bomId = req.params.id;
@@ -1176,7 +1331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // BOM items endpoint for auction form compatibility
-  app.get('/api/bom-items/:bomId', isAuthenticated, async (req: any, res) => {
+  app.get('/api/bom-items/:bomId', async (req: any, res) => {
     try {
       const { bomId } = req.params;
       console.log("=== FETCHING BOM ITEMS FOR AUCTION ===");
@@ -1206,7 +1361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alternative endpoint that matches the BOM structure
-  app.get('/api/boms/:bomId/items', isAuthenticated, async (req: any, res) => {
+  app.get('/api/boms/:bomId/items', async (req: any, res) => {
     try {
       const { bomId } = req.params;
       console.log("=== FETCHING BOM ITEMS VIA BOM ENDPOINT ===");
@@ -1230,6 +1385,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching BOM items via BOM endpoint:", error);
       console.error("Error stack:", (error as any).stack);
       res.status(500).json({ message: "Failed to fetch BOM items", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  app.post('/api/boms/:bomId/items', async (req: any, res) => {
+    try {
+      const { bomId } = req.params;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      console.log("Adding item to BOM:", bomId);
+      console.log("Item data:", req.body);
+
+      const itemData = {
+        bomId,
+        ...req.body,
+      };
+
+      const newItem = await storage.createBomItem(itemData);
+      console.log("BOM item created successfully:", newItem);
+      
+      res.json(newItem);
+    } catch (error) {
+      console.error("Error adding BOM item:", error);
+      res.status(500).json({ 
+        message: "Failed to add BOM item", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  app.put('/api/boms/:bomId/items/:itemId', async (req: any, res) => {
+    try {
+      const { bomId, itemId } = req.params;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      console.log("Updating BOM item:", itemId, "in BOM:", bomId);
+      console.log("Update data:", req.body);
+
+      const updatedItem = await storage.updateBomItem(itemId, req.body);
+      console.log("BOM item updated successfully:", updatedItem);
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating BOM item:", error);
+      res.status(500).json({ 
+        message: "Failed to update BOM item", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  app.delete('/api/boms/:bomId/items/:itemId', async (req: any, res) => {
+    try {
+      const { bomId, itemId } = req.params;
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      console.log("Deleting BOM item:", itemId, "from BOM:", bomId);
+
+      await storage.deleteBomItem(itemId);
+      console.log("BOM item deleted successfully:", itemId);
+      
+      res.json({ message: "BOM item deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting BOM item:", error);
+      res.status(500).json({ 
+        message: "Failed to delete BOM item", 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
     }
   });
 

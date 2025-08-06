@@ -557,6 +557,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBom(id: string): Promise<void> {
+    try {
+      console.log("Storage - Deleting BOM:", id);
+      
+      // First delete all BOM items
+      await this.db.delete(bomItems).where(eq(bomItems.bomId, id));
+      console.log("Storage - Deleted BOM items for BOM:", id);
+      
+      // Then delete the BOM
+      await this.db.delete(boms).where(eq(boms.id, id));
+      console.log("Storage - Deleted BOM:", id);
+    } catch (error) {
+      console.error("Storage - Error deleting BOM:", error);
+      throw error;
+    }
+  }
+
+  async updateBomItem(id: string, updates: Partial<InsertBomItem>): Promise<BomItem> {
+    const [updatedItem] = await this.db
+      .update(bomItems)
+      .set(updates)
+      .where(eq(bomItems.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  async deleteBomItem(id: string): Promise<void> {
+    await this.db.delete(bomItems).where(eq(bomItems.id, id));
+  }
+
+  async deleteBom(id: string): Promise<void> {
     // Delete BOM items first due to foreign key constraint
     await this.deleteBomItems(id);
     // Delete the BOM

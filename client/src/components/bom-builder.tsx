@@ -132,32 +132,30 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     mutationFn: async (data: any) => {
       console.log("Creating BOM with data:", data);
       console.log("BOM items to be added:", bomItems);
-      
+
       const isEditing = !!existingBom?.id;
-      
+
       // Create or update the BOM
       const bomPayload = {
         ...data,
         validFrom: data.validFrom || undefined,
         validTo: data.validTo || undefined,
       };
-      
+
       console.log("BOM payload:", bomPayload);
-      
-      const bomResponse = isEditing 
-        ? await apiRequest(`/api/boms/${existingBom.id}`, {
-            method: "PUT",
-            body: JSON.stringify(bomPayload),
-          })
-        : await apiRequest("/api/boms", {
-            method: "POST",
-            body: JSON.stringify(bomPayload),
-          });
+
+      const bomResponse = await apiRequest(
+        existingBom ? `/api/boms/${existingBom.id}` : "/api/boms",
+        {
+          method: existingBom ? "PUT" : "POST",
+          body: JSON.stringify(bomPayload),
+        }
+      );
       console.log("BOM response:", bomResponse);
-      
+
       const bomId = bomResponse ? bomResponse.id || existingBom?.id : null;
       console.log("Extracted BOM ID:", bomId);
-      
+
       // Handle BOM items
       if (bomId && bomItems.length > 0) {
         // If editing, we'll clear existing items and add new ones
@@ -173,7 +171,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
             console.log("Could not clear existing items, adding new ones");
           }
         }
-        
+
         // Add all BOM items
         for (const item of bomItems) {
           const itemPayload = {
@@ -191,7 +189,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
           console.log("Adding BOM item:", itemPayload);
           console.log("Item type:", item.productId ? 'Product Catalogue Item' : 'Custom Item');
           console.log("ProductId:", item.productId);
-          
+
           try {
             const itemResponse = await apiRequest(`/api/boms/${bomId}/items`, {
               method: "POST",
@@ -205,7 +203,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
           }
         }
       }
-      
+
       return bomResponse;
     },
     onSuccess: (data) => {
@@ -221,7 +219,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       });
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("BOM creation/update error:", error);
       if (isUnauthorizedError(error as Error)) {
         toast({
@@ -246,7 +244,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     console.log("Form submitted with data:", data);
     console.log("Current BOM items:", bomItems);
     console.log("Form validation errors:", form.formState.errors);
-    
+
     if (bomItems.length === 0 && data.isActive !== false) {
       toast({
         title: "Error",
@@ -255,14 +253,14 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
       });
       return;
     }
-    
+
     const submitData = {
       ...data,
       isActive: true, // Explicitly set as active when creating/updating BOM
       validFrom: data.validFrom || undefined,
       validTo: data.validTo || undefined,
     };
-    
+
     console.log("Submitting BOM data:", submitData);
     createBomMutation.mutate(submitData);
   };
@@ -285,7 +283,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     const existingItemIndex = bomItems.findIndex(item => 
       item.productId === selectedProduct.id && !item.isCustomItem
     );
-    
+
     if (existingItemIndex >= 0) {
       // Update existing item quantity
       setBomItems(prev => prev.map((item, index) => 
@@ -336,7 +334,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     };
 
     setBomItems(prev => [...prev, newItem]);
-    
+
     // Reset form
     setCustomItemForm({
       itemName: '',
@@ -543,7 +541,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
                             <Input placeholder="Search by product name..." className="pl-10" />
                           </div>
                         </div>
-                        
+
                         <div className="max-h-64 overflow-y-auto space-y-2">
                           {products.map((product: any) => (
                             <div
@@ -642,7 +640,7 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
                             />
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="text-sm font-medium text-foreground mb-2 block">
                             Description
