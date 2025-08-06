@@ -140,9 +140,9 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                     </div>
                     <div>
                       <div className="font-medium">
-                        {bid.vendor?.companyName || 
+                        {bid.vendorCompanyName || 
+                         bid.vendor?.companyName || 
                          bid.vendorName || 
-                         bid.vendorCompanyName || 
                          (bid.vendorId ? `Vendor ${bid.vendorId.substring(0, 8)}` : 'Unknown Vendor')}
                       </div>
                       <div className="text-sm text-muted-foreground">
