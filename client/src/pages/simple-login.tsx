@@ -21,16 +21,18 @@ export default function SimpleLogin() {
     setIsLoading(true);
 
     try {
-      console.log("Attempting login with role:", selectedRole);
+      console.log("🎯 Starting login process with role:", selectedRole);
 
       // First login to restore authentication
+      console.log("📞 Calling login function...");
       const user = await login();
-      console.log("Login successful, user:", user);
+      console.log("✅ Login successful, user:", user);
 
       // Then switch to selected role if different from current
       if (user && user.role !== selectedRole) {
-        console.log("Switching role from", user.role, "to", selectedRole);
+        console.log("🔄 Switching role from", user.role, "to", selectedRole);
         await switchRole(selectedRole);
+        console.log("✅ Role switch successful");
       }
 
       toast({
@@ -38,15 +40,16 @@ export default function SimpleLogin() {
         description: `Logged in as ${selectedRole.replace('_', ' ')}`,
       });
 
+      console.log("🎉 Login process complete, redirecting...");
       // Short delay to ensure state is updated
       setTimeout(() => {
         setLocation("/");
       }, 500);
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("❌ Login error:", error);
       toast({
         title: "Login Failed",
-        description: "Please try again",
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
     } finally {

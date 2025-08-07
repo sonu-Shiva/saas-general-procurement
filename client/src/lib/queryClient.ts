@@ -65,7 +65,10 @@ export const queryClient = new QueryClient({
 
           if (!response.ok) {
             if (isUnauthorizedError(response.status)) {
-              // Let the auth wrapper handle this
+              // For auth endpoints, return null instead of throwing to prevent loops
+              if (url === '/api/auth/user') {
+                return null;
+              }
               throw new Error('Unauthorized');
             }
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -82,7 +85,7 @@ export const queryClient = new QueryClient({
       },
       retry: (failureCount, error) => {
         // Don't retry on auth errors
-        if (error instanceof Error && error.message === 'Unauthorized') {
+        if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('401'))) {
           return false;
         }
         return failureCount < 3;

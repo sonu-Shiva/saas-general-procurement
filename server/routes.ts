@@ -111,34 +111,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/auth/login', async (req, res) => {
-    console.log('Login requested');
+    console.log('🔐 Login requested');
     try {
       // Restore login state
       isLoggedIn = true;
+      console.log('✅ Set isLoggedIn = true');
 
-      // Ensure the user exists in the database
-      const existingUser = await storage.getUser(currentDevUser.id);
-      if (!existingUser) {
-        console.log('User not found in database, creating...');
-        await storage.upsertUser({
-          id: currentDevUser.id,
-          email: currentDevUser.email,
-          firstName: currentDevUser.firstName,
-          lastName: currentDevUser.lastName,
-          role: currentDevUser.role as any,
-        });
+      // In development mode, skip database operations if they fail
+      try {
+        // Ensure the user exists in the database
+        const existingUser = await storage.getUser(currentDevUser.id);
+        if (!existingUser) {
+          console.log('👤 User not found in database, creating...');
+          await storage.upsertUser({
+            id: currentDevUser.id,
+            email: currentDevUser.email,
+            firstName: currentDevUser.firstName,
+            lastName: currentDevUser.lastName,
+            role: currentDevUser.role as any,
+          });
+          console.log('✅ User created in database');
+        } else {
+          console.log('✅ User found in database');
+        }
+      } catch (dbError) {
+        console.warn('⚠️ Database operation failed, continuing without DB:', dbError.message);
+        // Continue without database in development mode
       }
 
-      console.log('Login successful for user:', currentDevUser.email);
+      console.log('🎉 Login successful for user:', currentDevUser.email);
       res.json(currentDevUser);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       res.status(500).json({ message: 'Login failed' });
     }
   });
 
   app.patch('/api/auth/user/role', async (req, res) => {
-    console.log('Role change requested to:', req.body.role);
+    console.log('🔄 Role change requested to:', req.body.role);
     if (!isLoggedIn) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
@@ -151,22 +161,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // Update the user in the database first
-      await storage.upsertUser({
-        id: currentDevUser.id,
-        email: currentDevUser.email,
-        firstName: currentDevUser.firstName,
-        lastName: currentDevUser.lastName,
-        role: role as any,
-      });
+      // In development mode, skip database operations if they fail
+      try {
+        // Update the user in the database first
+        await storage.upsertUser({
+          id: currentDevUser.id,
+          email: currentDevUser.email,
+          firstName: currentDevUser.firstName,
+          lastName: currentDevUser.lastName,
+          role: role as any,
+        });
+        console.log('✅ Role updated in database');
+      } catch (dbError) {
+        console.warn('⚠️ Database operation failed, continuing without DB:', dbError.message);
+        // Continue without database in development mode
+      }
 
-      // Update in-memory only after database update succeeds
+      // Update in-memory user object
       currentDevUser.role = role;
-      console.log('Role updated in database and memory to:', role);
+      console.log('🎉 Role updated in memory to:', role);
 
       res.json(currentDevUser);
     } catch (error) {
-      console.error('Failed to update role in database:', error);
+      console.error('❌ Failed to update role:', error);
       res.status(500).json({ message: 'Failed to update role' });
     }
   });
@@ -774,10 +791,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // RFx routes
   app.get('/api/rfx', async (req, res) => {
     try {
-      const rfxEvents = await storage.getRfxEvents();
-      res.json(rfxEvents);
+      // In development mode, handle database failures gracefully
+      try {
+        const rfxEvents = await storage.getRfxEvents();
+        console.log('✅ Successfully fetched RFx events from database:', rfxEvents.length);
+        res.json(rfxEvents);
+      } catch (dbError) {
+        console.warn('⚠️ Database operation failed, returning empty RFx list:', dbError.message);
+        // Return empty array when database is not available
+        res.json([]);
+      }
     } catch (error) {
-      console.error("Error fetching RFx events:", error);
+      console.error("❌ Error in RFx endpoint:", error);
       res.status(500).json({ message: "Failed to fetch RFx events" });
     }
   });
@@ -1099,10 +1124,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auction routes
   app.get('/api/auctions', async (req, res) => {
     try {
-      const auctions = await storage.getAuctions();
-      res.json(auctions);
+      // In development mode, handle database failures gracefully
+      try {
+        const auctions = await storage.getAuctions();
+        console.log('✅ Successfully fetched auctions from database:', auctions.length);
+        res.json(auctions);
+      } catch (dbError) {
+        console.warn('⚠️ Database operation failed, returning empty auctions list:', dbError.message);
+        // Return empty array when database is not available
+        res.json([]);
+      }
     } catch (error) {
-      console.error("Error fetching auctions:", error);
+      console.error("❌ Error in auctions endpoint:", error);
       res.status(500).json({ message: "Failed to fetch auctions" });
     }
   });

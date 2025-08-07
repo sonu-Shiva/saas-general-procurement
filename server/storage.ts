@@ -62,6 +62,14 @@ import { nanoid } from "nanoid";
 import { v4 as uuidv4 } from 'uuid';
 import { desc, eq, like, asc, and, sql, inArray, isNull, or } from "drizzle-orm";
 
+// Helper function to check if database is available
+function requireDatabase() {
+  if (!db) {
+    throw new Error('Database not available in development mode');
+  }
+  return db;
+}
+
 export interface IStorage {
   // User operations - mandatory for Replit Auth
   getUser(id: string): Promise<User | undefined>;
@@ -170,21 +178,22 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  private db = db; // Assuming db is initialized and exported from ./db
-
   // User operations - mandatory for Replit Auth
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await this.db.select().from(users).where(eq(users.id, id));
+    const database = requireDatabase();
+    const [user] = await database.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await this.db.select().from(users).where(eq(users.email, email));
+    const database = requireDatabase();
+    const [user] = await database.select().from(users).where(eq(users.email, email));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await this.db
+    const database = requireDatabase();
+    const [user] = await database
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
@@ -610,12 +619,12 @@ export class DatabaseStorage implements IStorage {
     await this.db.delete(bomItems).where(eq(bomItems.id, id));
   }
 
-  async deleteBom(id: string): Promise<void> {
-    // Delete BOM items first due to foreign key constraint
-    await this.deleteBomItems(id);
-    // Delete the BOM
-    await this.db.delete(boms).where(eq(boms.id, id));
-  }
+  // async deleteBom(id: string): Promise<void> {
+  //   // Delete BOM items first due to foreign key constraint
+  //   await this.deleteBomItems(id);
+  //   // Delete the BOM
+  //   await this.db.delete(boms).where(eq(boms.id, id));
+  // }
 
   async searchVendors(query: string, filters?: { location?: string; category?: string; certifications?: string[] }): Promise<Vendor[]> {
     let dbQuery = this.db.select().from(vendors);
@@ -658,7 +667,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRfxEvents(filters?: { status?: string; type?: string; createdBy?: string }): Promise<RfxEvent[]> {
-    let query = this.db.select().from(rfxEvents);
+    const database = requireDatabase();
+    let query = database.select().from(rfxEvents);
 
     if (filters) {
       const conditions = [];
@@ -864,13 +874,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(rfxResponses.submittedAt));
   }
 
-  async getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]> {
-    return await this.db
-      .select()
-      .from(rfxResponses)
-      .where(eq(rfxResponses.vendorId, vendorId))
-      .orderBy(desc(rfxResponses.submittedAt));
-  }
+  // async getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]> {
+  //   return await this.db
+  //     .select()
+  //     .from(rfxResponses)
+  //     .where(eq(rfxResponses.vendorId, vendorId))
+  //     .orderBy(desc(rfxResponses.submittedAt));
+  // }
 
   async getChildRfxEvents(parentRfxId: string): Promise<RfxEvent[]> {
     return await this.db
@@ -934,6 +944,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuctions(filters?: { status?: string; createdBy?: string }): Promise<Auction[]> {
+    const database = requireDatabase();
     const conditions = [];
 
     if (filters?.status) {
@@ -944,7 +955,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(auctions.createdBy, filters.createdBy));
     }
 
-    const auctionList = await this.db
+    const auctionList = await database
       .select()
       .from(auctions)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
