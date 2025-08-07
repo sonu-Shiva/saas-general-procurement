@@ -43,8 +43,11 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
+  // Mount vite middleware at the base path
+  app.use('/general-procurement', vite.middlewares);
+  
+  // Handle all routes under the base path
+  app.use("/general-procurement/*", async (req, res, next) => {
     const url = req.originalUrl;
 
     try {
@@ -79,10 +82,16 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static files from the base path
+  app.use('/general-procurement', express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // Serve index.html for all routes under the base path
+  app.use("/general-procurement/*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
+  });
+  
+  // Redirect root to base path
+  app.get("/", (_req, res) => {
+    res.redirect("/general-procurement");
   });
 }

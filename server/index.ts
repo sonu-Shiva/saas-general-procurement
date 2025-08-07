@@ -41,6 +41,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Register routes returns a server, but we need to handle the base path differently
+  // We'll pass the main app and let registerRoutes create the server
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

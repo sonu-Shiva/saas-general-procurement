@@ -43,6 +43,9 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Base path configuration
+const BASE_PATH = '/general-procurement';
+
 // Mock authentication check - replace with actual auth middleware
 const isAuthenticated = async (req: any, res: any, next: any) => {
   // For development, we assume the user is authenticated if a user ID is present in the JWT claims
@@ -78,8 +81,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Skip database operations in development mode since database is disabled
   console.log('Development mode: Skipping database user creation (database disabled)');
 
-  // Auth routes
-  app.get('/api/auth/user', (req, res) => {
+  // Auth routes - prefixed with base path
+  app.get(`${BASE_PATH}/api/auth/user`, (req, res) => {
     console.log('Auth check - isLoggedIn:', isLoggedIn);
     if (!isLoggedIn) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -87,13 +90,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(currentDevUser);
   });
 
-  app.post('/api/auth/logout', (req, res) => {
+  app.post(`${BASE_PATH}/api/auth/logout`, (req, res) => {
     console.log('Logout requested');
     isLoggedIn = false;
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post(`${BASE_PATH}/api/auth/login`, async (req, res) => {
     console.log('🔐 Login requested');
     try {
       // Restore login state
@@ -111,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/auth/user/role', async (req, res) => {
+  app.patch(`${BASE_PATH}/api/auth/user/role`, async (req, res) => {
     console.log('🔄 Role change requested to:', req.body.role);
     if (!isLoggedIn) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -204,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Object storage routes for file uploads
-  app.post('/api/objects/upload', async (req, res) => {
+  app.post(`${BASE_PATH}/api/objects/upload`, async (req, res) => {
     try {
       const { fileName, entityType = 'general', entityId } = req.body;
       const objectStorageService = new ObjectStorageService();
@@ -231,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Terms acceptance endpoint
-  app.post('/api/terms/accept', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/terms/accept`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -255,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check terms acceptance status
-  app.get('/api/terms/check', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/terms/check`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -279,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor RFx Response endpoints
-  app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/vendor/rfx-invitations`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -300,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/vendor/rfx-responses', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/vendor/rfx-responses`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -320,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/vendor/rfx-responses', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/vendor/rfx-responses`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -370,7 +373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test data creation endpoint
-  app.post('/api/debug/create-test-bom', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/debug/create-test-bom`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || 'dev-user-123';
 
@@ -449,7 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug endpoint to check BOM data
-  app.get('/api/debug/boms', async (req, res) => {
+  app.get(`${BASE_PATH}/api/debug/boms`, async (req, res) => {
     try {
       console.log("=== DEBUG: Checking BOM data ===");
 
@@ -482,7 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard routes
-  app.get('/api/dashboard/stats', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/dashboard/stats`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -506,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor routes
-  app.get('/api/vendors', async (req, res) => {
+  app.get(`${BASE_PATH}/api/vendors`, async (req, res) => {
     try {
       const vendors = await storage.getVendors();
       res.json(vendors);
@@ -516,7 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/vendors', async (req, res) => {
+  app.post(`${BASE_PATH}/api/vendors`, async (req, res) => {
     try {
       const vendor = await storage.createVendor(req.body);
       res.json(vendor);
@@ -526,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/vendors/:id', async (req, res) => {
+  app.patch(`${BASE_PATH}/api/vendors/:id`, async (req, res) => {
     try {
       const vendorId = req.params.id;
 
@@ -544,7 +547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/vendors/:id', async (req, res) => {
+  app.delete(`${BASE_PATH}/api/vendors/:id`, async (req, res) => {
     try {
       const vendorId = req.params.id;
 
@@ -566,7 +569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor discovery route
-  app.post('/api/vendors/discover', async (req, res) => {
+  app.post(`${BASE_PATH}/api/vendors/discover`, async (req, res) => {
     try {
       console.log('=== AI VENDOR DISCOVERY REQUEST ===');
       console.log('Timestamp:', new Date().toISOString());
@@ -740,7 +743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // RFx routes
-  app.get('/api/rfx', async (req, res) => {
+  app.get(`${BASE_PATH}/api/rfx`, async (req, res) => {
     try {
       // In development mode, handle database failures gracefully
       try {
@@ -758,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/rfx', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/rfx`, async (req: any, res) => {
     try {
       console.log("RFx creation request received:", req.body);
       const userId = req.user?.claims?.sub;
@@ -815,7 +818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/rfx/invitations', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/rfx/invitations`, async (req: any, res) => {
     try {
       console.log("RFx invitation request:", req.body);
       const invitation = await storage.createRfxInvitation(req.body);
@@ -827,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor RFx invitations route
-  app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/vendor/rfx-invitations`, async (req: any, res) => {
     try {
       console.log('Vendor RFx invitations - User ID:', req.user?.claims?.sub);
 
@@ -930,7 +933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor RFx responses route
-  app.get('/api/vendor/rfx-responses', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/vendor/rfx-responses`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -956,7 +959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Submit RFx response
-  app.post('/api/vendor/rfx-responses', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/vendor/rfx-responses`, async (req: any, res) => {
     try {
       console.log('RFx response submission request:', req.body);
 
@@ -1016,7 +1019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Development helper: Invite current development vendor to a specific RFx
-  app.post('/api/dev/invite-to-rfx/:rfxId', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/dev/invite-to-rfx/:rfxId`, async (req: any, res) => {
     try {
       const rfxId = req.params.rfxId;
       console.log(`Creating invitation for development vendor to RFx ${rfxId}...`);
@@ -1073,7 +1076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auction routes
-  app.get('/api/auctions', async (req, res) => {
+  app.get(`${BASE_PATH}/api/auctions`, async (req, res) => {
     try {
       // In development mode, handle database failures gracefully
       try {
@@ -1092,7 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get auction results
-  app.get('/api/auctions/:id/results', authMiddleware, async (req: any, res: any) => {
+  app.get(`${BASE_PATH}/api/auctions/:id/results`, authMiddleware, async (req: any, res: any) => {
     try {
       const { id } = req.params;
 
@@ -1218,7 +1221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auctions', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/auctions`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -1315,7 +1318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order routes
-  app.get('/api/purchase-orders', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/purchase-orders`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       const user = await storage.getUser(userId);
@@ -1346,7 +1349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order approval endpoint
-  app.patch('/api/purchase-orders/:id/approve', async (req: any, res) => {
+  app.patch(`${BASE_PATH}/api/purchase-orders/:id/approve`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -1368,7 +1371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order rejection endpoint
-  app.patch('/api/purchase-orders/:id/reject', async (req: any, res) => {
+  app.patch(`${BASE_PATH}/api/purchase-orders/:id/reject`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -1395,7 +1398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order issue endpoint (for moving from approved to issued)
-  app.patch('/api/purchase-orders/:id/issue', async (req: any, res) => {
+  app.patch(`${BASE_PATH}/api/purchase-orders/:id/issue`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -1415,7 +1418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order acknowledge endpoint (for vendors to acknowledge issued POs)
-  app.patch('/api/purchase-orders/:id/acknowledge', async (req: any, res) => {
+  app.patch(`${BASE_PATH}/api/purchase-orders/:id/acknowledge`, async (req: any, res) => {
     try {
       const { id } = req.params;
       const userId = req.user?.claims?.sub;
@@ -1464,7 +1467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Product routes
-  app.get('/api/products', async (req, res) => {
+  app.get(`${BASE_PATH}/api/products`, async (req, res) => {
     try {
       const products = await storage.getProducts();
       res.json(products);
@@ -1474,7 +1477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/products/:id', async (req, res) => {
+  app.delete(`${BASE_PATH}/api/products/:id`, async (req, res) => {
     try {
       await storage.deleteProduct(req.params.id);
       res.json({ success: true, message: 'Product deleted successfully' });
@@ -1502,7 +1505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Product category routes
-  app.get('/api/product-categories/hierarchy', async (req, res) => {
+  app.get(`${BASE_PATH}/api/product-categories/hierarchy`, async (req, res) => {
     try {
       const categories = await storage.getProductCategoryHierarchy();
       res.json(categories);
@@ -1512,7 +1515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/product-categories', async (req, res) => {
+  app.post(`${BASE_PATH}/api/product-categories`, async (req, res) => {
     try {
       const categoryData = insertProductCategorySchema.parse(req.body);
       const newCategory = await storage.createProductCategory(categoryData);
@@ -1528,7 +1531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/product-categories/:id', async (req, res) => {
+  app.put(`${BASE_PATH}/api/product-categories/:id`, async (req, res) => {
     try {
       const categoryData = insertProductCategorySchema.partial().parse(req.body);
       const updatedCategory = await storage.updateProductCategory(req.params.id, categoryData);
@@ -1539,7 +1542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/product-categories/:id', async (req, res) => {
+  app.delete(`${BASE_PATH}/api/product-categories/:id`, async (req, res) => {
     try {
       await storage.deleteProductCategory(req.params.id);
       res.json({ success: true, message: 'Product category deleted successfully' });
@@ -1550,7 +1553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // BOM routes
-  app.get('/api/boms', async (req, res) => {
+  app.get(`${BASE_PATH}/api/boms`, async (req, res) => {
     try {
       const boms = await storage.getBoms();
       res.json(boms);
@@ -1560,7 +1563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/boms', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/boms`, async (req: any, res) => {
     try {
       let userId = req.user?.claims?.sub;
       
@@ -1623,7 +1626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/boms/:id', async (req: any, res) => {
+  app.put(`${BASE_PATH}/api/boms/:id`, async (req: any, res) => {
     try {
       const bomId = req.params.id;
       const userId = req.user?.claims?.sub;
@@ -1647,7 +1650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/boms/:id', async (req: any, res) => {
+  app.delete(`${BASE_PATH}/api/boms/:id`, async (req: any, res) => {
     try {
       const bomId = req.params.id;
       const userId = req.user?.claims?.sub;
@@ -1676,7 +1679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/boms/:id/copy', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/boms/:id/copy`, async (req: any, res) => {
     try {
       const bomId = req.params.id;
       const userId = req.user?.claims?.sub;
@@ -1749,7 +1752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/boms/:id', async (req, res) => {
+  app.get(`${BASE_PATH}/api/boms/:id`, async (req, res) => {
     try {
       const bomId = req.params.id;
       console.log("Getting BOM with ID:", bomId);
@@ -1777,7 +1780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // BOM items endpoint for auction form compatibility
-  app.get('/api/bom-items/:bomId', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/bom-items/:bomId`, async (req: any, res) => {
     try {
       const { bomId } = req.params;
       console.log("=== FETCHING BOM ITEMS FOR AUCTION ===");
@@ -1807,7 +1810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alternative endpoint that matches the BOM structure
-  app.get('/api/boms/:bomId/items', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/boms/:bomId/items`, async (req: any, res) => {
     try {
       const { bomId } = req.params;
       console.log("=== FETCHING BOM ITEMS VIA BOM ENDPOINT ===");
@@ -1834,7 +1837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/boms/:bomId/items', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/boms/:bomId/items`, async (req: any, res) => {
     try {
       const { bomId } = req.params;
       const userId = req.user?.claims?.sub;
@@ -1863,7 +1866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/boms/:bomId/items/:itemId', async (req: any, res) => {
+  app.put(`${BASE_PATH}/api/boms/:bomId/items/:itemId`, async (req: any, res) => {
     try {
       const { bomId, itemId } = req.params;
       const userId = req.user?.claims?.sub;
@@ -1887,7 +1890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/boms/:bomId/items/:itemId', async (req: any, res) => {
+  app.delete(`${BASE_PATH}/api/boms/:bomId/items/:itemId`, async (req: any, res) => {
     try {
       const { bomId, itemId } = req.params;
       const userId = req.user?.claims?.sub;
@@ -1912,7 +1915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Direct procurement routes
-  app.get('/api/direct-procurement', async (req, res) => {
+  app.get(`${BASE_PATH}/api/direct-procurement`, async (req, res) => {
     try {
       const orders = await storage.getDirectProcurementOrders();
       res.json(orders);
@@ -1922,7 +1925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/direct-procurement', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/direct-procurement`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -2044,7 +2047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/direct-procurement/:id', async (req: any, res) => {
+  app.get(`${BASE_PATH}/api/direct-procurement/:id`, async (req: any, res) => {
     try {
       const { id } = req.params;
       const order = await storage.getDirectProcurementOrderById(id);
@@ -2060,7 +2063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/direct-procurement/:id/status', async (req: any, res) => {
+  app.patch(`${BASE_PATH}/api/direct-procurement/:id/status`, async (req: any, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -2073,7 +2076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/direct-procurement/:id', async (req: any, res) => {
+  app.delete(`${BASE_PATH}/api/direct-procurement/:id`, async (req: any, res) => {
     try {
       const { id } = req.params;
       const userId = req.user?.claims?.sub;
@@ -2103,7 +2106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approval routes
-  app.get('/api/approvals', async (req, res) => {
+  app.get(`${BASE_PATH}/api/approvals`, async (req, res) => {
     try {
       // For development, return empty array since user might not exist in DB
       res.json([]);
@@ -2114,7 +2117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Route to create Purchase Order from Auction
-  app.post('/api/auctions/:id/create-po', async (req: any, res) => {
+  app.post(`${BASE_PATH}/api/auctions/:id/create-po`, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       const auctionId = req.params.id;

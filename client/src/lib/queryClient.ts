@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { isUnauthorizedError } from "./authUtils";
+import { getApiUrl } from "./api-config";
 
 // API request function for mutations
 export async function apiRequest(endpoint: string, options: RequestInit = {}) {
@@ -12,7 +13,9 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
     ...options,
   };
 
-  const response = await fetch(endpoint, requestOptions);
+  // Add base path to the endpoint
+  const fullUrl = endpoint.startsWith('/api') ? getApiUrl(endpoint) : endpoint;
+  const response = await fetch(fullUrl, requestOptions);
   
   if (!response.ok) {
     const text = await response.text();
@@ -41,7 +44,8 @@ export const queryClient = new QueryClient({
         try {
           const [url, params] = queryKey as [string, any?];
 
-          let fullUrl = url;
+          // Add base path to the URL if it's an API endpoint
+          let fullUrl = url.startsWith('/api') ? getApiUrl(url) : url;
           if (params) {
             const searchParams = new URLSearchParams();
             Object.entries(params).forEach(([key, value]) => {

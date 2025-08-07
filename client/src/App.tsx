@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router as WouterRouter } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from "react-error-boundary";
 import { useAuth } from "@/hooks/useAuth";
@@ -122,8 +122,10 @@ function App() {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <QueryClientProvider client={queryClient}>
-        <Router />
-        <Toaster />
+        <WouterRouter base="/general-procurement">
+          <Router />
+          <Toaster />
+        </WouterRouter>
       </QueryClientProvider>
     </ErrorBoundary>
   );
