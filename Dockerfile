@@ -1,4 +1,5 @@
 FROM 466920982015.dkr.ecr.us-east-2.amazonaws.com/devops:nodev16.20.0
+RUN npm install -g n && n 20
 ENV APPDIR='/opt/app'
 WORKDIR /opt/app
 COPY . /opt/app/
