@@ -178,6 +178,10 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private get db() {
+    return requireDatabase();
+  }
+
   // User operations - mandatory for Replit Auth
   async getUser(id: string): Promise<User | undefined> {
     const database = requireDatabase();
