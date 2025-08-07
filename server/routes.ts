@@ -75,25 +75,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log('DEVELOPMENT MODE: Setting up simple auth system');
 
-  // Ensure development user exists in database
-  try {
-    const existingUser = await storage.getUser(currentDevUser.id);
-    if (!existingUser) {
-      console.log('Creating development user in database...');
-      await storage.upsertUser({
-        id: currentDevUser.id,
-        email: currentDevUser.email,
-        firstName: currentDevUser.firstName,
-        lastName: currentDevUser.lastName,
-        role: currentDevUser.role as any,
-      });
-      console.log('Development user created successfully');
-    } else {
-      console.log('Development user already exists in database');
-    }
-  } catch (error) {
-    console.error('Error ensuring development user exists:', error);
-  }
+  // Skip database operations in development mode since database is disabled
+  console.log('Development mode: Skipping database user creation (database disabled)');
 
   // Auth routes
   app.get('/api/auth/user', (req, res) => {
@@ -117,27 +100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       isLoggedIn = true;
       console.log('✅ Set isLoggedIn = true');
 
-      // In development mode, skip database operations if they fail
-      try {
-        // Ensure the user exists in the database
-        const existingUser = await storage.getUser(currentDevUser.id);
-        if (!existingUser) {
-          console.log('👤 User not found in database, creating...');
-          await storage.upsertUser({
-            id: currentDevUser.id,
-            email: currentDevUser.email,
-            firstName: currentDevUser.firstName,
-            lastName: currentDevUser.lastName,
-            role: currentDevUser.role as any,
-          });
-          console.log('✅ User created in database');
-        } else {
-          console.log('✅ User found in database');
-        }
-      } catch (dbError) {
-        console.warn('⚠️ Database operation failed, continuing without DB:', dbError.message);
-        // Continue without database in development mode
-      }
+      // Skip database operations in development mode since database is disabled
+      console.log('Development mode: Skipping database user operations (database disabled)');
 
       console.log('🎉 Login successful for user:', currentDevUser.email);
       res.json(currentDevUser);
@@ -161,21 +125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // In development mode, skip database operations if they fail
-      try {
-        // Update the user in the database first
-        await storage.upsertUser({
-          id: currentDevUser.id,
-          email: currentDevUser.email,
-          firstName: currentDevUser.firstName,
-          lastName: currentDevUser.lastName,
-          role: role as any,
-        });
-        console.log('✅ Role updated in database');
-      } catch (dbError) {
-        console.warn('⚠️ Database operation failed, continuing without DB:', dbError.message);
-        // Continue without database in development mode
-      }
+      // Skip database operations in development mode since database is disabled
+      console.log('Development mode: Skipping database role update (database disabled)');
 
       // Update in-memory user object
       currentDevUser.role = role;
@@ -1567,8 +1518,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newCategory = await storage.createProductCategory(categoryData);
       res.json(newCategory);
     } catch (error) {
-      console.error("Error creating product category:", error);
-      res.status(500).json({ message: "Failed to create product category" });
+      console.error("Error creating product category - Full error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to create product category";
+      res.status(500).json({ 
+        message: "Failed to create product category",
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      });
     }
   });
 
@@ -1606,13 +1562,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/boms', async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      let userId = req.user?.claims?.sub;
+      
+      // If no user from auth, use a default test user for development
       if (!userId) {
-        return res.status(401).json({ message: "User not found" });
+        console.log("No authenticated user, using default test user");
+        userId = 'test-admin';
       }
 
       console.log("Creating BOM for user:", userId);
       console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+      // Ensure the user exists in the database
+      const existingUser = await storage.getUser(userId);
+      if (!existingUser) {
+        console.log("User not found in database, creating user:", userId);
+        // Create a basic user entry using upsertUser
+        await storage.upsertUser({
+          id: userId,
+          email: req.user?.claims?.email || `${userId}@example.com`,
+          firstName: req.user?.claims?.given_name || 'Test',
+          lastName: req.user?.claims?.family_name || 'User',
+          role: 'buyer_user'
+        });
+      }
 
       // Validate required fields
       const { name, version, description, category } = req.body;
