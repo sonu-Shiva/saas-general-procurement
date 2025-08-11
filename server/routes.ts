@@ -270,18 +270,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: 'Invalid vendor ID' });
         }
       } else {
-        // Regular role switch for non-vendor or vendor without specific ID
-        await storage.upsertUser({
-          id: currentDevUser.id,
-          email: currentDevUser.email,
-          firstName: currentDevUser.firstName,
-          lastName: currentDevUser.lastName,
-          role: role as any,
-        });
+        // Regular role switch for non-vendor roles - switch back to dev user
+        const originalDevUser = {
+          id: 'dev-user-123',
+          email: 'dev@sclen.com',
+          firstName: 'Development',
+          lastName: 'User',
+          role: role
+        };
 
-        // Update in-memory only after database update succeeds
-        currentDevUser.role = role;
-        console.log('Role updated in database and memory to:', role);
+        // Switch back to original dev user for non-vendor roles
+        currentDevUser = originalDevUser as any;
+        console.log('Switched back to dev user with role:', role);
       }
 
       res.json(currentDevUser);
