@@ -885,6 +885,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get RFx responses for buyers
+  app.get('/api/rfx/:id/responses', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      console.log(`Fetching responses for RFx ${id}...`);
+      
+      const responses = await storage.getRfxResponses({ rfxId: id });
+      console.log(`Found ${responses.length} responses for RFx ${id}`);
+      
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching RFx responses:", error);
+      res.status(500).json({ message: "Failed to fetch RFx responses" });
+    }
+  });
+
   // Vendor RFx invitations route
   app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
     try {
