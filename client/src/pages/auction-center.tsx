@@ -43,13 +43,29 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
   const { data: auction, isLoading: auctionLoading, error: auctionError } = useQuery({
     queryKey: ["/api/auctions", auctionId],
     queryFn: async () => {
+      console.log('Fetching auction details for ID:', auctionId);
       const response = await fetch(`/api/auctions/${auctionId}`, {
         credentials: "include",
       });
+      console.log('Auction fetch response status:', response.status);
+      console.log('Auction fetch response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
+        const responseText = await response.text();
+        console.log('Error response text:', responseText.substring(0, 200));
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      return response.json();
+      
+      const responseText = await response.text();
+      console.log('Auction response text sample:', responseText.substring(0, 200));
+      
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse auction JSON:', parseError);
+        console.log('Full response text:', responseText);
+        throw new Error(`Invalid JSON response: ${parseError}`);
+      }
     },
     retry: false,
   });
@@ -57,15 +73,31 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
   const { data: bids = [], isLoading, error } = useQuery({
     queryKey: ["/api/auctions", auctionId, "bids"],
     queryFn: async () => {
+      console.log('Fetching auction bids for ID:', auctionId);
       const response = await fetch(`/api/auctions/${auctionId}/bids`, {
         credentials: "include",
       });
+      console.log('Bids fetch response status:', response.status);
+      console.log('Bids fetch response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
+        const responseText = await response.text();
+        console.log('Bids error response text:', responseText.substring(0, 200));
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      const data = await response.json();
-      console.log('Fetched auction results:', data);
-      return data;
+      
+      const responseText = await response.text();
+      console.log('Bids response text sample:', responseText.substring(0, 200));
+      
+      try {
+        const data = JSON.parse(responseText);
+        console.log('Fetched auction bids:', data);
+        return data;
+      } catch (parseError) {
+        console.error('Failed to parse bids JSON:', parseError);
+        console.log('Full response text:', responseText);
+        throw new Error(`Invalid JSON response: ${parseError}`);
+      }
     },
     retry: false,
   });
