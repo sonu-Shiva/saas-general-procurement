@@ -665,11 +665,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse the AI response to extract vendor information
       console.log('Parsing AI response...');
       const vendors = parseVendorResponse(aiResponse);
-      console.log(`Parsed ${vendors.length} valid vendors`);
-      if (vendors.length > 0) {
-        console.log('Sample parsed vendor:', JSON.stringify(vendors[0], null, 2));
-      }
       console.log(`Found ${vendors.length} vendors from AI discovery`);
+      if (vendors.length > 0) {
+        console.log('Sample vendor:', vendors[0].name, '-', vendors[0].phone || 'No phone', '-', vendors[0].email || 'No email');
+      }
 
       res.json(vendors);
     } catch (error) {
@@ -678,30 +677,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple vendor parsing function
+  // Enhanced vendor parsing function to handle multiple response formats
   function parseVendorResponse(response: string) {
     const vendors: any[] = [];
-    const vendorBlocks = response.split('**').filter(block => block.trim().length > 0);
 
-    for (let i = 0; i < vendorBlocks.length; i += 2) {
-      if (i + 1 < vendorBlocks.length) {
-        const nameBlock = vendorBlocks[i].trim();
-        const detailsBlock = vendorBlocks[i + 1].trim();
+    // First, try to find vendor blocks by looking for company name patterns
+    // Use regex to find standalone company names followed by contact details
+    const vendorPattern = /^([A-Za-z][A-Za-z\s&().,'-]+(?:Ltd|Pvt Ltd|Company|Enterprises|Corp|Corporation|Inc|Chemicals|Industries|Impex|Private Limited)?)\s*\n((?:- [^\n]+\n?)+)/gm;
+    
+    let match;
+    let found = false;
+    
+    while ((match = vendorPattern.exec(response)) !== null) {
+      found = true;
+      const companyName = match[1].trim();
+      const details = match[2].trim();
+      
+      const vendor: any = {
+        name: companyName,
+        email: extractField(details, 'Contact Email:') || extractField(details, 'Email:'),
+        phone: extractField(details, 'Phone Number:') || extractField(details, 'Phone:'),
+        address: extractField(details, 'Address:'),
+        website: extractField(details, 'Website:'),
+        logoUrl: extractField(details, 'Logo URL:'),
+        description: extractField(details, 'Description:'),
+      };
 
-        if (nameBlock.length > 0 && detailsBlock.length > 0) {
-          const vendor: any = {
-            name: nameBlock.replace(/\*\*/g, '').trim(),
-            email: extractField(detailsBlock, 'Contact Email:') || extractField(detailsBlock, 'Email:'),
-            phone: extractField(detailsBlock, 'Phone Number:') || extractField(detailsBlock, 'Phone:'),
-            address: extractField(detailsBlock, 'Address:'),
-            website: extractField(detailsBlock, 'Website:'),
-            logoUrl: extractField(detailsBlock, 'Logo URL:'),
-            description: extractField(detailsBlock, 'Description:'),
-          };
+      // Only add vendors with at least a name and some contact info
+      if (vendor.name && (vendor.email || vendor.phone || vendor.address)) {
+        vendors.push(vendor);
+      }
+    }
 
-          // Only add vendors with at least a name and some contact info
-          if (vendor.name && (vendor.email || vendor.phone || vendor.address)) {
-            vendors.push(vendor);
+    // If regex approach didn't work, fall back to ** splitting approach
+    if (!found || vendors.length === 0) {
+      const sections = response.split('**').filter(section => section.trim().length > 0);
+
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i].trim();
+        
+        // Skip sections that are just descriptions or headers
+        if (section.toLowerCase().includes('here are') || section.toLowerCase().includes('suppliers in') || section.length < 10) {
+          continue;
+        }
+
+        // Check if this looks like a company name (not just details)
+        const firstLine = section.split('\n')[0].trim();
+        
+        // Look for company indicators
+        const companyIndicators = ['Ltd', 'Pvt', 'Company', 'Enterprises', 'Corp', 'Corporation', 'Inc', 'Chemicals', 'Industries', 'Impex', 'Private Limited'];
+        const isCompanyName = companyIndicators.some(indicator => firstLine.includes(indicator)) || 
+                             (firstLine.length < 100 && !firstLine.includes('-') && !firstLine.includes('Contact'));
+
+        if (isCompanyName) {
+          const companyName = firstLine;
+          
+          // Look for details in the next section or same section after first line
+          let details = '';
+          const restOfSection = section.substring(firstLine.length).trim();
+          
+          if (restOfSection.length > 20) {
+            details = restOfSection;
+          } else if (i + 1 < sections.length) {
+            details = sections[i + 1].trim();
+          }
+          
+          if (details.length > 20) {
+            const vendor: any = {
+              name: companyName,
+              email: extractField(details, 'Contact Email:') || extractField(details, 'Email:'),
+              phone: extractField(details, 'Phone Number:') || extractField(details, 'Phone:'),
+              address: extractField(details, 'Address:'),
+              website: extractField(details, 'Website:'),
+              logoUrl: extractField(details, 'Logo URL:'),
+              description: extractField(details, 'Description:'),
+            };
+
+            // Only add vendors with at least a name and some contact info
+            if (vendor.name && (vendor.email || vendor.phone || vendor.address)) {
+              vendors.push(vendor);
+            }
           }
         }
       }
