@@ -1296,6 +1296,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get auction results
+  // Get single auction by ID
+  app.get('/api/auctions/:id', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      console.log(`Fetching auction with ID: ${id}`);
+
+      const auction = await storage.getAuction(id);
+      if (!auction) {
+        console.log(`Auction not found: ${id}`);
+        return res.status(404).json({ error: 'Auction not found' });
+      }
+
+      console.log(`Auction found: ${auction.name}`);
+      res.json(auction);
+    } catch (error) {
+      console.error('Error getting auction:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/api/auctions/:id/results', authMiddleware, async (req: any, res: any) => {
     try {
       const { id } = req.params;
