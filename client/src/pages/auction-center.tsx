@@ -1234,10 +1234,10 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
                     <div key={bid.id} className="flex justify-between items-center p-3 bg-muted/30 rounded">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
-                          {bid.vendor?.companyName?.[0] || 'V'}
+                          {bid.vendorCompanyName?.[0] || 'V'}
                         </div>
                         <div>
-                          <div className="font-medium">{bid.vendor?.companyName || 'Vendor'}</div>
+                          <div className="font-medium">{bid.vendorCompanyName || 'Vendor'}</div>
                           <div className="text-sm text-muted-foreground">
                             {formatBidDateTime(bid.timestamp || bid.createdAt)}
                           </div>
@@ -1512,10 +1512,14 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                           isCurrentUser ? 'bg-blue-500 text-white' : 'bg-primary text-white'
                         }`}>
-                          {isCurrentUser ? 'You' : (bid.vendor?.companyName?.[0] || 'V')}
+                          {isCurrentUser ? 'You' : 
+                           ((user as any)?.role === 'vendor' ? 'V' : (bid.vendorCompanyName?.[0] || 'V'))}
                         </div>
                         <div>
-                          <div className="font-medium">{isCurrentUser ? 'Your Bid' : (bid.vendor?.companyName || 'Vendor')}</div>
+                          <div className="font-medium">
+                            {isCurrentUser ? 'Your Bid' : 
+                             ((user as any)?.role === 'vendor' ? 'Vendor' : (bid.vendorCompanyName || 'Vendor'))}
+                          </div>
                           <div className="text-sm text-muted-foreground">
                             {formatBidDateTime(bid.timestamp || bid.createdAt)}
                           </div>
