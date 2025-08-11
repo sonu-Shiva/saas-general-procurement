@@ -34,7 +34,7 @@ export function RfxResponsesView({ rfx, onClose, onCreatePO }: RfxResponsesViewP
   const { data: responses = [], isLoading } = useQuery({
     queryKey: [`/api/rfx/${rfx.id}/responses`],
     retry: false,
-  });
+  }) as { data: any[], isLoading: boolean };
 
   const handleCreatePOFromResponse = (response: any) => {
     setSelectedResponse(response);
@@ -143,8 +143,6 @@ function ResponseCard({ response, index, onCreatePO, rfxType }: any) {
             <div>
               <h3 className="font-medium">
                 {response.vendor?.companyName || 
-                 response.vendor?.company_name || 
-                 response.vendorName ||
                  `Vendor ${response.vendorId?.slice(-8) || 'Unknown'}`}
               </h3>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
