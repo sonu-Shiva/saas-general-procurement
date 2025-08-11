@@ -63,6 +63,43 @@ const isAuthenticated = async (req: any, res: any, next: any) => {
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Define test vendor profiles for development
+  const testVendorProfiles = {
+    'vendor-1': {
+      id: 'dev-vendor-1',
+      email: 'vendor1@sclen.com',
+      firstName: 'Tech',
+      lastName: 'Solutions',
+      role: 'vendor',
+      companyName: 'Tech Solutions Pvt Ltd',
+      phone: '+91-80-2550-2001',
+      gstNumber: 'TECH123456789',
+      address: 'Tech Park, Bangalore, Karnataka, India - 560001'
+    },
+    'vendor-2': {
+      id: 'dev-vendor-2', 
+      email: 'vendor2@sclen.com',
+      firstName: 'Green',
+      lastName: 'Industries',
+      role: 'vendor',
+      companyName: 'Green Industries Ltd',
+      phone: '+91-22-4567-8901',
+      gstNumber: 'GREEN987654321',
+      address: 'Industrial Estate, Mumbai, Maharashtra, India - 400001'
+    },
+    'vendor-3': {
+      id: 'dev-vendor-3',
+      email: 'vendor3@sclen.com', 
+      firstName: 'Smart',
+      lastName: 'Manufacturing',
+      role: 'vendor',
+      companyName: 'Smart Manufacturing Corp',
+      phone: '+91-44-7890-1234',
+      gstNumber: 'SMART567890123',
+      address: 'Manufacturing Hub, Chennai, Tamil Nadu, India - 600001'
+    }
+  };
+
   // Simple development authentication system
   let currentDevUser = {
     id: 'dev-user-123',
@@ -93,6 +130,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   } catch (error) {
     console.error('Error ensuring development user exists:', error);
+  }
+
+  // Create test vendor users and their vendor profiles
+  for (const [key, vendorProfile] of Object.entries(testVendorProfiles)) {
+    try {
+      const existingVendorUser = await storage.getUser(vendorProfile.id);
+      if (!existingVendorUser) {
+        console.log(`Creating test vendor user: ${vendorProfile.companyName}`);
+        await storage.upsertUser({
+          id: vendorProfile.id,
+          email: vendorProfile.email,
+          firstName: vendorProfile.firstName,
+          lastName: vendorProfile.lastName,
+          role: vendorProfile.role as any,
+        });
+
+        // Create corresponding vendor profile
+        const existingVendorProfile = await storage.getVendorByUserId(vendorProfile.id);
+        if (!existingVendorProfile) {
+          await storage.createVendor({
+            companyName: vendorProfile.companyName,
+            email: vendorProfile.email,
+            contactPerson: `${vendorProfile.firstName} ${vendorProfile.lastName}`,
+            phone: vendorProfile.phone,
+            address: vendorProfile.address,
+            gstNumber: vendorProfile.gstNumber,
+            userId: vendorProfile.id,
+          });
+          console.log(`Created vendor profile for: ${vendorProfile.companyName}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error creating test vendor ${key}:`, error);
+    }
   }
 
   // Auth routes
@@ -138,12 +209,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch('/api/auth/user/role', async (req, res) => {
-    console.log('Role change requested to:', req.body.role);
+    console.log('Role change requested to:', req.body.role, 'vendorId:', req.body.vendorId);
     if (!isLoggedIn) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const { role } = req.body;
+    const { role, vendorId } = req.body;
     const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
 
     if (!validRoles.includes(role)) {
@@ -151,24 +222,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // Update the user in the database first
-      await storage.upsertUser({
-        id: currentDevUser.id,
-        email: currentDevUser.email,
-        firstName: currentDevUser.firstName,
-        lastName: currentDevUser.lastName,
-        role: role as any,
-      });
+      // If switching to vendor role and a vendorId is provided, switch to that vendor profile
+      if (role === 'vendor' && vendorId) {
+        const vendorProfile = Object.values(testVendorProfiles).find(v => v.id === vendorId);
+        if (vendorProfile) {
+          console.log(`Switching to vendor profile: ${vendorProfile.companyName}`);
+          
+          // Update the user in the database first
+          await storage.upsertUser({
+            id: vendorProfile.id,
+            email: vendorProfile.email,
+            firstName: vendorProfile.firstName,
+            lastName: vendorProfile.lastName,
+            role: vendorProfile.role as any,
+          });
 
-      // Update in-memory only after database update succeeds
-      currentDevUser.role = role;
-      console.log('Role updated in database and memory to:', role);
+          // Update current user to the selected vendor profile
+          currentDevUser = {
+            id: vendorProfile.id,
+            email: vendorProfile.email,
+            firstName: vendorProfile.firstName,
+            lastName: vendorProfile.lastName,
+            role: vendorProfile.role
+          };
+          console.log(`Switched to vendor: ${vendorProfile.companyName}`);
+        } else {
+          return res.status(400).json({ message: 'Invalid vendor ID' });
+        }
+      } else {
+        // Regular role switch for non-vendor or vendor without specific ID
+        await storage.upsertUser({
+          id: currentDevUser.id,
+          email: currentDevUser.email,
+          firstName: currentDevUser.firstName,
+          lastName: currentDevUser.lastName,
+          role: role as any,
+        });
+
+        // Update in-memory only after database update succeeds
+        currentDevUser.role = role;
+        console.log('Role updated in database and memory to:', role);
+      }
 
       res.json(currentDevUser);
     } catch (error) {
       console.error('Failed to update role in database:', error);
       res.status(500).json({ message: 'Failed to update role' });
     }
+  });
+
+  // Add endpoint to get available test vendor profiles
+  app.get('/api/auth/test-vendors', (req, res) => {
+    if (!isLoggedIn) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const vendorList = Object.entries(testVendorProfiles).map(([key, profile]) => ({
+      id: profile.id,
+      companyName: profile.companyName,
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+    }));
+    
+    res.json(vendorList);
   });
 
   // Auth middleware for protected routes
