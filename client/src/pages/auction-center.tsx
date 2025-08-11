@@ -37,6 +37,7 @@ import {
 
 // Auction Results Component  
 function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreatePO?: (auction: any) => void }) {
+  const { user } = useAuth();
   const { data: bids = [], isLoading, error } = useQuery({
     queryKey: ["/api/auctions", auctionId, "bids"],
     queryFn: async () => {
@@ -140,10 +141,21 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                     </div>
                     <div>
                       <div className="font-medium">
-                        {bid.vendorCompanyName || 
-                         bid.vendor?.companyName || 
-                         bid.vendorName || 
-                         (bid.vendorId ? `Vendor ${bid.vendorId.substring(0, 8)}` : 'Unknown Vendor')}
+                        {(() => {
+                          const isCurrentUser = bid.vendorId === (user as any)?.vendorId;
+                          const isVendorUser = (user as any)?.role === 'vendor';
+                          
+                          if (isCurrentUser) {
+                            return 'Your Bid';
+                          } else if (isVendorUser) {
+                            return 'Vendor';
+                          } else {
+                            return bid.vendorCompanyName || 
+                                   bid.vendor?.companyName || 
+                                   bid.vendorName || 
+                                   (bid.vendorId ? `Vendor ${bid.vendorId.substring(0, 8)}` : 'Unknown Vendor');
+                          }
+                        })()}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {formatBidDateTime(bid.timestamp || bid.createdAt || bid.submittedAt)}
@@ -1502,7 +1514,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                 return sortedByTime.map((bid: any, index: number) => {
                   // Find the ranking based on amount
                   const rankIndex = sortedByAmount.findIndex(b => b.id === bid.id);
-                  const isCurrentUser = bid.vendorId === (user as any)?.id;
+                  const isCurrentUser = bid.vendorId === (user as any)?.vendorId;
 
                   return (
                     <div key={bid.id} className={`flex justify-between items-center p-3 rounded ${
