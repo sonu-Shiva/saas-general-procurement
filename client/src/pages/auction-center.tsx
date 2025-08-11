@@ -142,13 +142,17 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                     <div>
                       <div className="font-medium">
                         {(() => {
-                          const isCurrentUser = bid.vendorId === (user as any)?.vendorId;
-                          const isVendorUser = (user as any)?.role === 'vendor';
-                          
                           // Debug logging for results dialog
                           console.log('=== RESULTS DIALOG DEBUG ===');
                           console.log('bid.vendorId:', bid.vendorId);
                           console.log('user.vendorId:', (user as any)?.vendorId);
+                          console.log('user.id:', (user as any)?.id);
+                          
+                          // Try both vendorId and id for comparison
+                          const isCurrentUser = bid.vendorId === (user as any)?.vendorId || 
+                                               bid.vendorId === (user as any)?.id;
+                          const isVendorUser = (user as any)?.role === 'vendor';
+                          
                           console.log('isCurrentUser:', isCurrentUser);
                           console.log('isVendorUser:', isVendorUser);
                           
@@ -1530,7 +1534,9 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                   console.log('user.id:', (user as any)?.id);
                   console.log('user.role:', (user as any)?.role);
                   
-                  const isCurrentUser = bid.vendorId === (user as any)?.vendorId;
+                  // Try both vendorId and id for comparison
+                  const isCurrentUser = bid.vendorId === (user as any)?.vendorId || 
+                                       bid.vendorId === (user as any)?.id;
 
                   return (
                     <div key={bid.id} className={`flex justify-between items-center p-3 rounded ${

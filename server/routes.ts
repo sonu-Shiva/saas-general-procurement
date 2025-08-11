@@ -63,10 +63,10 @@ const isAuthenticated = async (req: any, res: any, next: any) => {
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Define test vendor profiles for development
+  // Define test vendor profiles for development - using actual vendor IDs from bids
   const testVendorProfiles = {
     'vendor-1': {
-      id: 'dev-vendor-1',
+      id: 'a5a10f14-4d2a-4309-a09f-0352278c4a53', // Matches Tech Solutions bid
       email: 'vendor1@sclen.com',
       firstName: 'Tech',
       lastName: 'Solutions',
@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       address: 'Tech Park, Bangalore, Karnataka, India - 560001'
     },
     'vendor-2': {
-      id: 'dev-vendor-2', 
+      id: '26a8a0d0-3b8d-477a-9f7d-a4a93af67dc0', // Matches Green Industries bid
       email: 'vendor2@sclen.com',
       firstName: 'Green',
       lastName: 'Industries',
@@ -88,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       address: 'Industrial Estate, Mumbai, Maharashtra, India - 400001'
     },
     'vendor-3': {
-      id: 'dev-vendor-3',
+      id: '89b9bba9-7ca4-4dc0-bf9b-ddb5cd26a46a', // Matches Smart Manufacturing bid
       email: 'vendor3@sclen.com', 
       firstName: 'Smart',
       lastName: 'Manufacturing',
@@ -243,7 +243,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             email: vendorProfile.email,
             firstName: vendorProfile.firstName,
             lastName: vendorProfile.lastName,
-            role: vendorProfile.role
+            role: vendorProfile.role,
+            vendorId: vendorProfile.id  // Add vendorId for frontend matching
           };
           console.log(`Switched to vendor: ${vendorProfile.companyName}`);
         } else {
