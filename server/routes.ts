@@ -228,14 +228,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (vendorProfile) {
           console.log(`Switching to vendor profile: ${vendorProfile.companyName}`);
           
-          // Update the user in the database first
-          await storage.upsertUser({
-            id: vendorProfile.id,
-            email: vendorProfile.email,
-            firstName: vendorProfile.firstName,
-            lastName: vendorProfile.lastName,
-            role: vendorProfile.role as any,
-          });
+          // Check if vendor user already exists
+          let existingVendor;
+          try {
+            existingVendor = await storage.getUser(vendorProfile.id);
+          } catch (error) {
+            // User doesn't exist, we'll create them
+          }
+          
+          // Only create/update if user doesn't exist or needs updating
+          if (!existingVendor) {
+            try {
+              await storage.upsertUser({
+                id: vendorProfile.id,
+                email: vendorProfile.email,
+                firstName: vendorProfile.firstName,
+                lastName: vendorProfile.lastName,
+                role: vendorProfile.role as any,
+              });
+            } catch (error: any) {
+              // If it's a duplicate email error, just continue - the user exists with different ID
+              if (error.code !== '23505') {
+                throw error;
+              }
+              console.log('Vendor user already exists with this email, continuing...');
+            }
+          }
 
           // Update current user to the selected vendor profile
           currentDevUser = {
