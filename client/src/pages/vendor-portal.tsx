@@ -75,7 +75,8 @@ export default function VendorPortal() {
 
   const pendingInvitations = invitations.filter((inv: any) => {
     const invStatus = inv.status || 'invited';
-    const isNotExpired = inv.rfxDueDate ? new Date(inv.rfxDueDate) > new Date() : true;
+    const dueDate = inv.rfx?.dueDate || inv.rfxDueDate;
+    const isNotExpired = dueDate ? new Date(dueDate) > new Date() : true;
     return (invStatus === 'invited' || invStatus === 'active') && invStatus !== 'responded' && isNotExpired;
   });
   
@@ -165,12 +166,13 @@ export default function VendorPortal() {
               ) : (
                 <div className="space-y-4">
                   {pendingInvitations.map((invitation: any) => {
-                    const isExpired = invitation.rfxDueDate ? new Date(invitation.rfxDueDate) < new Date() : false;
+                    const dueDate = invitation.rfx?.dueDate || invitation.rfxDueDate;
+                    const isExpired = dueDate ? new Date(dueDate) < new Date() : false;
                     console.log('DEBUG: Invitation details:', {
                       rfxId: invitation.rfxId,
                       status: invitation.status,
                       isExpired,
-                      rfxDueDate: invitation.rfxDueDate,
+                      rfxDueDate: dueDate,
                       shouldShowRespond: invitation.status === 'invited' && !isExpired
                     });
                     
@@ -179,9 +181,9 @@ export default function VendorPortal() {
                         <div className="flex items-start justify-between">
                           <div className="space-y-2 flex-1">
                             <div className="flex items-center gap-3">
-                              <h3 className="font-medium">{invitation.rfxTitle || 'Untitled RFx'}</h3>
-                              <Badge className={getRfxTypeColor(invitation.rfxType)}>
-                                {(invitation.rfxType || 'RFX').toUpperCase()}
+                              <h3 className="font-medium">{invitation.rfx?.title || invitation.rfxTitle || 'Untitled RFx'}</h3>
+                              <Badge className={getRfxTypeColor(invitation.rfx?.type || invitation.rfxType)}>
+                                {(invitation.rfx?.type || invitation.rfxType || 'RFX').toUpperCase()}
                               </Badge>
                               <Badge className={getVendorStatusColor(invitation)}>
                                 {getVendorStatusText(invitation)}
@@ -189,19 +191,19 @@ export default function VendorPortal() {
                             </div>
                             
                             <p className="text-sm text-muted-foreground">
-                              {invitation.rfxScope || 'No description available'}
+                              {invitation.rfx?.scope || invitation.rfxScope || 'No description available'}
                             </p>
                             
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-4 w-4" />
-                                Created: {invitation.rfxReferenceNo || 'N/A'}
+                                Created: {invitation.rfx?.referenceNo || invitation.rfxReferenceNo || 'N/A'}
                               </div>
                               <div className="flex items-center gap-1">
                                 <Clock className="h-4 w-4" />
-                                {invitation.rfxDueDate ? (
+                                {(invitation.rfx?.dueDate || invitation.rfxDueDate) ? (
                                   <span className={isExpired ? 'text-red-600 font-medium' : ''}>
-                                    Due: {format(new Date(invitation.rfxDueDate), 'PPp')}
+                                    Due: {format(new Date(invitation.rfx?.dueDate || invitation.rfxDueDate), 'PPp')}
                                   </span>
                                 ) : (
                                   'Due: N/A'

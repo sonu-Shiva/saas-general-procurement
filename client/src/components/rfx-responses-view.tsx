@@ -16,7 +16,8 @@ import {
   ShoppingCart,
   CheckCircle,
   AlertCircle,
-  User
+  User,
+  ExternalLink
 } from "lucide-react";
 
 interface RfxResponsesViewProps {
@@ -33,7 +34,7 @@ export function RfxResponsesView({ rfx, onClose, onCreatePO }: RfxResponsesViewP
   const { data: responses = [], isLoading } = useQuery({
     queryKey: [`/api/rfx/${rfx.id}/responses`],
     retry: false,
-  });
+  }) as { data: any[], isLoading: boolean };
 
   const handleCreatePOFromResponse = (response: any) => {
     setSelectedResponse(response);
@@ -128,6 +129,9 @@ export function RfxResponsesView({ rfx, onClose, onCreatePO }: RfxResponsesViewP
 
 // Individual Response Card Component
 function ResponseCard({ response, index, onCreatePO, rfxType }: any) {
+  // Debug logging to see the actual response structure
+  console.log('Rendering response:', response);
+  
   return (
     <Card className="border-l-4 border-l-blue-200">
       <CardHeader>
@@ -139,8 +143,6 @@ function ResponseCard({ response, index, onCreatePO, rfxType }: any) {
             <div>
               <h3 className="font-medium">
                 {response.vendor?.companyName || 
-                 response.vendor?.company_name || 
-                 response.vendorName ||
                  `Vendor ${response.vendorId?.slice(-8) || 'Unknown'}`}
               </h3>
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
@@ -160,42 +162,42 @@ function ResponseCard({ response, index, onCreatePO, rfxType }: any) {
       <CardContent className="space-y-4">
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {response.quotedPrice && (
+          {(response.quotedPrice || response.quoted_price) && (
             <div className="flex items-center space-x-2">
               <IndianRupee className="w-4 h-4 text-green-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Quoted Price</p>
-                <p className="font-medium">₹{parseFloat(response.quotedPrice).toLocaleString('en-IN')}</p>
+                <p className="font-medium">₹{parseFloat(response.quotedPrice || response.quoted_price).toLocaleString('en-IN')}</p>
               </div>
             </div>
           )}
           
-          {response.leadTime && (
+          {(response.leadTime || response.lead_time) && (
             <div className="flex items-center space-x-2">
               <Clock className="w-4 h-4 text-orange-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Lead Time</p>
-                <p className="font-medium">{response.leadTime} days</p>
+                <p className="font-medium">{response.leadTime || response.lead_time} days</p>
               </div>
             </div>
           )}
           
-          {response.deliveryTerms && (
+          {(response.deliveryTerms || response.delivery_terms) && (
             <div className="flex items-center space-x-2">
               <Truck className="w-4 h-4 text-blue-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Delivery</p>
-                <p className="font-medium text-sm">{response.deliveryTerms.substring(0, 20)}...</p>
+                <p className="font-medium text-sm">{(response.deliveryTerms || response.delivery_terms).substring(0, 20)}...</p>
               </div>
             </div>
           )}
           
-          {response.paymentTerms && (
+          {(response.paymentTerms || response.payment_terms) && (
             <div className="flex items-center space-x-2">
               <CreditCard className="w-4 h-4 text-purple-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Payment</p>
-                <p className="font-medium text-sm">{response.paymentTerms.substring(0, 20)}...</p>
+                <p className="font-medium text-sm">{(response.paymentTerms || response.payment_terms).substring(0, 20)}...</p>
               </div>
             </div>
           )}
@@ -208,27 +210,62 @@ function ResponseCard({ response, index, onCreatePO, rfxType }: any) {
           <div>
             <h4 className="font-medium mb-2">Detailed Response</h4>
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm whitespace-pre-wrap">{response.response}</p>
+              <p className="text-sm whitespace-pre-wrap">
+                {typeof response.response === 'string' 
+                  ? response.response 
+                  : response.response.responseDetails || JSON.stringify(response.response, null, 2)
+                }
+              </p>
             </div>
           </div>
         )}
 
         {/* Terms Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {response.deliveryTerms && (
+          {(response.deliveryTerms || response.delivery_terms) && (
             <div>
               <h4 className="font-medium mb-2">Delivery Terms</h4>
-              <p className="text-sm text-muted-foreground">{response.deliveryTerms}</p>
+              <p className="text-sm text-muted-foreground">{response.deliveryTerms || response.delivery_terms}</p>
             </div>
           )}
           
-          {response.paymentTerms && (
+          {(response.paymentTerms || response.payment_terms) && (
             <div>
               <h4 className="font-medium mb-2">Payment Terms</h4>
-              <p className="text-sm text-muted-foreground">{response.paymentTerms}</p>
+              <p className="text-sm text-muted-foreground">{response.paymentTerms || response.payment_terms}</p>
             </div>
           )}
         </div>
+
+        {/* Attachments */}
+        {response.attachments && response.attachments.length > 0 && (
+          <div>
+            <h4 className="font-medium mb-2">Attachments</h4>
+            <div className="space-y-2">
+              {response.attachments.map((attachment: string, attachmentIndex: number) => (
+                <div key={attachmentIndex} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <a 
+                    href={attachment} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 text-sm flex-1"
+                  >
+                    {attachment.split('/').pop() || `Attachment ${attachmentIndex + 1}`}
+                  </a>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(attachment, '_blank')}
+                    className="p-1 h-6 w-6"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end space-x-2 pt-2">
