@@ -208,7 +208,12 @@ function ResponseCard({ response, index, onCreatePO, rfxType }: any) {
           <div>
             <h4 className="font-medium mb-2">Detailed Response</h4>
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm whitespace-pre-wrap">{response.response}</p>
+              <p className="text-sm whitespace-pre-wrap">
+                {typeof response.response === 'string' 
+                  ? response.response 
+                  : response.response.responseDetails || JSON.stringify(response.response, null, 2)
+                }
+              </p>
             </div>
           </div>
         )}
