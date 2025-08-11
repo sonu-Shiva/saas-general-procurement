@@ -145,6 +145,13 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                           const isCurrentUser = bid.vendorId === (user as any)?.vendorId;
                           const isVendorUser = (user as any)?.role === 'vendor';
                           
+                          // Debug logging for results dialog
+                          console.log('=== RESULTS DIALOG DEBUG ===');
+                          console.log('bid.vendorId:', bid.vendorId);
+                          console.log('user.vendorId:', (user as any)?.vendorId);
+                          console.log('isCurrentUser:', isCurrentUser);
+                          console.log('isVendorUser:', isVendorUser);
+                          
                           if (isCurrentUser) {
                             return 'Your Bid';
                           } else if (isVendorUser) {
@@ -1514,6 +1521,15 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                 return sortedByTime.map((bid: any, index: number) => {
                   // Find the ranking based on amount
                   const rankIndex = sortedByAmount.findIndex(b => b.id === bid.id);
+                  
+                  // Debug logging
+                  console.log('=== BID COMPARISON DEBUG ===');
+                  console.log('bid.vendorId:', bid.vendorId);
+                  console.log('user:', user);
+                  console.log('user.vendorId:', (user as any)?.vendorId);
+                  console.log('user.id:', (user as any)?.id);
+                  console.log('user.role:', (user as any)?.role);
+                  
                   const isCurrentUser = bid.vendorId === (user as any)?.vendorId;
 
                   return (
