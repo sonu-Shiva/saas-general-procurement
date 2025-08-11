@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -96,26 +97,15 @@ interface TestVendor {
 export default function RoleSelector({ open, onClose, currentRole }: RoleSelectorProps) {
   const [selectedRole, setSelectedRole] = useState<string>(currentRole || "");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
-  const [testVendors, setTestVendors] = useState<TestVendor[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
-  const { switchRole, getTestVendors } = useAuth();
+  const { switchRole } = useAuth();
 
-  // Load test vendors when component mounts
-  useEffect(() => {
-    const loadTestVendors = async () => {
-      try {
-        const vendors = await getTestVendors();
-        setTestVendors(vendors);
-      } catch (error) {
-        console.error('Failed to load test vendors:', error);
-      }
-    };
-    
-    if (open) {
-      loadTestVendors();
-    }
-  }, [open, getTestVendors]);
+  // Use React Query to load test vendors
+  const { data: testVendors = [] } = useQuery({
+    queryKey: ['/api/auth/test-vendors'],
+    enabled: open, // Only fetch when dialog is open
+  });
 
   const handleRoleSelect = async () => {
     if (!selectedRole) {

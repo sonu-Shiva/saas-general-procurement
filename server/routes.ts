@@ -243,9 +243,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             email: vendorProfile.email,
             firstName: vendorProfile.firstName,
             lastName: vendorProfile.lastName,
-            role: vendorProfile.role,
-            vendorId: vendorProfile.id  // Add vendorId for frontend matching
-          };
+            role: vendorProfile.role
+          } as any;
+          // Add vendorId for frontend matching
+          (currentDevUser as any).vendorId = vendorProfile.id;
           console.log(`Switched to vendor: ${vendorProfile.companyName}`);
         } else {
           return res.status(400).json({ message: 'Invalid vendor ID' });
