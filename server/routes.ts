@@ -63,6 +63,43 @@ const isAuthenticated = async (req: any, res: any, next: any) => {
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Define test vendor profiles for development - using actual vendor IDs from bids
+  const testVendorProfiles = {
+    'vendor-1': {
+      id: 'a5a10f14-4d2a-4309-a09f-0352278c4a53', // Matches Tech Solutions bid
+      email: 'vendor1@sclen.com',
+      firstName: 'Tech',
+      lastName: 'Solutions',
+      role: 'vendor',
+      companyName: 'Tech Solutions Pvt Ltd',
+      phone: '+91-80-2550-2001',
+      gstNumber: 'TECH123456789',
+      address: 'Tech Park, Bangalore, Karnataka, India - 560001'
+    },
+    'vendor-2': {
+      id: '26a8a0d0-3b8d-477a-9f7d-a4a93af67dc0', // Matches Green Industries bid
+      email: 'vendor2@sclen.com',
+      firstName: 'Green',
+      lastName: 'Industries',
+      role: 'vendor',
+      companyName: 'Green Industries Ltd',
+      phone: '+91-22-4567-8901',
+      gstNumber: 'GREEN987654321',
+      address: 'Industrial Estate, Mumbai, Maharashtra, India - 400001'
+    },
+    'vendor-3': {
+      id: '89b9bba9-7ca4-4dc0-bf9b-ddb5cd26a46a', // Matches Smart Manufacturing bid
+      email: 'vendor3@sclen.com', 
+      firstName: 'Smart',
+      lastName: 'Manufacturing',
+      role: 'vendor',
+      companyName: 'Smart Manufacturing Corp',
+      phone: '+91-44-7890-1234',
+      gstNumber: 'SMART567890123',
+      address: 'Manufacturing Hub, Chennai, Tamil Nadu, India - 600001'
+    }
+  };
+
   // Simple development authentication system
   let currentDevUser = {
     id: 'dev-user-123',
@@ -93,6 +130,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   } catch (error) {
     console.error('Error ensuring development user exists:', error);
+  }
+
+  // Create test vendor users and their vendor profiles
+  for (const [key, vendorProfile] of Object.entries(testVendorProfiles)) {
+    try {
+      const existingVendorUser = await storage.getUser(vendorProfile.id);
+      if (!existingVendorUser) {
+        console.log(`Creating test vendor user: ${vendorProfile.companyName}`);
+        await storage.upsertUser({
+          id: vendorProfile.id,
+          email: vendorProfile.email,
+          firstName: vendorProfile.firstName,
+          lastName: vendorProfile.lastName,
+          role: vendorProfile.role as any,
+        });
+
+        // Create corresponding vendor profile
+        const existingVendorProfile = await storage.getVendorByUserId(vendorProfile.id);
+        if (!existingVendorProfile) {
+          await storage.createVendor({
+            companyName: vendorProfile.companyName,
+            email: vendorProfile.email,
+            contactPerson: `${vendorProfile.firstName} ${vendorProfile.lastName}`,
+            phone: vendorProfile.phone,
+            address: vendorProfile.address,
+            gstNumber: vendorProfile.gstNumber,
+            userId: vendorProfile.id,
+          });
+          console.log(`Created vendor profile for: ${vendorProfile.companyName}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error creating test vendor ${key}:`, error);
+    }
   }
 
   // Auth routes
@@ -138,12 +209,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch('/api/auth/user/role', async (req, res) => {
-    console.log('Role change requested to:', req.body.role);
+    console.log('Role change requested to:', req.body.role, 'vendorId:', req.body.vendorId);
     if (!isLoggedIn) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const { role } = req.body;
+    const { role, vendorId } = req.body;
     const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
 
     if (!validRoles.includes(role)) {
@@ -151,24 +222,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // Update the user in the database first
-      await storage.upsertUser({
-        id: currentDevUser.id,
-        email: currentDevUser.email,
-        firstName: currentDevUser.firstName,
-        lastName: currentDevUser.lastName,
-        role: role as any,
-      });
+      // If switching to vendor role and a vendorId is provided, switch to that vendor profile
+      if (role === 'vendor' && vendorId) {
+        const vendorProfile = Object.values(testVendorProfiles).find(v => v.id === vendorId);
+        if (vendorProfile) {
+          console.log(`Switching to vendor profile: ${vendorProfile.companyName}`);
+          
+          // Check if vendor user already exists
+          let existingVendor;
+          try {
+            existingVendor = await storage.getUser(vendorProfile.id);
+          } catch (error) {
+            // User doesn't exist, we'll create them
+          }
+          
+          // Only create/update if user doesn't exist or needs updating
+          if (!existingVendor) {
+            try {
+              await storage.upsertUser({
+                id: vendorProfile.id,
+                email: vendorProfile.email,
+                firstName: vendorProfile.firstName,
+                lastName: vendorProfile.lastName,
+                role: vendorProfile.role as any,
+              });
+            } catch (error: any) {
+              // If it's a duplicate email error, just continue - the user exists with different ID
+              if (error.code !== '23505') {
+                throw error;
+              }
+              console.log('Vendor user already exists with this email, continuing...');
+            }
+          }
 
-      // Update in-memory only after database update succeeds
-      currentDevUser.role = role;
-      console.log('Role updated in database and memory to:', role);
+          // Update current user to the selected vendor profile
+          currentDevUser = {
+            id: vendorProfile.id,
+            email: vendorProfile.email,
+            firstName: vendorProfile.firstName,
+            lastName: vendorProfile.lastName,
+            role: vendorProfile.role
+          } as any;
+          // Add vendorId for frontend matching
+          (currentDevUser as any).vendorId = vendorProfile.id;
+          console.log(`Switched to vendor: ${vendorProfile.companyName}`);
+        } else {
+          return res.status(400).json({ message: 'Invalid vendor ID' });
+        }
+      } else {
+        // Regular role switch for non-vendor roles - switch back to dev user
+        const originalDevUser = {
+          id: 'dev-user-123',
+          email: 'dev@sclen.com',
+          firstName: 'Development',
+          lastName: 'User',
+          role: role
+        };
+
+        // Switch back to original dev user for non-vendor roles
+        currentDevUser = originalDevUser as any;
+        console.log('Switched back to dev user with role:', role);
+      }
 
       res.json(currentDevUser);
     } catch (error) {
       console.error('Failed to update role in database:', error);
       res.status(500).json({ message: 'Failed to update role' });
     }
+  });
+
+  // Add endpoint to get available test vendor profiles
+  app.get('/api/auth/test-vendors', (req, res) => {
+    if (!isLoggedIn) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    
+    const vendorList = Object.entries(testVendorProfiles).map(([key, profile]) => ({
+      id: profile.id,
+      companyName: profile.companyName,
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+    }));
+    
+    res.json(vendorList);
   });
 
   // Auth middleware for protected routes
@@ -310,27 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Vendor RFx Response endpoints
-  app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not found" });
-      }
 
-      // Get vendor profile for current user
-      const vendor = await storage.getVendorByUserId(userId);
-      if (!vendor) {
-        return res.status(404).json({ message: "Vendor profile not found" });
-      }
-
-      const invitations = await storage.getRfxInvitationsForVendor(vendor.id);
-      res.json(invitations);
-    } catch (error) {
-      console.error("Error fetching vendor RFx invitations:", error);
-      res.status(500).json({ message: "Failed to fetch RFx invitations" });
-    }
-  });
 
   app.get('/api/vendor/rfx-responses', async (req: any, res) => {
     try {
@@ -665,11 +782,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse the AI response to extract vendor information
       console.log('Parsing AI response...');
       const vendors = parseVendorResponse(aiResponse);
-      console.log(`Parsed ${vendors.length} valid vendors`);
-      if (vendors.length > 0) {
-        console.log('Sample parsed vendor:', JSON.stringify(vendors[0], null, 2));
-      }
       console.log(`Found ${vendors.length} vendors from AI discovery`);
+      if (vendors.length > 0) {
+        console.log('Sample vendor:', vendors[0].name, '-', vendors[0].phone || 'No phone', '-', vendors[0].email || 'No email');
+      }
 
       res.json(vendors);
     } catch (error) {
@@ -678,30 +794,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple vendor parsing function
+  // Enhanced vendor parsing function to handle multiple response formats
   function parseVendorResponse(response: string) {
     const vendors: any[] = [];
-    const vendorBlocks = response.split('**').filter(block => block.trim().length > 0);
 
-    for (let i = 0; i < vendorBlocks.length; i += 2) {
-      if (i + 1 < vendorBlocks.length) {
-        const nameBlock = vendorBlocks[i].trim();
-        const detailsBlock = vendorBlocks[i + 1].trim();
+    // First, try to find vendor blocks by looking for company name patterns
+    // Use regex to find standalone company names followed by contact details
+    const vendorPattern = /^([A-Za-z][A-Za-z\s&().,'-]+(?:Ltd|Pvt Ltd|Company|Enterprises|Corp|Corporation|Inc|Chemicals|Industries|Impex|Private Limited)?)\s*\n((?:- [^\n]+\n?)+)/gm;
+    
+    let match;
+    let found = false;
+    
+    while ((match = vendorPattern.exec(response)) !== null) {
+      found = true;
+      const companyName = match[1].trim();
+      const details = match[2].trim();
+      
+      const vendor: any = {
+        name: companyName,
+        email: extractField(details, 'Contact Email:') || extractField(details, 'Email:'),
+        phone: extractField(details, 'Phone Number:') || extractField(details, 'Phone:'),
+        address: extractField(details, 'Address:'),
+        website: extractField(details, 'Website:'),
+        logoUrl: extractField(details, 'Logo URL:'),
+        description: extractField(details, 'Description:'),
+      };
 
-        if (nameBlock.length > 0 && detailsBlock.length > 0) {
-          const vendor: any = {
-            name: nameBlock.replace(/\*\*/g, '').trim(),
-            email: extractField(detailsBlock, 'Contact Email:') || extractField(detailsBlock, 'Email:'),
-            phone: extractField(detailsBlock, 'Phone Number:') || extractField(detailsBlock, 'Phone:'),
-            address: extractField(detailsBlock, 'Address:'),
-            website: extractField(detailsBlock, 'Website:'),
-            logoUrl: extractField(detailsBlock, 'Logo URL:'),
-            description: extractField(detailsBlock, 'Description:'),
-          };
+      // Only add vendors with at least a name and some contact info
+      if (vendor.name && (vendor.email || vendor.phone || vendor.address)) {
+        vendors.push(vendor);
+      }
+    }
 
-          // Only add vendors with at least a name and some contact info
-          if (vendor.name && (vendor.email || vendor.phone || vendor.address)) {
-            vendors.push(vendor);
+    // If regex approach didn't work, fall back to ** splitting approach
+    if (!found || vendors.length === 0) {
+      const sections = response.split('**').filter(section => section.trim().length > 0);
+
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i].trim();
+        
+        // Skip sections that are just descriptions or headers
+        if (section.toLowerCase().includes('here are') || section.toLowerCase().includes('suppliers in') || section.length < 10) {
+          continue;
+        }
+
+        // Check if this looks like a company name (not just details)
+        const firstLine = section.split('\n')[0].trim();
+        
+        // Look for company indicators
+        const companyIndicators = ['Ltd', 'Pvt', 'Company', 'Enterprises', 'Corp', 'Corporation', 'Inc', 'Chemicals', 'Industries', 'Impex', 'Private Limited'];
+        const isCompanyName = companyIndicators.some(indicator => firstLine.includes(indicator)) || 
+                             (firstLine.length < 100 && !firstLine.includes('-') && !firstLine.includes('Contact'));
+
+        if (isCompanyName) {
+          const companyName = firstLine;
+          
+          // Look for details in the next section or same section after first line
+          let details = '';
+          const restOfSection = section.substring(firstLine.length).trim();
+          
+          if (restOfSection.length > 20) {
+            details = restOfSection;
+          } else if (i + 1 < sections.length) {
+            details = sections[i + 1].trim();
+          }
+          
+          if (details.length > 20) {
+            const vendor: any = {
+              name: companyName,
+              email: extractField(details, 'Contact Email:') || extractField(details, 'Email:'),
+              phone: extractField(details, 'Phone Number:') || extractField(details, 'Phone:'),
+              address: extractField(details, 'Address:'),
+              website: extractField(details, 'Website:'),
+              logoUrl: extractField(details, 'Logo URL:'),
+              description: extractField(details, 'Description:'),
+            };
+
+            // Only add vendors with at least a name and some contact info
+            if (vendor.name && (vendor.email || vendor.phone || vendor.address)) {
+              vendors.push(vendor);
+            }
           }
         }
       }
@@ -847,6 +1019,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating RFx invitation:", error);
       res.status(500).json({ message: "Failed to create RFx invitation" });
+    }
+  });
+
+  // Get RFx responses for buyers
+  app.get('/api/rfx/:id/responses', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      console.log(`Fetching responses for RFx ${id}...`);
+      
+      const responses = await storage.getRfxResponses({ rfxId: id });
+      console.log(`Found ${responses.length} responses for RFx ${id}`);
+      
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching RFx responses:", error);
+      res.status(500).json({ message: "Failed to fetch RFx responses" });
     }
   });
 
@@ -1108,6 +1296,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get auction results
+  // Get single auction by ID
+  app.get('/api/auctions/:id', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      console.log(`Fetching auction with ID: ${id}`);
+
+      const auction = await storage.getAuction(id);
+      if (!auction) {
+        console.log(`Auction not found: ${id}`);
+        return res.status(404).json({ error: 'Auction not found' });
+      }
+
+      console.log(`Auction found: ${auction.name}`);
+      res.json(auction);
+    } catch (error) {
+      console.error('Error getting auction:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/api/auctions/:id/results', authMiddleware, async (req: any, res: any) => {
     try {
       const { id } = req.params;

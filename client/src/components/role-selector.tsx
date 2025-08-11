@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Package, Users, Settings } from "lucide-react";
+import { ShoppingCart, Package, Users, Settings, Building } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface RoleSelectorProps {
   open: boolean;
@@ -78,11 +86,26 @@ const roleOptions = [
   }
 ];
 
+interface TestVendor {
+  id: string;
+  companyName: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
 export default function RoleSelector({ open, onClose, currentRole }: RoleSelectorProps) {
   const [selectedRole, setSelectedRole] = useState<string>(currentRole || "");
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   const { switchRole } = useAuth();
+
+  // Use React Query to load test vendors
+  const { data: testVendors = [] } = useQuery({
+    queryKey: ['/api/auth/test-vendors'],
+    enabled: open, // Only fetch when dialog is open
+  });
 
   const handleRoleSelect = async () => {
     if (!selectedRole) {
@@ -94,17 +117,30 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
       return;
     }
 
-    if (selectedRole === currentRole) {
+    if (selectedRole === 'vendor' && !selectedVendorId) {
+      toast({
+        title: "No Vendor Selected",
+        description: "Please select a vendor profile to test with",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedRole === currentRole && selectedRole !== 'vendor') {
       onClose();
       return;
     }
 
     setIsUpdating(true);
     try {
-      await switchRole(selectedRole);
+      await switchRole(selectedRole, selectedVendorId || undefined);
+      const roleName = selectedRole === 'vendor' && selectedVendorId
+        ? testVendors.find(v => v.id === selectedVendorId)?.companyName || 'Vendor'
+        : roleOptions.find(r => r.id === selectedRole)?.title;
+      
       toast({
         title: "Role Updated",
-        description: `Successfully switched to ${roleOptions.find(r => r.id === selectedRole)?.title}`,
+        description: `Successfully switched to ${roleName}`,
       });
       onClose();
     } catch (error: any) {
@@ -176,6 +212,37 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
                         </li>
                       ))}
                     </ul>
+
+                    {/* Vendor Selection - only show for vendor role and when selected */}
+                    {role.id === 'vendor' && isSelected && (
+                      <div className="mt-4 p-3 bg-muted rounded-lg" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building className="w-4 h-4" />
+                          <h4 className="font-medium text-sm">Select Test Vendor Profile:</h4>
+                        </div>
+                        <Select 
+                          value={selectedVendorId} 
+                          onValueChange={setSelectedVendorId}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Choose a vendor to test with..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {testVendors.map((vendor) => (
+                              <SelectItem key={vendor.id} value={vendor.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{vendor.companyName}</span>
+                                  <span className="text-xs text-muted-foreground">{vendor.email}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Testing Purpose: Switch between different vendor identities to test multi-vendor scenarios like auctions and RFx responses.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

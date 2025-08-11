@@ -37,6 +37,23 @@ import {
 
 // Auction Results Component  
 function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreatePO?: (auction: any) => void }) {
+  const { user } = useAuth();
+  
+  // Fetch auction details
+  const { data: auction, isLoading: auctionLoading, error: auctionError } = useQuery({
+    queryKey: ["/api/auctions", auctionId],
+    queryFn: async () => {
+      const response = await fetch(`/api/auctions/${auctionId}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    retry: false,
+  });
+
   const { data: bids = [], isLoading, error } = useQuery({
     queryKey: ["/api/auctions", auctionId, "bids"],
     queryFn: async () => {
@@ -47,7 +64,6 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
-      console.log('Fetched auction results:', data);
       return data;
     },
     retry: false,
@@ -57,17 +73,17 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
   console.log('Frontend: First bid details:', bids[0]);
   console.log('Frontend: Query error:', error);
 
-  if (isLoading) {
+  if (isLoading || auctionLoading) {
     return <div className="text-center py-4">Loading results...</div>;
   }
 
-  if (error) {
+  if (error || auctionError) {
     return (
       <div className="text-center py-8">
         <div className="text-red-600">
           <Trophy className="w-12 h-12 mx-auto mb-4 text-red-300" />
           <h3 className="text-lg font-medium mb-2">Error Loading Results</h3>
-          <p className="text-sm">{error.message || 'Failed to load auction results'}</p>
+          <p className="text-sm">{(error || auctionError)?.message || 'Failed to load auction results'}</p>
         </div>
       </div>
     );
@@ -140,10 +156,32 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                     </div>
                     <div>
                       <div className="font-medium">
-                        {bid.vendorCompanyName || 
-                         bid.vendor?.companyName || 
-                         bid.vendorName || 
-                         (bid.vendorId ? `Vendor ${bid.vendorId.substring(0, 8)}` : 'Unknown Vendor')}
+                        {(() => {
+                          // Debug logging for results dialog
+                          console.log('=== RESULTS DIALOG DEBUG ===');
+                          console.log('bid.vendorId:', bid.vendorId);
+                          console.log('user.vendorId:', (user as any)?.vendorId);
+                          console.log('user.id:', (user as any)?.id);
+                          
+                          // Try both vendorId and id for comparison
+                          const isCurrentUser = bid.vendorId === (user as any)?.vendorId || 
+                                               bid.vendorId === (user as any)?.id;
+                          const isVendorUser = (user as any)?.role === 'vendor';
+                          
+                          console.log('isCurrentUser:', isCurrentUser);
+                          console.log('isVendorUser:', isVendorUser);
+                          
+                          if (isCurrentUser) {
+                            return 'Your Bid';
+                          } else if (isVendorUser) {
+                            return 'Vendor';
+                          } else {
+                            return bid.vendorCompanyName || 
+                                   bid.vendor?.companyName || 
+                                   bid.vendorName || 
+                                   (bid.vendorId ? `Vendor ${bid.vendorId.substring(0, 8)}` : 'Unknown Vendor');
+                          }
+                        })()}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {formatBidDateTime(bid.timestamp || bid.createdAt || bid.submittedAt)}
@@ -170,10 +208,10 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
         </div>
 
         {/* Create PO Button for completed auctions */}
-        {sortedBids.length > 0 && onCreatePO && (
+        {sortedBids.length > 0 && onCreatePO && auction && (
           <div className="text-center mt-6 pt-4 border-t">
             <Button 
-              onClick={() => onCreatePO({ id: auctionId, winningBid: sortedBids[0] })}
+              onClick={() => onCreatePO({ ...auction, winningBid: sortedBids[0] })}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
@@ -1234,10 +1272,10 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
                     <div key={bid.id} className="flex justify-between items-center p-3 bg-muted/30 rounded">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
-                          {bid.vendor?.companyName?.[0] || 'V'}
+                          {bid.vendorCompanyName?.[0] || 'V'}
                         </div>
                         <div>
-                          <div className="font-medium">{bid.vendor?.companyName || 'Vendor'}</div>
+                          <div className="font-medium">{bid.vendorCompanyName || 'Vendor'}</div>
                           <div className="text-sm text-muted-foreground">
                             {formatBidDateTime(bid.timestamp || bid.createdAt)}
                           </div>
@@ -1502,7 +1540,18 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                 return sortedByTime.map((bid: any, index: number) => {
                   // Find the ranking based on amount
                   const rankIndex = sortedByAmount.findIndex(b => b.id === bid.id);
-                  const isCurrentUser = bid.vendorId === (user as any)?.id;
+                  
+                  // Debug logging
+                  console.log('=== BID COMPARISON DEBUG ===');
+                  console.log('bid.vendorId:', bid.vendorId);
+                  console.log('user:', user);
+                  console.log('user.vendorId:', (user as any)?.vendorId);
+                  console.log('user.id:', (user as any)?.id);
+                  console.log('user.role:', (user as any)?.role);
+                  
+                  // Try both vendorId and id for comparison
+                  const isCurrentUser = bid.vendorId === (user as any)?.vendorId || 
+                                       bid.vendorId === (user as any)?.id;
 
                   return (
                     <div key={bid.id} className={`flex justify-between items-center p-3 rounded ${
@@ -1512,10 +1561,14 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                           isCurrentUser ? 'bg-blue-500 text-white' : 'bg-primary text-white'
                         }`}>
-                          {isCurrentUser ? 'You' : (bid.vendor?.companyName?.[0] || 'V')}
+                          {isCurrentUser ? 'You' : 
+                           ((user as any)?.role === 'vendor' ? 'V' : (bid.vendorCompanyName?.[0] || 'V'))}
                         </div>
                         <div>
-                          <div className="font-medium">{isCurrentUser ? 'Your Bid' : (bid.vendor?.companyName || 'Vendor')}</div>
+                          <div className="font-medium">
+                            {isCurrentUser ? 'Your Bid' : 
+                             ((user as any)?.role === 'vendor' ? 'Vendor' : (bid.vendorCompanyName || 'Vendor'))}
+                          </div>
                           <div className="text-sm text-muted-foreground">
                             {formatBidDateTime(bid.timestamp || bid.createdAt)}
                           </div>

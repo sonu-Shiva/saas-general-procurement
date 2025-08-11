@@ -24,7 +24,7 @@ const rfxFormSchema = z.object({
     val ? (typeof val === 'string' ? parseFloat(val) : val) : undefined
   ),
   contactPerson: z.string().optional(),
-  status: z.enum(["draft", "published"]).default("published"),
+  status: z.literal("active").default("active"),
   termsAndConditionsRequired: z.boolean().default(false),
   termsAndConditionsPath: z.string().optional(),
   selectedVendors: z.array(z.string()).optional(), // Added for vendor selection

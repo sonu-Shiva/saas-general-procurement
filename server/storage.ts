@@ -846,7 +846,7 @@ export class DatabaseStorage implements IStorage {
     return response;
   }
 
-  async getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]> {
+  async getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<any[]> {
     const conditions = [];
 
     if (filters?.rfxId) {
@@ -857,11 +857,34 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(rfxResponses.vendorId, filters.vendorId));
     }
 
-    return await this.db
-      .select()
+    // Join with vendors table to get vendor information
+    const responsesWithVendors = await this.db
+      .select({
+        id: rfxResponses.id,
+        rfxId: rfxResponses.rfxId,
+        vendorId: rfxResponses.vendorId,
+        response: rfxResponses.response,
+        quotedPrice: rfxResponses.quotedPrice,
+        deliveryTerms: rfxResponses.deliveryTerms,
+        paymentTerms: rfxResponses.paymentTerms,
+        leadTime: rfxResponses.leadTime,
+        attachments: rfxResponses.attachments,
+        submittedAt: rfxResponses.submittedAt,
+        vendor: {
+          id: vendors.id,
+          companyName: vendors.companyName,
+          email: vendors.email,
+          contactPerson: vendors.contactPerson,
+          phone: vendors.phone,
+          address: vendors.address,
+        }
+      })
       .from(rfxResponses)
+      .leftJoin(vendors, eq(rfxResponses.vendorId, vendors.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(rfxResponses.submittedAt));
+
+    return responsesWithVendors;
   }
 
   async getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]> {
