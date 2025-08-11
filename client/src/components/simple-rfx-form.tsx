@@ -55,7 +55,7 @@ export default function SimpleRfxForm({ onClose, onSuccess }: SimpleRfxFormProps
           scope: data.scope,
           type: data.type,
           dueDate: data.dueDate,
-          status: "draft",
+          status: "active",
         }),
         credentials: "include",
       });

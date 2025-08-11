@@ -66,11 +66,16 @@ export function useAuth() {
     }
   };
 
-  const switchRole = async (newRole: string) => {
+  const switchRole = async (newRole: string, vendorId?: string) => {
     try {
+      const requestBody: { role: string; vendorId?: string } = { role: newRole };
+      if (vendorId) {
+        requestBody.vendorId = vendorId;
+      }
+
       const updatedUser = await apiRequest('/api/auth/user/role', { 
         method: 'PATCH',
-        body: JSON.stringify({ role: newRole }),
+        body: JSON.stringify(requestBody),
         headers: { 'Content-Type': 'application/json' }
       });
       
@@ -87,6 +92,15 @@ export function useAuth() {
     }
   };
 
+  const getTestVendors = async () => {
+    try {
+      return await apiRequest('/api/auth/test-vendors');
+    } catch (error) {
+      console.error('Error fetching test vendors:', error);
+      return [];
+    }
+  };
+
   return {
     user,
     isLoading,
@@ -95,5 +109,6 @@ export function useAuth() {
     login,
     logout,
     switchRole,
+    getTestVendors,
   };
 }

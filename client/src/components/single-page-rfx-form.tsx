@@ -90,7 +90,7 @@ export default function SinglePageRfxForm({ onClose, onSuccess }: SinglePageRfxF
         bomId: data.bomId || undefined,
         criteria: data.criteria || undefined,
         evaluationParameters: data.evaluationParameters || undefined,
-        status: "draft",
+        status: "active",
       };
       
       console.log("RFx payload before API call:", rfxPayload);

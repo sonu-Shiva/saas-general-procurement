@@ -62,7 +62,7 @@ export default function ConvertRfxForm({ sourceRfx, onClose, onSuccess }: Conver
           criteria: data.criteria || undefined,
           evaluationParameters: data.evaluationParameters || undefined,
           parentRfxId: sourceRfx.id, // Link to the source RFx
-          status: "draft",
+          status: "active",
         }),
         credentials: "include",
       });
