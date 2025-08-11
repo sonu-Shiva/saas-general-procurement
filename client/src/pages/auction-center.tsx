@@ -38,6 +38,22 @@ import {
 // Auction Results Component  
 function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreatePO?: (auction: any) => void }) {
   const { user } = useAuth();
+  
+  // Fetch auction details
+  const { data: auction, isLoading: auctionLoading, error: auctionError } = useQuery({
+    queryKey: ["/api/auctions", auctionId],
+    queryFn: async () => {
+      const response = await fetch(`/api/auctions/${auctionId}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    retry: false,
+  });
+
   const { data: bids = [], isLoading, error } = useQuery({
     queryKey: ["/api/auctions", auctionId, "bids"],
     queryFn: async () => {
@@ -58,17 +74,17 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
   console.log('Frontend: First bid details:', bids[0]);
   console.log('Frontend: Query error:', error);
 
-  if (isLoading) {
+  if (isLoading || auctionLoading) {
     return <div className="text-center py-4">Loading results...</div>;
   }
 
-  if (error) {
+  if (error || auctionError) {
     return (
       <div className="text-center py-8">
         <div className="text-red-600">
           <Trophy className="w-12 h-12 mx-auto mb-4 text-red-300" />
           <h3 className="text-lg font-medium mb-2">Error Loading Results</h3>
-          <p className="text-sm">{error.message || 'Failed to load auction results'}</p>
+          <p className="text-sm">{(error || auctionError)?.message || 'Failed to load auction results'}</p>
         </div>
       </div>
     );
@@ -193,10 +209,10 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
         </div>
 
         {/* Create PO Button for completed auctions */}
-        {sortedBids.length > 0 && onCreatePO && (
+        {sortedBids.length > 0 && onCreatePO && auction && (
           <div className="text-center mt-6 pt-4 border-t">
             <Button 
-              onClick={() => onCreatePO({ id: auctionId, winningBid: sortedBids[0] })}
+              onClick={() => onCreatePO({ ...auction, winningBid: sortedBids[0] })}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
