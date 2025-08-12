@@ -2245,7 +2245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           poNumber,
           vendorId,
           totalAmount: totalAmount.toString(),
-          status: "pending_approval" as const,
+          status: "issued" as const, // Direct procurement orders should be issued immediately
           termsAndConditions: notes || "Purchase Order created from Direct Procurement Order",
           paymentTerms: paymentTerms || "Net 30",
           createdBy: userId,
@@ -2261,14 +2261,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const item = bomItems[index];
             await storage.createPoLineItem({
               poId: purchaseOrder.id,
-              slNo: index + 1,
               itemName: item.productName || "Item",
               quantity: item.requestedQuantity?.toString() || "1",
               unitPrice: item.unitPrice?.toString() || "0",
               totalPrice: item.totalPrice?.toString() || "0",
-              taxableValue: item.totalPrice?.toString() || "0",
-              uom: "NOS",
-              hsnCode: "9999",
               specifications: item.specifications || "",
             });
           }
