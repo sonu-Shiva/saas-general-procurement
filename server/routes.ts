@@ -269,7 +269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // CRITICAL: Update the vendor profile's userId to match the current user
           // This ensures vendor lookup by userId works correctly
           try {
-            const existingVendorProfile = await storage.getVendorByEmail(vendorProfile.email);
+            const allVendors = await storage.getVendors();
+            const existingVendorProfile = allVendors.find(v => v.email === vendorProfile.email);
             if (existingVendorProfile && existingVendorProfile.userId !== vendorProfile.id) {
               console.log(`Updating vendor profile userId from ${existingVendorProfile.userId} to ${vendorProfile.id}`);
               await storage.updateVendor(existingVendorProfile.id, {
