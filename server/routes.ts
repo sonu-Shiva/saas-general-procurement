@@ -265,6 +265,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } as any;
           // Add vendorId for frontend matching
           (currentDevUser as any).vendorId = vendorProfile.id;
+          
+          // CRITICAL: Update the vendor profile's userId to match the current user
+          // This ensures vendor lookup by userId works correctly
+          try {
+            const existingVendorProfile = await storage.getVendorByEmail(vendorProfile.email);
+            if (existingVendorProfile && existingVendorProfile.userId !== vendorProfile.id) {
+              console.log(`Updating vendor profile userId from ${existingVendorProfile.userId} to ${vendorProfile.id}`);
+              await storage.updateVendor(existingVendorProfile.id, {
+                userId: vendorProfile.id
+              });
+              console.log(`Vendor profile userId updated successfully`);
+            }
+          } catch (vendorUpdateError) {
+            console.error('Error updating vendor profile userId:', vendorUpdateError);
+          }
+          
           console.log(`Switched to vendor: ${vendorProfile.companyName}`);
         } else {
           return res.status(400).json({ message: 'Invalid vendor ID' });
