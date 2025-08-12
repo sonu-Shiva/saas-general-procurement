@@ -1041,25 +1041,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Vendor RFx invitations route
   app.get('/api/vendor/rfx-invitations', async (req: any, res) => {
     try {
-      console.log('Vendor RFx invitations - User ID:', req.user?.claims?.sub);
+      console.log('Vendor RFx invitations - Current user ID:', currentDevUser.id);
+      console.log('Vendor RFx invitations - Current user role:', currentDevUser.role);
 
-      const userId = req.user?.claims?.sub;
+      // In development mode, use currentDevUser instead of req.user
+      const userId = currentDevUser.id;
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
       }
 
-      // Check user role from database
-      // Get fresh user data from database to ensure role changes are reflected
-      const user = await storage.getUser(userId);
-      console.log('Vendor RFx invitations - User role:', user?.role);
-      console.log('Vendor RFx invitations - Current session role:', currentDevUser.role);
-
-      if (!user || user.role !== 'vendor') {
-        console.log('User role check failed. User found:', !!user, 'Role:', user?.role);
+      // For development, check if current user is in vendor role
+      if (currentDevUser.role !== 'vendor') {
+        console.log('User role check failed. Current role:', currentDevUser.role);
         return res.json([]);
       }
 
-      // For development, let's find vendor by userId or create a mock vendor
+      // Find vendor by userId - the current user ID should match a vendor profile
       let vendor = await storage.getVendorByUserId(userId);
       console.log("Found vendor:", vendor ? vendor.id : 'No vendor found');
 
@@ -1144,19 +1141,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Vendor RFx responses route
   app.get('/api/vendor/rfx-responses', async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      console.log('Vendor RFx responses - Current user ID:', currentDevUser.id);
+      console.log('Vendor RFx responses - Current user role:', currentDevUser.role);
+
+      // In development mode, use currentDevUser instead of req.user
+      const userId = currentDevUser.id;
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
       }
 
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'vendor') {
+      // For development, check if current user is in vendor role
+      if (currentDevUser.role !== 'vendor') {
+        console.log('User role check failed for responses. Current role:', currentDevUser.role);
         return res.json([]);
       }
 
       const vendor = await storage.getVendorByUserId(userId);
       if (!vendor) {
-        return res.json([]);
+        console.log("No vendor profile found for user:", userId);
+        return res.status(404).json({ message: "Vendor profile not found" });
       }
 
       const responses = await storage.getRfxResponsesByVendor(vendor.id);
