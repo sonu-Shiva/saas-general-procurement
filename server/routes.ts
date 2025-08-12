@@ -346,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth middleware for protected routes
-  const authMiddleware = (req: any, res: next, next: any) => {
+  const authMiddleware = (req: any, res: any, next: any) => {
     try {
       // Skip auth check for auth routes, vendor discovery, and auction bids (temporarily)
       if (req.path.startsWith('/auth/') || 
@@ -2486,6 +2486,302 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to create purchase order from auction",
         error: error.message || "Unknown error"
       });
+    }
+  });
+
+  // ===== NEW MULTI-ROLE APPROVAL WORKFLOW ROUTES =====
+
+  // Procurement Request routes
+  app.post("/api/procurement-requests", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const requestData = {
+        ...req.body,
+        requestedBy: userId,
+        department: user.department || req.body.department || 'General',
+      };
+
+      const request = await storage.createProcurementRequest(requestData);
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating procurement request:", error);
+      res.status(500).json({ message: "Failed to create procurement request" });
+    }
+  });
+
+  app.get("/api/procurement-requests", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let filters: any = {};
+
+      // Role-based filtering
+      switch (user.role) {
+        case 'requester':
+          filters.requestedBy = userId;
+          break;
+        case 'request_approver':
+        case 'procurement_approver':
+          // Approvers can see requests for their department or any if they're senior
+          if (user.department) {
+            filters.department = user.department;
+          }
+          break;
+        case 'admin':
+          // Admin can see all requests
+          break;
+        default:
+          // Other roles can see all requests
+          break;
+      }
+
+      const requests = await storage.getProcurementRequests(filters);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching procurement requests:", error);
+      res.status(500).json({ message: "Failed to fetch procurement requests" });
+    }
+  });
+
+  app.get("/api/procurement-requests/:id", authMiddleware, async (req, res) => {
+    try {
+      const request = await storage.getProcurementRequest(req.params.id);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Error fetching procurement request:", error);
+      res.status(500).json({ message: "Failed to fetch procurement request" });
+    }
+  });
+
+  app.put("/api/procurement-requests/:id", authMiddleware, async (req, res) => {
+    try {
+      const request = await storage.updateProcurementRequest(req.params.id, req.body);
+      res.json(request);
+    } catch (error) {
+      console.error("Error updating procurement request:", error);
+      res.status(500).json({ message: "Failed to update procurement request" });
+    }
+  });
+
+  app.delete("/api/procurement-requests/:id", authMiddleware, async (req, res) => {
+    try {
+      await storage.deleteProcurementRequest(req.params.id);
+      res.json({ message: "Procurement request deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting procurement request:", error);
+      res.status(500).json({ message: "Failed to delete procurement request" });
+    }
+  });
+
+  // Approval Configuration routes (Admin only)
+  app.post("/api/approval-configurations", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Only admins can create approval configurations" });
+      }
+
+      const configData = {
+        ...req.body,
+        createdBy: userId,
+      };
+
+      const config = await storage.createApprovalConfiguration(configData);
+      res.json(config);
+    } catch (error) {
+      console.error("Error creating approval configuration:", error);
+      res.status(500).json({ message: "Failed to create approval configuration" });
+    }
+  });
+
+  app.get("/api/approval-configurations", authMiddleware, async (req, res) => {
+    try {
+      const { approvalType, department } = req.query;
+      const filters: any = {};
+      
+      if (approvalType) filters.approvalType = approvalType as string;
+      if (department) filters.department = department as string;
+
+      const configs = await storage.getApprovalConfigurations(filters);
+      res.json(configs);
+    } catch (error) {
+      console.error("Error fetching approval configurations:", error);
+      res.status(500).json({ message: "Failed to fetch approval configurations" });
+    }
+  });
+
+  app.put("/api/approval-configurations/:id", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Only admins can update approval configurations" });
+      }
+
+      const config = await storage.updateApprovalConfiguration(req.params.id, req.body);
+      res.json(config);
+    } catch (error) {
+      console.error("Error updating approval configuration:", error);
+      res.status(500).json({ message: "Failed to update approval configuration" });
+    }
+  });
+
+  app.delete("/api/approval-configurations/:id", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'admin') {
+        return res.status(403).json({ message: "Only admins can delete approval configurations" });
+      }
+
+      await storage.deleteApprovalConfiguration(req.params.id);
+      res.json({ message: "Approval configuration deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting approval configuration:", error);
+      res.status(500).json({ message: "Failed to delete approval configuration" });
+    }
+  });
+
+  // Approval History routes
+  app.get("/api/approval-history", authMiddleware, async (req, res) => {
+    try {
+      const { entityId, approverId, status } = req.query;
+      const filters: any = {};
+      
+      if (entityId) filters.entityId = entityId as string;
+      if (approverId) filters.approverId = approverId as string;
+      if (status) filters.status = status as string;
+
+      const history = await storage.getApprovalHistory(filters);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching approval history:", error);
+      res.status(500).json({ message: "Failed to fetch approval history" });
+    }
+  });
+
+  // Approval Action routes
+  app.post("/api/approval-requests/:id/approve", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const requestId = req.params.id;
+      const { comments } = req.body;
+
+      // Get the procurement request
+      const procurementRequest = await storage.getProcurementRequest(requestId);
+      if (!procurementRequest) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Check if user has approval authority based on role
+      const canApprove = ['request_approver', 'procurement_approver', 'admin'].includes(user.role);
+      if (!canApprove) {
+        return res.status(403).json({ message: "You don't have approval authority" });
+      }
+
+      // Create approval history record
+      await storage.createApprovalHistory({
+        entityType: 'procurement_request',
+        entityId: requestId,
+        approvalType: user.role === 'request_approver' ? 'request_approval' : 'procurement_approval',
+        level: 1, // TODO: Implement proper level calculation based on configuration
+        approverId: userId,
+        status: 'approved',
+        comments,
+        processedAt: new Date(),
+      });
+
+      // Update the procurement request status
+      let updates: any = {};
+      if (user.role === 'request_approver') {
+        updates = {
+          requestApprovalStatus: 'approved',
+          overallStatus: 'request_approved',
+        };
+      } else if (user.role === 'procurement_approver') {
+        updates = {
+          procurementMethodStatus: 'approved',
+          overallStatus: 'procurement_approved',
+        };
+      }
+
+      const updatedRequest = await storage.updateProcurementRequest(requestId, updates);
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Error approving request:", error);
+      res.status(500).json({ message: "Failed to approve request" });
+    }
+  });
+
+  app.post("/api/approval-requests/:id/reject", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const requestId = req.params.id;
+      const { comments } = req.body;
+
+      // Get the procurement request
+      const procurementRequest = await storage.getProcurementRequest(requestId);
+      if (!procurementRequest) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Check if user has approval authority
+      const canApprove = ['request_approver', 'procurement_approver', 'admin'].includes(user.role);
+      if (!canApprove) {
+        return res.status(403).json({ message: "You don't have approval authority" });
+      }
+
+      // Create approval history record
+      await storage.createApprovalHistory({
+        entityType: 'procurement_request',
+        entityId: requestId,
+        approvalType: user.role === 'request_approver' ? 'request_approval' : 'procurement_approval',
+        level: 1, // TODO: Implement proper level calculation
+        approverId: userId,
+        status: 'rejected',
+        comments: comments || 'Request rejected',
+        processedAt: new Date(),
+      });
+
+      // Update the procurement request status
+      const updatedRequest = await storage.updateProcurementRequest(requestId, {
+        overallStatus: 'rejected',
+      });
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Error rejecting request:", error);
+      res.status(500).json({ message: "Failed to reject request" });
     }
   });
 

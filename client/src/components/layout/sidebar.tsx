@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   BarChart3,
   MessageSquare,
+  ClipboardCheck,
 } from "lucide-react";
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Vendor Management", href: "/vendors", icon: Users, buyerOnly: true },
   { name: "Product Catalogue", href: "/products", icon: Package },
   { name: "BOM Management", href: "/boms", icon: Layers, buyerOnly: true },
+  { name: "Procurement Requests", href: "/procurement-requests", icon: ClipboardCheck, requesterApproverOnly: true },
   { name: "RFx Invitations", href: "/vendor-portal", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management", vendorHref: "/vendor-portal", buyerHref: "/rfx" },
   { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center" },
   { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, buyerOnly: true },
@@ -38,12 +40,22 @@ export default function Sidebar() {
         <nav className="space-y-2">
           {navigation
             .filter((item) => {
-              const isVendor = (user as any)?.role === 'vendor';
+              const userRole = (user as any)?.role;
+              const isVendor = userRole === 'vendor';
               
               // Hide buyer-only items from vendors
               if (isVendor && item.buyerOnly) {
                 return false;
               }
+              
+              // Show procurement requests only to requesters, approvers, buyers, and admin
+              if (item.requesterApproverOnly) {
+                const allowedRoles = ['requester', 'request_approver', 'procurement_approver', 'buyer', 'admin'];
+                if (!allowedRoles.includes(userRole)) {
+                  return false;
+                }
+              }
+              
               return true;
             })
             .map((item) => {

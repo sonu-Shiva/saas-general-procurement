@@ -29,44 +29,86 @@ interface RoleSelectorProps {
 
 const roleOptions = [
   {
-    id: "buyer_admin",
-    title: "Buyer Admin",
-    description: "Full procurement management with administrative privileges",
+    id: "admin",
+    title: "Admin",
+    description: "Platform administration with full system control",
     icon: Settings,
     features: [
-      "Manage all procurement processes",
-      "View and create BOMs",
-      "Manage vendor relationships",
-      "Administrative controls",
-      "Analytics and reporting"
+      "Configure approval workflows",
+      "Manage all user roles",
+      "System administration",
+      "Advanced analytics",
+      "Global settings control"
     ],
-    color: "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300"
+    color: "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300"
   },
   {
-    id: "buyer_user",
+    id: "requester",
+    title: "Requester",
+    description: "Department-level procurement request initiator",
+    icon: Package,
+    features: [
+      "Create procurement requests",
+      "Build BOMs for departments",
+      "Submit approval requests",
+      "Track request status",
+      "Basic procurement workflows"
+    ],
+    color: "bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300"
+  },
+  {
+    id: "request_approver",
+    title: "Request Approver",
+    description: "Multi-level procurement request approval authority",
+    icon: Users,
+    features: [
+      "Review procurement requests",
+      "Approve or reject requests",
+      "Add approval comments",
+      "Multi-level approval workflows",
+      "Request history tracking"
+    ],
+    color: "bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300"
+  },
+  {
+    id: "buyer",
     title: "Buyer",
-    description: "Standard procurement user with BOM creation capabilities",
+    description: "Execute approved procurement through RFx, Auctions, or Direct methods",
     icon: ShoppingCart,
     features: [
-      "View product catalogue",
-      "Create and manage BOMs",
-      "Submit purchase requests",
-      "View vendor information",
-      "Basic analytics access"
+      "Process approved requests",
+      "Manage RFx processes",
+      "Conduct auctions",
+      "Direct procurement",
+      "Vendor selection"
     ],
     color: "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300"
   },
   {
+    id: "procurement_approver",
+    title: "Procurement Approver",
+    description: "Multi-level approval for procurement methods and strategies",
+    icon: Building,
+    features: [
+      "Approve procurement methods",
+      "Review RFx strategies",
+      "Approve auction parameters",
+      "Direct procurement approval",
+      "Strategic oversight"
+    ],
+    color: "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300"
+  },
+  {
     id: "sourcing_manager",
     title: "Sourcing Manager",
-    description: "Advanced procurement with sourcing and vendor management",
+    description: "Final purchase order approval and vendor management",
     icon: Users,
     features: [
-      "Manage vendor relationships",
-      "View and create BOMs",
-      "RFx process management",
-      "Auction participation",
-      "Advanced analytics"
+      "Final PO approval",
+      "Vendor relationship management",
+      "Strategic sourcing decisions",
+      "Performance analytics",
+      "Contract management"
     ],
     color: "bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300"
   },

@@ -18,6 +18,9 @@ import {
   notifications,
   organizations,
   termsAcceptance,
+  procurementRequests,
+  approvalConfigurations,
+  approvalHistory,
   type User,
   type UpsertUser,
   type Vendor,
@@ -56,6 +59,12 @@ import {
   type InsertOrganization,
   type TermsAcceptance,
   type InsertTermsAcceptance,
+  type ProcurementRequest,
+  type InsertProcurementRequest,
+  type ApprovalConfiguration,
+  type InsertApprovalConfiguration,
+  type ApprovalHistory,
+  type InsertApprovalHistory,
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from "nanoid";
@@ -161,6 +170,25 @@ export interface IStorage {
 
   // Dashboard operations
   getDashboardStats(userId: string): Promise<any>;
+
+  // Procurement Request operations
+  createProcurementRequest(request: InsertProcurementRequest): Promise<ProcurementRequest>;
+  getProcurementRequests(filters?: { requestedBy?: string; department?: string; status?: string }): Promise<ProcurementRequest[]>;
+  getProcurementRequest(id: string): Promise<ProcurementRequest | undefined>;
+  updateProcurementRequest(id: string, updates: Partial<ProcurementRequest>): Promise<ProcurementRequest>;
+  deleteProcurementRequest(id: string): Promise<void>;
+
+  // Approval Configuration operations
+  createApprovalConfiguration(config: InsertApprovalConfiguration): Promise<ApprovalConfiguration>;
+  getApprovalConfigurations(filters?: { approvalType?: string; department?: string }): Promise<ApprovalConfiguration[]>;
+  getApprovalConfiguration(id: string): Promise<ApprovalConfiguration | undefined>;
+  updateApprovalConfiguration(id: string, updates: Partial<ApprovalConfiguration>): Promise<ApprovalConfiguration>;
+  deleteApprovalConfiguration(id: string): Promise<void>;
+
+  // Approval History operations
+  createApprovalHistory(history: InsertApprovalHistory): Promise<ApprovalHistory>;
+  getApprovalHistory(filters?: { entityId?: string; approverId?: string; status?: string }): Promise<ApprovalHistory[]>;
+  updateApprovalHistory(id: string, updates: Partial<ApprovalHistory>): Promise<ApprovalHistory>;
 
   // Terms & Conditions operations
   recordTermsAcceptance(acceptance: InsertTermsAcceptance): Promise<TermsAcceptance>;
@@ -1569,6 +1597,142 @@ export class DatabaseStorage implements IStorage {
       .from(termsAcceptance)
       .where(eq(termsAcceptance.vendorId, vendorId))
       .orderBy(desc(termsAcceptance.acceptedAt));
+  }
+
+  // Procurement Request operations
+  async createProcurementRequest(request: InsertProcurementRequest): Promise<ProcurementRequest> {
+    const requestNumber = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const requestData = {
+      ...request,
+      requestNumber,
+    };
+    const [created] = await this.db.insert(procurementRequests).values(requestData).returning();
+    return created;
+  }
+
+  async getProcurementRequests(filters?: { requestedBy?: string; department?: string; status?: string }): Promise<ProcurementRequest[]> {
+    const conditions = [];
+
+    if (filters?.requestedBy) {
+      conditions.push(eq(procurementRequests.requestedBy, filters.requestedBy));
+    }
+
+    if (filters?.department) {
+      conditions.push(eq(procurementRequests.department, filters.department));
+    }
+
+    if (filters?.status) {
+      conditions.push(eq(procurementRequests.overallStatus, filters.status as any));
+    }
+
+    return await this.db
+      .select()
+      .from(procurementRequests)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(procurementRequests.createdAt));
+  }
+
+  async getProcurementRequest(id: string): Promise<ProcurementRequest | undefined> {
+    const [request] = await this.db
+      .select()
+      .from(procurementRequests)
+      .where(eq(procurementRequests.id, id));
+    return request;
+  }
+
+  async updateProcurementRequest(id: string, updates: Partial<ProcurementRequest>): Promise<ProcurementRequest> {
+    const [updated] = await this.db
+      .update(procurementRequests)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(procurementRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteProcurementRequest(id: string): Promise<void> {
+    await this.db.delete(procurementRequests).where(eq(procurementRequests.id, id));
+  }
+
+  // Approval Configuration operations
+  async createApprovalConfiguration(config: InsertApprovalConfiguration): Promise<ApprovalConfiguration> {
+    const [created] = await this.db.insert(approvalConfigurations).values(config).returning();
+    return created;
+  }
+
+  async getApprovalConfigurations(filters?: { approvalType?: string; department?: string }): Promise<ApprovalConfiguration[]> {
+    const conditions = [eq(approvalConfigurations.isActive, true)];
+
+    if (filters?.approvalType) {
+      conditions.push(eq(approvalConfigurations.approvalType, filters.approvalType as any));
+    }
+
+    if (filters?.department) {
+      conditions.push(eq(approvalConfigurations.department, filters.department));
+    }
+
+    return await this.db
+      .select()
+      .from(approvalConfigurations)
+      .where(and(...conditions))
+      .orderBy(desc(approvalConfigurations.createdAt));
+  }
+
+  async getApprovalConfiguration(id: string): Promise<ApprovalConfiguration | undefined> {
+    const [config] = await this.db
+      .select()
+      .from(approvalConfigurations)
+      .where(eq(approvalConfigurations.id, id));
+    return config;
+  }
+
+  async updateApprovalConfiguration(id: string, updates: Partial<ApprovalConfiguration>): Promise<ApprovalConfiguration> {
+    const [updated] = await this.db
+      .update(approvalConfigurations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(approvalConfigurations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteApprovalConfiguration(id: string): Promise<void> {
+    await this.db.delete(approvalConfigurations).where(eq(approvalConfigurations.id, id));
+  }
+
+  // Approval History operations
+  async createApprovalHistory(history: InsertApprovalHistory): Promise<ApprovalHistory> {
+    const [created] = await this.db.insert(approvalHistory).values(history).returning();
+    return created;
+  }
+
+  async getApprovalHistory(filters?: { entityId?: string; approverId?: string; status?: string }): Promise<ApprovalHistory[]> {
+    const conditions = [];
+
+    if (filters?.entityId) {
+      conditions.push(eq(approvalHistory.entityId, filters.entityId));
+    }
+
+    if (filters?.approverId) {
+      conditions.push(eq(approvalHistory.approverId, filters.approverId));
+    }
+
+    if (filters?.status) {
+      conditions.push(eq(approvalHistory.status, filters.status as any));
+    }
+
+    return await this.db
+      .select()
+      .from(approvalHistory)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(approvalHistory.createdAt));
+  }
+
+  async updateApprovalHistory(id: string, updates: Partial<ApprovalHistory>): Promise<ApprovalHistory> {
+    const [updated] = await this.db
+      .update(approvalHistory)
+      .set({ ...updates, processedAt: updates.processedAt || new Date() })
+      .where(eq(approvalHistory.id, id))
+      .returning();
+    return updated;
   }
 }
 

@@ -35,8 +35,9 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role", { enum: ["buyer_admin", "buyer_user", "sourcing_manager", "vendor"] }).notNull().default("buyer_user"),
+  role: varchar("role", { enum: ["admin", "requester", "request_approver", "buyer", "procurement_approver", "sourcing_manager", "vendor"] }).notNull().default("requester"),
   organizationId: varchar("organization_id"),
+  department: varchar("department", { length: 100 }), // For requesters - which department they belong to
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -304,7 +305,7 @@ export const poLineItems = pgTable("po_line_items", {
 
 export const approvals = pgTable("approvals", {
   id: uuid("id").primaryKey().defaultRandom(),
-  entityType: varchar("entity_type", { enum: ["vendor", "rfx", "po", "budget"] }).notNull(),
+  entityType: varchar("entity_type", { enum: ["vendor", "rfx", "po", "budget", "procurement_request"] }).notNull(),
   entityId: uuid("entity_id").notNull(),
   approverId: varchar("approver_id").references(() => users.id).notNull(),
   status: varchar("status", { enum: ["pending", "approved", "rejected"] }).default("pending"),
@@ -358,6 +359,73 @@ export const termsAcceptance = pgTable("terms_acceptance", {
 }, (table) => ({
   uniqueAcceptance: unique("unique_vendor_entity_acceptance").on(table.vendorId, table.entityType, table.entityId),
 }));
+
+// Procurement Requests - New table for requester-initiated procurement requests
+export const procurementRequests = pgTable("procurement_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  requestNumber: varchar("request_number", { length: 100 }).unique().notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  department: varchar("department", { length: 100 }).notNull(),
+  bomId: uuid("bom_id").references(() => boms.id).notNull(),
+  priority: varchar("priority", { enum: ["low", "medium", "high", "urgent"] }).default("medium"),
+  requestedBy: varchar("requested_by").references(() => users.id).notNull(),
+  requestedDeliveryDate: timestamp("requested_delivery_date").notNull(),
+  justification: text("justification"), // Business justification for the procurement
+  estimatedBudget: decimal("estimated_budget", { precision: 12, scale: 2 }),
+  
+  // Request Approval Stage
+  requestApprovalStatus: varchar("request_approval_status", { enum: ["pending", "approved", "rejected"] }).default("pending"),
+  currentRequestApprover: varchar("current_request_approver").references(() => users.id),
+  requestApprovalHistory: jsonb("request_approval_history"), // Track multi-level approvals
+  
+  // Procurement Method Stage (after request approval)
+  procurementMethod: varchar("procurement_method", { enum: ["rfx", "auction", "direct"] }),
+  procurementMethodStatus: varchar("procurement_method_status", { enum: ["pending", "approved", "rejected"] }).default("pending"),
+  currentProcurementApprover: varchar("current_procurement_approver").references(() => users.id),
+  procurementApprovalHistory: jsonb("procurement_approval_history"), // Track multi-level procurement approvals
+  
+  // Overall Status
+  overallStatus: varchar("overall_status", { enum: ["draft", "request_approval_pending", "request_approved", "procurement_method_pending", "procurement_approved", "in_procurement", "completed", "rejected"] }).default("request_approval_pending"),
+  
+  // Linked Entities (created after approvals)
+  rfxId: uuid("rfx_id").references(() => rfxEvents.id),
+  auctionId: uuid("auction_id").references(() => auctions.id),
+  directProcurementId: uuid("direct_procurement_id").references(() => directProcurementOrders.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Approval Configuration - Admin configurable multi-level approvals
+export const approvalConfigurations = pgTable("approval_configurations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  approvalType: varchar("approval_type", { enum: ["request_approval", "procurement_approval"] }).notNull(),
+  department: varchar("department", { length: 100 }), // Department-specific configurations
+  budgetRange: varchar("budget_range", { length: 50 }), // e.g., "0-10000", "10000-50000", "50000+"
+  
+  // Multi-level approval chain
+  approvalLevels: jsonb("approval_levels").notNull(), // Array of {level: 1, approverRole: "request_approver", approverIds: ["user1", "user2"], requireAll: false}
+  
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Approval History - Track all approvals with detailed history
+export const approvalHistory = pgTable("approval_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  entityType: varchar("entity_type", { enum: ["procurement_request", "rfx", "auction", "direct_procurement", "purchase_order"] }).notNull(),
+  entityId: uuid("entity_id").notNull(),
+  approvalType: varchar("approval_type", { enum: ["request_approval", "procurement_approval", "po_approval"] }).notNull(),
+  level: integer("level").notNull(), // Approval level (1, 2, 3, etc.)
+  approverId: varchar("approver_id").references(() => users.id).notNull(),
+  status: varchar("status", { enum: ["pending", "approved", "rejected"] }).notNull(),
+  comments: text("comments"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -759,6 +827,30 @@ export const insertTermsAcceptanceSchema = createInsertSchema(termsAcceptance).o
   acceptedAt: true,
 });
 
+export const insertProcurementRequestSchema = createInsertSchema(procurementRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  requestedDeliveryDate: z.union([z.string(), z.date()]).transform((val) =>
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  estimatedBudget: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ),
+});
+
+export const insertApprovalConfigurationSchema = createInsertSchema(approvalConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertApprovalHistorySchema = createInsertSchema(approvalHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -800,3 +892,12 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type TermsAcceptance = typeof termsAcceptance.$inferSelect;
 export type InsertTermsAcceptance = z.infer<typeof insertTermsAcceptanceSchema>;
+
+export type ProcurementRequest = typeof procurementRequests.$inferSelect;
+export type InsertProcurementRequest = z.infer<typeof insertProcurementRequestSchema>;
+
+export type ApprovalConfiguration = typeof approvalConfigurations.$inferSelect;
+export type InsertApprovalConfiguration = z.infer<typeof insertApprovalConfigurationSchema>;
+
+export type ApprovalHistory = typeof approvalHistory.$inferSelect;
+export type InsertApprovalHistory = z.infer<typeof insertApprovalHistorySchema>;

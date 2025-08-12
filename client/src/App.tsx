@@ -15,6 +15,7 @@ import DirectProcurement from "@/pages/direct-procurement";
 import Analytics from "@/pages/analytics";
 import VendorDiscovery from "@/pages/vendor-discovery";
 import VendorPortal from "@/pages/vendor-portal";
+import ProcurementRequests from "@/pages/procurement-requests";
 
 import SimpleLogin from "@/pages/simple-login";
 import Sidebar from "@/components/layout/sidebar";
@@ -99,6 +100,7 @@ function Router() {
           <Route path="/vendors" component={VendorManagement} />
           <Route path="/products" component={ProductCatalogue} />
           <Route path="/boms" component={BomManagement} />
+          <Route path="/procurement-requests" component={ProcurementRequests} />
           <Route path="/rfx" component={RfxManagement} />
           <Route path="/vendor-portal" component={VendorPortal} />
           <Route path="/auctions" component={AuctionCenter} />
