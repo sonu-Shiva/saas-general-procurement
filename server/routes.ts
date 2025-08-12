@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const { role, vendorId } = req.body;
-    const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
+    const validRoles = ['admin', 'requester', 'request_approver', 'buyer', 'procurement_approver', 'sourcing_manager', 'vendor'];
 
     if (!validRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
@@ -314,8 +314,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: 'dev@sclen.com',
           firstName: 'Development',
           lastName: 'User',
-          role: role
+          role: role,
+          department: role === 'requester' ? 'IT' : undefined  // Add department for requesters
         };
+
+        // Update user in database with new role
+        try {
+          await storage.upsertUser({
+            id: originalDevUser.id,
+            email: originalDevUser.email,
+            firstName: originalDevUser.firstName,
+            lastName: originalDevUser.lastName,
+            role: originalDevUser.role as any,
+            department: originalDevUser.department,
+          });
+        } catch (dbError) {
+          console.error('Error updating user role in database:', dbError);
+        }
 
         // Switch back to original dev user for non-vendor roles
         currentDevUser = originalDevUser as any;
