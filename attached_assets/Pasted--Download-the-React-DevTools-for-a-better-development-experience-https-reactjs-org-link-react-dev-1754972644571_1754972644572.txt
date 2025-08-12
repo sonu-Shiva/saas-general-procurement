@@ -1,0 +1,249 @@
+ Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+ RfxManagement render - rfxEvents: Array(0) isLoading: true
+ RfxManagement render - rfxEvents: Array(21) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxManagement render - rfxEvents: Array(0) isLoading: true
+ RfxManagement render - rfxEvents: Array(0) isLoading: true
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ Respond button clicked for RFx: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxResponseForm - Debug data: Object
+ RfxResponseForm - Debug data: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxResponseForm - Debug data: Object
+ RfxResponseForm - Debug data: Object
+ RfxResponseForm - Debug data: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxResponseForm - Debug data: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxResponseForm - Debug data: Object
+ Upload parameters received: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxResponseForm - Debug data: Object
+ Upload parameters received: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxResponseForm - Debug data: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxResponseForm - Debug data: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: false
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxResponseForm - Debug data: Object
+ RfxResponseForm - Debug data: Object
+ Submitting RFx response with data: Object
+ RfxResponseForm - Debug data: Object
+ RfxManagement render - rfxEvents: Array(3) isLoading: false
+ RfxCard - Debug Info: Object
+ RfxCard - Can Respond: true
+ 🔍 VENDOR STATUS DISPLAY: Object
+ RfxCard - Debug Info: Object
+rfx-management.tsx:752 RfxCard - Can Respond: true
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: Object
+rfx-management.tsx:733 RfxCard - Debug Info: Object
+rfx-management.tsx:752 RfxCard - Can Respond: false
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: Object
+rfx-response-form.tsx:59 RfxResponseForm - Debug data: Object
+rfx-management.tsx:85 RfxManagement render - rfxEvents: Array(3) isLoading: false
+rfx-management.tsx:733 RfxCard - Debug Info: Object
+rfx-management.tsx:752 RfxCard - Can Respond: true
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: Object
+rfx-management.tsx:733 RfxCard - Debug Info: Object
+rfx-management.tsx:752 RfxCard - Can Respond: true
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: Object
+rfx-management.tsx:733 RfxCard - Debug Info: Object
+rfx-management.tsx:752 RfxCard - Can Respond: false
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: Object
+rfx-response-form.tsx:59 RfxResponseForm - Debug data: Object
+rfx-response-form.tsx:59 RfxResponseForm - Debug data: {rfx: {…}, rfxData: {…}, rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0', rfxType: 'RFI', termsPath: 'https://storage.googleapis.com/replit-objstore-612…vate/uploads/3d60aa79-05af-4d66-87b1-eb6451a73f52'}
+rfx-response-form.tsx:188 Submitting RFx response with data: {rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0', response: 'Test response', quotedPrice: null, deliveryTerms: null, paymentTerms: null, …}
+rfx-response-form.tsx:59 RfxResponseForm - Debug data: {rfx: {…}, rfxData: {…}, rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0', rfxType: 'RFI', termsPath: 'https://storage.googleapis.com/replit-objstore-612…vate/uploads/3d60aa79-05af-4d66-87b1-eb6451a73f52'}
+rfx-management.tsx:85 RfxManagement render - rfxEvents: (3) [{…}, {…}, {…}] isLoading: false
+rfx-response-form.tsx:190 Fetch failed loading: POST "https://b66231d0-1d21-4c13-a6b7-b97aa4f459d3-00-e3m5sn2rrnzv.kirk.replit.dev/api/vendor/rfx-responses".
+mutationFn @ rfx-response-form.tsx:190
+fn @ @tanstack_react-query.js?v=c5795bf1:1189
+run @ @tanstack_react-query.js?v=c5795bf1:494
+start @ @tanstack_react-query.js?v=c5795bf1:536
+execute @ @tanstack_react-query.js?v=c5795bf1:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=c5795bf1:2630
+(anonymous) @ @tanstack_react-query.js?v=c5795bf1:3295
+onSubmit @ rfx-response-form.tsx:232
+(anonymous) @ chunk-4BFJKWC4.js?v=c5795bf1:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=c5795bf1:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=c5795bf1:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=c5795bf1:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=c5795bf1:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=c5795bf1:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=c5795bf1:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=c5795bf1:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=c5795bf1:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=c5795bf1:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=c5795bf1:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=c5795bf1:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=c5795bf1:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=c5795bf1:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=c5795bf1:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=c5795bf1:5449
+rfx-management.tsx:733 RfxCard - Debug Info: {isVendor: true, rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0-a5a10f14-4d2a-4309-a09f-0352278c4a53', invitationStatus: 'invited', rfxStatus: 'active', canRespondCheck: {…}}
+rfx-management.tsx:752 RfxCard - Can Respond: true
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: {rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0-a5a10f14-4d2a-4309-a09f-0352278c4a53', isVendor: true, invitationStatus: 'invited', rfxStatus: 'active', vendorDisplayStatus: 'active', …}
+rfx-management.tsx:733 RfxCard - Debug Info: {isVendor: true, rfxId: '16d8eccf-0873-4c7c-a12b-fbde10365879-a5a10f14-4d2a-4309-a09f-0352278c4a53', invitationStatus: 'invited', rfxStatus: 'active', canRespondCheck: {…}}
+rfx-management.tsx:752 RfxCard - Can Respond: true
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: {rfxId: '16d8eccf-0873-4c7c-a12b-fbde10365879-a5a10f14-4d2a-4309-a09f-0352278c4a53', isVendor: true, invitationStatus: 'invited', rfxStatus: 'active', vendorDisplayStatus: 'active', …}
+rfx-management.tsx:733 RfxCard - Debug Info: {isVendor: true, rfxId: '8cff2183-3679-40e0-8b1e-e6d2691a623d-a5a10f14-4d2a-4309-a09f-0352278c4a53', invitationStatus: 'responded', rfxStatus: 'active', canRespondCheck: {…}}
+rfx-management.tsx:752 RfxCard - Can Respond: false
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: {rfxId: '8cff2183-3679-40e0-8b1e-e6d2691a623d-a5a10f14-4d2a-4309-a09f-0352278c4a53', isVendor: true, invitationStatus: 'responded', rfxStatus: 'active', vendorDisplayStatus: 'responded', …}
+rfx-response-form.tsx:59 RfxResponseForm - Debug data: {rfx: {…}, rfxData: {…}, rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0', rfxType: 'RFI', termsPath: 'https://storage.googleapis.com/replit-objstore-612…vate/uploads/3d60aa79-05af-4d66-87b1-eb6451a73f52'}
+rfx-management.tsx:85 RfxManagement render - rfxEvents: (3) [{…}, {…}, {…}] isLoading: false
+rfx-management.tsx:733 RfxCard - Debug Info: {isVendor: true, rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0-a5a10f14-4d2a-4309-a09f-0352278c4a53', invitationStatus: 'invited', rfxStatus: 'active', canRespondCheck: {…}}
+rfx-management.tsx:752 RfxCard - Can Respond: true
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: {rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0-a5a10f14-4d2a-4309-a09f-0352278c4a53', isVendor: true, invitationStatus: 'invited', rfxStatus: 'active', vendorDisplayStatus: 'active', …}
+rfx-management.tsx:733 RfxCard - Debug Info: {isVendor: true, rfxId: '16d8eccf-0873-4c7c-a12b-fbde10365879-a5a10f14-4d2a-4309-a09f-0352278c4a53', invitationStatus: 'invited', rfxStatus: 'active', canRespondCheck: {…}}
+rfx-management.tsx:752 RfxCard - Can Respond: true
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: {rfxId: '16d8eccf-0873-4c7c-a12b-fbde10365879-a5a10f14-4d2a-4309-a09f-0352278c4a53', isVendor: true, invitationStatus: 'invited', rfxStatus: 'active', vendorDisplayStatus: 'active', …}
+rfx-management.tsx:733 RfxCard - Debug Info: {isVendor: true, rfxId: '8cff2183-3679-40e0-8b1e-e6d2691a623d-a5a10f14-4d2a-4309-a09f-0352278c4a53', invitationStatus: 'responded', rfxStatus: 'active', canRespondCheck: {…}}
+rfx-management.tsx:752 RfxCard - Can Respond: false
+rfx-management.tsx:757 🔍 VENDOR STATUS DISPLAY: {rfxId: '8cff2183-3679-40e0-8b1e-e6d2691a623d-a5a10f14-4d2a-4309-a09f-0352278c4a53', isVendor: true, invitationStatus: 'responded', rfxStatus: 'active', vendorDisplayStatus: 'responded', …}
+rfx-response-form.tsx:59 RfxResponseForm - Debug data: {rfx: {…}, rfxData: {…}, rfxId: '5b8783f8-5be2-40ce-9c1e-eefe84e4dca0', rfxType: 'RFI', termsPath: 'https://storage.googleapis.com/replit-objstore-612…vate/uploads/3d60aa79-05af-4d66-87b1-eb6451a73f52'}

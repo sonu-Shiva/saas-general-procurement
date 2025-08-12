@@ -273,6 +273,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const existingVendorProfile = allVendors.find(v => v.email === vendorProfile.email);
             if (existingVendorProfile && existingVendorProfile.userId !== vendorProfile.id) {
               console.log(`Updating vendor profile userId from ${existingVendorProfile.userId} to ${vendorProfile.id}`);
+              
+              // First ensure the user exists in the users table (foreign key requirement)
+              try {
+                await storage.upsertUser({
+                  id: vendorProfile.id,
+                  email: vendorProfile.email,
+                  firstName: vendorProfile.firstName,
+                  lastName: vendorProfile.lastName,
+                  role: vendorProfile.role as any,
+                });
+                console.log(`Ensured user exists in users table: ${vendorProfile.id}`);
+              } catch (userError: any) {
+                // If it's a duplicate email error, just continue - user already exists
+                if (userError.code !== '23505') {
+                  throw userError;
+                }
+                console.log('User already exists in users table');
+              }
+              
+              // Now update the vendor profile with the correct userId
               await storage.updateVendor(existingVendorProfile.id, {
                 userId: vendorProfile.id
               });
