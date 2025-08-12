@@ -1174,18 +1174,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/vendor/rfx-responses', async (req: any, res) => {
     try {
       console.log('RFx response submission request:', req.body);
+      console.log('RFx response submission - Current user ID:', currentDevUser.id);
+      console.log('RFx response submission - Current user role:', currentDevUser.role);
 
-      const userId = req.user?.claims?.sub;
+      // In development mode, use currentDevUser instead of req.user
+      const userId = currentDevUser.id;
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
       }
 
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'vendor') {
+      // For development, check if current user is in vendor role
+      if (currentDevUser.role !== 'vendor') {
         return res.status(403).json({ message: "Access denied. Vendors only." });
       }
 
-      const vendor = await storage.getVendorByUserId(userId);
+      // Find vendor by userId - try direct lookup first, then by email as fallback
+      let vendor = await storage.getVendorByUserId(userId);
+      console.log("Direct vendor lookup result:", vendor ? vendor.id : 'No vendor found');
+      
+      if (!vendor) {
+        // Fallback: find vendor by email matching current user email
+        const allVendors = await storage.getVendors();
+        vendor = allVendors.find(v => v.email === currentDevUser.email);
+        console.log("Fallback vendor lookup by email result:", vendor ? vendor.id : 'No vendor found by email');
+      }
+      
       if (!vendor) {
         return res.status(404).json({ message: "Vendor profile not found" });
       }
