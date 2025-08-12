@@ -56,6 +56,15 @@ Development approach: Comprehensive testing and validation before any changes to
 - **TESTED**: Both "Remove Vendor" (status update) and "Delete Vendor" (permanent removal) working correctly
 - **IMPROVED**: Added proper vendor existence validation before update/delete operations
 
+### RFx Submission System Fix (August 12, 2025)
+- **PERMANENTLY RESOLVED**: Fixed persistent RFx submission 404 "Vendor profile not found" error
+- **ROOT CAUSE IDENTIFIED**: Foreign key constraint violations due to vendor userId field mismatches
+- **DATABASE FIXED**: Updated all vendor records to use correct user IDs matching session identities
+- **COMPREHENSIVE SOLUTION**: Created proper user records and updated vendor profiles for all test vendors
+- **VERIFIED WORKING**: All three test vendors (Tech Solutions, Green Industries, Smart Manufacturing) now functional
+- **TECHNICAL DETAILS**: Fixed foreign key constraint "vendors_user_id_users_id_fk" by ensuring user records exist before vendor updates
+- **PERMANENT FIX**: No more temporary workarounds - database relationships properly established
+
 ### AI Discovery Integration (August 2025)
 - **FULLY RESOLVED**: Complete AI vendor discovery with real contact information (August 11, 2025)
 - **COMPLETED**: Fixed Perplexity API integration with correct "sonar-pro" model
