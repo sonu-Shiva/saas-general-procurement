@@ -19,15 +19,15 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Vendor Management", href: "/vendors", icon: Users, buyerOnly: true },
+  { name: "Vendor Management", href: "/vendors", icon: Users, allowedRoles: ['buyer', 'admin'] },
   { name: "Product Catalogue", href: "/products", icon: Package },
-  { name: "BOM Management", href: "/boms", icon: Layers, buyerOnly: true },
-  { name: "Procurement Requests", href: "/procurement-requests", icon: ClipboardCheck, requesterApproverOnly: true },
-  { name: "RFx Invitations", href: "/vendor-portal", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management", vendorHref: "/vendor-portal", buyerHref: "/rfx" },
-  { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center" },
-  { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, buyerOnly: true },
-  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders" },
-  { name: "Analytics", href: "/analytics", icon: BarChart3, buyerOnly: true },
+  { name: "BOM Management", href: "/boms", icon: Layers, allowedRoles: ['requester', 'admin'] },
+  { name: "Procurement Requests", href: "/procurement-requests", icon: ClipboardCheck, allowedRoles: ['requester', 'request_approver', 'buyer', 'procurement_approver', 'sourcing_manager', 'admin'] },
+  { name: "RFx Invitations", href: "/vendor-portal", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management", vendorHref: "/vendor-portal", buyerHref: "/rfx", allowedRoles: ['buyer', 'procurement_approver', 'vendor', 'admin'] },
+  { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center", allowedRoles: ['buyer', 'procurement_approver', 'vendor', 'admin'] },
+  { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, allowedRoles: ['buyer', 'admin'] },
+  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders", allowedRoles: ['buyer', 'sourcing_manager', 'vendor', 'admin'] },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, allowedRoles: ['buyer', 'sourcing_manager', 'admin'] },
 ];
 
 export default function Sidebar() {
@@ -41,21 +41,13 @@ export default function Sidebar() {
           {navigation
             .filter((item) => {
               const userRole = (user as any)?.role;
-              const isVendor = userRole === 'vendor';
               
-              // Hide buyer-only items from vendors
-              if (isVendor && item.buyerOnly) {
-                return false;
+              // If item has allowedRoles defined, check if user role is allowed
+              if (item.allowedRoles && item.allowedRoles.length > 0) {
+                return item.allowedRoles.includes(userRole);
               }
               
-              // Show procurement requests only to requesters, approvers, buyers, and admin
-              if (item.requesterApproverOnly) {
-                const allowedRoles = ['requester', 'request_approver', 'procurement_approver', 'buyer', 'admin'];
-                if (!allowedRoles.includes(userRole)) {
-                  return false;
-                }
-              }
-              
+              // If no allowedRoles defined, allow all authenticated users
               return true;
             })
             .map((item) => {

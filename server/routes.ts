@@ -106,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     email: 'dev@sclen.com',
     firstName: 'Developer',
     lastName: 'User',
-    role: 'buyer_admin'
+    role: 'admin'  // Changed from 'buyer_admin' to 'admin' for proper role-based access
   };
   let isLoggedIn = true;
 
@@ -123,6 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: currentDevUser.firstName,
         lastName: currentDevUser.lastName,
         role: currentDevUser.role as any,
+        department: 'IT',  // Add department for admin user
       });
       console.log('Development user created successfully');
     } else {
@@ -368,6 +369,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Auth middleware error:', error);
       res.status(500).json({ message: 'Authentication error' });
     }
+  };
+
+  // Role-based authorization middleware
+  const requireRole = (...allowedRoles: string[]) => {
+    return async (req: any, res: any, next: any) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id || 'dev-user-123';
+        const user = await storage.getUser(userId);
+        
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!allowedRoles.includes(user.role)) {
+          return res.status(403).json({ 
+            message: `Access denied. Required roles: ${allowedRoles.join(', ')}. Your role: ${user.role}` 
+          });
+        }
+
+        req.user = { ...req.user, role: user.role, userData: user };
+        next();
+      } catch (error) {
+        console.error('Role authorization error:', error);
+        res.status(500).json({ message: 'Authorization error' });
+      }
+    };
   };
 
   // Get auction bids - register BEFORE authentication middleware to avoid 500 error
@@ -692,7 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor routes
-  app.get('/api/vendors', async (req, res) => {
+  app.get('/api/vendors', authMiddleware, requireRole('buyer', 'admin'), async (req, res) => {
     try {
       const vendors = await storage.getVendors();
       res.json(vendors);
@@ -702,7 +729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/vendors', async (req, res) => {
+  app.post('/api/vendors', authMiddleware, requireRole('buyer', 'admin'), async (req, res) => {
     try {
       const vendor = await storage.createVendor(req.body);
       res.json(vendor);
@@ -712,7 +739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/vendors/:id', async (req, res) => {
+  app.patch('/api/vendors/:id', authMiddleware, requireRole('buyer', 'admin'), async (req, res) => {
     try {
       const vendorId = req.params.id;
 
@@ -730,7 +757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/vendors/:id', async (req, res) => {
+  app.delete('/api/vendors/:id', authMiddleware, requireRole('buyer', 'admin'), async (req, res) => {
     try {
       const vendorId = req.params.id;
 
@@ -981,7 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // RFx routes
-  app.get('/api/rfx', async (req, res) => {
+  app.get('/api/rfx', authMiddleware, requireRole('buyer', 'procurement_approver', 'vendor', 'admin'), async (req, res) => {
     try {
       const rfxEvents = await storage.getRfxEvents();
       res.json(rfxEvents);
@@ -991,7 +1018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/rfx', async (req: any, res) => {
+  app.post('/api/rfx', authMiddleware, requireRole('buyer', 'admin'), async (req: any, res) => {
     try {
       console.log("RFx creation request received:", req.body);
       const userId = req.user?.claims?.sub;
@@ -1592,7 +1619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order routes
-  app.get('/api/purchase-orders', async (req: any, res) => {
+  app.get('/api/purchase-orders', authMiddleware, requireRole('buyer', 'sourcing_manager', 'vendor', 'admin'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       const user = await storage.getUser(userId);
@@ -1623,7 +1650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order approval endpoint
-  app.patch('/api/purchase-orders/:id/approve', async (req: any, res) => {
+  app.patch('/api/purchase-orders/:id/approve', authMiddleware, requireRole('sourcing_manager', 'admin'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -1822,7 +1849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // BOM routes
-  app.get('/api/boms', async (req, res) => {
+  app.get('/api/boms', authMiddleware, requireRole('requester', 'admin'), async (req, res) => {
     try {
       const boms = await storage.getBoms();
       res.json(boms);
@@ -1832,7 +1859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/boms', async (req: any, res) => {
+  app.post('/api/boms', authMiddleware, requireRole('requester', 'admin'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -1878,7 +1905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/boms/:id', async (req: any, res) => {
+  app.put('/api/boms/:id', authMiddleware, requireRole('requester', 'admin'), async (req: any, res) => {
     try {
       const bomId = req.params.id;
       const userId = req.user?.claims?.sub;
@@ -1902,7 +1929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/boms/:id', async (req: any, res) => {
+  app.delete('/api/boms/:id', authMiddleware, requireRole('requester', 'admin'), async (req: any, res) => {
     try {
       const bomId = req.params.id;
       const userId = req.user?.claims?.sub;
