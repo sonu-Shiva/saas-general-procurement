@@ -136,30 +136,49 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
   // Create procurement request
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const formDataPayload = new FormData();
-      
-      // Add form data
-      formDataPayload.append('data', JSON.stringify({
-        title: data.title,
-        department: data.department,
-        needByDate: data.needByDate,
-        urgency: data.urgency,
-        budgetCode: data.budgetCode,
-        notes: data.notes,
-        bomLineItems: data.bomLineItems,
-        selectedBomId: data.selectedBomId,
-        requestedBy: user?.id,
-      }));
+      if (data.attachments && data.attachments.length > 0) {
+        // Use FormData when attachments are present
+        const formDataPayload = new FormData();
+        
+        // Add form data
+        formDataPayload.append('data', JSON.stringify({
+          title: data.title,
+          department: data.department,
+          needByDate: data.needByDate,
+          urgency: data.urgency,
+          budgetCode: data.budgetCode,
+          notes: data.notes,
+          bomLineItems: data.bomLineItems,
+          selectedBomId: data.selectedBomId,
+          requestedBy: user?.id,
+        }));
 
-      // Add attachments
-      data.attachments.forEach((file: File, index: number) => {
-        formDataPayload.append(`attachment_${index}`, file);
-      });
+        // Add attachments
+        data.attachments.forEach((file: File, index: number) => {
+          formDataPayload.append(`attachment_${index}`, file);
+        });
 
-      return apiRequest('/api/pr', {
-        method: 'POST',
-        body: formDataPayload,
-      });
+        return apiRequest('/api/pr', {
+          method: 'POST',
+          body: formDataPayload,
+        });
+      } else {
+        // Use JSON when no attachments
+        return apiRequest('/api/pr', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: data.title,
+            department: data.department,
+            needByDate: data.needByDate,
+            urgency: data.urgency,
+            budgetCode: data.budgetCode,
+            notes: data.notes,
+            bomLineItems: data.bomLineItems,
+            selectedBomId: data.selectedBomId,
+            requestedBy: user?.id,
+          }),
+        });
+      }
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['/api/procurement-requests'] });
@@ -365,20 +384,44 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
     }
   };
 
-  // Select BOM from existing list
-  const selectExistingBOM = (bomId: string) => {
+  // Select BOM from existing list and load its items
+  const selectExistingBOM = async (bomId: string) => {
     const selectedBom = existingBoms.find(bom => bom.id === bomId);
-    setFormData(prev => ({ 
-      ...prev, 
-      selectedBomId: bomId,
-      bomLineItems: [] // Clear any manual items when selecting a BOM
-    }));
-    setActiveTab("bom");
     
-    toast({
-      title: "BOM Selected",
-      description: `Selected "${selectedBom?.name}" for this procurement request`,
-    });
+    try {
+      // Load BOM items for editing
+      const response = await apiRequest(`/api/boms/${bomId}/items`);
+      const bomItems = response.map((item: any) => ({
+        itemCode: item.itemCode || '',
+        itemName: item.itemName,
+        description: item.description || '',
+        uom: item.uom || 'PCS',
+        quantity: parseFloat(item.quantity) || 1,
+        specifications: item.specifications || '',
+        catalogReference: item.productId ? `CATALOG-${item.productId}` : '',
+        isMapped: !!item.productId,
+        productId: item.productId,
+        estimatedPrice: parseFloat(item.unitPrice) || 0,
+      }));
+
+      setFormData(prev => ({ 
+        ...prev, 
+        selectedBomId: bomId,
+        bomLineItems: bomItems // Load BOM items for display and editing
+      }));
+      setActiveTab("bom");
+      
+      toast({
+        title: "BOM Selected",
+        description: `Selected "${selectedBom?.name}" with ${bomItems.length} items for editing`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error Loading BOM",
+        description: "Failed to load BOM items",
+        variant: "destructive",
+      });
+    }
   };
 
   // Clear BOM selection and allow manual entry
@@ -633,7 +676,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                         </Button>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        The selected BOM will be used for this procurement request. Clear selection to add items manually.
+                        BOM items are loaded below and can be edited. Clear selection to add items manually instead.
                       </p>
                     </div>
                   ) : (
@@ -664,7 +707,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
               </Card>
             )}
 
-            {!formData.selectedBomId && formData.bomLineItems.length > 0 && (
+            {formData.bomLineItems.length > 0 && (
               <>
                 <div className="flex gap-4 text-sm">
                   <div className="flex items-center gap-2">
