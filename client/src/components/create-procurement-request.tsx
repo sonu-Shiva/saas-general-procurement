@@ -66,6 +66,7 @@ interface CreateProcurementRequestFormData {
   notes?: string;
   bomLineItems: BOMLineItem[];
   attachments: File[];
+  selectedBomId?: string; // New field for selected BOM
 }
 
 interface CreateProcurementRequestDialogProps {
@@ -84,6 +85,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
     notes: "",
     bomLineItems: [],
     attachments: [],
+    selectedBomId: undefined,
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -145,6 +147,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
         budgetCode: data.budgetCode,
         notes: data.notes,
         bomLineItems: data.bomLineItems,
+        selectedBomId: data.selectedBomId,
         requestedBy: user?.id,
       }));
 
@@ -186,6 +189,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
       notes: "",
       bomLineItems: [],
       attachments: [],
+      selectedBomId: undefined,
     });
     setActiveTab("details");
   };
@@ -298,7 +302,8 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
       return false;
     }
     
-    if (formData.bomLineItems.length === 0) {
+    // Must have either a selected BOM or manual line items
+    if (!formData.selectedBomId && formData.bomLineItems.length === 0) {
       return false;
     }
 
@@ -312,9 +317,16 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
 
   const handleSubmit = () => {
     if (!isValidForm()) {
+      let errorMsg = "Please fill all required fields";
+      if (!formData.selectedBomId && formData.bomLineItems.length === 0) {
+        errorMsg = "Please either select an existing BOM or add line items manually";
+      } else if (formData.needByDate && new Date(formData.needByDate) < new Date()) {
+        errorMsg = "Need by date cannot be in the past";
+      }
+      
       toast({
         title: "Validation Error",
-        description: "Please fill all required fields and ensure need by date is not in the past",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
@@ -353,37 +365,33 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
     }
   };
 
-  // Copy BOM from existing list
-  const copyExistingBOM = async (bomId: string) => {
-    try {
-      const response = await apiRequest(`/api/bom/${bomId}/items`);
-      const bomItems = response.map((item: any) => ({
-        itemCode: item.itemCode || '',
-        itemName: item.itemName,
-        description: item.description || '',
-        uom: item.uom || 'PCS',
-        quantity: parseFloat(item.quantity) || 1,
-        specifications: item.specifications || '',
-        catalogReference: item.productId ? `CATALOG-${item.productId}` : '',
-        isMapped: !!item.productId,
-        productId: item.productId,
-        estimatedPrice: parseFloat(item.unitPrice) || 0,
-      }));
+  // Select BOM from existing list
+  const selectExistingBOM = (bomId: string) => {
+    const selectedBom = existingBoms.find(bom => bom.id === bomId);
+    setFormData(prev => ({ 
+      ...prev, 
+      selectedBomId: bomId,
+      bomLineItems: [] // Clear any manual items when selecting a BOM
+    }));
+    setActiveTab("bom");
+    
+    toast({
+      title: "BOM Selected",
+      description: `Selected "${selectedBom?.name}" for this procurement request`,
+    });
+  };
 
-      setFormData(prev => ({ ...prev, bomLineItems: bomItems }));
-      setActiveTab("bom");
-      
-      toast({
-        title: "BOM Copied",
-        description: `Copied ${bomItems.length} items from existing BOM`,
-      });
-    } catch (error) {
-      toast({
-        title: "Copy Error",
-        description: "Failed to copy BOM items",
-        variant: "destructive",
-      });
-    }
+  // Clear BOM selection and allow manual entry
+  const clearBOMSelection = () => {
+    setFormData(prev => ({ 
+      ...prev, 
+      selectedBomId: undefined
+    }));
+    
+    toast({
+      title: "BOM Selection Cleared",
+      description: "You can now add items manually or upload a file",
+    });
   };
 
   return (
@@ -545,86 +553,118 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
           <TabsContent value="bom" className="space-y-4">
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-lg font-semibold">BOM Line Items</h3>
+                <h3 className="text-lg font-semibold">BOM Selection & Line Items</h3>
                 <p className="text-sm text-muted-foreground">
-                  Upload file, copy from existing BOM, or add items manually
+                  Select an existing BOM, upload a file, or add items manually
                 </p>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={downloadTemplate}
-                  data-testid="button-download-template"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Template
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => xlsxInputRef.current?.click()}
-                  data-testid="button-upload-xlsx"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload CSV/XLSX
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addLineItem}
-                  data-testid="button-add-line-item"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
-                </Button>
-                <input
-                  ref={xlsxInputRef}
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  className="hidden"
-                  onChange={handleXLSXUpload}
-                />
-              </div>
+              {!formData.selectedBomId && (
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={downloadTemplate}
+                    data-testid="button-download-template"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Template
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => xlsxInputRef.current?.click()}
+                    data-testid="button-upload-xlsx"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload CSV/XLSX
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addLineItem}
+                    data-testid="button-add-line-item"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Item
+                  </Button>
+                  <input
+                    ref={xlsxInputRef}
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    className="hidden"
+                    onChange={handleXLSXUpload}
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Existing BOM Selection */}
+            {/* BOM Selection */}
             {existingBoms.length > 0 && (
               <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <List className="w-4 h-4" />
-                    Copy from Existing BOM
+                    Select Existing BOM
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {existingBoms.map((bom) => (
-                      <div key={bom.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-950 border rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">{bom.name}</div>
-                          <div className="text-xs text-muted-foreground">v{bom.version}</div>
-                          {bom.description && (
-                            <div className="text-xs text-muted-foreground truncate">{bom.description}</div>
-                          )}
+                  {formData.selectedBomId ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <div className="flex-1">
+                            <div className="font-medium text-sm text-green-900 dark:text-green-100">
+                              {existingBoms.find(b => b.id === formData.selectedBomId)?.name}
+                            </div>
+                            <div className="text-xs text-green-600 dark:text-green-400">
+                              BOM selected for this procurement request
+                            </div>
+                          </div>
                         </div>
                         <Button
                           type="button"
                           size="sm"
                           variant="ghost"
-                          onClick={() => copyExistingBOM(bom.id)}
-                          data-testid={`button-copy-bom-${bom.id}`}
+                          onClick={clearBOMSelection}
+                          data-testid="button-clear-bom-selection"
                         >
-                          <Copy className="w-4 h-4" />
+                          <X className="w-4 h-4" />
                         </Button>
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-sm text-muted-foreground">
+                        The selected BOM will be used for this procurement request. Clear selection to add items manually.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {existingBoms.map((bom) => (
+                        <div key={bom.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-950 border rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">{bom.name}</div>
+                            <div className="text-xs text-muted-foreground">v{bom.version}</div>
+                            {bom.description && (
+                              <div className="text-xs text-muted-foreground truncate">{bom.description}</div>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => selectExistingBOM(bom.id)}
+                            data-testid={`button-select-bom-${bom.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {formData.bomLineItems.length > 0 && (
+            {!formData.selectedBomId && formData.bomLineItems.length > 0 && (
               <>
                 <div className="flex gap-4 text-sm">
                   <div className="flex items-center gap-2">

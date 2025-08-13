@@ -2669,29 +2669,43 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         data = req.body;
       }
 
-      // Create BOM first with line items
-      const bomData = {
-        name: `BOM for ${data.title}`,
-        description: `Auto-generated BOM for procurement request: ${data.title}`,
-        category: data.department,
-        createdBy: userId,
-      };
-
-      const bom = await storage.createBOM(bomData);
+      let bomId;
       
-      // Create BOM items
-      if (data.bomLineItems && data.bomLineItems.length > 0) {
-        for (const item of data.bomLineItems) {
-          await storage.createBOMItem({
-            bomId: bom.id,
-            productId: item.productId || null,
-            itemName: item.itemName,
-            itemCode: item.itemCode || null,
-            description: item.description || null,
-            quantity: item.quantity.toString(),
-            uom: item.uom,
-            specifications: item.specifications ? JSON.stringify({ specs: item.specifications }) : null,
-          });
+      if (data.selectedBomId) {
+        // Use the selected existing BOM
+        bomId = data.selectedBomId;
+        
+        // Verify the BOM exists
+        const existingBom = await storage.getBom(bomId);
+        if (!existingBom) {
+          return res.status(400).json({ message: "Selected BOM not found" });
+        }
+      } else {
+        // Create new BOM with manual line items
+        const bomData = {
+          name: `BOM for ${data.title}`,
+          description: `Auto-generated BOM for procurement request: ${data.title}`,
+          category: data.department,
+          createdBy: userId,
+        };
+
+        const bom = await storage.createBOM(bomData);
+        bomId = bom.id;
+        
+        // Create BOM items for manual entry
+        if (data.bomLineItems && data.bomLineItems.length > 0) {
+          for (const item of data.bomLineItems) {
+            await storage.createBOMItem({
+              bomId: bom.id,
+              productId: item.productId || null,
+              itemName: item.itemName,
+              itemCode: item.itemCode || null,
+              description: item.description || null,
+              quantity: item.quantity.toString(),
+              uom: item.uom,
+              specifications: item.specifications ? JSON.stringify({ specs: item.specifications }) : null,
+            });
+          }
         }
       }
 
@@ -2704,7 +2718,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         title: data.title,
         description: data.notes || null,
         department: data.department,
-        bomId: bom.id,
+        bomId: bomId,
         priority: data.urgency?.toLowerCase() || 'normal',
         requestedBy: userId,
         requestedDeliveryDate: new Date(data.needByDate),
@@ -2719,7 +2733,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         success: true,
         prId: request.id,
         requestNumber: requestNumber,
-        bomId: bom.id,
+        bomId: bomId,
         status: 'SUBMITTED',
         message: `Procurement request ${requestNumber} created successfully`
       });
