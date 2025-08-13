@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar, Clock, FileText, Plus, Search, User, Building2, CheckCircle, XCircle, AlertCircle, Package, Eye, Trash2, Filter, CalendarIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { CreateProcurementRequestDialog } from "@/components/create-procurement-request";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -191,6 +192,7 @@ export default function ProcurementRequests() {
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   // Fetch procurement requests
   const { data: requests = [], isLoading } = useQuery<ProcurementRequest[]>({
@@ -553,6 +555,7 @@ export default function ProcurementRequests() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                onClick={() => setLocation(`/pr-approval/${request.id}`)}
                                 data-testid={`button-view-${request.id}`}
                               >
                                 <Eye className="w-4 h-4" />

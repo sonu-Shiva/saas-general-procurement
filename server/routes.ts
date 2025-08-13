@@ -2797,6 +2797,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== PR APPROVAL ROUTES FOR DEPT_APPROVER =====
+
+  // Approve procurement request
+  app.post("/api/pr/:id/approve", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const requestId = req.params.id;
+      
+      // Check user has approval role
+      const user = await storage.getUser(userId);
+      if (!user || !['request_approver', 'admin'].includes(user.role)) {
+        return res.status(403).json({ message: "Insufficient permissions to approve requests" });
+      }
+
+      // Get the request to check status
+      const request = await storage.getProcurementRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Check if request can be approved
+      if (request.overallStatus !== 'request_approval_pending') {
+        return res.status(400).json({ 
+          message: "Request can only be approved when in pending approval status" 
+        });
+      }
+
+      // Update request status to approved and move to sourcing queue
+      const updatedRequest = await storage.updateProcurementRequest(requestId, {
+        overallStatus: 'request_approved',
+        requestApprovalStatus: 'approved',
+        currentRequestApprover: userId,
+        requestApprovedAt: new Date().toISOString(),
+        procurementStatus: 'method_selection_pending',
+      });
+
+      // TODO: Send notification to requester
+      // TODO: Add to sourcing queue
+      
+      res.json({ 
+        message: "Procurement request approved successfully",
+        request: updatedRequest,
+        nextStep: "Moved to sourcing queue for procurement method selection"
+      });
+    } catch (error) {
+      console.error("Error approving procurement request:", error);
+      res.status(500).json({ message: "Failed to approve procurement request" });
+    }
+  });
+
+  // Reject procurement request
+  app.post("/api/pr/:id/reject", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const requestId = req.params.id;
+      const { reason } = req.body;
+
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ message: "Rejection reason is required" });
+      }
+
+      // Check user has approval role
+      const user = await storage.getUser(userId);
+      if (!user || !['request_approver', 'admin'].includes(user.role)) {
+        return res.status(403).json({ message: "Insufficient permissions to reject requests" });
+      }
+
+      // Get the request to check status
+      const request = await storage.getProcurementRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Check if request can be rejected
+      if (request.overallStatus !== 'request_approval_pending') {
+        return res.status(400).json({ 
+          message: "Request can only be rejected when in pending approval status" 
+        });
+      }
+
+      // Update request status to rejected
+      const updatedRequest = await storage.updateProcurementRequest(requestId, {
+        overallStatus: 'rejected',
+        requestApprovalStatus: 'rejected',
+        currentRequestApprover: userId,
+        requestRejectedAt: new Date().toISOString(),
+        requestRejectionReason: reason,
+      });
+
+      // TODO: Send notification to requester
+      
+      res.json({ 
+        message: "Procurement request rejected",
+        request: updatedRequest,
+        reason: reason
+      });
+    } catch (error) {
+      console.error("Error rejecting procurement request:", error);
+      res.status(500).json({ message: "Failed to reject procurement request" });
+    }
+  });
+
+  // Send back procurement request for edits
+  app.post("/api/pr/:id/sendback", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const requestId = req.params.id;
+      const { reason } = req.body;
+
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ message: "Send back reason is required" });
+      }
+
+      // Check user has approval role
+      const user = await storage.getUser(userId);
+      if (!user || !['request_approver', 'admin'].includes(user.role)) {
+        return res.status(403).json({ message: "Insufficient permissions to send back requests" });
+      }
+
+      // Get the request to check status
+      const request = await storage.getProcurementRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Check if request can be sent back
+      if (request.overallStatus !== 'request_approval_pending') {
+        return res.status(400).json({ 
+          message: "Request can only be sent back when in pending approval status" 
+        });
+      }
+
+      // Update request status to needs edits
+      const updatedRequest = await storage.updateProcurementRequest(requestId, {
+        overallStatus: 'needs_edits',
+        requestApprovalStatus: 'needs_edits',
+        currentRequestApprover: userId,
+        requestSentBackAt: new Date().toISOString(),
+        requestSendBackReason: reason,
+      });
+
+      // TODO: Send notification to requester
+      
+      res.json({ 
+        message: "Procurement request sent back for edits",
+        request: updatedRequest,
+        reason: reason
+      });
+    } catch (error) {
+      console.error("Error sending back procurement request:", error);
+      res.status(500).json({ message: "Failed to send back procurement request" });
+    }
+  });
+
   // Approval Configuration routes (Admin only)
   app.post("/api/approval-configurations", authMiddleware, async (req, res) => {
     try {

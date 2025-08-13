@@ -16,6 +16,7 @@ import Analytics from "@/pages/analytics";
 import VendorDiscovery from "@/pages/vendor-discovery";
 import VendorPortal from "@/pages/vendor-portal";
 import ProcurementRequests from "@/pages/procurement-requests";
+import { lazy } from "react";
 
 import SimpleLogin from "@/pages/simple-login";
 import Sidebar from "@/components/layout/sidebar";
@@ -101,6 +102,7 @@ function Router() {
           <Route path="/products" component={ProductCatalogue} />
           <Route path="/boms" component={BomManagement} />
           <Route path="/procurement-requests" component={ProcurementRequests} />
+          <Route path="/pr-approval/:id" component={lazy(() => import('./pages/pr-approval'))} />
           <Route path="/rfx" component={RfxManagement} />
           <Route path="/vendor-portal" component={VendorPortal} />
           <Route path="/auctions" component={AuctionCenter} />
