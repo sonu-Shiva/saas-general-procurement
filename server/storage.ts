@@ -233,11 +233,40 @@ export class DatabaseStorage implements IStorage {
   private db = db; // Assuming db is initialized and exported from ./db
 
   // Temporary in-memory storage for sourcing events (replace with actual DB operations)
-  private sourcingEvents: any[] = [];
+  private sourcingEvents: any[] = [
+    {
+      id: 'sourcing-event-001',
+      procurementRequestId: 'pr-001',
+      type: 'RFQ',
+      justification: 'Multiple vendors required for competitive pricing',
+      estimatedValue: 150000,
+      selectedVendorIds: ['vendor-001', 'vendor-002', 'vendor-003'],
+      status: 'PENDING_SM_APPROVAL',
+      createdBy: 'sourcing-exec-001',
+      createdAt: new Date('2025-01-13T09:00:00Z'),
+      updatedAt: new Date('2025-01-13T09:00:00Z'),
+      submittedAt: new Date('2025-01-13T09:00:00Z'),
+    }
+  ];
   // Temporary in-memory storage for vendors (replace with actual DB operations)
   private vendors: Vendor[] = [];
   // Temporary in-memory storage for procurement requests (replace with actual DB operations)
-  private procurementRequests: ProcurementRequest[] = [];
+  private procurementRequests: ProcurementRequest[] = [
+    {
+      id: 'pr-001',
+      userId: 'dev-user-123',
+      bomId: 'bom-001',
+      department: 'engineering',
+      description: 'Procurement of electronic components for Q1 production',
+      priority: 'high',
+      urgency: 'normal',
+      estimatedBudget: 150000,
+      status: 'approved',
+      bomItems: [],
+      createdAt: new Date('2025-01-12T10:00:00Z'),
+      updatedAt: new Date('2025-01-12T10:00:00Z'),
+    } as ProcurementRequest
+  ];
 
   // User operations - mandatory for Replit Auth
   async getUser(id: string): Promise<User | undefined> {
@@ -1848,11 +1877,21 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getSourcingEvents(): Promise<any[]> {
+  async getSourcingEvents(filters: { status?: string; department?: string } = {}): Promise<any[]> {
     try {
       // In a real implementation, you would fetch from the database.
       // Here, we return the in-memory array, potentially enriching it with related data.
-      return this.sourcingEvents.map(event => ({
+      let events = this.sourcingEvents;
+      
+      // Apply filters if provided
+      if (filters.status) {
+        events = events.filter(event => event.status === filters.status);
+      }
+      if (filters.department) {
+        events = events.filter(event => event.department === filters.department);
+      }
+
+      return events.map(event => ({
         ...event,
         // Example: Fetching related procurement request data
         procurementRequest: this.procurementRequests.find(pr => pr.id === event.procurementRequestId),
@@ -1883,7 +1922,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateSourcingEventStatus(id: string, status: string, updatedBy: string): Promise<any | null> {
+  async updateSourcingEvent(id: string, updates: any): Promise<any | null> {
     try {
       // In a real implementation, you would update the event in the database.
       const eventIndex = this.sourcingEvents.findIndex(e => e.id === id);
@@ -1891,16 +1930,19 @@ export class DatabaseStorage implements IStorage {
 
       this.sourcingEvents[eventIndex] = {
         ...this.sourcingEvents[eventIndex],
-        status,
-        updatedBy,
+        ...updates,
         updatedAt: new Date(),
       };
 
       return this.sourcingEvents[eventIndex];
     } catch (error) {
-      console.error("Error updating sourcing event status:", error);
+      console.error("Error updating sourcing event:", error);
       throw error;
     }
+  }
+
+  async updateSourcingEventStatus(id: string, status: string, updatedBy: string): Promise<any | null> {
+    return this.updateSourcingEvent(id, { status, updatedBy });
   }
 }
 

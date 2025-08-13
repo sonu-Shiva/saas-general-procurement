@@ -106,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     email: 'dev@sclen.com',
     firstName: 'Developer',
     lastName: 'User',
-    role: 'admin'  // Changed from 'buyer_admin' to 'admin' for proper role-based access
+    role: 'sourcing_manager'  // Changed to sourcing_manager to test method approval functionality
   };
   let isLoggedIn = true;
 
@@ -3484,6 +3484,140 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     } catch (error) {
       console.error("Error fetching sourcing events:", error);
       res.status(500).json({ message: "Failed to fetch sourcing events" });
+    }
+  });
+
+  // Get pending sourcing events for sourcing manager approval
+  app.get("/api/events/pending-approval", authMiddleware, requireRole(['sourcing_manager', 'admin']), async (req, res) => {
+    try {
+      console.log("=== FETCHING PENDING SOURCING EVENTS ===");
+      
+      // Fetch events pending SM approval
+      const filters = { status: 'PENDING_SM_APPROVAL' };
+      const events = await storage.getSourcingEvents(filters);
+      console.log("Found pending events:", events.length);
+
+      // Enrich events with procurement request details
+      const enrichedEvents = await Promise.all(
+        events.map(async (event) => {
+          try {
+            const procurementRequest = await storage.getProcurementRequest(event.procurementRequestId);
+            
+            // Get vendor details for selected vendors
+            const vendors = await Promise.all(
+              event.selectedVendorIds.map(async (vendorId) => {
+                try {
+                  const vendor = await storage.getVendor(vendorId);
+                  return vendor;
+                } catch (error) {
+                  console.warn(`Could not fetch vendor ${vendorId}:`, error);
+                  return null;
+                }
+              })
+            );
+
+            return {
+              ...event,
+              procurementRequest,
+              vendors: vendors.filter(Boolean),
+            };
+          } catch (error) {
+            console.warn(`Could not enrich event ${event.id}:`, error);
+            return event;
+          }
+        })
+      );
+
+      res.json(enrichedEvents);
+    } catch (error) {
+      console.error("Error fetching pending sourcing events:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch pending sourcing events",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Process sourcing event approval
+  app.post("/api/events/:id/approval", authMiddleware, requireRole(['sourcing_manager', 'admin']), async (req, res) => {
+    try {
+      const { id: eventId } = req.params;
+      const { action, comments } = req.body;
+      const userId = req.user?.id || 'dev-user-123';
+
+      console.log("=== PROCESSING EVENT APPROVAL ===");
+      console.log("Event ID:", eventId);
+      console.log("Action:", action);
+      console.log("Comments:", comments);
+
+      // Get the sourcing event
+      const event = await storage.getSourcingEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Sourcing event not found" });
+      }
+
+      // Check if event can be processed
+      if (event.status !== 'PENDING_SM_APPROVAL') {
+        return res.status(400).json({ 
+          message: "Event is not in pending approval status" 
+        });
+      }
+
+      let updateData: any = {
+        approvedBy: userId,
+        approvedAt: new Date(),
+      };
+
+      switch (action) {
+        case 'approve':
+          updateData.status = 'SM_APPROVED';
+          
+          // TODO: Implement post-approval actions
+          // - For competitive methods (RFQ/RFP/RFI/AUCTION): Send vendor invitations
+          // - For DIRECT_PO: Create draft Purchase Order
+          
+          console.log(`Event ${eventId} approved - method: ${event.type}`);
+          break;
+
+        case 'reject':
+          if (!comments?.trim()) {
+            return res.status(400).json({ message: "Comments are required for rejection" });
+          }
+          updateData.status = 'SM_REJECTED';
+          updateData.rejectionReason = comments.trim();
+          console.log(`Event ${eventId} rejected with reason: ${comments}`);
+          break;
+
+        case 'request_changes':
+          if (!comments?.trim()) {
+            return res.status(400).json({ message: "Comments are required when requesting changes" });
+          }
+          updateData.status = 'CHANGES_REQUESTED';
+          updateData.changeRequestComments = comments.trim();
+          console.log(`Changes requested for event ${eventId}: ${comments}`);
+          break;
+
+        default:
+          return res.status(400).json({ message: "Invalid action. Must be 'approve', 'reject', or 'request_changes'" });
+      }
+
+      // Update the sourcing event
+      const updatedEvent = await storage.updateSourcingEvent(eventId, updateData);
+
+      // TODO: Send notifications to relevant users
+      // - Notify sourcing executive of approval/rejection/changes
+      // - If approved and competitive method, notify selected vendors
+
+      res.json({
+        message: `Sourcing event ${action}d successfully`,
+        event: updatedEvent
+      });
+    } catch (error) {
+      console.error("Error processing event approval:", error);
+      res.status(500).json({ 
+        message: "Failed to process approval",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

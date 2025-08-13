@@ -425,9 +425,12 @@ export const sourcingEvents = pgTable("sourcing_events", {
   selectedVendorIds: jsonb("selected_vendor_ids").notNull(), // Array of vendor IDs
   
   // Status and Approval
-  status: varchar("status", { enum: ["PENDING_SM_APPROVAL", "SM_APPROVED", "ACTIVE", "COMPLETED", "CANCELLED"] }).default("PENDING_SM_APPROVAL"),
+  status: varchar("status", { enum: ["PENDING_SM_APPROVAL", "SM_APPROVED", "SM_REJECTED", "CHANGES_REQUESTED", "ACTIVE", "COMPLETED", "CANCELLED"] }).default("PENDING_SM_APPROVAL"),
   approvedBy: varchar("approved_by").references(() => users.id),
   approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  changeRequestComments: text("change_request_comments"),
+  submittedAt: timestamp("submitted_at"),
   
   // Execution Details (filled after SM approval)
   rfxId: uuid("rfx_id").references(() => rfxEvents.id),

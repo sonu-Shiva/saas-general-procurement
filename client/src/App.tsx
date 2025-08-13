@@ -107,6 +107,7 @@ function Router() {
           <Route path="/rfx" component={RfxManagement} />
           <Route path="/auctions" component={AuctionCenter} />
           <Route path="/sourcing-intake" component={SourcingIntake} />
+          <Route path="/method-approval" component={lazy(() => import('./pages/method-approval'))} />
           <Route path="/vendor-discovery" component={VendorDiscovery} />
           <Route path="/vendor-portal" component={VendorPortal} />
           <Route path="/purchase-orders" component={PurchaseOrders} />

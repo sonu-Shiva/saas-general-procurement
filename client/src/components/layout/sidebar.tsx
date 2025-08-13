@@ -16,6 +16,7 @@ import {
   MessageSquare,
   ClipboardCheck,
   Target,
+  CheckCircle,
 } from "lucide-react";
 
 const navigation = [
@@ -29,6 +30,8 @@ const navigation = [
   { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, allowedRoles: ['buyer', 'admin'] },
   { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders", allowedRoles: ['buyer', 'sourcing_manager', 'vendor', 'admin'] },
   { name: "Analytics", href: "/analytics", icon: BarChart3, allowedRoles: ['buyer', 'sourcing_manager', 'admin'] },
+  { name: "Sourcing Intake", href: "/sourcing-intake", icon: FileText, allowedRoles: ['sourcing_exec', 'admin'] },
+  { name: "Method Approval", href: "/method-approval", icon: CheckCircle, allowedRoles: ['sourcing_manager', 'admin'] },
 ];
 
 export default function Sidebar() {
