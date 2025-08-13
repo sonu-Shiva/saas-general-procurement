@@ -11,6 +11,17 @@ Role-based access control priority: Strict enforcement of user role permissions 
 
 ## Recent Changes
 
+### Method Approval System Implementation (January 13, 2025)
+- **COMPLETED**: Full Method Approval screen for SOURCING_MANAGER role with policy enforcement
+- **FEATURES IMPLEMENTED**: PR details display, procurement method validation, vendor pool review
+- **POLICY ENFORCEMENT**: RFx/Auction required for amounts >$100K, justification mandatory for DIRECT_PO
+- **APPROVAL ACTIONS**: Approve/Reject/Request Changes with proper validation and comments
+- **API ENDPOINTS**: Complete backend support for pending events fetching and approval processing
+- **DATABASE SCHEMA**: Enhanced sourcing_events table with approval workflow fields
+- **NAVIGATION**: Method Approval screen accessible only to sourcing managers and admins
+
+## Recent Changes
+
 ### Regression Prevention & Code Quality (January 5, 2025)
 - **CRITICAL LESSON**: Regression issues caused by incomplete API signature updates across codebase
 - **ROOT CAUSES IDENTIFIED**: Schema import mismatches, method name inconsistencies, incomplete refactoring
@@ -18,14 +29,15 @@ Role-based access control priority: Strict enforcement of user role permissions 
 - **QUALITY GATES**: Added pre-deployment validation checks, interface consistency verification
 - **USER PRIORITY**: Zero tolerance for regression issues - all changes must maintain existing functionality
 
-### Strict Role-Based Access Control Implementation (August 12, 2025)
-- **IMPLEMENTED**: Comprehensive 5-step role-based approval workflow with strict access restrictions
-- **ROLE RESTRICTIONS ENFORCED**:
-  - **Requester**: Only allowed to create and manage BOMs (BOM Management page exclusive access)
-  - **Request Approver**: Only approves BOMs in the procurement workflow
-  - **Buyer**: Creates procurement methods, coordinates RFx/Auction/Direct procurement, manages vendors, creates POs
-  - **Procurement Approver**: Only approves procurement methods before RFx/Auction/Direct procurement gets floated
-  - **Sourcing Manager**: Final approval of Purchase Orders only
+### Comprehensive Role-Based Workflow Implementation (January 13, 2025)
+- **IMPLEMENTED**: Complete 5-tier procurement workflow with granular role-based access control
+- **ROLE DEFINITIONS CLARIFIED**:
+  - **DEPARTMENT_REQUESTER**: Creates Purchase Requisitions (PRs) with BOM/material lists, edits drafts, views statuses
+  - **DEPT_APPROVER**: Reviews and approves/rejects PRs from Department Requesters based on compliance
+  - **SOURCING_EXEC**: Intakes approved PRs, selects procurement methods, creates events, coordinates with vendors
+  - **SOURCING_MANAGER**: Reviews/approves procurement methods, approves final POs, acts as policy gatekeeper
+  - **BUYER_ADMIN**: Configures budgets, manages product catalogue, handles organizational user/role management
+  - **VENDOR**: Self-registration, catalogue maintenance, RFx responses, auction participation, PO acknowledgment
 - **NAVIGATION CONTROL**: Sidebar navigation dynamically filters based on user role permissions
 - **API SECURITY**: All backend routes protected with role-based middleware (`requireRole()` function)
 - **WORKFLOW INTEGRATION**: Role restrictions seamlessly integrated with existing 5-step approval workflow

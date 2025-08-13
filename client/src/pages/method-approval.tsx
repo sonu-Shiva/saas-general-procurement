@@ -50,6 +50,21 @@ export default function MethodApprovalPage() {
   const [comments, setComments] = useState('');
   const [showActionDialog, setShowActionDialog] = useState(false);
   const queryClient = useQueryClient();
+  
+  // Role switching for testing (development only)
+  const switchToSourcingManager = async () => {
+    try {
+      await apiRequest('/api/switch-role', {
+        method: 'POST',
+        body: JSON.stringify({ role: 'sourcing_manager' }),
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events/pending-approval'] });
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to switch role:', error);
+    }
+  };
 
   // Fetch pending sourcing events for approval
   const { data: pendingEvents = [], isLoading } = useQuery<SourcingEvent[]>({

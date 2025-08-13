@@ -21,15 +21,15 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Vendor Management", href: "/vendors", icon: Users, allowedRoles: ['buyer', 'admin'] },
+  { name: "Vendor Management", href: "/vendors", icon: Users, allowedRoles: ['sourcing_exec', 'buyer_admin', 'admin'] },
   { name: "Product Catalogue", href: "/products", icon: Package },
-  { name: "BOM Management", href: "/boms", icon: Layers, allowedRoles: ['requester', 'admin'] },
-  { name: "Procurement Requests", href: "/procurement-requests", icon: ClipboardCheck, allowedRoles: ['requester', 'request_approver', 'buyer', 'procurement_approver', 'sourcing_manager', 'admin'] },
-  { name: "RFx Invitations", href: "/vendor-portal", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management", vendorHref: "/vendor-portal", buyerHref: "/rfx", allowedRoles: ['buyer', 'procurement_approver', 'vendor', 'admin'] },
-  { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center", allowedRoles: ['buyer', 'procurement_approver', 'vendor', 'admin'] },
-  { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, allowedRoles: ['buyer', 'admin'] },
-  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders", allowedRoles: ['buyer', 'sourcing_manager', 'vendor', 'admin'] },
-  { name: "Analytics", href: "/analytics", icon: BarChart3, allowedRoles: ['buyer', 'sourcing_manager', 'admin'] },
+  { name: "BOM Management", href: "/boms", icon: Layers, allowedRoles: ['department_requester', 'admin'] },
+  { name: "Procurement Requests", href: "/procurement-requests", icon: ClipboardCheck, allowedRoles: ['department_requester', 'dept_approver', 'sourcing_exec', 'sourcing_manager', 'admin'] },
+  { name: "RFx Invitations", href: "/vendor-portal", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management", vendorHref: "/vendor-portal", buyerHref: "/rfx", allowedRoles: ['sourcing_exec', 'vendor', 'admin'] },
+  { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center", allowedRoles: ['sourcing_exec', 'vendor', 'admin'] },
+  { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, allowedRoles: ['sourcing_exec', 'admin'] },
+  { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders", allowedRoles: ['sourcing_exec', 'sourcing_manager', 'vendor', 'admin'] },
+  { name: "Analytics", href: "/analytics", icon: BarChart3, allowedRoles: ['sourcing_manager', 'buyer_admin', 'admin'] },
   { name: "Sourcing Intake", href: "/sourcing-intake", icon: FileText, allowedRoles: ['sourcing_exec', 'admin'] },
   { name: "Method Approval", href: "/method-approval", icon: CheckCircle, allowedRoles: ['sourcing_manager', 'admin'] },
 ];
