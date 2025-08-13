@@ -8,20 +8,20 @@ import Dashboard from "@/pages/dashboard";
 import VendorManagement from "@/pages/vendor-management";
 import ProductCatalogue from "@/pages/product-catalogue";
 import BomManagement from "@/pages/bom-management";
-import RfxManagement from "@/pages/rfx-management";
-import AuctionCenter from "@/pages/auction-center";
+import RfxManagement from "./pages/rfx-management";
+import AuctionCenter from "./pages/auction-center";
 import PurchaseOrders from "@/pages/purchase-orders";
 import DirectProcurement from "@/pages/direct-procurement";
 import Analytics from "@/pages/analytics";
-import VendorDiscovery from "@/pages/vendor-discovery";
-import VendorPortal from "@/pages/vendor-portal";
+import VendorDiscovery from "./pages/vendor-discovery";
+import VendorPortal from "./pages/vendor-portal";
 import ProcurementRequests from "@/pages/procurement-requests";
-import SourcingIntake from "@/pages/sourcing-intake";
 import { lazy } from "react";
 
 import SimpleLogin from "@/pages/simple-login";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
+import SourcingIntake from "./pages/sourcing-intake";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -104,14 +104,14 @@ function Router() {
           <Route path="/boms" component={BomManagement} />
           <Route path="/procurement-requests" component={ProcurementRequests} />
           <Route path="/pr-approval/:id" component={lazy(() => import('./pages/pr-approval'))} />
-          <Route path="/sourcing-intake" component={SourcingIntake} />
           <Route path="/rfx" component={RfxManagement} />
-          <Route path="/vendor-portal" component={VendorPortal} />
           <Route path="/auctions" component={AuctionCenter} />
-          <Route path="/purchase-orders" component={PurchaseOrders} />
-          <Route path="/direct-procurement" component={DirectProcurement} />
-          <Route path="/analytics" component={Analytics} />
+          <Route path="/sourcing-intake" component={SourcingIntake} />
           <Route path="/vendor-discovery" component={VendorDiscovery} />
+          <Route path="/vendor-portal" component={VendorPortal} />
+          <Route path="/purchase-orders" component={PurchaseOrders} />
+          <Route path="/analytics" component={Analytics} />
+          <Route path="/direct-procurement" component={DirectProcurement} />
           <Route>
             <div className="p-8 text-center">
               <h1 className="text-2xl font-bold">Page not found</h1>

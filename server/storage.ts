@@ -22,7 +22,6 @@ import {
   approvalConfigurations,
   approvalHistory,
   departments,
-  sourcingEvents,
   type User,
   type UpsertUser,
   type Vendor,
@@ -69,8 +68,6 @@ import {
   type InsertApprovalHistory,
   type Department,
   type InsertDepartment,
-  type SourcingEvent,
-  type InsertSourcingEvent,
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from "nanoid";
@@ -118,6 +115,12 @@ export interface IStorage {
   copyBom(bomId: string, newName: string, newVersion: string, createdBy: string): Promise<Bom>;
   createBomItem(bomItem: InsertBomItem): Promise<BomItem>;
   getBomItems(bomId: string): Promise<BomItem[]>;
+  deleteBomItems(bomId: string): Promise<void>;
+  updateBom(id: string, updates: Partial<InsertBom>): Promise<Bom>;
+  deleteBom(id: string): Promise<void>;
+  updateBomItem(id: string, updates: Partial<InsertBomItem>): Promise<BomItem>;
+  deleteBomItem(id: string): Promise<void>;
+  searchVendors(query: string, filters?: { location?: string; category?: string; certifications?: string[] }): Promise<Vendor[]>;
 
   // RFx operations
   createRfxEvent(rfx: InsertRfxEvent): Promise<RfxEvent>;
@@ -137,6 +140,7 @@ export interface IStorage {
   createRfxResponse(data: any): Promise<RfxResponse>;
   getRfxResponses(filters?: { rfxId?: string; vendorId?: string }): Promise<RfxResponse[]>;
   getRfxResponsesByVendor(vendorId: string): Promise<RfxResponse[]>;
+  getChildRfxEvents(parentRfxId: string): Promise<RfxEvent[]>;
 
   // Auction operations
   createAuction(auction: InsertAuction): Promise<Auction>;
@@ -154,12 +158,14 @@ export interface IStorage {
   getBids(filters?: { auctionId?: string; vendorId?: string }): Promise<Bid[]>;
   getAuctionBids(auctionId: string): Promise<Bid[]>;
   getLatestBid(auctionId: string): Promise<Bid | undefined>;
+  getAuctionItems(auctionId: string): Promise<any[]>;
 
   // Purchase Order operations
   createPurchaseOrder(po: InsertPurchaseOrder): Promise<PurchaseOrder>;
-  getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined>;
-  getPurchaseOrders(filters?: { status?: string; vendorId?: string; createdBy?: string }): Promise<PurchaseOrder[]>;
+  getPurchaseOrder(id: string): Promise<any | undefined>;
+  getPurchaseOrders(filters?: { status?: string; vendorId?: string; createdBy?: string }): Promise<any[]>;
   updatePurchaseOrder(id: string, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder>;
+  deletePurchaseOrder(id: string): Promise<void>;
 
   createPoLineItem(lineItem: InsertPoLineItem): Promise<PoLineItem>;
   getPoLineItems(poId: string): Promise<PoLineItem[]>;
@@ -174,6 +180,13 @@ export interface IStorage {
   getNotifications(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<void>;
 
+  // Direct Procurement operations
+  createDirectProcurementOrder(order: InsertDirectProcurementOrder): Promise<DirectProcurementOrder>;
+  getDirectProcurementOrders(userId?: string): Promise<any[]>;
+  getDirectProcurementOrderById(id: string): Promise<DirectProcurementOrder | undefined>;
+  updateDirectProcurementOrderStatus(id: string, status: string): Promise<DirectProcurementOrder>;
+  deleteDirectProcurementOrder(id: string): Promise<void>;
+
   // Dashboard operations
   getDashboardStats(userId: string): Promise<any>;
 
@@ -182,7 +195,7 @@ export interface IStorage {
   getProcurementRequests(filters?: { requestedBy?: string; department?: string; status?: string }): Promise<ProcurementRequest[]>;
   getProcurementRequest(id: string): Promise<ProcurementRequest | undefined>;
   updateProcurementRequest(id: string, updates: Partial<ProcurementRequest>): Promise<ProcurementRequest>;
-  deleteProcurementRequest(id: string): Promise<void>;
+  deleteProcurementRequest(id: string): Promise<void>; // Removed userId parameter as it's not used in the DB implementation
 
   // Approval Configuration operations
   createApprovalConfiguration(config: InsertApprovalConfiguration): Promise<ApprovalConfiguration>;
@@ -209,16 +222,22 @@ export interface IStorage {
   updateDepartment(id: string, data: Partial<Department>): Promise<Department | null>;
   deleteDepartment(id: string): Promise<boolean>;
 
-  // Sourcing Events operations
-  createSourcingEvent(event: InsertSourcingEvent): Promise<SourcingEvent>;
-  getSourcingEvent(id: string): Promise<SourcingEvent | undefined>;
-  getSourcingEvents(filters?: { status?: string; createdBy?: string }): Promise<SourcingEvent[]>;
-  updateSourcingEvent(id: string, updates: Partial<InsertSourcingEvent>): Promise<SourcingEvent>;
-  getProcurementRequestsByStatus(status: string): Promise<ProcurementRequest[]>;
+  // Sourcing Intake operations
+  createSourcingEvent(data: any): Promise<any>;
+  getSourcingEvents(): Promise<any[]>;
+  getSourcingEvent(id: string): Promise<any | null>;
+  updateSourcingEventStatus(id: string, status: string, updatedBy: string): Promise<any | null>;
 }
 
 export class DatabaseStorage implements IStorage {
   private db = db; // Assuming db is initialized and exported from ./db
+
+  // Temporary in-memory storage for sourcing events (replace with actual DB operations)
+  private sourcingEvents: any[] = [];
+  // Temporary in-memory storage for vendors (replace with actual DB operations)
+  private vendors: Vendor[] = [];
+  // Temporary in-memory storage for procurement requests (replace with actual DB operations)
+  private procurementRequests: ProcurementRequest[] = [];
 
   // User operations - mandatory for Replit Auth
   async getUser(id: string): Promise<User | undefined> {
@@ -260,6 +279,7 @@ export class DatabaseStorage implements IStorage {
   // Vendor operations
   async createVendor(vendor: InsertVendor): Promise<Vendor> {
     const [newVendor] = await this.db.insert(vendors).values(vendor).returning();
+    this.vendors.push(newVendor); // Add to in-memory store
     return newVendor;
   }
 
@@ -309,11 +329,20 @@ export class DatabaseStorage implements IStorage {
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(vendors.id, id))
       .returning();
+    // Update in-memory store
+    if (updatedVendor) {
+      const index = this.vendors.findIndex(v => v.id === id);
+      if (index !== -1) {
+        this.vendors[index] = updatedVendor;
+      }
+    }
     return updatedVendor;
   }
 
   async deleteVendor(id: string): Promise<boolean> {
     const result = await this.db.delete(vendors).where(eq(vendors.id, id));
+    // Remove from in-memory store
+    this.vendors = this.vendors.filter(v => v.id !== id);
     return result.rowCount > 0;
   }
 
@@ -479,7 +508,7 @@ export class DatabaseStorage implements IStorage {
   async createBom(bom: InsertBom): Promise<Bom> {
     try {
       console.log("Storage - Creating BOM with data:", JSON.stringify(bom, null, 2));
-      
+
       // Ensure all required fields are present and valid
       const bomData = {
         id: bom.id || undefined, // Let DB generate if not provided
@@ -596,7 +625,7 @@ export class DatabaseStorage implements IStorage {
         })));
       } else {
         console.log("Storage - No BOM items found for BOM:", bomId);
-        
+
         // Check if there are any BOM items at all
         const allItems = await this.db.select().from(bomItems).limit(5);
         console.log("Storage - Total BOM items in database:", allItems.length);
@@ -631,11 +660,11 @@ export class DatabaseStorage implements IStorage {
   async deleteBom(id: string): Promise<void> {
     try {
       console.log("Storage - Deleting BOM:", id);
-      
+
       // First delete all BOM items
       await this.db.delete(bomItems).where(eq(bomItems.bomId, id));
       console.log("Storage - Deleted BOM items for BOM:", id);
-      
+
       // Then delete the BOM
       await this.db.delete(boms).where(eq(boms.id, id));
       console.log("Storage - Deleted BOM:", id);
@@ -656,13 +685,6 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBomItem(id: string): Promise<void> {
     await this.db.delete(bomItems).where(eq(bomItems.id, id));
-  }
-
-  async deleteBom(id: string): Promise<void> {
-    // Delete BOM items first due to foreign key constraint
-    await this.deleteBomItems(id);
-    // Delete the BOM
-    await this.db.delete(boms).where(eq(boms.id, id));
   }
 
   async searchVendors(query: string, filters?: { location?: string; category?: string; certifications?: string[] }): Promise<Vendor[]> {
@@ -955,7 +977,7 @@ export class DatabaseStorage implements IStorage {
   async createAuction(auction: InsertAuction): Promise<Auction> {
     try {
       console.log("Storage - Creating auction with data:", JSON.stringify(auction, null, 2));
-      
+
       // Ensure all required fields are present and properly formatted
       const auctionData = {
         id: auction.id || uuidv4(),
@@ -1174,7 +1196,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(vendors, eq(bids.vendorId, vendors.id))
       .where(eq(bids.auctionId, auctionId))
       .orderBy(desc(bids.timestamp));
-    
+
     console.log(`DEBUG: Raw bid results from DB with vendor info:`, bidResults);
     return bidResults;
   }
@@ -1224,21 +1246,17 @@ export class DatabaseStorage implements IStorage {
       buyerBranchName: buyerOrg?.name || "Head Office",
       buyerAddress: buyerOrg?.address || "",
       buyerGstin: buyerOrg?.gstNumber || "",
-      
+
       // Vendor Information
       vendorName: vendorDetails?.companyName || "",
       vendorAddress: vendorDetails?.address || "",
       vendorGstin: vendorDetails?.gstNumber || "",
-      
-      // Delivery defaults to buyer address unless specified
-      deliveryToAddress: po.deliveryToAddress || buyerOrg?.address || "",
-      deliveryGstin: po.deliveryGstin || buyerOrg?.gstNumber || "",
-      
+
       // PO Details
       poDate: new Date(),
       taxAmount: po.taxAmount || "0",
-      authorizedSignatory: buyerUser?.firstName && buyerUser?.lastName 
-        ? `${buyerUser.firstName} ${buyerUser.lastName}` 
+      authorizedSignatory: buyerUser?.firstName && buyerUser?.lastName
+        ? `${buyerUser.firstName} ${buyerUser.lastName}`
         : "Authorized Signatory",
     };
 
@@ -1365,7 +1383,7 @@ export class DatabaseStorage implements IStorage {
     const quantity = parseFloat(lineItem.quantity);
     const unitPrice = parseFloat(lineItem.unitPrice);
     const taxableValue = lineItem.taxableValue || (quantity * unitPrice).toString();
-    
+
     const enhancedLineItem = {
       ...lineItem,
       taxableValue,
@@ -1627,6 +1645,7 @@ export class DatabaseStorage implements IStorage {
       requestNumber,
     };
     const [created] = await this.db.insert(procurementRequests).values(requestData).returning();
+    this.procurementRequests.push(created); // Add to in-memory store
     return created;
   }
 
@@ -1645,6 +1664,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(procurementRequests.overallStatus, filters.status as any));
     }
 
+    // Fetch from DB and return
     return await this.db
       .select()
       .from(procurementRequests)
@@ -1666,11 +1686,21 @@ export class DatabaseStorage implements IStorage {
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(procurementRequests.id, id))
       .returning();
+    // Update in-memory store
+    if (updated) {
+      const index = this.procurementRequests.findIndex(pr => pr.id === id);
+      if (index !== -1) {
+        this.procurementRequests[index] = updated;
+      }
+    }
     return updated;
   }
 
   async deleteProcurementRequest(id: string): Promise<void> {
+    // Delete from DB
     await this.db.delete(procurementRequests).where(eq(procurementRequests.id, id));
+    // Remove from in-memory store
+    this.procurementRequests = this.procurementRequests.filter(pr => pr.id !== id);
   }
 
   // Approval Configuration operations
@@ -1797,52 +1827,80 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-  // Sourcing Events operations
-  async createSourcingEvent(eventData: InsertSourcingEvent): Promise<SourcingEvent> {
-    const [event] = await this.db
-      .insert(sourcingEvents)
-      .values(eventData)
-      .returning();
-    return event;
-  }
+  // Sourcing Intake operations
+  async createSourcingEvent(data: any): Promise<any> {
+    try {
+      const sourcingEvent = {
+        id: uuidv4(),
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-  async getSourcingEvent(id: string): Promise<SourcingEvent | undefined> {
-    const [event] = await this.db
-      .select()
-      .from(sourcingEvents)
-      .where(eq(sourcingEvents.id, id));
-    return event;
-  }
-
-  async getSourcingEvents(filters?: { status?: string; createdBy?: string }): Promise<SourcingEvent[]> {
-    let query = this.db.select().from(sourcingEvents);
-    
-    if (filters?.status) {
-      query = query.where(eq(sourcingEvents.status, filters.status));
+      // Here you would interact with your database to save the sourcing event.
+      // For now, we'll simulate saving it to the in-memory array.
+      this.sourcingEvents.push(sourcingEvent);
+      console.log(`Sourcing event created: ${sourcingEvent.id}`);
+      return sourcingEvent;
+    } catch (error) {
+      console.error("Error creating sourcing event:", error);
+      throw error;
     }
-    
-    if (filters?.createdBy) {
-      query = query.where(eq(sourcingEvents.createdBy, filters.createdBy));
+  }
+
+  async getSourcingEvents(): Promise<any[]> {
+    try {
+      // In a real implementation, you would fetch from the database.
+      // Here, we return the in-memory array, potentially enriching it with related data.
+      return this.sourcingEvents.map(event => ({
+        ...event,
+        // Example: Fetching related procurement request data
+        procurementRequest: this.procurementRequests.find(pr => pr.id === event.procurementRequestId),
+        // Example: Counting selected vendors
+        vendorCount: event.selectedVendors?.length || 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching sourcing events:", error);
+      throw error;
     }
-    
-    return await query.orderBy(desc(sourcingEvents.createdAt));
   }
 
-  async updateSourcingEvent(id: string, updates: Partial<InsertSourcingEvent>): Promise<SourcingEvent> {
-    const [updatedEvent] = await this.db
-      .update(sourcingEvents)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(sourcingEvents.id, id))
-      .returning();
-    return updatedEvent;
+  async getSourcingEvent(id: string): Promise<any | null> {
+    try {
+      // In a real implementation, you would fetch a single event from the database.
+      const event = this.sourcingEvents.find(e => e.id === id);
+      if (!event) return null;
+
+      // Example: Fetching related data
+      return {
+        ...event,
+        procurementRequest: this.procurementRequests.find(pr => pr.id === event.procurementRequestId),
+        vendors: this.vendors.filter(v => event.selectedVendors?.includes(v.id)),
+      };
+    } catch (error) {
+      console.error("Error fetching sourcing event:", error);
+      throw error;
+    }
   }
 
-  async getProcurementRequestsByStatus(status: string): Promise<ProcurementRequest[]> {
-    return await this.db
-      .select()
-      .from(procurementRequests)
-      .where(eq(procurementRequests.overallStatus, status))
-      .orderBy(desc(procurementRequests.createdAt));
+  async updateSourcingEventStatus(id: string, status: string, updatedBy: string): Promise<any | null> {
+    try {
+      // In a real implementation, you would update the event in the database.
+      const eventIndex = this.sourcingEvents.findIndex(e => e.id === id);
+      if (eventIndex === -1) return null;
+
+      this.sourcingEvents[eventIndex] = {
+        ...this.sourcingEvents[eventIndex],
+        status,
+        updatedBy,
+        updatedAt: new Date(),
+      };
+
+      return this.sourcingEvents[eventIndex];
+    } catch (error) {
+      console.error("Error updating sourcing event status:", error);
+      throw error;
+    }
   }
 }
 

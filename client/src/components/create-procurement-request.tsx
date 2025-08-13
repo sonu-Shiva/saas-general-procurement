@@ -799,18 +799,18 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                           </TableCell>
                           <TableCell>
                             <Select 
-                              value={item.catalogReference || ""} 
+                              value={item.catalogReference || "none"} 
                               onValueChange={(value) => updateLineItem(index, { 
-                                catalogReference: value, 
+                                catalogReference: value === "none" ? "" : value, 
                                 productId: value.startsWith('CATALOG-') ? value.replace('CATALOG-', '') : undefined,
-                                isMapped: !!value 
+                                isMapped: value !== "none" && !!value 
                               })}
                             >
                               <SelectTrigger className="w-40">
                                 <SelectValue placeholder="Select..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">None</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                                 {products.map((product) => (
                                   <SelectItem 
                                     key={product.id} 

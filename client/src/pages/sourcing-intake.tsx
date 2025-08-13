@@ -1,512 +1,565 @@
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
+
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  ShoppingCart, 
   FileText, 
+  Package, 
   DollarSign, 
   Users, 
-  Clock,
+  Search,
+  Gavel,
+  ShoppingCart,
+  MessageSquare,
+  AlertTriangle,
   CheckCircle,
-  Package,
-  Info,
-  Building,
-  Calendar,
-  Target
+  Bot
 } from "lucide-react";
-import type { ProcurementRequest } from "@shared/schema";
+import { format } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
 
-// Form schema for sourcing intake
-const sourcingIntakeSchema = z.object({
-  procurementRequestId: z.string().min(1, "Please select a procurement request"),
-  procurementMethod: z.enum(["rfq", "rfp", "rfi"], {
-    required_error: "Please select a procurement method",
-  }),
-  vendorCount: z.number().min(1, "At least 1 vendor is required").max(20, "Maximum 20 vendors allowed"),
-  notes: z.string().optional(),
-  urgencyLevel: z.enum(["low", "medium", "high"], {
-    required_error: "Please select urgency level",
-  }),
-  estimatedTimeToComplete: z.number().min(1, "Please provide estimated time"),
-});
+interface ProcurementRequest {
+  id: string;
+  title: string;
+  department: string;
+  needByDate: string;
+  urgency: string;
+  status: string;
+  bomLineItems: Array<{
+    itemName: string;
+    quantity: number;
+    uom: string;
+    estimatedPrice?: number;
+    isMapped: boolean;
+    catalogReference?: string;
+  }>;
+  estimatedValue?: number;
+}
 
-type SourcingIntakeFormData = z.infer<typeof sourcingIntakeSchema>;
+interface Vendor {
+  id: string;
+  companyName: string;
+  email?: string;
+  phone?: string;
+  categories: string[];
+  status: string;
+  performanceScore?: number;
+}
 
-export default function SourcingIntakePage() {
-  const [selectedPR, setSelectedPR] = useState<ProcurementRequest | null>(null);
-  const [spendEstimateData, setSpendEstimateData] = useState<any>(null);
+interface SourcingEventData {
+  procurementRequestId: string;
+  type: string;
+  justification?: string;
+  selectedVendors: string[];
+  aiDiscoveryQuery?: string;
+}
 
-  const form = useForm<SourcingIntakeFormData>({
-    resolver: zodResolver(sourcingIntakeSchema),
-    defaultValues: {
-      vendorCount: 5,
-      urgencyLevel: "medium",
-      estimatedTimeToComplete: 7,
+export default function SourcingIntake() {
+  const [selectedPR, setSelectedPR] = useState<string>("");
+  const [procurementMethod, setProcurementMethod] = useState<string>("");
+  const [justification, setJustification] = useState<string>("");
+  const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
+  const [aiDiscoveryQuery, setAiDiscoveryQuery] = useState<string>("");
+  const [showAiDiscovery, setShowAiDiscovery] = useState<boolean>(false);
+  const [discoveredVendors, setDiscoveredVendors] = useState<Vendor[]>([]);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Get pending procurement requests
+  const { data: procurementRequests = [] } = useQuery<ProcurementRequest[]>({
+    queryKey: ['/api/procurement-requests'],
+  });
+
+  // Get approved vendors
+  const { data: vendors = [] } = useQuery<Vendor[]>({
+    queryKey: ['/api/vendors'],
+  });
+
+  // Filter approved vendors
+  const approvedVendors = vendors.filter(v => v.status === 'approved');
+
+  // Get selected PR details
+  const selectedPRData = procurementRequests.find(pr => pr.id === selectedPR);
+
+  // Calculate spend estimate
+  const spendEstimate = selectedPRData?.bomLineItems.reduce((total, item) => {
+    const price = item.estimatedPrice || 0;
+    return total + (price * item.quantity);
+  }, 0) || 0;
+
+  // Mapped vs unmapped items
+  const mappedItems = selectedPRData?.bomLineItems.filter(item => item.isMapped).length || 0;
+  const totalItems = selectedPRData?.bomLineItems.length || 0;
+  const unmappedItems = totalItems - mappedItems;
+
+  // AI Vendor Discovery mutation
+  const aiDiscoveryMutation = useMutation({
+    mutationFn: async (query: string) => {
+      return apiRequest('/api/vendors/ai-discovery', {
+        method: 'POST',
+        body: JSON.stringify({ query }),
+      });
     },
-  });
-
-  // Fetch approved procurement requests
-  const { data: approvedRequests = [], isLoading: loadingRequests } = useQuery<ProcurementRequest[]>({
-    queryKey: ["/api/procurement-requests/approved"],
-    refetchOnWindowFocus: false,
-  });
-
-  // Fetch spend estimate for selected PR
-  const { refetch: fetchSpendEstimate, isLoading: loadingSpendEstimate } = useQuery({
-    queryKey: ["/api/procurement-requests", selectedPR?.id, "spend-estimate"],
-    enabled: false,
-    refetchOnWindowFocus: false,
+    onSuccess: (vendors) => {
+      setDiscoveredVendors(vendors);
+      toast({
+        title: "Vendors Discovered",
+        description: `Found ${vendors.length} potential vendors`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Discovery Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Create sourcing event mutation
-  const createSourcingEventMutation = useMutation({
-    mutationFn: async (data: SourcingIntakeFormData) => {
-      const response = await apiRequest("/api/events", {
-        method: "POST",
-        body: JSON.stringify({
-          procurementRequestId: data.procurementRequestId,
-          procurementMethod: data.procurementMethod,
-          vendorCount: data.vendorCount,
-          notes: data.notes,
-          urgencyLevel: data.urgencyLevel,
-          estimatedTimeToComplete: data.estimatedTimeToComplete,
-          status: "draft",
-        }),
+  const createEventMutation = useMutation({
+    mutationFn: async (data: SourcingEventData) => {
+      return apiRequest('/api/events', {
+        method: 'POST',
+        body: JSON.stringify(data),
       });
-      return response;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      console.log("Sourcing event created:", data);
-      // Reset form and state
-      form.reset();
-      setSelectedPR(null);
-      setSpendEstimateData(null);
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({
+        title: "Sourcing Event Created",
+        description: `Event ${result.referenceNo} submitted for manager approval`,
+      });
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Creation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
-  const handlePRSelection = async (prId: string) => {
-    const selected = approvedRequests.find((pr) => pr.id === prId);
-    setSelectedPR(selected || null);
-    form.setValue("procurementRequestId", prId);
+  const resetForm = () => {
+    setSelectedPR("");
+    setProcurementMethod("");
+    setJustification("");
+    setSelectedVendors([]);
+    setAiDiscoveryQuery("");
+    setShowAiDiscovery(false);
+    setDiscoveredVendors([]);
+  };
 
-    if (selected) {
-      console.log("Fetching spend estimate for PR:", prId);
-      try {
-        const response = await apiRequest(`/api/procurement-requests/${prId}/spend-estimate`);
-        setSpendEstimateData(response);
-        console.log("Spend estimate data:", response);
-      } catch (error) {
-        console.error("Error fetching spend estimate:", error);
-      }
+  const handleVendorToggle = (vendorId: string) => {
+    setSelectedVendors(prev => 
+      prev.includes(vendorId) 
+        ? prev.filter(id => id !== vendorId)
+        : [...prev, vendorId]
+    );
+  };
+
+  const handleAiDiscovery = () => {
+    if (!aiDiscoveryQuery.trim()) {
+      toast({
+        title: "Query Required",
+        description: "Please enter a search query for AI vendor discovery",
+        variant: "destructive",
+      });
+      return;
     }
+    aiDiscoveryMutation.mutate(aiDiscoveryQuery);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-    }).format(amount);
+  const isFormValid = () => {
+    if (!selectedPR || !procurementMethod) return false;
+    if (procurementMethod === 'DIRECT_PO' && !justification.trim()) return false;
+    if (selectedVendors.length === 0) return false;
+    return true;
   };
 
-  const getProcurementMethodDescription = (method: string) => {
-    switch (method) {
-      case "rfq":
-        return "Request for Quote - For standardized items with clear specifications";
-      case "rfp":
-        return "Request for Proposal - For complex requirements needing vendor expertise";
-      case "rfi":
-        return "Request for Information - For market research and vendor capabilities";
-      default:
-        return "";
+  const handleSubmit = () => {
+    if (!isFormValid()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill all required fields",
+        variant: "destructive",
+      });
+      return;
     }
+
+    const eventData: SourcingEventData = {
+      procurementRequestId: selectedPR,
+      type: procurementMethod,
+      selectedVendors,
+    };
+
+    if (procurementMethod === 'DIRECT_PO') {
+      eventData.justification = justification;
+    }
+
+    if (aiDiscoveryQuery.trim()) {
+      eventData.aiDiscoveryQuery = aiDiscoveryQuery;
+    }
+
+    createEventMutation.mutate(eventData);
   };
 
-  const onSubmit = (data: SourcingIntakeFormData) => {
-    console.log("Submitting sourcing intake:", data);
-    createSourcingEventMutation.mutate(data);
-  };
+  // Check user role
+  if (user?.role !== 'SOURCING_EXEC') {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-12 text-center">
+            <AlertTriangle className="w-16 h-16 text-orange-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Access Denied</h3>
+            <p className="text-muted-foreground">This page is only accessible to Sourcing Executives.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8" data-testid="sourcing-intake-page">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Target className="h-8 w-8" />
-          Sourcing Intake
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Convert approved procurement requests into sourcing events for vendor engagement
+    <div className="space-y-6 p-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl font-bold">Sourcing Intake</h1>
+        <p className="text-muted-foreground">
+          Select procurement method and vendors for sourcing events
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Main Form */}
-        <Card data-testid="sourcing-form-card">
-          <CardHeader>
-            <CardTitle>Create Sourcing Event</CardTitle>
-            <CardDescription>
-              Select an approved procurement request and configure sourcing parameters
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Procurement Request Selection */}
-                <FormField
-                  control={form.control}
-                  name="procurementRequestId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Approved Procurement Request *</FormLabel>
-                      <Select 
-                        onValueChange={handlePRSelection} 
-                        value={field.value}
-                        data-testid="select-procurement-request"
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select approved procurement request" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {loadingRequests ? (
-                            <SelectItem value="loading" disabled>
-                              Loading requests...
-                            </SelectItem>
-                          ) : approvedRequests.length === 0 ? (
-                            <SelectItem value="no-requests" disabled>
-                              No approved requests available
-                            </SelectItem>
-                          ) : (
-                            approvedRequests.map((request) => (
-                              <SelectItem key={request.id} value={request.id}>
-                                {request.title} - {request.department} ({request.requestNumber})
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Procurement Method */}
-                <FormField
-                  control={form.control}
-                  name="procurementMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Procurement Method *</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value}
-                        data-testid="select-procurement-method"
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select procurement method" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="rfq">Request for Quote (RFQ)</SelectItem>
-                          <SelectItem value="rfp">Request for Proposal (RFP)</SelectItem>
-                          <SelectItem value="rfi">Request for Information (RFI)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form.watch("procurementMethod") && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          <Info className="h-4 w-4 inline mr-1" />
-                          {getProcurementMethodDescription(form.watch("procurementMethod"))}
-                        </p>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Vendor Count */}
-                <FormField
-                  control={form.control}
-                  name="vendorCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Number of Vendors to Invite *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="20"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                          data-testid="input-vendor-count"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Urgency Level */}
-                <FormField
-                  control={form.control}
-                  name="urgencyLevel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Urgency Level *</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        value={field.value}
-                        data-testid="select-urgency-level"
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select urgency level" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="low">Low Priority</SelectItem>
-                          <SelectItem value="medium">Medium Priority</SelectItem>
-                          <SelectItem value="high">High Priority</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Estimated Time to Complete */}
-                <FormField
-                  control={form.control}
-                  name="estimatedTimeToComplete"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Days to Complete *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="365"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                          data-testid="input-estimated-days"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Notes */}
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Internal Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Add any internal notes or special instructions..."
-                          className="min-h-[100px]"
-                          {...field}
-                          data-testid="textarea-notes"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={createSourcingEventMutation.isPending}
-                  data-testid="button-submit-sourcing-event"
-                >
-                  {createSourcingEventMutation.isPending ? (
-                    <>
-                      <Clock className="h-4 w-4 animate-spin mr-2" />
-                      Creating Sourcing Event...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Create Sourcing Event
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-
-        {/* Selected PR Details & Spend Estimate */}
-        <div className="space-y-6">
-          {selectedPR && (
-            <Card data-testid="selected-pr-details">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Selected Procurement Request
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-semibold">Request Number:</span>
-                    <p className="text-gray-600 dark:text-gray-400" data-testid="text-request-number">
-                      {selectedPR.requestNumber}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-semibold">Department:</span>
-                    <p className="text-gray-600 dark:text-gray-400" data-testid="text-department">
-                      <Building className="h-4 w-4 inline mr-1" />
-                      {selectedPR.department}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-semibold">Requested By:</span>
-                    <p className="text-gray-600 dark:text-gray-400" data-testid="text-requested-by">
-                      {selectedPR.requestedBy}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-semibold">Delivery Date:</span>
-                    <p className="text-gray-600 dark:text-gray-400" data-testid="text-delivery-date">
-                      <Calendar className="h-4 w-4 inline mr-1" />
-                      {selectedPR.requestedDeliveryDate 
-                        ? new Date(selectedPR.requestedDeliveryDate).toLocaleDateString()
-                        : 'Not specified'
-                      }
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="font-semibold">Title:</span>
-                  <p className="text-gray-600 dark:text-gray-400" data-testid="text-title">
-                    {selectedPR.title}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - PR Selection & Summary */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* PR Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Select Procurement Request
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {procurementRequests.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    No procurement requests available for sourcing
                   </p>
-                </div>
-
-                <div>
-                  <span className="font-semibold">Justification:</span>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm" data-testid="text-justification">
-                    {selectedPR.justification}
-                  </p>
-                </div>
-
-                <div>
-                  <span className="font-semibold">Status:</span>
-                  <Badge variant="secondary" className="ml-2" data-testid="badge-status">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    {selectedPR.overallStatus?.replace('_', ' ').toUpperCase()}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {spendEstimateData && (
-            <Card data-testid="spend-estimate-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Spend Estimate Analysis
-                </CardTitle>
-                <CardDescription>
-                  Based on BOM items and catalog pricing
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-green-700 dark:text-green-400" data-testid="text-total-estimate">
-                      {formatCurrency(spendEstimateData.spendEstimate)}
-                    </div>
-                    <div className="text-sm text-green-600 dark:text-green-500">Total Estimate</div>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-400" data-testid="text-total-items">
-                      {spendEstimateData.totalItems}
-                    </div>
-                    <div className="text-sm text-blue-600 dark:text-blue-500">Total Items</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span>Catalog Mapped Items:</span>
-                  <Badge variant={spendEstimateData.catalogMappedItems > 0 ? "default" : "secondary"} data-testid="badge-catalog-mapped">
-                    <Package className="h-3 w-3 mr-1" />
-                    {spendEstimateData.catalogMappedItems} / {spendEstimateData.totalItems}
-                  </Badge>
-                </div>
-
-                {spendEstimateData.catalogMappedItems < spendEstimateData.totalItems && (
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      <Info className="h-4 w-4 inline mr-1" />
-                      Some items don't have catalog pricing. Vendor quotes will be essential for accurate costs.
-                    </p>
-                  </div>
-                )}
-
-                <div className="pt-2 border-t">
-                  <h4 className="font-semibold mb-2">Item Breakdown:</h4>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {spendEstimateData.itemEstimates?.slice(0, 5).map((item: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center text-sm">
-                        <span className="truncate flex-1" data-testid={`text-item-name-${index}`}>{item.itemName}</span>
-                        <span className="text-gray-600 dark:text-gray-400" data-testid={`text-item-estimate-${index}`}>
-                          {item.hasCatalogPrice ? formatCurrency(item.lineEstimate) : 'TBD'}
-                        </span>
+                ) : (
+                  <RadioGroup value={selectedPR} onValueChange={setSelectedPR}>
+                    {procurementRequests.map((pr) => (
+                      <div key={pr.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                        <RadioGroupItem value={pr.id} id={pr.id} />
+                        <div className="flex-1">
+                          <Label htmlFor={pr.id} className="cursor-pointer">
+                            <div className="font-medium">{pr.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {pr.department} • Due: {format(new Date(pr.needByDate), 'MMM dd, yyyy')}
+                            </div>
+                          </Label>
+                        </div>
+                        <Badge variant={
+                          pr.urgency === 'CRITICAL' ? 'destructive' :
+                          pr.urgency === 'HIGH' ? 'default' : 'secondary'
+                        }>
+                          {pr.urgency}
+                        </Badge>
                       </div>
                     ))}
-                    {spendEstimateData.itemEstimates?.length > 5 && (
-                      <div className="text-sm text-gray-500 text-center pt-2" data-testid="text-more-items">
-                        ... and {spendEstimateData.itemEstimates.length - 5} more items
-                      </div>
-                    )}
+                  </RadioGroup>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* BOM Summary */}
+          {selectedPRData && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  BOM Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span>Mapped: {mappedItems}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-orange-600" />
+                      <span>Unmapped: {unmappedItems}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-blue-600" />
+                      <span>Estimated: ${spendEstimate.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Qty</TableHead>
+                          <TableHead>UOM</TableHead>
+                          <TableHead>Est. Price</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedPRData.bomLineItems.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{item.itemName}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>{item.uom}</TableCell>
+                            <TableCell>
+                              {item.estimatedPrice ? `$${item.estimatedPrice.toLocaleString()}` : 'TBD'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={item.isMapped ? 'default' : 'secondary'}>
+                                {item.isMapped ? 'Mapped' : 'Unmapped'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
+        </div>
 
-          {!selectedPR && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <ShoppingCart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">
-                  Select a procurement request to view details and spend estimate
-                </p>
-              </CardContent>
-            </Card>
-          )}
+        {/* Right Column - Method & Vendors */}
+        <div className="space-y-6">
+          {/* Procurement Method */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Procurement Method</CardTitle>
+              <CardDescription>Select the sourcing approach</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup value={procurementMethod} onValueChange={setProcurementMethod}>
+                <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <RadioGroupItem value="RFI" id="rfi" />
+                  <div className="flex-1">
+                    <Label htmlFor="rfi" className="cursor-pointer flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">RFI - Request for Information</div>
+                        <div className="text-xs text-muted-foreground">Gather vendor capabilities</div>
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <RadioGroupItem value="RFP" id="rfp" />
+                  <div className="flex-1">
+                    <Label htmlFor="rfp" className="cursor-pointer flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">RFP - Request for Proposal</div>
+                        <div className="text-xs text-muted-foreground">Detailed proposals required</div>
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <RadioGroupItem value="RFQ" id="rfq" />
+                  <div className="flex-1">
+                    <Label htmlFor="rfq" className="cursor-pointer flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">RFQ - Request for Quote</div>
+                        <div className="text-xs text-muted-foreground">Price quotes only</div>
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <RadioGroupItem value="AUCTION" id="auction" />
+                  <div className="flex-1">
+                    <Label htmlFor="auction" className="cursor-pointer flex items-center gap-2">
+                      <Gavel className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">Auction</div>
+                        <div className="text-xs text-muted-foreground">Competitive bidding</div>
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                  <RadioGroupItem value="DIRECT_PO" id="direct_po" />
+                  <div className="flex-1">
+                    <Label htmlFor="direct_po" className="cursor-pointer flex items-center gap-2">
+                      <ShoppingCart className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">Direct PO</div>
+                        <div className="text-xs text-muted-foreground">Skip sourcing process</div>
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+              </RadioGroup>
+
+              {/* Justification for Direct PO */}
+              {procurementMethod === 'DIRECT_PO' && (
+                <div className="mt-4 space-y-2">
+                  <Label htmlFor="justification">Justification *</Label>
+                  <Textarea
+                    id="justification"
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                    placeholder="Explain why direct PO is necessary..."
+                    rows={3}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Vendor Pool Builder */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Vendor Pool
+              </CardTitle>
+              <CardDescription>
+                Select vendors or discover new ones
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="approved" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="approved">Approved Vendors</TabsTrigger>
+                  <TabsTrigger value="discovery">AI Discovery</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="approved" className="space-y-3">
+                  {approvedVendors.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">
+                      No approved vendors available
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {approvedVendors.map((vendor) => (
+                        <div key={vendor.id} className="flex items-center space-x-3 p-2 border rounded">
+                          <Checkbox
+                            id={vendor.id}
+                            checked={selectedVendors.includes(vendor.id)}
+                            onCheckedChange={() => handleVendorToggle(vendor.id)}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor={vendor.id} className="cursor-pointer">
+                              <div className="font-medium text-sm">{vendor.companyName}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {vendor.categories.join(', ')}
+                              </div>
+                            </Label>
+                          </div>
+                          {vendor.performanceScore && (
+                            <Badge variant="outline" className="text-xs">
+                              {vendor.performanceScore}/5
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="discovery" className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="ai-query">Search Query</Label>
+                    <Input
+                      id="ai-query"
+                      value={aiDiscoveryQuery}
+                      onChange={(e) => setAiDiscoveryQuery(e.target.value)}
+                      placeholder="e.g., automotive parts suppliers in India"
+                    />
+                    <Button
+                      onClick={handleAiDiscovery}
+                      disabled={aiDiscoveryMutation.isPending}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      <Bot className="w-4 h-4 mr-2" />
+                      {aiDiscoveryMutation.isPending ? 'Discovering...' : 'Discover Vendors'}
+                    </Button>
+                  </div>
+
+                  {discoveredVendors.length > 0 && (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {discoveredVendors.map((vendor) => (
+                        <div key={vendor.id} className="flex items-center space-x-3 p-2 border rounded">
+                          <Checkbox
+                            id={`discovered-${vendor.id}`}
+                            checked={selectedVendors.includes(vendor.id)}
+                            onCheckedChange={() => handleVendorToggle(vendor.id)}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor={`discovered-${vendor.id}`} className="cursor-pointer">
+                              <div className="font-medium text-sm">{vendor.companyName}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {vendor.email} • AI Discovered
+                              </div>
+                            </Label>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            New
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              {selectedVendors.length > 0 && (
+                <div className="mt-3 p-2 bg-blue-50 rounded">
+                  <div className="text-sm font-medium text-blue-800">
+                    {selectedVendors.length} vendors selected
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <Button
+            onClick={handleSubmit}
+            disabled={!isFormValid() || createEventMutation.isPending}
+            className="w-full"
+            size="lg"
+          >
+            {createEventMutation.isPending ? 'Creating...' : 'Proceed to Sourcing'}
+          </Button>
         </div>
       </div>
-
-      {/* Success Message */}
-      {createSourcingEventMutation.isSuccess && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white p-4 rounded-lg shadow-lg" data-testid="success-message">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
-            <span>Sourcing event created successfully!</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

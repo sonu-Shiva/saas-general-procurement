@@ -21,8 +21,7 @@ import {
   poLineItems,
   directProcurementOrders,
   bids,
-  notifications,
-  sourcingEvents
+  notifications
 } from "@shared/schema";
 import {
   insertVendorSchema,
@@ -41,7 +40,6 @@ import {
   insertApprovalSchema,
   insertNotificationSchema,
   insertTermsAcceptanceSchema,
-  insertSourcingEventSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -108,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     email: 'dev@sclen.com',
     firstName: 'Developer',
     lastName: 'User',
-    role: 'sourcing_exec'  // Changed to sourcing_exec to test sourcing intake functionality
+    role: 'admin'  // Changed from 'buyer_admin' to 'admin' for proper role-based access
   };
   let isLoggedIn = true;
 
@@ -265,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const vendorProfile = Object.values(testVendorProfiles).find(v => v.id === vendorId);
         if (vendorProfile) {
           console.log(`Switching to vendor profile: ${vendorProfile.companyName}`);
-          
+
           // Check if vendor user already exists
           let existingVendor;
           try {
@@ -273,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (error) {
             // User doesn't exist, we'll create them
           }
-          
+
           // Only create/update if user doesn't exist or needs updating
           if (!existingVendor) {
             try {
@@ -303,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } as any;
           // Add vendorId for frontend matching
           (currentDevUser as any).vendorId = vendorProfile.id;
-          
+
           // CRITICAL: Update the vendor profile's userId to match the current user
           // This ensures vendor lookup by userId works correctly
           try {
@@ -311,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const existingVendorProfile = allVendors.find(v => v.email === vendorProfile.email);
             if (existingVendorProfile && existingVendorProfile.userId !== vendorProfile.id) {
               console.log(`Updating vendor profile userId from ${existingVendorProfile.userId} to ${vendorProfile.id}`);
-              
+
               // First ensure the user exists in the users table (foreign key requirement)
               try {
                 await storage.upsertUser({
@@ -329,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
                 console.log('User already exists in users table');
               }
-              
+
               // Now update the vendor profile with the correct userId
               await storage.updateVendor(existingVendorProfile.id, {
                 userId: vendorProfile.id
@@ -339,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (vendorUpdateError) {
             console.error('Error updating vendor profile userId:', vendorUpdateError);
           }
-          
+
           console.log(`Switched to vendor: ${vendorProfile.companyName}`);
         } else {
           return res.status(400).json({ message: 'Invalid vendor ID' });
@@ -386,7 +384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!isLoggedIn) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
-    
+
     const vendorList = Object.entries(testVendorProfiles).map(([key, profile]) => ({
       id: profile.id,
       companyName: profile.companyName,
@@ -394,7 +392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       firstName: profile.firstName,
       lastName: profile.lastName,
     }));
-    
+
     res.json(vendorList);
   });
 
@@ -429,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const userId = req.user?.claims?.sub || req.user?.id || 'dev-user-123';
         const user = await storage.getUser(userId);
-        
+
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }
@@ -747,7 +745,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =====  DEPARTMENTS API ROUTES =====
-  
+
   // Get all departments
   app.get('/api/departments', async (req, res) => {
     try {
@@ -817,7 +815,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 ITEM-001,Sample Item 1,PCS,10,Sample specifications
 ITEM-002,Sample Item 2,KG,5.5,Another sample item
 ITEM-003,Sample Item 3,METER,25,Length measurement item`;
-      
+
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename="bom_template.csv"');
       res.send(csvContent);
@@ -998,15 +996,15 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     // First, try to find vendor blocks by looking for company name patterns
     // Use regex to find standalone company names followed by contact details
     const vendorPattern = /^([A-Za-z][A-Za-z\s&().,'-]+(?:Ltd|Pvt Ltd|Company|Enterprises|Corp|Corporation|Inc|Chemicals|Industries|Impex|Private Limited)?)\s*\n((?:- [^\n]+\n?)+)/gm;
-    
+
     let match;
     let found = false;
-    
+
     while ((match = vendorPattern.exec(response)) !== null) {
       found = true;
       const companyName = match[1].trim();
       const details = match[2].trim();
-      
+
       const vendor: any = {
         name: companyName,
         email: extractField(details, 'Contact Email:') || extractField(details, 'Email:'),
@@ -1029,7 +1027,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
       for (let i = 0; i < sections.length; i++) {
         const section = sections[i].trim();
-        
+
         // Skip sections that are just descriptions or headers
         if (section.toLowerCase().includes('here are') || section.toLowerCase().includes('suppliers in') || section.length < 10) {
           continue;
@@ -1037,7 +1035,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
         // Check if this looks like a company name (not just details)
         const firstLine = section.split('\n')[0].trim();
-        
+
         // Look for company indicators
         const companyIndicators = ['Ltd', 'Pvt', 'Company', 'Enterprises', 'Corp', 'Corporation', 'Inc', 'Chemicals', 'Industries', 'Impex', 'Private Limited'];
         const isCompanyName = companyIndicators.some(indicator => firstLine.includes(indicator)) || 
@@ -1045,17 +1043,17 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
         if (isCompanyName) {
           const companyName = firstLine;
-          
+
           // Look for details in the next section or same section after first line
           let details = '';
           const restOfSection = section.substring(firstLine.length).trim();
-          
+
           if (restOfSection.length > 20) {
             details = restOfSection;
           } else if (i + 1 < sections.length) {
             details = sections[i + 1].trim();
           }
-          
+
           if (details.length > 20) {
             const vendor: any = {
               name: companyName,
@@ -1224,10 +1222,10 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const { id } = req.params;
       console.log(`Fetching responses for RFx ${id}...`);
-      
+
       const responses = await storage.getRfxResponses({ rfxId: id });
       console.log(`Found ${responses.length} responses for RFx ${id}`);
-      
+
       res.json(responses);
     } catch (error) {
       console.error("Error fetching RFx responses:", error);
@@ -1388,14 +1386,14 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       // Find vendor by userId - try direct lookup first, then by email as fallback
       let vendor = await storage.getVendorByUserId(userId);
       console.log("Direct vendor lookup result:", vendor ? vendor.id : 'No vendor found');
-      
+
       if (!vendor) {
         // Fallback: find vendor by email matching current user email
         const allVendors = await storage.getVendors();
         vendor = allVendors.find(v => v.email === currentDevUser.email);
         console.log("Fallback vendor lookup by email result:", vendor ? vendor.id : 'No vendor found by email');
       }
-      
+
       if (!vendor) {
         return res.status(404).json({ message: "Vendor profile not found" });
       }
@@ -1756,16 +1754,16 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.claims?.sub;
       const user = await storage.getUser(userId);
-      
+
       let purchaseOrders;
-      
+
       if (user?.role === 'vendor') {
         // For vendors, only show their POs in 'issued' or 'acknowledged' status
         const vendor = await storage.getVendorByUserId(userId);
         if (!vendor) {
           return res.status(404).json({ message: "Vendor profile not found" });
         }
-        
+
         // Use filter to get only issued and acknowledged POs for this vendor
         purchaseOrders = await storage.getPurchaseOrders({ vendorId: vendor.id });
         // Client-side filtering will handle status filtering since getPurchaseOrders doesn't support status array filtering yet
@@ -1856,7 +1854,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const { id } = req.params;
       const userId = req.user?.claims?.sub;
-      
+
       if (!userId) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -2656,7 +2654,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -2672,11 +2670,11 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       let bomId;
-      
+
       if (data.selectedBomId) {
         // Use the selected existing BOM
         bomId = data.selectedBomId;
-        
+
         // Verify the BOM exists
         const existingBom = await storage.getBom(bomId);
         if (!existingBom) {
@@ -2693,7 +2691,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
         const bom = await storage.createBOM(bomData);
         bomId = bom.id;
-        
+
         // Create BOM items for manual entry
         if (data.bomLineItems && data.bomLineItems.length > 0) {
           for (const item of data.bomLineItems) {
@@ -2749,14 +2747,14 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   app.post("/api/bom/validate", authMiddleware, async (req, res) => {
     try {
       const { lineItems } = req.body;
-      
+
       if (!lineItems || !Array.isArray(lineItems)) {
         return res.status(400).json({ message: "Invalid line items provided" });
       }
 
       // Get all products for mapping
       const products = await storage.getProducts();
-      
+
       const mappedItems: number[] = [];
       const mappedProducts: any[] = [];
       let mappedCount = 0;
@@ -2797,7 +2795,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -2820,7 +2818,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -2880,8 +2878,8 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
   app.delete("/api/procurement-requests/:id", authMiddleware, async (req, res) => {
     try {
-      await storage.deleteProcurementRequest(req.params.id);
-      res.json({ message: "Procurement request deleted successfully" });
+      const request = await storage.deleteProcurementRequest(req.params.id);
+      res.json(request);
     } catch (error) {
       console.error("Error deleting procurement request:", error);
       res.status(500).json({ message: "Failed to delete procurement request" });
@@ -2893,7 +2891,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const requestId = req.params.id;
-      
+
       // Get the request to check ownership and status
       const request = await storage.getProcurementRequest(requestId);
       if (!request) {
@@ -2947,13 +2945,13 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
 
       const { name, code, description } = req.body;
-      
+
       if (!name || !code) {
         return res.status(400).json({ message: "Name and code are required" });
       }
@@ -2977,7 +2975,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (!user || user.role !== 'admin') {
         return res.status(403).json({ message: "Admin access required" });
       }
@@ -3047,7 +3045,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const requestId = req.params.id;
-      
+
       // Check user has approval role
       const user = await storage.getUser(userId);
       if (!user || !['request_approver', 'admin'].includes(user.role)) {
@@ -3078,7 +3076,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
       // TODO: Send notification to requester
       // TODO: Add to sourcing queue
-      
+
       res.json({ 
         message: "Procurement request approved successfully",
         request: updatedRequest,
@@ -3130,7 +3128,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       });
 
       // TODO: Send notification to requester
-      
+
       res.json({ 
         message: "Procurement request rejected",
         request: updatedRequest,
@@ -3182,7 +3180,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       });
 
       // TODO: Send notification to requester
-      
+
       res.json({ 
         message: "Procurement request sent back for edits",
         request: updatedRequest,
@@ -3199,7 +3197,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Only admins can create approval configurations" });
       }
@@ -3221,7 +3219,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const { approvalType, department } = req.query;
       const filters: any = {};
-      
+
       if (approvalType) filters.approvalType = approvalType as string;
       if (department) filters.department = department as string;
 
@@ -3237,7 +3235,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Only admins can update approval configurations" });
       }
@@ -3254,7 +3252,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (user?.role !== 'admin') {
         return res.status(403).json({ message: "Only admins can delete approval configurations" });
       }
@@ -3272,7 +3270,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const { entityId, approverId, status } = req.query;
       const filters: any = {};
-      
+
       if (entityId) filters.entityId = entityId as string;
       if (approverId) filters.approverId = approverId as string;
       if (status) filters.status = status as string;
@@ -3290,7 +3288,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -3348,7 +3346,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -3392,261 +3390,100 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  // ===== SOURCING INTAKE ROUTES =====
-
-  // Create sourcing event (POST /api/events)
-  app.post("/api/events", authMiddleware, requireRole(['sourcing_exec']), async (req, res) => {
+  // Delete procurement request
+  app.delete('/api/procurement-requests/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id || 'dev-user-123';
-      
-      console.log("=== CREATING SOURCING EVENT ===");
-      console.log("Request body:", req.body);
-      console.log("User ID:", userId);
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
 
-      // Generate event number
-      const eventNumber = `SE-${Date.now().toString().slice(-6)}`;
+      const deletedPR = await storage.deleteProcurementRequest(id, userId);
 
-      // Create sourcing event
-      const sourcingEvent = await storage.createSourcingEvent({
-        ...req.body,
-        eventNumber,
-        createdBy: userId,
-      });
+      if (!deletedPR) {
+        return res.status(404).json({ message: "Procurement request not found or access denied" });
+      }
 
-      console.log("Created sourcing event:", sourcingEvent);
-
-      res.json({
-        success: true,
-        event: sourcingEvent,
-        message: `Sourcing event ${sourcingEvent.eventNumber} created successfully`
-      });
+      res.json({ message: "Procurement request deleted successfully" });
     } catch (error) {
-      console.error("Error creating sourcing event:", error);
-      res.status(500).json({ 
-        message: "Failed to create sourcing event",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
+      console.error("Error deleting procurement request:", error);
+      res.status(500).json({ message: "Failed to delete procurement request" });
     }
   });
 
-  // Get approved procurement requests for sourcing intake
-  app.get("/api/procurement-requests/approved", authMiddleware, requireRole(['sourcing_exec']), async (req, res) => {
+  // Create sourcing event
+  app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
-      console.log("=== FETCHING APPROVED PROCUREMENT REQUESTS ===");
-      
-      const approvedRequests = await storage.getProcurementRequestsByStatus('request_approved');
-      console.log("Found approved requests:", approvedRequests.length);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
 
-      res.json(approvedRequests);
-    } catch (error) {
-      console.error("Error fetching approved procurement requests:", error);
-      res.status(500).json({ 
-        message: "Failed to fetch approved procurement requests",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
+      // Check user role
+      if (!user || user.role !== 'SOURCING_EXEC') {
+        return res.status(403).json({ message: "Access denied. Sourcing Executive role required." });
+      }
 
-  // Get BOM items with catalog pricing for spend estimate
-  app.get("/api/procurement-requests/:prId/spend-estimate", authMiddleware, requireRole(['sourcing_exec']), async (req, res) => {
-    try {
-      const { prId } = req.params;
-      console.log("=== CALCULATING SPEND ESTIMATE ===");
-      console.log("PR ID:", prId);
+      const { procurementRequestId, type, justification, selectedVendors, aiDiscoveryQuery } = req.body;
 
-      const procurementRequest = await storage.getProcurementRequest(prId);
-      if (!procurementRequest) {
+      // Validate required fields
+      if (!procurementRequestId || !type || !selectedVendors || selectedVendors.length === 0) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Validate justification for DIRECT_PO
+      if (type === 'DIRECT_PO' && !justification?.trim()) {
+        return res.status(400).json({ message: "Justification required for Direct PO" });
+      }
+
+      // Verify PR exists
+      const pr = await storage.getProcurementRequest(procurementRequestId);
+      if (!pr) {
         return res.status(404).json({ message: "Procurement request not found" });
       }
 
-      const bomItems = await storage.getBomItems(procurementRequest.bomId);
-      console.log("Found BOM items:", bomItems.length);
-
-      let totalSpendEstimate = 0;
-      const itemEstimates = [];
-
-      for (const bomItem of bomItems) {
-        let unitPrice = 0;
-        
-        if (bomItem.productId) {
-          // Get catalog price for the product
-          const product = await storage.getProduct(bomItem.productId);
-          if (product && product.basePrice) {
-            unitPrice = parseFloat(product.basePrice);
-          }
-        }
-
-        const quantity = parseFloat(bomItem.quantity) || 0;
-        const lineEstimate = unitPrice * quantity;
-        totalSpendEstimate += lineEstimate;
-
-        itemEstimates.push({
-          itemName: bomItem.itemName,
-          quantity: quantity,
-          unitPrice: unitPrice,
-          lineEstimate: lineEstimate,
-          hasCatalogPrice: !!bomItem.productId,
-        });
-      }
-
-      res.json({
-        procurementRequest,
-        spendEstimate: totalSpendEstimate,
-        itemEstimates,
-        totalItems: bomItems.length,
-        catalogMappedItems: itemEstimates.filter(item => item.hasCatalogPrice).length,
-      });
-    } catch (error) {
-      console.error("Error calculating spend estimate:", error);
-      res.status(500).json({ 
-        message: "Failed to calculate spend estimate",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // ===== SOURCING EVENTS ENDPOINTS =====
-  
-  // Create sourcing event
-  app.post("/api/events", authMiddleware, requireRole(['sourcing_exec', 'buyer', 'admin']), async (req, res) => {
-    try {
-      const userId = req.user?.id || 'dev-user-123';
-      console.log("=== CREATING SOURCING EVENT ===");
-      console.log("Request body:", req.body);
-
+      // Create sourcing event
       const eventData = {
-        ...req.body,
+        procurementRequestId,
+        type,
+        justification: type === 'DIRECT_PO' ? justification : null,
+        selectedVendors,
+        aiDiscoveryQuery: aiDiscoveryQuery?.trim() || null,
+        status: 'PENDING_SM_APPROVAL',
         createdBy: userId,
-        eventNumber: `SE-${Date.now()}`, // Generate unique event number
-        status: req.body.status || 'draft',
+        referenceNo: `SE-${Date.now()}`,
+        title: `${type} - ${pr.title}`,
+        needByDate: pr.needByDate,
+        estimatedValue: pr.estimatedValue || 0,
       };
 
       const sourcingEvent = await storage.createSourcingEvent(eventData);
-      
-      res.status(201).json({
-        message: "Sourcing event created successfully",
-        event: sourcingEvent
-      });
+
+      res.status(201).json(sourcingEvent);
     } catch (error) {
       console.error("Error creating sourcing event:", error);
-      res.status(500).json({ 
-        message: "Failed to create sourcing event",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
+      res.status(500).json({ message: "Failed to create sourcing event" });
     }
   });
 
-  // Get all sourcing events (with role-based filtering)
-  app.get("/api/events", authMiddleware, async (req, res) => {
+  // Get sourcing events
+  app.get('/api/events', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id || 'dev-user-123';
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      let filters: any = {};
-
-      // Role-based filtering
-      switch (user.role) {
-        case 'sourcing_exec':
-          filters.createdBy = userId;
-          break;
-        case 'buyer':
-        case 'admin':
-          // Can see all events
-          break;
-        default:
-          // Restrict access for other roles
-          return res.status(403).json({ message: "Access denied" });
+      // Filter based on user role
+      let events = [];
+      if (user.role === 'SOURCING_EXEC' || user.role === 'SOURCING_MANAGER') {
+        events = await storage.getSourcingEvents();
+      } else {
+        return res.status(403).json({ message: "Access denied" });
       }
 
-      const events = await storage.getSourcingEvents(filters);
       res.json(events);
     } catch (error) {
       console.error("Error fetching sourcing events:", error);
-      res.status(500).json({ 
-        message: "Failed to fetch sourcing events",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // Get sourcing event by ID
-  app.get("/api/events/:id", authMiddleware, requireRole(['sourcing_exec', 'buyer', 'admin']), async (req, res) => {
-    try {
-      const event = await storage.getSourcingEvent(req.params.id);
-      if (!event) {
-        return res.status(404).json({ message: "Sourcing event not found" });
-      }
-      res.json(event);
-    } catch (error) {
-      console.error("Error fetching sourcing event:", error);
-      res.status(500).json({ 
-        message: "Failed to fetch sourcing event",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // Update sourcing event
-  app.put("/api/events/:id", authMiddleware, requireRole(['sourcing_exec', 'buyer', 'admin']), async (req, res) => {
-    try {
-      const event = await storage.updateSourcingEvent(req.params.id, req.body);
-      res.json({
-        message: "Sourcing event updated successfully",
-        event
-      });
-    } catch (error) {
-      console.error("Error updating sourcing event:", error);
-      res.status(500).json({ 
-        message: "Failed to update sourcing event",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // Submit sourcing event for approval
-  app.post("/api/events/:id/submit", authMiddleware, requireRole(['sourcing_exec']), async (req, res) => {
-    try {
-      const eventId = req.params.id;
-      const userId = req.user?.id || 'dev-user-123';
-
-      // Get the event to check ownership and status
-      const event = await storage.getSourcingEvent(eventId);
-      if (!event) {
-        return res.status(404).json({ message: "Sourcing event not found" });
-      }
-
-      // Check if user is the creator
-      if (event.createdBy !== userId) {
-        return res.status(403).json({ message: "You can only submit events you created" });
-      }
-
-      // Check if event can be submitted
-      if (event.status !== 'draft') {
-        return res.status(400).json({ 
-          message: "Event can only be submitted when in draft status" 
-        });
-      }
-
-      // Update event status to submitted/pending approval
-      const updatedEvent = await storage.updateSourcingEvent(eventId, {
-        status: 'submitted',
-        submittedAt: new Date(),
-      });
-
-      res.json({ 
-        message: "Sourcing event submitted for approval",
-        event: updatedEvent 
-      });
-    } catch (error) {
-      console.error("Error submitting sourcing event:", error);
-      res.status(500).json({ 
-        message: "Failed to submit sourcing event",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
+      res.status(500).json({ message: "Failed to fetch sourcing events" });
     }
   });
 
