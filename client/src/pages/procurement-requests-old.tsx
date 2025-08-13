@@ -64,6 +64,8 @@ const priorityColors = {
   urgent: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
 };
 
+// CreateProcurementRequestDialog moved to separate component file
+
 function ApprovalActions({ request }: { request: ProcurementRequest }) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -180,8 +182,8 @@ function ApprovalActions({ request }: { request: ProcurementRequest }) {
 
 export default function ProcurementRequests() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [priorityFilter, setPriorityFilter] = useState<string>("");
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -198,8 +200,8 @@ export default function ProcurementRequests() {
       request.requestNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.department.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = !statusFilter || statusFilter === "all" || request.overallStatus === statusFilter;
-    const matchesPriority = !priorityFilter || priorityFilter === "all" || request.priority === priorityFilter;
+    const matchesStatus = !statusFilter || request.overallStatus === statusFilter;
+    const matchesPriority = !priorityFilter || request.priority === priorityFilter;
     
     return matchesSearch && matchesStatus && matchesPriority;
   });
@@ -254,7 +256,7 @@ export default function ProcurementRequests() {
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="">All Statuses</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="request_approval_pending">Request Approval Pending</SelectItem>
                 <SelectItem value="request_approved">Request Approved</SelectItem>
@@ -270,7 +272,7 @@ export default function ProcurementRequests() {
                 <SelectValue placeholder="All Priorities" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="">All Priorities</SelectItem>
                 <SelectItem value="low">Low</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="high">High</SelectItem>
@@ -322,55 +324,61 @@ export default function ProcurementRequests() {
             )}
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredRequests.map((request) => (
-              <Card key={request.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
+              <Card key={request.id} className="hover:shadow-md transition-shadow" data-testid={`card-request-${request.id}`}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
                       <CardTitle className="text-lg">{request.title}</CardTitle>
-                      <CardDescription className="text-sm">
-                        {request.requestNumber} • {request.department}
+                      <CardDescription className="font-mono text-sm">
+                        {request.requestNumber}
                       </CardDescription>
                     </div>
-                    <div className="flex gap-1 flex-col items-end">
-                      <Badge className={priorityColors[request.priority]}>
+                    <div className="flex flex-col gap-1">
+                      <Badge className={priorityColors[request.priority]} data-testid={`badge-priority-${request.priority}`}>
                         {request.priority.toUpperCase()}
+                      </Badge>
+                      <Badge className={statusColors[request.overallStatus]} data-testid={`badge-status-${request.overallStatus}`}>
+                        {request.overallStatus.replace(/_/g, ' ').toUpperCase()}
                       </Badge>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      <span>Need by: {format(new Date(request.requestedDeliveryDate), 'MMM d, yyyy')}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <User className="w-4 h-4 mr-1" />
-                      <span>Requested by: {request.requestedBy}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <span>Created: {format(new Date(request.createdAt), 'MMM d, yyyy')}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Badge className={statusColors[request.overallStatus]}>
-                      {request.overallStatus.replace(/_/g, ' ').toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  <ApprovalActions request={request} />
-
                   {request.description && (
-                    <div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {request.description}
-                      </p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {request.description}
+                    </p>
+                  )}
+                </CardHeader>
+                
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                      <span className="truncate">{request.department}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{format(new Date(request.requestedDeliveryDate), 'MMM dd, yyyy')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="truncate">Requester</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <span>{format(new Date(request.createdAt), 'MMM dd')}</span>
+                    </div>
+                  </div>
+
+                  {request.estimatedBudget && (
+                    <div className="pt-2 border-t">
+                      <div className="text-sm text-muted-foreground">Estimated Budget</div>
+                      <div className="font-semibold">${request.estimatedBudget.toLocaleString()}</div>
                     </div>
                   )}
+
+                  <ApprovalActions request={request} />
                 </CardContent>
               </Card>
             ))}

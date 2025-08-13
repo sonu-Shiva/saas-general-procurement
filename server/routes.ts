@@ -2533,7 +2533,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== NEW MULTI-ROLE APPROVAL WORKFLOW ROUTES =====
 
-  // Procurement Request routes
+  // Enhanced Procurement Request creation route (new PR endpoint)
+  app.post("/api/pr", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Parse form data or JSON data
+      let data;
+      if (req.body.data) {
+        // Handle FormData case (with attachments)
+        data = JSON.parse(req.body.data);
+      } else {
+        // Handle regular JSON case
+        data = req.body;
+      }
+
+      // Create BOM first with line items
+      const bomData = {
+        name: `BOM for ${data.title}`,
+        description: `Auto-generated BOM for procurement request: ${data.title}`,
+        category: data.department,
+        createdBy: userId,
+      };
+
+      const bom = await storage.createBOM(bomData);
+      
+      // Create BOM items
+      if (data.bomLineItems && data.bomLineItems.length > 0) {
+        for (const item of data.bomLineItems) {
+          await storage.createBOMItem({
+            bomId: bom.id,
+            productId: item.productId || null,
+            itemName: item.itemName,
+            itemCode: item.itemCode || null,
+            description: item.description || null,
+            quantity: item.quantity.toString(),
+            uom: item.uom,
+            specifications: item.specifications ? JSON.stringify({ specs: item.specifications }) : null,
+          });
+        }
+      }
+
+      // Generate request number
+      const requestNumber = `PR-${Date.now().toString().slice(-6)}`;
+
+      // Create procurement request
+      const requestData = {
+        requestNumber,
+        title: data.title,
+        description: data.notes || null,
+        department: data.department,
+        bomId: bom.id,
+        priority: data.urgency?.toLowerCase() || 'normal',
+        requestedBy: userId,
+        requestedDeliveryDate: new Date(data.needByDate),
+        justification: data.notes || null,
+        estimatedBudget: null,
+        overallStatus: 'request_approval_pending',
+      };
+
+      const request = await storage.createProcurementRequest(requestData);
+
+      res.json({ 
+        success: true,
+        prId: request.id,
+        requestNumber: requestNumber,
+        bomId: bom.id,
+        status: 'SUBMITTED',
+        message: `Procurement request ${requestNumber} created successfully`
+      });
+    } catch (error) {
+      console.error("Error creating enhanced procurement request:", error);
+      res.status(500).json({ message: "Failed to create procurement request" });
+    }
+  });
+
+  // BOM validation endpoint
+  app.post("/api/bom/validate", authMiddleware, async (req, res) => {
+    try {
+      const { lineItems } = req.body;
+      
+      if (!lineItems || !Array.isArray(lineItems)) {
+        return res.status(400).json({ message: "Invalid line items provided" });
+      }
+
+      // Get all products for mapping
+      const products = await storage.getProducts();
+      
+      const mappedItems: number[] = [];
+      const mappedProducts: any[] = [];
+      let mappedCount = 0;
+
+      // Try to map each line item to existing products
+      lineItems.forEach((item, index) => {
+        // Simple matching logic - can be enhanced
+        const matchedProduct = products.find(product => 
+          (item.itemCode && product.internalCode && product.internalCode.toLowerCase() === item.itemCode.toLowerCase()) ||
+          (item.itemCode && product.externalCode && product.externalCode.toLowerCase() === item.itemCode.toLowerCase()) ||
+          (item.itemName && product.itemName.toLowerCase().includes(item.itemName.toLowerCase()))
+        );
+
+        if (matchedProduct) {
+          mappedItems.push(index);
+          mappedProducts.push(matchedProduct);
+          mappedCount++;
+        } else {
+          mappedProducts.push(null);
+        }
+      });
+
+      res.json({
+        mappedItems,
+        mappedProducts,
+        mappedCount,
+        totalItems: lineItems.length,
+        unmappedCount: lineItems.length - mappedCount,
+      });
+    } catch (error) {
+      console.error("Error validating BOM items:", error);
+      res.status(500).json({ message: "Failed to validate BOM items" });
+    }
+  });
+
+  // Original Procurement Request routes
   app.post("/api/procurement-requests", authMiddleware, async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
