@@ -12,10 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, Clock, FileText, Plus, Search, User, Building2, CheckCircle, XCircle, AlertCircle, Package } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar, Clock, FileText, Plus, Search, User, Building2, CheckCircle, XCircle, AlertCircle, Package, Eye, Trash2, Filter, CalendarIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { CreateProcurementRequestDialog } from "@/components/create-procurement-request";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
 interface ProcurementRequest {
   id: string;
@@ -182,6 +184,10 @@ export default function ProcurementRequests() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -200,48 +206,122 @@ export default function ProcurementRequests() {
     
     const matchesStatus = !statusFilter || statusFilter === "all" || request.overallStatus === statusFilter;
     const matchesPriority = !priorityFilter || priorityFilter === "all" || request.priority === priorityFilter;
+    const matchesDepartment = !departmentFilter || departmentFilter === "all" || request.department === departmentFilter;
     
-    return matchesSearch && matchesStatus && matchesPriority;
+    // Date range filtering
+    let matchesDateRange = true;
+    if (fromDate) {
+      const requestDate = parseISO(request.createdAt);
+      matchesDateRange = matchesDateRange && requestDate >= fromDate;
+    }
+    if (toDate) {
+      const requestDate = parseISO(request.createdAt);
+      matchesDateRange = matchesDateRange && requestDate <= toDate;
+    }
+    
+    return matchesSearch && matchesStatus && matchesPriority && matchesDepartment && matchesDateRange;
   });
+
+  // Get unique departments for filter
+  const departments = Array.from(new Set(requests.map(r => r.department).filter(Boolean)));
 
   // Role-based capabilities
   const canCreateRequests = user && ['requester', 'admin'].includes(user.role);
   const canApprove = user && ['request_approver', 'procurement_approver', 'admin'].includes(user.role);
+  const isRequester = user && user.role === 'requester';
+
+  // Withdraw request mutation
+  const withdrawMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      return apiRequest(`/api/procurement-requests/${requestId}/withdraw`, {
+        method: 'POST',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/procurement-requests'] });
+      toast({
+        title: "Success",
+        description: "Request withdrawn successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to withdraw request",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const queryClient = useQueryClient();
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Procurement Requests</h1>
+          <h1 className="text-3xl font-bold">
+            {isRequester ? "My Requests" : "Procurement Requests"}
+          </h1>
           <p className="text-muted-foreground">
-            Manage procurement requests through the 5-step approval workflow
+            {isRequester 
+              ? "Track and manage your procurement requests"
+              : "Manage procurement requests through the 5-step approval workflow"
+            }
           </p>
         </div>
         
-        {canCreateRequests && (
-          <CreateProcurementRequestDialog
-            trigger={
-              <Button data-testid="button-create-request">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Request
+        <div className="flex gap-2">
+          {isRequester && (
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "table" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                data-testid="button-table-view"
+              >
+                Table
               </Button>
-            }
-          />
-        )}
+              <Button
+                variant={viewMode === "cards" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("cards")}
+                data-testid="button-cards-view"
+              >
+                Cards
+              </Button>
+            </div>
+          )}
+          {canCreateRequests && (
+            <CreateProcurementRequestDialog
+              trigger={
+                <Button data-testid="button-create-request">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Request
+                </Button>
+              }
+            />
+          )}
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Enhanced Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filters
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-center">
-            <div className="flex-1 max-w-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {/* Search */}
+            <div className="md:col-span-2">
+              <Label htmlFor="search">Search</Label>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search requests..."
+                  id="search"
+                  placeholder="Search PR#, title, department..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
@@ -249,56 +329,155 @@ export default function ProcurementRequests() {
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="request_approval_pending">Request Approval Pending</SelectItem>
-                <SelectItem value="request_approved">Request Approved</SelectItem>
-                <SelectItem value="procurement_method_pending">Procurement Method Pending</SelectItem>
-                <SelectItem value="procurement_approved">Procurement Approved</SelectItem>
-                <SelectItem value="in_procurement">In Procurement</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="All Priorities" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {/* Status Filter */}
+            <div>
+              <Label htmlFor="status-filter">Status</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger id="status-filter">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="request_approval_pending">Submitted</SelectItem>
+                  <SelectItem value="request_approved">Request Approved</SelectItem>
+                  <SelectItem value="procurement_method_pending">Procurement Pending</SelectItem>
+                  <SelectItem value="procurement_approved">Procurement Approved</SelectItem>
+                  <SelectItem value="in_procurement">In Procurement</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Department Filter */}
+            <div>
+              <Label htmlFor="department-filter">Department</Label>
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger id="department-filter">
+                  <SelectValue placeholder="All Departments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Range */}
+            <div>
+              <Label>Date Range</Label>
+              <div className="flex gap-1">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 px-2">
+                      <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={fromDate}
+                      onSelect={setFromDate}
+                      disabled={(date) => date > new Date() || (toDate ? date > toDate : false)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-xs text-muted-foreground self-center">to</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 px-2">
+                      <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={toDate}
+                      onSelect={setToDate}
+                      disabled={(date) => date > new Date() || (fromDate ? date < fromDate : false)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {(fromDate || toDate) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFromDate(undefined);
+                    setToDate(undefined);
+                  }}
+                  className="h-6 px-2 text-xs mt-1"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Requests List */}
+      {/* Requests Display */}
       <div className="space-y-4">
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }, (_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded w-2/3"></div>
-                  </div>
+          <div className="space-y-4">
+            {viewMode === "table" ? (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>PR#</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Submitted On</TableHead>
+                        <TableHead>Approver</TableHead>
+                        <TableHead>Need By</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <TableRow key={i} className="animate-pulse">
+                          <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
+                          <TableCell><div className="h-4 bg-muted rounded w-32"></div></TableCell>
+                          <TableCell><div className="h-4 bg-muted rounded w-24"></div></TableCell>
+                          <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
+                          <TableCell><div className="h-4 bg-muted rounded w-24"></div></TableCell>
+                          <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
+                          <TableCell><div className="h-4 bg-muted rounded w-24"></div></TableCell>
+                          <TableCell><div className="h-4 bg-muted rounded w-16"></div></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardHeader>
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="h-3 bg-muted rounded"></div>
+                        <div className="h-3 bg-muted rounded w-2/3"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         ) : filteredRequests.length === 0 ? (
           <Card className="p-8 text-center">
@@ -322,59 +501,141 @@ export default function ProcurementRequests() {
             )}
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRequests.map((request) => (
-              <Card key={request.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1 flex-1">
-                      <CardTitle className="text-lg">{request.title}</CardTitle>
-                      <CardDescription className="text-sm">
-                        {request.requestNumber} • {request.department}
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-1 flex-col items-end">
-                      <Badge className={priorityColors[request.priority]}>
-                        {request.priority.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      <span>Need by: {format(new Date(request.requestedDeliveryDate), 'MMM d, yyyy')}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <User className="w-4 h-4 mr-1" />
-                      <span>Requested by: {request.requestedBy}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <span>Created: {format(new Date(request.createdAt), 'MMM d, yyyy')}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Badge className={statusColors[request.overallStatus]}>
-                      {request.overallStatus.replace(/_/g, ' ').toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  <ApprovalActions request={request} />
-
-                  {request.description && (
-                    <div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {request.description}
-                      </p>
-                    </div>
-                  )}
+          <>
+            {/* Table View for Requesters */}
+            {isRequester && viewMode === "table" && (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>PR#</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Submitted On</TableHead>
+                        <TableHead>Approver</TableHead>
+                        <TableHead>Need By</TableHead>
+                        <TableHead className="w-24">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRequests.map((request) => (
+                        <TableRow key={request.id} className="hover:bg-muted/50">
+                          <TableCell className="font-medium" data-testid={`pr-number-${request.id}`}>
+                            {request.requestNumber}
+                          </TableCell>
+                          <TableCell className="font-medium" data-testid={`pr-title-${request.id}`}>
+                            {request.title}
+                          </TableCell>
+                          <TableCell data-testid={`pr-department-${request.id}`}>
+                            {request.department}
+                          </TableCell>
+                          <TableCell data-testid={`pr-status-${request.id}`}>
+                            <Badge className={statusColors[request.overallStatus]}>
+                              {request.overallStatus === 'request_approval_pending' 
+                                ? 'SUBMITTED' 
+                                : request.overallStatus.replace(/_/g, ' ').toUpperCase()
+                              }
+                            </Badge>
+                          </TableCell>
+                          <TableCell data-testid={`pr-submitted-${request.id}`}>
+                            {format(parseISO(request.createdAt), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell data-testid={`pr-approver-${request.id}`}>
+                            {request.currentRequestApprover || request.currentProcurementApprover || 'Pending'}
+                          </TableCell>
+                          <TableCell data-testid={`pr-needby-${request.id}`}>
+                            {format(parseISO(request.requestedDeliveryDate), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                data-testid={`button-view-${request.id}`}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {request.overallStatus === 'request_approval_pending' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => withdrawMutation.mutate(request.id)}
+                                  disabled={withdrawMutation.isPending}
+                                  data-testid={`button-withdraw-${request.id}`}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            )}
+
+            {/* Cards View */}
+            {(!isRequester || viewMode === "cards") && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredRequests.map((request) => (
+                  <Card key={request.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1 flex-1">
+                          <CardTitle className="text-lg">{request.title}</CardTitle>
+                          <CardDescription className="text-sm">
+                            {request.requestNumber} • {request.department}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-1 flex-col items-end">
+                          <Badge className={priorityColors[request.priority]}>
+                            {request.priority.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          <span>Need by: {format(parseISO(request.requestedDeliveryDate), 'MMM d, yyyy')}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <User className="w-4 h-4 mr-1" />
+                          <span>Requested by: {request.requestedBy}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4 mr-1" />
+                          <span>Created: {format(parseISO(request.createdAt), 'MMM d, yyyy')}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Badge className={statusColors[request.overallStatus]}>
+                          {request.overallStatus.replace(/_/g, ' ').toUpperCase()}
+                        </Badge>
+                      </div>
+
+                      <ApprovalActions request={request} />
+
+                      {request.description && (
+                        <div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {request.description}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

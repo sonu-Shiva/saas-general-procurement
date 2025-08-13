@@ -2756,6 +2756,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Withdraw procurement request (for requesters)
+  app.post("/api/procurement-requests/:id/withdraw", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const requestId = req.params.id;
+      
+      // Get the request to check ownership and status
+      const request = await storage.getProcurementRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Check if user is the requester
+      if (request.requestedBy !== userId) {
+        return res.status(403).json({ message: "You can only withdraw your own requests" });
+      }
+
+      // Check if request can be withdrawn (only if SUBMITTED status)
+      if (request.overallStatus !== 'request_approval_pending') {
+        return res.status(400).json({ 
+          message: "Request can only be withdrawn when in SUBMITTED status" 
+        });
+      }
+
+      // Update request status to withdrawn/draft
+      const updatedRequest = await storage.updateProcurementRequest(requestId, {
+        overallStatus: 'draft',
+        requestApprovalStatus: 'pending',
+        currentRequestApprover: null,
+      });
+
+      res.json({ 
+        message: "Request withdrawn successfully",
+        request: updatedRequest 
+      });
+    } catch (error) {
+      console.error("Error withdrawing procurement request:", error);
+      res.status(500).json({ message: "Failed to withdraw procurement request" });
+    }
+  });
+
   // Approval Configuration routes (Admin only)
   app.post("/api/approval-configurations", authMiddleware, async (req, res) => {
     try {
