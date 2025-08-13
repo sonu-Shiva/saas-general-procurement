@@ -25,7 +25,9 @@ import {
   Package,
   File,
   Download,
-  ShoppingCart
+  ShoppingCart,
+  List,
+  Copy
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
@@ -41,6 +43,7 @@ interface BOMLineItem {
   isMapped: boolean;
   productId?: string;
   estimatedPrice?: number;
+  catalogReference?: string; // New field for catalog reference
 }
 
 interface Product {
@@ -92,6 +95,16 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
   // Get available products for catalog mapping
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
+  });
+
+  // Get available departments for dropdown
+  const { data: departments = [] } = useQuery<Array<{id: string; name: string; code: string}>>({
+    queryKey: ['/api/departments'],
+  });
+
+  // Get existing BOMs for selection
+  const { data: existingBoms = [] } = useQuery<Array<{id: string; name: string; version: string; description?: string}>>({
+    queryKey: ['/api/boms'],
   });
 
   // Validate BOM items against catalog
@@ -313,6 +326,66 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
   const mappedItemsCount = formData.bomLineItems.filter(item => item.isMapped).length;
   const unmappedItemsCount = formData.bomLineItems.length - mappedItemsCount;
 
+  // Handle BOM template download
+  const downloadTemplate = async () => {
+    try {
+      const response = await fetch('/api/bom/template');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'bom_template.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Template Downloaded",
+        description: "BOM template downloaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Error",
+        description: "Failed to download BOM template",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Copy BOM from existing list
+  const copyExistingBOM = async (bomId: string) => {
+    try {
+      const response = await apiRequest(`/api/bom/${bomId}/items`);
+      const bomItems = response.map((item: any) => ({
+        itemCode: item.itemCode || '',
+        itemName: item.itemName,
+        description: item.description || '',
+        uom: item.uom || 'PCS',
+        quantity: parseFloat(item.quantity) || 1,
+        specifications: item.specifications || '',
+        catalogReference: item.productId ? `CATALOG-${item.productId}` : '',
+        isMapped: !!item.productId,
+        productId: item.productId,
+        estimatedPrice: parseFloat(item.unitPrice) || 0,
+      }));
+
+      setFormData(prev => ({ ...prev, bomLineItems: bomItems }));
+      setActiveTab("bom");
+      
+      toast({
+        title: "BOM Copied",
+        description: `Copied ${bomItems.length} items from existing BOM`,
+      });
+    } catch (error) {
+      toast({
+        title: "Copy Error",
+        description: "Failed to copy BOM items",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -354,13 +427,21 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
               </div>
               <div className="space-y-2">
                 <Label htmlFor="department">Department *</Label>
-                <Input
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                  placeholder="Department name"
-                  data-testid="input-department"
-                />
+                <Select 
+                  value={formData.department} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}
+                >
+                  <SelectTrigger data-testid="select-department">
+                    <SelectValue placeholder="Select a department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.code}>
+                        {dept.name} ({dept.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -466,10 +547,19 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
               <div>
                 <h3 className="text-lg font-semibold">BOM Line Items</h3>
                 <p className="text-sm text-muted-foreground">
-                  Upload XLSX file or add items manually
+                  Upload file, copy from existing BOM, or add items manually
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={downloadTemplate}
+                  data-testid="button-download-template"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Template
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -497,6 +587,42 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                 />
               </div>
             </div>
+
+            {/* Existing BOM Selection */}
+            {existingBoms.length > 0 && (
+              <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <List className="w-4 h-4" />
+                    Copy from Existing BOM
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {existingBoms.map((bom) => (
+                      <div key={bom.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-950 border rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{bom.name}</div>
+                          <div className="text-xs text-muted-foreground">v{bom.version}</div>
+                          {bom.description && (
+                            <div className="text-xs text-muted-foreground truncate">{bom.description}</div>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyExistingBOM(bom.id)}
+                          data-testid={`button-copy-bom-${bom.id}`}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {formData.bomLineItems.length > 0 && (
               <>
@@ -532,6 +658,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                         <TableHead>UOM *</TableHead>
                         <TableHead>Quantity *</TableHead>
                         <TableHead>Specifications</TableHead>
+                        <TableHead>Catalog Ref</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -586,6 +713,31 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                               placeholder="Specifications"
                               className="w-48"
                             />
+                          </TableCell>
+                          <TableCell>
+                            <Select 
+                              value={item.catalogReference || ""} 
+                              onValueChange={(value) => updateLineItem(index, { 
+                                catalogReference: value, 
+                                productId: value.startsWith('CATALOG-') ? value.replace('CATALOG-', '') : undefined,
+                                isMapped: !!value 
+                              })}
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">None</SelectItem>
+                                {products.map((product) => (
+                                  <SelectItem 
+                                    key={product.id} 
+                                    value={`CATALOG-${product.id}`}
+                                  >
+                                    {product.itemName} ({product.internalCode || 'No Code'})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </TableCell>
                           <TableCell>
                             <Button

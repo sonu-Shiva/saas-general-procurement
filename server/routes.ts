@@ -133,6 +133,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('Error ensuring development user exists:', error);
   }
 
+  // Ensure sample departments exist in database
+  try {
+    const existingDepartments = await storage.getDepartments();
+    if (existingDepartments.length === 0) {
+      console.log('Creating sample departments...');
+      const sampleDepartments = [
+        { name: 'Information Technology', code: 'IT', description: 'IT Services and Technology' },
+        { name: 'Human Resources', code: 'HR', description: 'Human Resources Management' },
+        { name: 'Finance & Accounting', code: 'FIN', description: 'Financial Operations' },
+        { name: 'Operations', code: 'OPS', description: 'Operations and Production' },
+        { name: 'Marketing', code: 'MKT', description: 'Marketing and Sales' },
+        { name: 'Research & Development', code: 'R&D', description: 'Research and Development' },
+        { name: 'Procurement', code: 'PROC', description: 'Procurement and Supply Chain' },
+        { name: 'Quality Assurance', code: 'QA', description: 'Quality Control and Assurance' }
+      ];
+
+      for (const dept of sampleDepartments) {
+        await storage.createDepartment({
+          id: nanoid(),
+          name: dept.name,
+          code: dept.code,
+          description: dept.description,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+      console.log('Sample departments created successfully');
+    } else {
+      console.log('Departments already exist in database');
+    }
+  } catch (error) {
+    console.error('Error ensuring sample departments exist:', error);
+  }
+
   // Create test vendor users and their vendor profiles
   for (const [key, vendorProfile] of Object.entries(testVendorProfiles)) {
     try {
@@ -706,6 +741,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in debug endpoint:", error);
       res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // =====  DEPARTMENTS API ROUTES =====
+  
+  // Get all departments
+  app.get('/api/departments', async (req, res) => {
+    try {
+      const departments = await storage.getDepartments();
+      res.json(departments);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      res.status(500).json({ message: "Failed to fetch departments" });
+    }
+  });
+
+  // Create new department
+  app.post('/api/departments', async (req, res) => {
+    try {
+      const { name, code, description } = req.body;
+      const department = await storage.createDepartment({
+        id: nanoid(),
+        name,
+        code,
+        description,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      res.json(department);
+    } catch (error) {
+      console.error("Error creating department:", error);
+      res.status(500).json({ message: "Failed to create department" });
+    }
+  });
+
+  // Update department
+  app.put('/api/departments/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const department = await storage.updateDepartment(id, updates);
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      res.json(department);
+    } catch (error) {
+      console.error("Error updating department:", error);
+      res.status(500).json({ message: "Failed to update department" });
+    }
+  });
+
+  // Delete department
+  app.delete('/api/departments/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteDepartment(id);
+      if (!success) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      res.json({ message: "Department deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting department:", error);
+      res.status(500).json({ message: "Failed to delete department" });
+    }
+  });
+
+  // BOM template download endpoint
+  app.get('/api/bom/template', async (req, res) => {
+    try {
+      const csvContent = `item_code,item_desc,uom,qty,specs
+ITEM-001,Sample Item 1,PCS,10,Sample specifications
+ITEM-002,Sample Item 2,KG,5.5,Another sample item
+ITEM-003,Sample Item 3,METER,25,Length measurement item`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="bom_template.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Error generating BOM template:", error);
+      res.status(500).json({ message: "Failed to generate template" });
     }
   });
 
@@ -2794,6 +2910,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error withdrawing procurement request:", error);
       res.status(500).json({ message: "Failed to withdraw procurement request" });
+    }
+  });
+
+  // ===== DEPARTMENTS CONFIGURATION ROUTES (ADMIN ONLY) =====
+
+  // Get all departments
+  app.get("/api/departments", authMiddleware, async (req, res) => {
+    try {
+      const departments = await storage.getDepartments();
+      res.json(departments);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      res.status(500).json({ message: "Failed to fetch departments" });
+    }
+  });
+
+  // Create department (admin only)
+  app.post("/api/departments", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { name, code, description } = req.body;
+      
+      if (!name || !code) {
+        return res.status(400).json({ message: "Name and code are required" });
+      }
+
+      const department = await storage.createDepartment({
+        name,
+        code: code.toUpperCase(),
+        description,
+        createdBy: userId,
+      });
+
+      res.status(201).json(department);
+    } catch (error) {
+      console.error("Error creating department:", error);
+      res.status(500).json({ message: "Failed to create department" });
+    }
+  });
+
+  // Update department (admin only)
+  app.put("/api/departments/:id", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const departmentId = req.params.id;
+      const { name, code, description, isActive } = req.body;
+
+      const department = await storage.updateDepartment(departmentId, {
+        name,
+        code: code?.toUpperCase(),
+        description,
+        isActive,
+      });
+
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+
+      res.json(department);
+    } catch (error) {
+      console.error("Error updating department:", error);
+      res.status(500).json({ message: "Failed to update department" });
+    }
+  });
+
+  // Get BOM template download
+  app.get("/api/bom/template", authMiddleware, async (req, res) => {
+    try {
+      // CSV template headers
+      const csvHeaders = [
+        'Item Name*',
+        'Item Code',
+        'Description', 
+        'Quantity*',
+        'UOM*',
+        'Estimated Price',
+        'Specifications',
+        'Catalog Reference'
+      ];
+
+      // Sample data rows
+      const sampleRows = [
+        ['Steel Rods', 'STL-001', '10mm steel rods for construction', '100', 'PCS', '50.00', 'Grade A steel', 'CAT-STEEL-001'],
+        ['Cement Bags', 'CEM-002', 'Portland cement 50kg bags', '20', 'BAGS', '300.00', 'OPC 43 Grade', 'CAT-CEM-002'],
+        ['Electrical Wire', 'ELE-003', '2.5mm copper wire', '500', 'METERS', '5.50', 'ISI certified', 'CAT-ELE-003']
+      ];
+
+      // Generate CSV content
+      const csvContent = [
+        csvHeaders.join(','),
+        ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="bom_template.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Error generating BOM template:", error);
+      res.status(500).json({ message: "Failed to generate BOM template" });
     }
   });
 

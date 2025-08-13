@@ -21,6 +21,7 @@ import {
   procurementRequests,
   approvalConfigurations,
   approvalHistory,
+  departments,
   type User,
   type UpsertUser,
   type Vendor,
@@ -65,6 +66,8 @@ import {
   type InsertApprovalConfiguration,
   type ApprovalHistory,
   type InsertApprovalHistory,
+  type Department,
+  type InsertDepartment,
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from "nanoid";
@@ -195,6 +198,13 @@ export interface IStorage {
   checkTermsAcceptance(vendorId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined>;
   getTermsAcceptance(userId: string, entityType: string, entityId: string): Promise<TermsAcceptance | undefined>;
   getTermsAcceptances(vendorId: string): Promise<TermsAcceptance[]>;
+
+  // Departments operations
+  getDepartments(): Promise<Department[]>;
+  getDepartment(id: string): Promise<Department | null>;
+  createDepartment(data: InsertDepartment): Promise<Department>;
+  updateDepartment(id: string, data: Partial<Department>): Promise<Department | null>;
+  deleteDepartment(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1733,6 +1743,48 @@ export class DatabaseStorage implements IStorage {
       .where(eq(approvalHistory.id, id))
       .returning();
     return updated;
+  }
+
+  // ===== DEPARTMENTS OPERATIONS =====
+
+  async getDepartments(): Promise<Department[]> {
+    return await this.db
+      .select()
+      .from(departments)
+      .where(eq(departments.isActive, true))
+      .orderBy(asc(departments.name));
+  }
+
+  async getDepartment(id: string): Promise<Department | null> {
+    const [department] = await this.db
+      .select()
+      .from(departments)
+      .where(eq(departments.id, id));
+    return department || null;
+  }
+
+  async createDepartment(data: InsertDepartment): Promise<Department> {
+    const [created] = await this.db
+      .insert(departments)
+      .values(data)
+      .returning();
+    return created;
+  }
+
+  async updateDepartment(id: string, data: Partial<Department>): Promise<Department | null> {
+    const [updated] = await this.db
+      .update(departments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(departments.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteDepartment(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(departments)
+      .where(eq(departments.id, id));
+    return result.rowCount > 0;
   }
 }
 

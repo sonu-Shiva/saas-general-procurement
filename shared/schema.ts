@@ -56,6 +56,18 @@ export const organizations = pgTable("organizations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Admin configurable departments table
+export const departments = pgTable("departments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 50 }).unique().notNull(), // Short code like "IT", "HR", "FIN"
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const vendors = pgTable("vendors", {
   id: uuid("id").primaryKey().defaultRandom(),
   companyName: varchar("company_name", { length: 255 }).notNull(),
@@ -426,6 +438,8 @@ export const approvalHistory = pgTable("approval_history", {
   processedAt: timestamp("processed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -851,9 +865,18 @@ export const insertApprovalHistorySchema = createInsertSchema(approvalHistory).o
   createdAt: true,
 });
 
+export const insertDepartmentSchema = createInsertSchema(departments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+export type Department = typeof departments.$inferSelect;
+export type InsertDepartment = typeof departments.$inferInsert;
 
 // Direct Procurement Order Types
 export type DirectProcurementOrder = typeof directProcurementOrders.$inferSelect;
