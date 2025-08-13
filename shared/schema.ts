@@ -35,7 +35,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role", { enum: ["admin", "requester", "request_approver", "buyer", "procurement_approver", "sourcing_manager", "vendor"] }).notNull().default("requester"),
+  role: varchar("role", { enum: ["admin", "requester", "request_approver", "buyer", "procurement_approver", "sourcing_manager", "sourcing_exec", "vendor"] }).notNull().default("requester"),
   organizationId: varchar("organization_id"),
   department: varchar("department", { length: 100 }), // For requesters - which department they belong to
   isActive: boolean("is_active").default(true),
@@ -404,7 +404,36 @@ export const procurementRequests = pgTable("procurement_requests", {
   rfxId: uuid("rfx_id").references(() => rfxEvents.id),
   auctionId: uuid("auction_id").references(() => auctions.id),
   directProcurementId: uuid("direct_procurement_id").references(() => directProcurementOrders.id),
+  sourcingEventId: uuid("sourcing_event_id").references(() => sourcingEvents.id),
   
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Sourcing Events - Created by SOURCING_EXEC after procurement method selection
+export const sourcingEvents = pgTable("sourcing_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventNumber: varchar("event_number", { length: 100 }).unique().notNull(),
+  procurementRequestId: uuid("procurement_request_id").references(() => procurementRequests.id).notNull(),
+  type: varchar("type", { enum: ["RFI", "RFP", "RFQ", "AUCTION", "DIRECT_PO"] }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  spendEstimate: decimal("spend_estimate", { precision: 12, scale: 2 }),
+  justification: text("justification"), // Required for DIRECT_PO
+  
+  // Vendor Selection
+  selectedVendorIds: jsonb("selected_vendor_ids").notNull(), // Array of vendor IDs
+  
+  // Status and Approval
+  status: varchar("status", { enum: ["PENDING_SM_APPROVAL", "SM_APPROVED", "ACTIVE", "COMPLETED", "CANCELLED"] }).default("PENDING_SM_APPROVAL"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  
+  // Execution Details (filled after SM approval)
+  rfxId: uuid("rfx_id").references(() => rfxEvents.id),
+  auctionId: uuid("auction_id").references(() => auctions.id),
+  
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -479,6 +508,31 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
   bids: many(bids),
   purchaseOrders: many(purchaseOrders),
   directProcurementOrders: many(directProcurementOrders),
+  sourcingEvents: many(sourcingEvents),
+}));
+
+// Sourcing Events Relations
+export const sourcingEventsRelations = relations(sourcingEvents, ({ one }) => ({
+  procurementRequest: one(procurementRequests, {
+    fields: [sourcingEvents.procurementRequestId],
+    references: [procurementRequests.id],
+  }),
+  createdBy: one(users, {
+    fields: [sourcingEvents.createdBy],
+    references: [users.id],
+  }),
+  approvedBy: one(users, {
+    fields: [sourcingEvents.approvedBy],
+    references: [users.id],
+  }),
+  rfxEvent: one(rfxEvents, {
+    fields: [sourcingEvents.rfxId],
+    references: [rfxEvents.id],
+  }),
+  auction: one(auctions, {
+    fields: [sourcingEvents.auctionId],
+    references: [auctions.id],
+  }),
 }));
 
 // Direct Procurement Orders Relations
@@ -924,3 +978,14 @@ export type InsertApprovalConfiguration = z.infer<typeof insertApprovalConfigura
 
 export type ApprovalHistory = typeof approvalHistory.$inferSelect;
 export type InsertApprovalHistory = z.infer<typeof insertApprovalHistorySchema>;
+
+// Sourcing Events
+export const insertSourcingEventSchema = createInsertSchema(sourcingEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SourcingEvent = typeof sourcingEvents.$inferSelect;
+export type InsertSourcingEvent = z.infer<typeof insertSourcingEventSchema>;
+

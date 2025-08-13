@@ -23,6 +23,7 @@ const navigation = [
   { name: "Product Catalogue", href: "/products", icon: Package },
   { name: "BOM Management", href: "/boms", icon: Layers, allowedRoles: ['requester', 'admin'] },
   { name: "Procurement Requests", href: "/procurement-requests", icon: ClipboardCheck, allowedRoles: ['requester', 'request_approver', 'buyer', 'procurement_approver', 'sourcing_manager', 'admin'] },
+  { name: "Sourcing Intake", href: "/sourcing-intake", icon: Search, allowedRoles: ['sourcing_exec', 'buyer', 'admin'] },
   { name: "RFx Invitations", href: "/vendor-portal", icon: FileText, vendorLabel: "RFx Invitations", buyerLabel: "RFx Management", vendorHref: "/vendor-portal", buyerHref: "/rfx", allowedRoles: ['buyer', 'procurement_approver', 'vendor', 'admin'] },
   { name: "Auction Center", href: "/auctions", icon: Gavel, vendorLabel: "My Auctions", buyerLabel: "Auction Center", allowedRoles: ['buyer', 'procurement_approver', 'vendor', 'admin'] },
   { name: "Direct Procurement", href: "/direct-procurement", icon: ShoppingCart, allowedRoles: ['buyer', 'admin'] },

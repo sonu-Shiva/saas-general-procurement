@@ -21,7 +21,8 @@ import {
   poLineItems,
   directProcurementOrders,
   bids,
-  notifications
+  notifications,
+  sourcingEvents
 } from "@shared/schema";
 import {
   insertVendorSchema,
@@ -40,6 +41,7 @@ import {
   insertApprovalSchema,
   insertNotificationSchema,
   insertTermsAcceptanceSchema,
+  insertSourcingEventSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -106,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     email: 'dev@sclen.com',
     firstName: 'Developer',
     lastName: 'User',
-    role: 'admin'  // Changed from 'buyer_admin' to 'admin' for proper role-based access
+    role: 'sourcing_exec'  // Changed to sourcing_exec to test sourcing intake functionality
   };
   let isLoggedIn = true;
 
@@ -3387,6 +3389,264 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     } catch (error) {
       console.error("Error rejecting request:", error);
       res.status(500).json({ message: "Failed to reject request" });
+    }
+  });
+
+  // ===== SOURCING INTAKE ROUTES =====
+
+  // Create sourcing event (POST /api/events)
+  app.post("/api/events", authMiddleware, requireRole(['sourcing_exec']), async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      
+      console.log("=== CREATING SOURCING EVENT ===");
+      console.log("Request body:", req.body);
+      console.log("User ID:", userId);
+
+      // Generate event number
+      const eventNumber = `SE-${Date.now().toString().slice(-6)}`;
+
+      // Create sourcing event
+      const sourcingEvent = await storage.createSourcingEvent({
+        ...req.body,
+        eventNumber,
+        createdBy: userId,
+      });
+
+      console.log("Created sourcing event:", sourcingEvent);
+
+      res.json({
+        success: true,
+        event: sourcingEvent,
+        message: `Sourcing event ${sourcingEvent.eventNumber} created successfully`
+      });
+    } catch (error) {
+      console.error("Error creating sourcing event:", error);
+      res.status(500).json({ 
+        message: "Failed to create sourcing event",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get approved procurement requests for sourcing intake
+  app.get("/api/procurement-requests/approved", authMiddleware, requireRole(['sourcing_exec']), async (req, res) => {
+    try {
+      console.log("=== FETCHING APPROVED PROCUREMENT REQUESTS ===");
+      
+      const approvedRequests = await storage.getProcurementRequestsByStatus('request_approved');
+      console.log("Found approved requests:", approvedRequests.length);
+
+      res.json(approvedRequests);
+    } catch (error) {
+      console.error("Error fetching approved procurement requests:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch approved procurement requests",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get BOM items with catalog pricing for spend estimate
+  app.get("/api/procurement-requests/:prId/spend-estimate", authMiddleware, requireRole(['sourcing_exec']), async (req, res) => {
+    try {
+      const { prId } = req.params;
+      console.log("=== CALCULATING SPEND ESTIMATE ===");
+      console.log("PR ID:", prId);
+
+      const procurementRequest = await storage.getProcurementRequest(prId);
+      if (!procurementRequest) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      const bomItems = await storage.getBomItems(procurementRequest.bomId);
+      console.log("Found BOM items:", bomItems.length);
+
+      let totalSpendEstimate = 0;
+      const itemEstimates = [];
+
+      for (const bomItem of bomItems) {
+        let unitPrice = 0;
+        
+        if (bomItem.productId) {
+          // Get catalog price for the product
+          const product = await storage.getProduct(bomItem.productId);
+          if (product && product.basePrice) {
+            unitPrice = parseFloat(product.basePrice);
+          }
+        }
+
+        const quantity = parseFloat(bomItem.quantity) || 0;
+        const lineEstimate = unitPrice * quantity;
+        totalSpendEstimate += lineEstimate;
+
+        itemEstimates.push({
+          itemName: bomItem.itemName,
+          quantity: quantity,
+          unitPrice: unitPrice,
+          lineEstimate: lineEstimate,
+          hasCatalogPrice: !!bomItem.productId,
+        });
+      }
+
+      res.json({
+        procurementRequest,
+        spendEstimate: totalSpendEstimate,
+        itemEstimates,
+        totalItems: bomItems.length,
+        catalogMappedItems: itemEstimates.filter(item => item.hasCatalogPrice).length,
+      });
+    } catch (error) {
+      console.error("Error calculating spend estimate:", error);
+      res.status(500).json({ 
+        message: "Failed to calculate spend estimate",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // ===== SOURCING EVENTS ENDPOINTS =====
+  
+  // Create sourcing event
+  app.post("/api/events", authMiddleware, requireRole(['sourcing_exec', 'buyer', 'admin']), async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      console.log("=== CREATING SOURCING EVENT ===");
+      console.log("Request body:", req.body);
+
+      const eventData = {
+        ...req.body,
+        createdBy: userId,
+        eventNumber: `SE-${Date.now()}`, // Generate unique event number
+        status: req.body.status || 'draft',
+      };
+
+      const sourcingEvent = await storage.createSourcingEvent(eventData);
+      
+      res.status(201).json({
+        message: "Sourcing event created successfully",
+        event: sourcingEvent
+      });
+    } catch (error) {
+      console.error("Error creating sourcing event:", error);
+      res.status(500).json({ 
+        message: "Failed to create sourcing event",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get all sourcing events (with role-based filtering)
+  app.get("/api/events", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let filters: any = {};
+
+      // Role-based filtering
+      switch (user.role) {
+        case 'sourcing_exec':
+          filters.createdBy = userId;
+          break;
+        case 'buyer':
+        case 'admin':
+          // Can see all events
+          break;
+        default:
+          // Restrict access for other roles
+          return res.status(403).json({ message: "Access denied" });
+      }
+
+      const events = await storage.getSourcingEvents(filters);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching sourcing events:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch sourcing events",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get sourcing event by ID
+  app.get("/api/events/:id", authMiddleware, requireRole(['sourcing_exec', 'buyer', 'admin']), async (req, res) => {
+    try {
+      const event = await storage.getSourcingEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ message: "Sourcing event not found" });
+      }
+      res.json(event);
+    } catch (error) {
+      console.error("Error fetching sourcing event:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch sourcing event",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Update sourcing event
+  app.put("/api/events/:id", authMiddleware, requireRole(['sourcing_exec', 'buyer', 'admin']), async (req, res) => {
+    try {
+      const event = await storage.updateSourcingEvent(req.params.id, req.body);
+      res.json({
+        message: "Sourcing event updated successfully",
+        event
+      });
+    } catch (error) {
+      console.error("Error updating sourcing event:", error);
+      res.status(500).json({ 
+        message: "Failed to update sourcing event",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Submit sourcing event for approval
+  app.post("/api/events/:id/submit", authMiddleware, requireRole(['sourcing_exec']), async (req, res) => {
+    try {
+      const eventId = req.params.id;
+      const userId = req.user?.id || 'dev-user-123';
+
+      // Get the event to check ownership and status
+      const event = await storage.getSourcingEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Sourcing event not found" });
+      }
+
+      // Check if user is the creator
+      if (event.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only submit events you created" });
+      }
+
+      // Check if event can be submitted
+      if (event.status !== 'draft') {
+        return res.status(400).json({ 
+          message: "Event can only be submitted when in draft status" 
+        });
+      }
+
+      // Update event status to submitted/pending approval
+      const updatedEvent = await storage.updateSourcingEvent(eventId, {
+        status: 'submitted',
+        submittedAt: new Date(),
+      });
+
+      res.json({ 
+        message: "Sourcing event submitted for approval",
+        event: updatedEvent 
+      });
+    } catch (error) {
+      console.error("Error submitting sourcing event:", error);
+      res.status(500).json({ 
+        message: "Failed to submit sourcing event",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

@@ -22,6 +22,7 @@ import {
   approvalConfigurations,
   approvalHistory,
   departments,
+  sourcingEvents,
   type User,
   type UpsertUser,
   type Vendor,
@@ -68,6 +69,8 @@ import {
   type InsertApprovalHistory,
   type Department,
   type InsertDepartment,
+  type SourcingEvent,
+  type InsertSourcingEvent,
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from "nanoid";
@@ -205,6 +208,13 @@ export interface IStorage {
   createDepartment(data: InsertDepartment): Promise<Department>;
   updateDepartment(id: string, data: Partial<Department>): Promise<Department | null>;
   deleteDepartment(id: string): Promise<boolean>;
+
+  // Sourcing Events operations
+  createSourcingEvent(event: InsertSourcingEvent): Promise<SourcingEvent>;
+  getSourcingEvent(id: string): Promise<SourcingEvent | undefined>;
+  getSourcingEvents(filters?: { status?: string; createdBy?: string }): Promise<SourcingEvent[]>;
+  updateSourcingEvent(id: string, updates: Partial<InsertSourcingEvent>): Promise<SourcingEvent>;
+  getProcurementRequestsByStatus(status: string): Promise<ProcurementRequest[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1785,6 +1795,54 @@ export class DatabaseStorage implements IStorage {
       .delete(departments)
       .where(eq(departments.id, id));
     return result.rowCount > 0;
+  }
+
+  // Sourcing Events operations
+  async createSourcingEvent(eventData: InsertSourcingEvent): Promise<SourcingEvent> {
+    const [event] = await this.db
+      .insert(sourcingEvents)
+      .values(eventData)
+      .returning();
+    return event;
+  }
+
+  async getSourcingEvent(id: string): Promise<SourcingEvent | undefined> {
+    const [event] = await this.db
+      .select()
+      .from(sourcingEvents)
+      .where(eq(sourcingEvents.id, id));
+    return event;
+  }
+
+  async getSourcingEvents(filters?: { status?: string; createdBy?: string }): Promise<SourcingEvent[]> {
+    let query = this.db.select().from(sourcingEvents);
+    
+    if (filters?.status) {
+      query = query.where(eq(sourcingEvents.status, filters.status));
+    }
+    
+    if (filters?.createdBy) {
+      query = query.where(eq(sourcingEvents.createdBy, filters.createdBy));
+    }
+    
+    return await query.orderBy(desc(sourcingEvents.createdAt));
+  }
+
+  async updateSourcingEvent(id: string, updates: Partial<InsertSourcingEvent>): Promise<SourcingEvent> {
+    const [updatedEvent] = await this.db
+      .update(sourcingEvents)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(sourcingEvents.id, id))
+      .returning();
+    return updatedEvent;
+  }
+
+  async getProcurementRequestsByStatus(status: string): Promise<ProcurementRequest[]> {
+    return await this.db
+      .select()
+      .from(procurementRequests)
+      .where(eq(procurementRequests.overallStatus, status))
+      .orderBy(desc(procurementRequests.createdAt));
   }
 }
 
