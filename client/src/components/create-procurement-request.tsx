@@ -136,12 +136,10 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
   // Create procurement request
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      if (data.attachments && data.attachments.length > 0) {
-        // Use FormData when attachments are present
-        const formDataPayload = new FormData();
-        
-        // Add form data
-        formDataPayload.append('data', JSON.stringify({
+      // Use JSON for form submission (skip file attachments for now)
+      return apiRequest('/api/pr', {
+        method: 'POST',
+        body: JSON.stringify({
           title: data.title,
           department: data.department,
           needByDate: data.needByDate,
@@ -151,34 +149,11 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
           bomLineItems: data.bomLineItems,
           selectedBomId: data.selectedBomId,
           requestedBy: user?.id,
-        }));
-
-        // Add attachments
-        data.attachments.forEach((file: File, index: number) => {
-          formDataPayload.append(`attachment_${index}`, file);
-        });
-
-        return apiRequest('/api/pr', {
-          method: 'POST',
-          body: formDataPayload,
-        });
-      } else {
-        // Use JSON when no attachments
-        return apiRequest('/api/pr', {
-          method: 'POST',
-          body: JSON.stringify({
-            title: data.title,
-            department: data.department,
-            needByDate: data.needByDate,
-            urgency: data.urgency,
-            budgetCode: data.budgetCode,
-            notes: data.notes,
-            bomLineItems: data.bomLineItems,
-            selectedBomId: data.selectedBomId,
-            requestedBy: user?.id,
-          }),
-        });
-      }
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['/api/procurement-requests'] });

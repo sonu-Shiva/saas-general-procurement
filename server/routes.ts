@@ -2659,15 +2659,8 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Parse form data or JSON data
-      let data;
-      if (req.body.data) {
-        // Handle FormData case (with attachments)
-        data = JSON.parse(req.body.data);
-      } else {
-        // Handle regular JSON case
-        data = req.body;
-      }
+      // Parse JSON data
+      const data = req.body;
 
       let bomId;
 
