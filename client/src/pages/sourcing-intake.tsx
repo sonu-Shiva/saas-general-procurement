@@ -29,7 +29,8 @@ import {
   Users,
   AlertCircle,
   ArrowRight,
-  Settings
+  Settings,
+  Upload
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -115,6 +116,12 @@ export default function SourcingIntake() {
   // Fetch vendors for method creation
   const { data: vendors = [] } = useQuery({
     queryKey: ["/api/vendors"],
+    retry: false,
+  });
+
+  // Fetch all BOMs for dropdown selection
+  const { data: allBoms = [] } = useQuery({
+    queryKey: ["/api/boms"],
     retry: false,
   });
 
@@ -601,6 +608,7 @@ export default function SourcingIntake() {
               <CreateAuctionFormEmbedded 
                 procurementRequest={selectedPR}
                 bomItems={bomItems}
+                allBoms={allBoms}
                 vendors={vendors}
                 onClose={() => {
                   setIsCreateFormDialogOpen(false);
@@ -621,6 +629,7 @@ export default function SourcingIntake() {
               <CreateRfxFormEmbedded 
                 procurementRequest={selectedPR}
                 bomItems={bomItems}
+                allBoms={allBoms}
                 vendors={vendors}
                 onClose={() => {
                   setIsCreateFormDialogOpen(false);
@@ -641,6 +650,7 @@ export default function SourcingIntake() {
               <CreateDirectProcurementFormEmbedded 
                 procurementRequest={selectedPR}
                 bomItems={bomItems}
+                allBoms={allBoms}
                 vendors={vendors}
                 onClose={() => {
                   setIsCreateFormDialogOpen(false);
@@ -668,21 +678,23 @@ export default function SourcingIntake() {
 // Embedded form components with prefilled data from PR context
 
 // Create Auction Form with prefilled data
-function CreateAuctionFormEmbedded({ procurementRequest, bomItems, vendors, onClose, onSuccess }: any) {
+function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vendors, onClose, onSuccess }: any) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
     name: `Auction for ${procurementRequest.title} (${procurementRequest.requestNumber})`,
     description: procurementRequest.description || `Reverse auction for procurement request: ${procurementRequest.title}`,
-    bomId: procurementRequest.bomId,
+    bomId: procurementRequest.bomId || '',
     ceilingPrice: procurementRequest.estimatedBudget || '',
     startTime: '',
     endTime: '',
     selectedVendors: [] as string[],
     selectedBomItems: bomItems.map((item: any) => item.id) || [],
-    termsUrl: '',
+    termsFile: null as File | null,
   });
+
+  const [uploadingTerms, setUploadingTerms] = useState(false);
 
   const [editableBomItems, setEditableBomItems] = useState<{[key: string]: {quantity: number, unitPrice: number}}>({});
 
@@ -701,7 +713,7 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, vendors, onCl
           startTime: data.startTime ? new Date(data.startTime).toISOString() : null,
           endTime: data.endTime ? new Date(data.endTime).toISOString() : null,
           status: 'scheduled',
-          termsUrl: data.termsUrl,
+          termsUrl: data.termsFile ? 'uploaded' : '',
         }),
         credentials: "include",
       });
@@ -761,6 +773,15 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, vendors, onCl
       return;
     }
 
+    if (!formData.termsFile) {
+      toast({
+        title: "Error",
+        description: "Please upload Terms & Conditions before creating the auction",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createAuctionMutation.mutate(formData);
   };
 
@@ -771,6 +792,13 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, vendors, onCl
         ? prev.selectedVendors.filter(id => id !== vendorId)
         : [...prev.selectedVendors, vendorId]
     }));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, termsFile: file }));
+    }
   };
 
   return (
@@ -839,6 +867,27 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, vendors, onCl
         </div>
       </div>
 
+      {/* BOM Selection */}
+      <div className="space-y-3">
+        <Label>Bill of Materials</Label>
+        <Select
+          value={formData.bomId}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select BOM (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">None</SelectItem>
+            {allBoms.map((bom: any) => (
+              <SelectItem key={bom.id} value={bom.id}>
+                {bom.name} ({bom.version}) - {bom.department}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Timing */}
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -888,15 +937,34 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, vendors, onCl
         </p>
       </div>
 
-      {/* Terms & Conditions */}
-      <div>
-        <Label htmlFor="termsUrl">Terms & Conditions URL</Label>
-        <Input
-          id="termsUrl"
-          type="url"
-          value={formData.termsUrl}
-          onChange={(e) => setFormData(prev => ({ ...prev, termsUrl: e.target.value }))}
-          placeholder="https://example.com/terms-and-conditions.pdf"
+      {/* Terms & Conditions Upload */}
+      <div className="space-y-3">
+        <Label>Terms & Conditions *</Label>
+        <p className="text-sm text-muted-foreground">
+          Upload terms and conditions that vendors must accept before bidding
+        </p>
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => document.getElementById('terms-upload')?.click()}
+            className="flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Upload Terms & Conditions
+          </Button>
+          {formData.termsFile && (
+            <span className="text-sm text-green-600 dark:text-green-400">
+              ✓ {formData.termsFile.name}
+            </span>
+          )}
+        </div>
+        <input
+          id="terms-upload"
+          type="file"
+          accept=".pdf,.doc,.docx"
+          onChange={handleFileUpload}
+          className="hidden"
         />
       </div>
 
@@ -918,7 +986,7 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, vendors, onCl
 }
 
 // Create RFx Form with prefilled data
-function CreateRfxFormEmbedded({ procurementRequest, bomItems, vendors, onClose, onSuccess }: any) {
+function CreateRfxFormEmbedded({ procurementRequest, bomItems, allBoms, vendors, onClose, onSuccess }: any) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -930,6 +998,7 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, vendors, onClose,
     dueDate: '',
     budget: procurementRequest.estimatedBudget || '',
     contactPerson: '',
+    bomId: procurementRequest.bomId || '',
     selectedVendors: [] as string[],
   });
 
@@ -1067,6 +1136,31 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, vendors, onClose,
           />
         </div>
 
+        {/* BOM Integration */}
+        <div>
+          <Label>BOM Integration (Optional)</Label>
+          <p className="text-sm text-muted-foreground mb-2">
+            Link this request to a specific Bill of Materials for structured procurement
+          </p>
+          <Label htmlFor="bomSelect">Select BOM</Label>
+          <Select
+            value={formData.bomId}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a BOM (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {allBoms.map((bom: any) => (
+                <SelectItem key={bom.id} value={bom.id}>
+                  {bom.name} (v{bom.version}) - {bom.department}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div>
           <Label htmlFor="criteria">Evaluation Criteria</Label>
           <Textarea
@@ -1156,13 +1250,14 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, vendors, onClose,
 }
 
 // Create Direct Procurement Form with prefilled data
-function CreateDirectProcurementFormEmbedded({ procurementRequest, bomItems, vendors, onClose, onSuccess }: any) {
+function CreateDirectProcurementFormEmbedded({ procurementRequest, bomItems, allBoms, vendors, onClose, onSuccess }: any) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
     title: `Direct PO for ${procurementRequest.title} (${procurementRequest.requestNumber})`,
     description: procurementRequest.description || `Direct procurement for: ${procurementRequest.title}`,
+    bomId: procurementRequest.bomId || '',
     vendorId: '',
     totalAmount: procurementRequest.estimatedBudget || '',
     deliveryDate: '',
@@ -1183,7 +1278,7 @@ function CreateDirectProcurementFormEmbedded({ procurementRequest, bomItems, ven
           deliveryDate: data.deliveryDate ? new Date(data.deliveryDate).toISOString() : null,
           paymentTerms: data.paymentTerms,
           deliveryTerms: data.deliveryTerms,
-          bomId: procurementRequest.bomId,
+          bomId: data.bomId || null,
           status: 'draft',
         }),
         credentials: "include",
@@ -1277,6 +1372,29 @@ function CreateDirectProcurementFormEmbedded({ procurementRequest, bomItems, ven
             placeholder="Describe the procurement requirements"
             rows={3}
           />
+        </div>
+
+        <div>
+          <Label>Bill of Materials (BOM) *</Label>
+          <p className="text-sm text-muted-foreground mb-2">
+            Select BOM to procure against
+          </p>
+          <Select
+            value={formData.bomId}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select BOM to procure against" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {allBoms.map((bom: any) => (
+                <SelectItem key={bom.id} value={bom.id}>
+                  {bom.name} (v{bom.version}) - {bom.department}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
