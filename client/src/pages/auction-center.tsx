@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { CreatePOFromAuctionDialog } from "@/components/CreatePOFromAuctionDialog";
-import { TermsUploader } from "@/components/TermsUploader";
+
 import { TermsAcceptanceDialog } from "@/components/TermsAcceptanceDialog";
 import { 
   Plus, 
@@ -32,7 +32,8 @@ import {
   Eye,
   Bell,
   Calendar,
-  ShoppingCart
+  ShoppingCart,
+  Upload
 } from "lucide-react";
 
 // Auction Results Component  
