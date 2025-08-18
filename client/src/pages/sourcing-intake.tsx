@@ -694,7 +694,7 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
   const [formData, setFormData] = useState({
     name: `Auction for ${procurementRequest.title} (${procurementRequest.requestNumber})`,
     description: procurementRequest.description || `Reverse auction for procurement request: ${procurementRequest.title}`,
-    bomId: procurementRequest.bomId || '',
+    bomId: procurementRequest.bomId || 'none',
     ceilingPrice: procurementRequest.estimatedBudget || '',
     startTime: '',
     endTime: '',
@@ -881,14 +881,14 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
         <Label>Bill of Materials</Label>
         <Select
           value={formData.bomId}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value }))}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value === "none" ? "" : value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select BOM (optional)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
-            {allBoms.map((bom: any) => (
+            <SelectItem value="none">None</SelectItem>
+            {(allBoms as any[]).map((bom: any) => (
               <SelectItem key={bom.id} value={bom.id}>
                 {bom.name} ({bom.version}) - {bom.department}
               </SelectItem>
@@ -1007,7 +1007,7 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, allBoms, vendors,
     dueDate: '',
     budget: procurementRequest.estimatedBudget || '',
     contactPerson: '',
-    bomId: procurementRequest.bomId || '',
+    bomId: procurementRequest.bomId || 'none',
     selectedVendors: [] as string[],
   });
 
@@ -1154,14 +1154,14 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, allBoms, vendors,
           <Label htmlFor="bomSelect">Select BOM</Label>
           <Select
             value={formData.bomId}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value }))}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value === "none" ? "" : value }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Choose a BOM (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
-              {allBoms.map((bom: any) => (
+              <SelectItem value="none">None</SelectItem>
+              {(allBoms as any[]).map((bom: any) => (
                 <SelectItem key={bom.id} value={bom.id}>
                   {bom.name} (v{bom.version}) - {bom.department}
                 </SelectItem>
@@ -1266,7 +1266,7 @@ function CreateDirectProcurementFormEmbedded({ procurementRequest, bomItems, all
   const [formData, setFormData] = useState({
     title: `Direct PO for ${procurementRequest.title} (${procurementRequest.requestNumber})`,
     description: procurementRequest.description || `Direct procurement for: ${procurementRequest.title}`,
-    bomId: procurementRequest.bomId || '',
+    bomId: procurementRequest.bomId || 'none',
     vendorId: '',
     totalAmount: procurementRequest.estimatedBudget || '',
     deliveryDate: '',
@@ -1390,14 +1390,14 @@ function CreateDirectProcurementFormEmbedded({ procurementRequest, bomItems, all
           </p>
           <Select
             value={formData.bomId}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value }))}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value === "none" ? "" : value }))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select BOM to procure against" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
-              {allBoms.map((bom: any) => (
+              <SelectItem value="none">None</SelectItem>
+              {(allBoms as any[]).map((bom: any) => (
                 <SelectItem key={bom.id} value={bom.id}>
                   {bom.name} (v{bom.version}) - {bom.department}
                 </SelectItem>
