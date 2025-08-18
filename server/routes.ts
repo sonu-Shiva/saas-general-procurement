@@ -1139,7 +1139,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   }
 
   // RFx routes
-  app.get('/api/rfx', authMiddleware, requireRole('buyer', 'procurement_approver', 'vendor', 'admin'), async (req, res) => {
+  app.get('/api/rfx', authMiddleware, requireRole('buyer', 'procurement_approver', 'vendor', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       const rfxEvents = await storage.getRfxEvents();
       res.json(rfxEvents);
@@ -1149,7 +1149,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post('/api/rfx', authMiddleware, requireRole('buyer', 'admin'), async (req: any, res) => {
+  app.post('/api/rfx', authMiddleware, requireRole('buyer', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req: any, res) => {
     try {
       console.log("RFx creation request received:", req.body);
       const userId = req.user?.claims?.sub;
