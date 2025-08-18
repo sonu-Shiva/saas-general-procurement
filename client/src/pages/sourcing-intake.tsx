@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -707,6 +707,22 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
 
   const [editableBomItems, setEditableBomItems] = useState<{[key: string]: {quantity: number, unitPrice: number}}>({});
 
+  // Get selected BOM object
+  const selectedBom = formData.bomId && formData.bomId !== 'none' 
+    ? allBoms.find((bom: any) => bom.id === formData.bomId) 
+    : null;
+
+  // Fetch BOM items when BOM is selected
+  const { data: bomItemsFromBom = [], isLoading: bomItemsLoading, error: bomItemsError } = useQuery({
+    queryKey: ["/api/boms", formData.bomId, "items"],
+    queryFn: () => formData.bomId && formData.bomId !== 'none' ? apiRequest(`/api/boms/${formData.bomId}/items`) : Promise.resolve([]),
+    enabled: !!formData.bomId && formData.bomId !== 'none',
+    retry: false,
+  });
+
+  // Use bomItems from BOM endpoint if available, fallback to passed bomItems
+  const availableBomItems = formData.bomId && formData.bomId !== 'none' ? bomItemsFromBom : bomItems;
+
   const createAuctionMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await fetch("/api/auctions", {
@@ -810,6 +826,64 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
     }
   };
 
+  const handleBomItemToggle = (itemId: string, item: any) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedBomItems: prev.selectedBomItems.includes(itemId)
+        ? prev.selectedBomItems.filter(id => id !== itemId)
+        : [...prev.selectedBomItems, itemId]
+    }));
+
+    // Initialize editable item data if not exists
+    if (!editableBomItems[itemId]) {
+      setEditableBomItems(prev => ({
+        ...prev,
+        [itemId]: {
+          quantity: parseFloat(item.quantity) || 1,
+          unitPrice: parseFloat(item.unitPrice) || 0
+        }
+      }));
+    }
+  };
+
+  const updateBomItemPrice = (itemId: string, field: 'quantity' | 'unitPrice', value: number) => {
+    setEditableBomItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [field]: value
+      }
+    }));
+  };
+
+  const calculateCeilingPrice = () => {
+    let total = 0;
+    formData.selectedBomItems.forEach(itemId => {
+      const editableItem = editableBomItems[itemId];
+      if (editableItem) {
+        total += editableItem.quantity * editableItem.unitPrice;
+      }
+    });
+    return total.toFixed(2);
+  };
+
+  const handleBomChange = (value: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      bomId: value === "none" ? "" : value,
+      selectedBomItems: [] // Reset selected items when BOM changes
+    }));
+    setEditableBomItems({}); // Reset editable items
+  };
+
+  // Auto-update ceiling price when BOM items are selected
+  useEffect(() => {
+    if (formData.selectedBomItems.length > 0) {
+      const newCeilingPrice = calculateCeilingPrice();
+      setFormData(prev => ({ ...prev, ceilingPrice: newCeilingPrice }));
+    }
+  }, [editableBomItems, formData.selectedBomItems]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* PR Context Display */}
@@ -870,9 +944,14 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
             type="number"
             value={formData.ceilingPrice}
             onChange={(e) => setFormData(prev => ({ ...prev, ceilingPrice: e.target.value }))}
+            disabled={formData.selectedBomItems.length > 0}
+            className={formData.selectedBomItems.length > 0 ? "bg-gray-100" : ""}
             placeholder="Maximum budget for this auction"
             step="0.01"
           />
+          {formData.selectedBomItems.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">Auto-calculated from selected BOM items</p>
+          )}
         </div>
       </div>
 
@@ -881,7 +960,7 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
         <Label>Bill of Materials</Label>
         <Select
           value={formData.bomId}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, bomId: value === "none" ? "" : value }))}
+          onValueChange={handleBomChange}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select BOM (optional)" />
@@ -896,6 +975,112 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
           </SelectContent>
         </Select>
       </div>
+
+      {/* BOM Items Selection */}
+      {formData.bomId && formData.bomId !== 'none' && selectedBom && (
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <Label className="text-base font-medium">BOM Items for Auction</Label>
+            <Badge variant="outline">{selectedBom.name} ({selectedBom.version})</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Select specific items from this BOM to include in the auction:
+          </p>
+          {bomItemsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-sm text-muted-foreground">Loading BOM items...</p>
+            </div>
+          ) : bomItemsError ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-red-600">Error loading BOM items</p>
+              <p className="text-xs text-gray-400 mt-2">
+                Error: {bomItemsError?.message || 'Unknown error'}
+              </p>
+            </div>
+          ) : !availableBomItems || availableBomItems.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground">No items found in this BOM</p>
+              <p className="text-xs text-gray-400 mt-2">Please add items to this BOM first or select a different BOM.</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {availableBomItems.map((item: any) => (
+                <div key={item.id} className="p-3 border rounded hover:bg-muted/50">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      id={`bom-item-${item.id}`}
+                      checked={formData.selectedBomItems.includes(item.id)}
+                      onChange={() => handleBomItemToggle(item.id, item)}
+                      className="rounded mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <Label htmlFor={`bom-item-${item.id}`} className="text-sm font-medium cursor-pointer">
+                            {item.itemName}
+                          </Label>
+                          {item.itemCode && (
+                            <p className="text-xs text-muted-foreground">Code: {item.itemCode}</p>
+                          )}
+                          {item.specifications && typeof item.specifications === 'string' && (
+                            <p className="text-xs text-muted-foreground mt-1">{item.specifications}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Editable quantity and price for selected items */}
+                      {formData.selectedBomItems.includes(item.id) && (
+                        <div className="grid grid-cols-3 gap-2 mt-2 p-2 bg-blue-50 rounded">
+                          <div>
+                            <Label className="text-xs">Quantity</Label>
+                            <Input
+                              type="number"
+                              value={editableBomItems[item.id]?.quantity || item.quantity || 1}
+                              onChange={(e) => updateBomItemPrice(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                              className="h-8 text-sm"
+                              min="1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Unit Price (₹)</Label>
+                            <Input
+                              type="number"
+                              value={editableBomItems[item.id]?.unitPrice || item.unitPrice || 0}
+                              onChange={(e) => updateBomItemPrice(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                              className="h-8 text-sm"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Total</Label>
+                            <div className="h-8 px-2 bg-gray-100 rounded text-sm flex items-center">
+                              ₹{((editableBomItems[item.id]?.quantity || item.quantity || 1) * 
+                                (editableBomItems[item.id]?.unitPrice || item.unitPrice || 0)).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Display calculated ceiling price */}
+          {formData.selectedBomItems.length > 0 && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-green-800">Total Ceiling Price:</span>
+                <span className="text-lg font-bold text-green-600">₹{calculateCeilingPrice()}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Timing */}
       <div className="grid grid-cols-2 gap-4">
