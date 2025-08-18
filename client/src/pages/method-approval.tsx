@@ -23,7 +23,7 @@ import {
   ShoppingCart,
   Gavel,
   FileQuestion,
-  DollarSign,
+  IndianRupee,
   Users,
   AlertCircle,
   MessageSquare,
@@ -238,11 +238,11 @@ export default function MethodApproval() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-green-500" />
+              <IndianRupee className="w-5 h-5 text-green-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
                 <p className="text-2xl font-bold">
-                  ${filteredEvents.reduce((sum, e) => sum + (parseFloat(e.spendEstimate || "0")), 0).toLocaleString()}
+                  ₹{filteredEvents.reduce((sum, e) => sum + (parseFloat(e.spendEstimate || "0")), 0).toLocaleString()}
                 </p>
               </div>
             </div>

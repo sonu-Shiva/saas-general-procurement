@@ -22,7 +22,7 @@ import {
   User,
   Building2,
   Package,
-  DollarSign,
+  IndianRupee,
   Clock
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -461,7 +461,7 @@ export default function PRApproval() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5" />
+              <IndianRupee className="w-5 h-5" />
               Financial Information
             </CardTitle>
           </CardHeader>
