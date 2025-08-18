@@ -74,7 +74,7 @@ function ApprovalActions({ request }: { request: ProcurementRequest }) {
   const [comments, setComments] = useState("");
   const [showComments, setShowComments] = useState(false);
 
-  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes(user.role);
+  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes((user as any).role);
   
   const approveMutation = useMutation({
     mutationFn: async (action: 'approve' | 'reject') => {
@@ -104,8 +104,8 @@ function ApprovalActions({ request }: { request: ProcurementRequest }) {
   if (!canApprove) return null;
 
   const needsApproval = (
-    (user.role === 'dept_approver' && request.requestApprovalStatus === 'pending') ||
-    (user.role === 'sourcing_manager' && request.procurementMethodStatus === 'pending')
+    ((user as any).role === 'dept_approver' && request.requestApprovalStatus === 'pending') ||
+    ((user as any).role === 'sourcing_manager' && request.procurementMethodStatus === 'pending')
   );
 
   if (!needsApproval) return null;
@@ -228,9 +228,9 @@ export default function ProcurementRequests() {
   const departments = Array.from(new Set(requests.map(r => r.department).filter(Boolean)));
 
   // Role-based capabilities
-  const canCreateRequests = user && ['department_requester', 'admin'].includes(user.role);
-  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes(user.role);
-  const isRequester = user && user.role === 'department_requester';
+  const canCreateRequests = user && ['department_requester', 'admin'].includes((user as any).role);
+  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes((user as any).role);
+  const isRequester = user && (user as any).role === 'department_requester';
 
   // Withdraw request mutation
   const withdrawMutation = useMutation({
@@ -273,7 +273,7 @@ export default function ProcurementRequests() {
         </div>
         
         <div className="flex gap-2">
-          {isRequester && (
+          {isRequester ? (
             <div className="flex gap-2">
               <Button
                 variant={viewMode === "table" ? "default" : "outline"}
@@ -292,8 +292,8 @@ export default function ProcurementRequests() {
                 Cards
               </Button>
             </div>
-          )}
-          {canCreateRequests && (
+          ) : null}
+          {canCreateRequests ? (
             <CreateProcurementRequestDialog
               trigger={
                 <Button data-testid="button-create-request">
@@ -302,7 +302,7 @@ export default function ProcurementRequests() {
                 </Button>
               }
             />
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -491,7 +491,7 @@ export default function ProcurementRequests() {
                 : "No requests match your current filters."
               }
             </p>
-            {canCreateRequests && requests.length === 0 && (
+            {canCreateRequests && requests.length === 0 ? (
               <CreateProcurementRequestDialog
                 trigger={
                   <Button>
@@ -500,7 +500,7 @@ export default function ProcurementRequests() {
                   </Button>
                 }
               />
-            )}
+            ) : null}
           </Card>
         ) : (
           <>
@@ -584,55 +584,101 @@ export default function ProcurementRequests() {
 
             {/* Cards View */}
             {(!isRequester || viewMode === "cards") && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredRequests.map((request) => (
-                  <Card key={request.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
+                  <Card key={request.id} className="hover:shadow-xl transition-all duration-300 border-l-4 border-l-blue-500 hover:border-l-blue-600">
+                    <CardHeader className="pb-4 space-y-3">
                       <div className="flex items-start justify-between">
-                        <div className="space-y-1 flex-1">
-                          <CardTitle className="text-lg">{request.title}</CardTitle>
-                          <CardDescription className="text-sm">
-                            {request.requestNumber} • {request.department}
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs font-medium">
+                              {request.requestNumber}
+                            </Badge>
+                            <Badge className={priorityColors[request.priority]} data-testid={`priority-${request.id}`}>
+                              {request.priority.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <CardTitle className="text-xl font-bold leading-tight">{request.title}</CardTitle>
+                          <CardDescription className="text-sm text-muted-foreground">
+                            <Building2 className="w-4 h-4 inline mr-1" />
+                            {request.department}
                           </CardDescription>
-                        </div>
-                        <div className="flex gap-1 flex-col items-end">
-                          <Badge className={priorityColors[request.priority]}>
-                            {request.priority.toUpperCase()}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          <span>Need by: {format(parseISO(request.requestedDeliveryDate), 'MMM d, yyyy')}</span>
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <User className="w-4 h-4 mr-1" />
-                          <span>Requested by: {request.requestedBy}</span>
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4 mr-1" />
-                          <span>Created: {format(parseISO(request.createdAt), 'MMM d, yyyy')}</span>
                         </div>
                       </div>
                       
-                      <div className="space-y-2">
-                        <Badge className={statusColors[request.overallStatus]}>
-                          {request.overallStatus.replace(/_/g, ' ').toUpperCase()}
+                      {/* Status Badge - More Prominent */}
+                      <div className="flex justify-center">
+                        <Badge className={`${statusColors[request.overallStatus]} px-3 py-1 text-sm font-medium`} data-testid={`status-${request.id}`}>
+                          {request.overallStatus === 'procurement_method_pending' 
+                            ? 'PROCUREMENT METHOD PENDING'
+                            : request.overallStatus.replace(/_/g, ' ').toUpperCase()
+                          }
                         </Badge>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center text-muted-foreground">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            <span>Need by:</span>
+                          </div>
+                          <span className="font-medium">
+                            {format(parseISO(request.requestedDeliveryDate), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center text-muted-foreground">
+                            <User className="w-4 h-4 mr-2" />
+                            <span>Requested by:</span>
+                          </div>
+                          <span className="font-medium">{request.requestedBy}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center text-muted-foreground">
+                            <Clock className="w-4 h-4 mr-2" />
+                            <span>Created:</span>
+                          </div>
+                          <span className="font-medium">
+                            {format(parseISO(request.createdAt), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                        {request.estimatedBudget && (
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center text-muted-foreground">
+                              <Package className="w-4 h-4 mr-2" />
+                              <span>Budget:</span>
+                            </div>
+                            <span className="font-medium text-green-600">
+                              ₹{request.estimatedBudget.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <ApprovalActions request={request} />
 
                       {request.description && (
-                        <div>
+                        <div className="border-t pt-3">
                           <p className="text-sm text-muted-foreground line-clamp-2">
                             {request.description}
                           </p>
                         </div>
                       )}
+                      
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLocation(`/pr-approval/${request.id}`)}
+                          className="flex-1"
+                          data-testid={`button-view-details-${request.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View Details
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
