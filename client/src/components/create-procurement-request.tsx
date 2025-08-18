@@ -772,12 +772,28 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
+                            <Select
                               value={item.uom}
-                              onChange={(e) => updateLineItem(index, { uom: e.target.value })}
-                              placeholder="UOM"
-                              className="w-20"
-                            />
+                              onValueChange={(value) => updateLineItem(index, { uom: value })}
+                            >
+                              <SelectTrigger className="w-20">
+                                <SelectValue placeholder="UOM" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="PCS">PCS</SelectItem>
+                                <SelectItem value="KG">KG</SelectItem>
+                                <SelectItem value="LTR">LTR</SelectItem>
+                                <SelectItem value="MTR">MTR</SelectItem>
+                                <SelectItem value="SQM">SQM</SelectItem>
+                                <SelectItem value="CUM">CUM</SelectItem>
+                                <SelectItem value="BOX">BOX</SelectItem>
+                                <SelectItem value="SET">SET</SelectItem>
+                                <SelectItem value="ROLL">ROLL</SelectItem>
+                                <SelectItem value="PKT">PKT</SelectItem>
+                                <SelectItem value="BAG">BAG</SelectItem>
+                                <SelectItem value="TON">TON</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </TableCell>
                           <TableCell>
                             <Input
