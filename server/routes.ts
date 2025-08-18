@@ -2846,6 +2846,18 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Sourcing queue - approved PRs ready for sourcing exec intake
+  app.get("/api/procurement-requests/sourcing-queue", authMiddleware, requireRole(['sourcing_exec', 'sourcing_manager', 'buyer_admin']), async (req, res) => {
+    try {
+      // Fetch approved procurement requests that haven't been assigned to sourcing yet
+      const requests = await storage.getProcurementRequestsByStatus(['approved']);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching sourcing queue:", error);
+      res.status(500).json({ message: "Failed to fetch sourcing queue" });
+    }
+  });
+
   app.get("/api/procurement-requests/:id", authMiddleware, async (req, res) => {
     try {
       const request = await storage.getProcurementRequest(req.params.id);

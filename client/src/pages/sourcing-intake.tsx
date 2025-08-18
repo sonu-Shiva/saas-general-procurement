@@ -117,8 +117,7 @@ export default function SourcingIntake() {
   // Create sourcing event mutation
   const createSourcingEventMutation = useMutation({
     mutationFn: async (eventData: any) => {
-      return await apiRequest({
-        url: "/api/sourcing-events",
+      return await apiRequest("/api/sourcing-events", {
         method: "POST",
         body: JSON.stringify(eventData),
         headers: { "Content-Type": "application/json" },
