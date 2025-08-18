@@ -390,9 +390,9 @@ export default function ProcurementRequests() {
       </Card>
 
       {/* Requests Display */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {viewMode === "table" ? (
               <Card>
                 <CardContent className="p-0">
