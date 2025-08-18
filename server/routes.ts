@@ -3277,7 +3277,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Approval Action routes
-  app.post("/api/approval-requests/:id/approve", authMiddleware, async (req, res) => {
+  app.post("/api/approval-requests/:id/approve", authMiddleware, requireRole('dept_approver', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
@@ -3296,7 +3296,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       // Check if user has approval authority based on role
-      const canApprove = ['request_approver', 'procurement_approver', 'admin'].includes(user.role);
+      const canApprove = ['dept_approver', 'sourcing_manager', 'buyer_admin'].includes(user.role);
       if (!canApprove) {
         return res.status(403).json({ message: "You don't have approval authority" });
       }
@@ -3305,7 +3305,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       await storage.createApprovalHistory({
         entityType: 'procurement_request',
         entityId: requestId,
-        approvalType: user.role === 'request_approver' ? 'request_approval' : 'procurement_approval',
+        approvalType: user.role === 'dept_approver' ? 'request_approval' : 'procurement_approval',
         level: 1, // TODO: Implement proper level calculation based on configuration
         approverId: userId,
         status: 'approved',
@@ -3315,12 +3315,12 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
       // Update the procurement request status
       let updates: any = {};
-      if (user.role === 'request_approver') {
+      if (user.role === 'dept_approver') {
         updates = {
           requestApprovalStatus: 'approved',
           overallStatus: 'request_approved',
         };
-      } else if (user.role === 'procurement_approver') {
+      } else if (user.role === 'sourcing_manager') {
         updates = {
           procurementMethodStatus: 'approved',
           overallStatus: 'procurement_approved',
@@ -3335,7 +3335,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post("/api/approval-requests/:id/reject", authMiddleware, async (req, res) => {
+  app.post("/api/approval-requests/:id/reject", authMiddleware, requireRole('dept_approver', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
@@ -3354,7 +3354,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       // Check if user has approval authority
-      const canApprove = ['request_approver', 'procurement_approver', 'admin'].includes(user.role);
+      const canApprove = ['dept_approver', 'sourcing_manager', 'buyer_admin'].includes(user.role);
       if (!canApprove) {
         return res.status(403).json({ message: "You don't have approval authority" });
       }
@@ -3363,7 +3363,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       await storage.createApprovalHistory({
         entityType: 'procurement_request',
         entityId: requestId,
-        approvalType: user.role === 'request_approver' ? 'request_approval' : 'procurement_approval',
+        approvalType: user.role === 'dept_approver' ? 'request_approval' : 'procurement_approval',
         level: 1, // TODO: Implement proper level calculation
         approverId: userId,
         status: 'rejected',
