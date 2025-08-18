@@ -87,12 +87,7 @@ export default function MethodApproval() {
   // Process approval action mutation
   const processApprovalMutation = useMutation({
     mutationFn: async ({ eventId, action, comments }: { eventId: string; action: string; comments?: string }) => {
-      return await apiRequest({
-        url: `/api/sourcing-events/${eventId}/${action}`,
-        method: "POST",
-        body: JSON.stringify({ comments }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest(`/api/sourcing-events/${eventId}/process-approval`, "POST", { action, comments });
     },
     onSuccess: (_, variables) => {
       const actionText = variables.action === "approve" ? "approved" : 
@@ -143,7 +138,7 @@ export default function MethodApproval() {
     });
   };
 
-  const filteredEvents = sourcingEvents.filter((event: SourcingEvent) =>
+  const filteredEvents = (sourcingEvents as SourcingEvent[]).filter((event: SourcingEvent) =>
     event.eventNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
     event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     event.procurementRequest?.requestNumber.toLowerCase().includes(searchQuery.toLowerCase())
@@ -166,7 +161,7 @@ export default function MethodApproval() {
 
   const getSelectedVendorNames = (vendorIds: string[]) => {
     return vendorIds.map(id => {
-      const vendor = vendors.find((v: any) => v.id === id);
+      const vendor = (vendors as any[]).find((v: any) => v.id === id);
       return vendor?.companyName || "Unknown Vendor";
     }).join(", ");
   };
@@ -192,15 +187,14 @@ export default function MethodApproval() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold">Method Approval</h1>
           <p className="text-muted-foreground">
             Review and approve procurement method selections by Sourcing Executives
           </p>
         </div>
-      </div>
 
       {/* Search */}
       <Card>
@@ -242,7 +236,7 @@ export default function MethodApproval() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
                 <p className="text-2xl font-bold">
-                  ₹{filteredEvents.reduce((sum, e) => sum + (parseFloat(e.spendEstimate || "0")), 0).toLocaleString()}
+                  ₹{filteredEvents.reduce((sum: number, e: SourcingEvent) => sum + (parseFloat(e.spendEstimate || "0")), 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -306,7 +300,7 @@ export default function MethodApproval() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEvents.map((event) => {
+                {filteredEvents.map((event: SourcingEvent) => {
                   const policyIssues = validatePolicyCompliance(event);
                   return (
                     <TableRow key={event.id}>
@@ -314,7 +308,7 @@ export default function MethodApproval() {
                       <TableCell>{event.procurementRequest?.requestNumber}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {typeIcons[event.type]}
+                          {typeIcons[event.type as keyof typeof typeIcons]}
                           {event.type}
                         </div>
                       </TableCell>
@@ -338,7 +332,7 @@ export default function MethodApproval() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusColors[event.status]}>
+                        <Badge className={statusColors[event.status as keyof typeof statusColors]}>
                           {event.status.replace(/_/g, " ")}
                         </Badge>
                       </TableCell>
@@ -593,6 +587,7 @@ export default function MethodApproval() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
