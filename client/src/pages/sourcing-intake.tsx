@@ -34,6 +34,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 interface ProcurementRequest {
   id: string;
@@ -94,6 +95,7 @@ export default function SourcingIntake() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Fetch approved procurement requests assigned to sourcing exec
   const { data: procurementRequests = [], isLoading } = useQuery({
@@ -114,28 +116,26 @@ export default function SourcingIntake() {
     retry: false,
   });
 
-  // Create sourcing event mutation
-  const createSourcingEventMutation = useMutation({
-    mutationFn: async (eventData: any) => {
-      return await apiRequest("/api/sourcing-events", {
-        method: "POST",
-        body: JSON.stringify(eventData),
+  // Update PR with selected method mutation
+  const updatePRMethodMutation = useMutation({
+    mutationFn: async (data: { prId: string; method: string }) => {
+      return await apiRequest(`/api/procurement-requests/${data.prId}/method`, {
+        method: "PATCH",
+        body: JSON.stringify({ procurementMethod: data.method }),
         headers: { "Content-Type": "application/json" },
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast({
-        title: "Sourcing Event Created",
-        description: "Draft has been submitted for Sourcing Manager approval",
+        title: "Method Selected",
+        description: `Procurement method set to ${variables.method.toUpperCase()}. Redirecting to creation screen...`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/procurement-requests/sourcing-queue"] });
-      setIsMethodModalOpen(false);
-      resetMethodForm();
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create sourcing event",
+        description: error.message || "Failed to update procurement method",
         variant: "destructive",
       });
     },
@@ -150,45 +150,52 @@ export default function SourcingIntake() {
     setSelectedVendors([]);
   };
 
-  const handleCreateSourcingEvent = () => {
-    if (!selectedPR || !selectedMethod || !eventTitle) {
+  const handleProceedToCreation = () => {
+    if (!selectedPR || !selectedMethod) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please select a procurement method",
         variant: "destructive",
       });
       return;
     }
 
-    if (selectedMethod === "direct" && !justification) {
-      toast({
-        title: "Justification Required",
-        description: "Direct procurement requires business justification",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (selectedVendors.length === 0) {
-      toast({
-        title: "Vendors Required",
-        description: "Please select at least one vendor",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const eventData = {
-      procurementRequestId: selectedPR.id,
-      type: selectedMethod === "rfx" ? "RFQ" : selectedMethod === "auction" ? "AUCTION" : "DIRECT_PO",
-      title: eventTitle,
-      description: eventDescription,
-      spendEstimate: spendEstimate ? parseFloat(spendEstimate) : null,
-      justification: justification,
-      selectedVendorIds: selectedVendors,
+    // Store PR context in sessionStorage for the creation screens
+    const prContext = {
+      prId: selectedPR.id,
+      prNumber: selectedPR.requestNumber,
+      prTitle: selectedPR.title,
+      prDescription: selectedPR.description,
+      department: selectedPR.department,
+      estimatedBudget: selectedPR.estimatedBudget,
+      bomId: selectedPR.bomId,
+      bomItems: bomItems
     };
+    
+    sessionStorage.setItem('procurementContext', JSON.stringify(prContext));
 
-    createSourcingEventMutation.mutate(eventData);
+    // Update the PR with selected method first
+    updatePRMethodMutation.mutate({ 
+      prId: selectedPR.id, 
+      method: selectedMethod 
+    });
+
+    // Navigate to appropriate creation screen
+    setTimeout(() => {
+      switch (selectedMethod) {
+        case "rfx":
+          setLocation("/rfx");
+          break;
+        case "auction":
+          setLocation("/auctions");
+          break;
+        case "direct":
+          setLocation("/direct-procurement");
+          break;
+      }
+      setIsMethodModalOpen(false);
+      resetMethodForm();
+    }, 1000); // Allow toast to show before navigation
   };
 
   const filteredRequests = procurementRequests.filter((pr: ProcurementRequest) =>
@@ -424,7 +431,7 @@ export default function SourcingIntake() {
                     <div>
                       <Label>Estimated Budget</Label>
                       <p className="font-medium">
-                        {selectedPR.estimatedBudget ? `$${selectedPR.estimatedBudget.toLocaleString()}` : "N/A"}
+                        {selectedPR.estimatedBudget ? `₹${selectedPR.estimatedBudget.toLocaleString()}` : "N/A"}
                       </p>
                     </div>
                   </div>
@@ -472,10 +479,10 @@ export default function SourcingIntake() {
                           <TableCell className="font-medium">{item.itemName}</TableCell>
                           <TableCell>{item.quantity} {item.uom}</TableCell>
                           <TableCell>
-                            {item.unitPrice ? `$${parseFloat(item.unitPrice).toLocaleString()}` : "N/A"}
+                            {item.unitPrice ? `₹${parseFloat(item.unitPrice).toLocaleString()}` : "N/A"}
                           </TableCell>
                           <TableCell>
-                            {item.totalPrice ? `$${parseFloat(item.totalPrice).toLocaleString()}` : "N/A"}
+                            {item.totalPrice ? `₹${parseFloat(item.totalPrice).toLocaleString()}` : "N/A"}
                           </TableCell>
                           <TableCell>{item.specifications || "N/A"}</TableCell>
                         </TableRow>
@@ -495,7 +502,7 @@ export default function SourcingIntake() {
           <DialogHeader>
             <DialogTitle>Select Procurement Method</DialogTitle>
             <DialogDescription>
-              Choose the appropriate procurement method and configure the sourcing event
+              Choose the appropriate procurement method. You'll be redirected to the creation screen with PR details pre-filled.
             </DialogDescription>
           </DialogHeader>
 
@@ -545,96 +552,27 @@ export default function SourcingIntake() {
               </div>
             </div>
 
-            {/* Event Configuration */}
+            {/* Action Buttons */}
             {selectedMethod && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="eventTitle">Event Title *</Label>
-                    <Input
-                      id="eventTitle"
-                      value={eventTitle}
-                      onChange={(e) => setEventTitle(e.target.value)}
-                      placeholder="Enter event title"
-                      data-testid="input-event-title"
-                    />
+                <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-blue-900 dark:text-blue-100">Next Steps</span>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="spendEstimate">Spend Estimate</Label>
-                    <Input
-                      id="spendEstimate"
-                      type="number"
-                      value={spendEstimate}
-                      onChange={(e) => setSpendEstimate(e.target.value)}
-                      placeholder="Enter estimated spend"
-                      data-testid="input-spend-estimate"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="eventDescription">Event Description</Label>
-                  <Textarea
-                    id="eventDescription"
-                    value={eventDescription}
-                    onChange={(e) => setEventDescription(e.target.value)}
-                    placeholder="Describe the sourcing event requirements"
-                    rows={3}
-                    data-testid="textarea-event-description"
-                  />
-                </div>
-
-                {selectedMethod === "direct" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="justification">Business Justification *</Label>
-                    <Textarea
-                      id="justification"
-                      value={justification}
-                      onChange={(e) => setJustification(e.target.value)}
-                      placeholder="Provide justification for direct procurement"
-                      rows={3}
-                      data-testid="textarea-justification"
-                    />
-                  </div>
-                )}
-
-                {/* Vendor Selection */}
-                <div className="space-y-2">
-                  <Label>Select Vendors *</Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border rounded p-2">
-                    {vendors.map((vendor: any) => (
-                      <div key={vendor.id} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id={`vendor-${vendor.id}`}
-                          checked={selectedVendors.includes(vendor.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedVendors([...selectedVendors, vendor.id]);
-                            } else {
-                              setSelectedVendors(selectedVendors.filter(id => id !== vendor.id));
-                            }
-                          }}
-                          className="rounded border-gray-300"
-                        />
-                        <label htmlFor={`vendor-${vendor.id}`} className="text-sm">
-                          {vendor.companyName}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Selected: {selectedVendors.length} vendor(s)
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    You will be redirected to the {selectedMethod === "rfx" ? "RFx Management" : selectedMethod === "auction" ? "Auction Center" : "Direct Procurement"} screen to create the event with the procurement request details pre-filled.
                   </p>
                 </div>
 
                 <div className="flex gap-2 pt-4">
                   <Button
-                    onClick={handleCreateSourcingEvent}
-                    disabled={createSourcingEventMutation.isPending}
-                    data-testid="button-create-sourcing-event"
+                    onClick={handleProceedToCreation}
+                    disabled={updatePRMethodMutation.isPending}
+                    data-testid="button-proceed-to-creation"
+                    className="flex-1"
                   >
-                    {createSourcingEventMutation.isPending ? "Creating..." : "Create Sourcing Event"}
+                    {updatePRMethodMutation.isPending ? "Processing..." : `Proceed to ${selectedMethod === "rfx" ? "RFx Creation" : selectedMethod === "auction" ? "Auction Creation" : "Direct Procurement"}`}
                   </Button>
                   <Button 
                     variant="outline" 

@@ -2891,6 +2891,47 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Update procurement method for sourcing executives
+  app.patch("/api/procurement-requests/:id/method", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+    try {
+      const { procurementMethod } = req.body;
+      const requestId = req.params.id;
+
+      // Validate procurement method
+      const validMethods = ['rfx', 'auction', 'direct'];
+      if (!validMethods.includes(procurementMethod)) {
+        return res.status(400).json({ 
+          message: "Invalid procurement method. Must be 'rfx', 'auction', or 'direct'" 
+        });
+      }
+
+      // Get the procurement request to check it exists and status
+      const request = await storage.getProcurementRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Check if request is in correct status for method selection
+      if (request.overallStatus !== 'request_approved') {
+        return res.status(400).json({ 
+          message: "Procurement method can only be set for approved requests" 
+        });
+      }
+
+      // Update the procurement method
+      const updatedRequest = await storage.updateProcurementRequest(requestId, {
+        procurementMethod: procurementMethod,
+        procurementMethodStatus: 'pending',
+        overallStatus: 'procurement_method_pending'
+      });
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Error updating procurement method:", error);
+      res.status(500).json({ message: "Failed to update procurement method" });
+    }
+  });
+
   // Withdraw procurement request (for requesters)
   app.post("/api/procurement-requests/:id/withdraw", authMiddleware, async (req, res) => {
     try {
