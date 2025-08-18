@@ -3276,6 +3276,94 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Sourcing queue endpoint for sourcing executives
+  app.get("/api/procurement-requests/sourcing-queue", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+    try {
+      const requests = await storage.getProcurementRequestsByStatus(['request_approved']);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching sourcing queue:", error);
+      res.status(500).json({ message: "Failed to fetch sourcing queue" });
+    }
+  });
+
+  // Sourcing events endpoints
+  app.post("/api/sourcing-events", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const eventData = {
+        ...req.body,
+        createdBy: userId,
+      };
+
+      const event = await storage.createSourcingEvent(eventData);
+      res.json(event);
+    } catch (error) {
+      console.error("Error creating sourcing event:", error);
+      res.status(500).json({ message: "Failed to create sourcing event" });
+    }
+  });
+
+  app.get("/api/sourcing-events/pending", authMiddleware, requireRole('sourcing_manager', 'buyer_admin'), async (req, res) => {
+    try {
+      const events = await storage.getSourcingEventsByStatus(['PENDING_SM_APPROVAL']);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching pending sourcing events:", error);
+      res.status(500).json({ message: "Failed to fetch pending sourcing events" });
+    }
+  });
+
+  app.post("/api/sourcing-events/:id/approve", authMiddleware, requireRole('sourcing_manager', 'buyer_admin'), async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const { comments } = req.body;
+
+      const updatedEvent = await storage.updateSourcingEvent(req.params.id, {
+        status: 'SM_APPROVED',
+        approvedBy: userId,
+        approvedAt: new Date(),
+      });
+
+      res.json(updatedEvent);
+    } catch (error) {
+      console.error("Error approving sourcing event:", error);
+      res.status(500).json({ message: "Failed to approve sourcing event" });
+    }
+  });
+
+  app.post("/api/sourcing-events/:id/reject", authMiddleware, requireRole('sourcing_manager', 'buyer_admin'), async (req, res) => {
+    try {
+      const { comments } = req.body;
+
+      const updatedEvent = await storage.updateSourcingEvent(req.params.id, {
+        status: 'SM_REJECTED',
+        rejectionReason: comments,
+      });
+
+      res.json(updatedEvent);
+    } catch (error) {
+      console.error("Error rejecting sourcing event:", error);
+      res.status(500).json({ message: "Failed to reject sourcing event" });
+    }
+  });
+
+  app.post("/api/sourcing-events/:id/request_changes", authMiddleware, requireRole('sourcing_manager', 'buyer_admin'), async (req, res) => {
+    try {
+      const { comments } = req.body;
+
+      const updatedEvent = await storage.updateSourcingEvent(req.params.id, {
+        status: 'CHANGES_REQUESTED',
+        changeRequestComments: comments,
+      });
+
+      res.json(updatedEvent);
+    } catch (error) {
+      console.error("Error requesting changes:", error);
+      res.status(500).json({ message: "Failed to request changes" });
+    }
+  });
+
   // Approval Action routes
   app.post("/api/approval-requests/:id/approve", authMiddleware, requireRole('dept_approver', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {

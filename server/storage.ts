@@ -19,6 +19,7 @@ import {
   organizations,
   termsAcceptance,
   procurementRequests,
+  sourcingEvents,
   approvalConfigurations,
   approvalHistory,
   departments,
@@ -62,6 +63,8 @@ import {
   type InsertTermsAcceptance,
   type ProcurementRequest,
   type InsertProcurementRequest,
+  type SourcingEvent,
+  type InsertSourcingEvent,
   type ApprovalConfiguration,
   type InsertApprovalConfiguration,
   type ApprovalHistory,
@@ -222,11 +225,13 @@ export interface IStorage {
   updateDepartment(id: string, data: Partial<Department>): Promise<Department | null>;
   deleteDepartment(id: string): Promise<boolean>;
 
-  // Sourcing Intake operations
-  createSourcingEvent(data: any): Promise<any>;
-  getSourcingEvents(): Promise<any[]>;
-  getSourcingEvent(id: string): Promise<any | null>;
-  updateSourcingEventStatus(id: string, status: string, updatedBy: string): Promise<any | null>;
+  // Sourcing Event operations
+  createSourcingEvent(data: InsertSourcingEvent): Promise<SourcingEvent>;
+  getSourcingEvent(id: string): Promise<SourcingEvent | undefined>;
+  getSourcingEvents(filters?: { status?: string; createdBy?: string }): Promise<SourcingEvent[]>;
+  getSourcingEventsByStatus(statuses: string[]): Promise<SourcingEvent[]>;
+  updateSourcingEvent(id: string, updates: Partial<SourcingEvent>): Promise<SourcingEvent>;
+  getProcurementRequestsByStatus(statuses: string[]): Promise<ProcurementRequest[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1857,19 +1862,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Sourcing Intake operations
-  async createSourcingEvent(data: any): Promise<any> {
+  async createSourcingEvent(data: InsertSourcingEvent): Promise<SourcingEvent> {
     try {
-      const sourcingEvent = {
-        id: uuidv4(),
+      const eventNumber = `SE-${Date.now()}`;
+      const sourcingEventData = {
         ...data,
+        id: nanoid(),
+        eventNumber,
+        status: 'PENDING_SM_APPROVAL' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      // Here you would interact with your database to save the sourcing event.
-      // For now, we'll simulate saving it to the in-memory array.
-      this.sourcingEvents.push(sourcingEvent);
-      console.log(`Sourcing event created: ${sourcingEvent.id}`);
+      const [sourcingEvent] = await this.db
+        .insert(sourcingEvents)
+        .values(sourcingEventData)
+        .returning();
+
       return sourcingEvent;
     } catch (error) {
       console.error("Error creating sourcing event:", error);
@@ -1877,72 +1886,88 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getSourcingEvents(filters: { status?: string; department?: string } = {}): Promise<any[]> {
+  async getSourcingEvents(filters: { status?: string; createdBy?: string } = {}): Promise<SourcingEvent[]> {
     try {
-      // In a real implementation, you would fetch from the database.
-      // Here, we return the in-memory array, potentially enriching it with related data.
-      let events = this.sourcingEvents;
+      let query = this.db.select().from(sourcingEvents);
       
-      // Apply filters if provided
       if (filters.status) {
-        events = events.filter(event => event.status === filters.status);
+        query = query.where(eq(sourcingEvents.status, filters.status));
       }
-      if (filters.department) {
-        events = events.filter(event => event.department === filters.department);
+      if (filters.createdBy) {
+        query = query.where(eq(sourcingEvents.createdBy, filters.createdBy));
       }
 
-      return events.map(event => ({
-        ...event,
-        // Example: Fetching related procurement request data
-        procurementRequest: this.procurementRequests.find(pr => pr.id === event.procurementRequestId),
-        // Example: Counting selected vendors
-        vendorCount: event.selectedVendors?.length || 0,
-      }));
+      const events = await query.orderBy(desc(sourcingEvents.createdAt));
+      return events;
     } catch (error) {
       console.error("Error fetching sourcing events:", error);
       throw error;
     }
   }
 
-  async getSourcingEvent(id: string): Promise<any | null> {
+  async getSourcingEventsByStatus(statuses: string[]): Promise<SourcingEvent[]> {
     try {
-      // In a real implementation, you would fetch a single event from the database.
-      const event = this.sourcingEvents.find(e => e.id === id);
-      if (!event) return null;
+      const events = await this.db
+        .select()
+        .from(sourcingEvents)
+        .where(inArray(sourcingEvents.status, statuses))
+        .orderBy(desc(sourcingEvents.createdAt));
+      
+      return events;
+    } catch (error) {
+      console.error("Error fetching sourcing events by status:", error);
+      throw error;
+    }
+  }
 
-      // Example: Fetching related data
-      return {
-        ...event,
-        procurementRequest: this.procurementRequests.find(pr => pr.id === event.procurementRequestId),
-        vendors: this.vendors.filter(v => event.selectedVendors?.includes(v.id)),
-      };
+  async getSourcingEvent(id: string): Promise<SourcingEvent | undefined> {
+    try {
+      const [event] = await this.db
+        .select()
+        .from(sourcingEvents)
+        .where(eq(sourcingEvents.id, id))
+        .limit(1);
+      
+      return event;
     } catch (error) {
       console.error("Error fetching sourcing event:", error);
       throw error;
     }
   }
 
-  async updateSourcingEvent(id: string, updates: any): Promise<any | null> {
+  async updateSourcingEvent(id: string, updates: Partial<SourcingEvent>): Promise<SourcingEvent> {
     try {
-      // In a real implementation, you would update the event in the database.
-      const eventIndex = this.sourcingEvents.findIndex(e => e.id === id);
-      if (eventIndex === -1) return null;
-
-      this.sourcingEvents[eventIndex] = {
-        ...this.sourcingEvents[eventIndex],
+      const updateData = {
         ...updates,
         updatedAt: new Date(),
       };
 
-      return this.sourcingEvents[eventIndex];
+      const [updatedEvent] = await this.db
+        .update(sourcingEvents)
+        .set(updateData)
+        .where(eq(sourcingEvents.id, id))
+        .returning();
+
+      return updatedEvent;
     } catch (error) {
       console.error("Error updating sourcing event:", error);
       throw error;
     }
   }
 
-  async updateSourcingEventStatus(id: string, status: string, updatedBy: string): Promise<any | null> {
-    return this.updateSourcingEvent(id, { status, updatedBy });
+  async getProcurementRequestsByStatus(statuses: string[]): Promise<ProcurementRequest[]> {
+    try {
+      const requests = await this.db
+        .select()
+        .from(procurementRequests)
+        .where(inArray(procurementRequests.requestApprovalStatus, statuses))
+        .orderBy(desc(procurementRequests.createdAt));
+      
+      return requests;
+    } catch (error) {
+      console.error("Error fetching procurement requests by status:", error);
+      throw error;
+    }
   }
 }
 
