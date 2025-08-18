@@ -2797,7 +2797,6 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         ...req.body,
         requestedBy: userId,
         department: user.department || req.body.department || 'General',
-        requestedDeliveryDate: req.body.requestedDeliveryDate ? new Date(req.body.requestedDeliveryDate) : undefined,
       };
 
       const request = await storage.createProcurementRequest(requestData);
