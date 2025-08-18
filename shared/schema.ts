@@ -35,7 +35,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role", { enum: ["admin", "requester", "request_approver", "buyer", "procurement_approver", "sourcing_manager", "sourcing_exec", "vendor"] }).notNull().default("requester"),
+  role: varchar("role", { enum: ["admin", "requester", "dept_approver", "buyer", "procurement_approver", "sourcing_manager", "sourcing_exec", "vendor"] }).notNull().default("requester"),
   organizationId: varchar("organization_id"),
   department: varchar("department", { length: 100 }), // For requesters - which department they belong to
   isActive: boolean("is_active").default(true),

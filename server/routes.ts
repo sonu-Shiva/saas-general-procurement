@@ -2847,7 +2847,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Sourcing queue - approved PRs ready for sourcing exec intake
-  app.get("/api/procurement-requests/sourcing-queue", authMiddleware, requireRole(['sourcing_exec', 'sourcing_manager', 'buyer_admin']), async (req, res) => {
+  app.get("/api/procurement-requests/sourcing-queue", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       // Fetch approved procurement requests that haven't been assigned to sourcing yet
       const requests = await storage.getProcurementRequestsByStatus(['approved']);
@@ -3289,7 +3289,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Sourcing queue endpoint for sourcing executives
-  app.get("/api/procurement-requests/sourcing-queue", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.get("/api/procurement-requests/sourcing-queue-v2", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       const requests = await storage.getProcurementRequestsByStatus(['request_approved']);
       res.json(requests);
