@@ -655,9 +655,10 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
     endTime: '',
     selectedVendors: [] as string[],
     selectedBomItems: [] as string[],
-    termsUrl: '',
+    termsFile: null as File | null,
   });
 
+  const [uploadingTerms, setUploadingTerms] = useState(false);
   const [editableBomItems, setEditableBomItems] = useState<{[key: string]: {quantity: number, unitPrice: number}}>({});
 
   // Fetch BOM items when a BOM is selected
@@ -747,7 +748,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
           startTime: data.startTime ? new Date(data.startTime).toISOString() : null,
           endTime: data.endTime ? new Date(data.endTime).toISOString() : null,
           status: 'scheduled',
-          termsUrl: data.termsUrl,
+          termsUrl: data.termsFile ? 'uploaded' : '',
         }),
         credentials: "include",
       });
@@ -811,7 +812,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
     }
 
     // Validate Terms & Conditions upload
-    if (!formData.termsUrl) {
+    if (!formData.termsFile) {
       toast({
         title: "Error", 
         description: "Please upload Terms & Conditions before creating the auction",
@@ -888,6 +889,13 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
       bomId: value,
       selectedBomItems: [] // Reset selected items when BOM changes
     }));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, termsFile: file }));
+    }
   };
 
   return (
@@ -1109,20 +1117,41 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
       )}
 
       {/* Terms & Conditions Upload */}
-      <div className="border rounded-lg p-4">
-        <Label className="text-base font-medium">Terms & Conditions *</Label>
-        <p className="text-sm text-muted-foreground mb-3">
+      <div className="space-y-3">
+        <Label>Terms & Conditions *</Label>
+        <p className="text-sm text-muted-foreground">
           Upload terms and conditions that vendors must accept before bidding
         </p>
-        <TermsUploader
-          onTermsUpload={(url: string) => setFormData(prev => ({ ...prev, termsUrl: url }))}
-          currentTermsUrl={formData.termsUrl}
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => document.getElementById('terms-upload')?.click()}
+            className="flex items-center gap-2"
+            data-testid="button-upload-terms"
+          >
+            <Upload className="w-4 h-4" />
+            Upload Terms & Conditions
+          </Button>
+          {formData.termsFile && (
+            <span className="text-sm text-green-600 dark:text-green-400">
+              ✓ {formData.termsFile.name}
+            </span>
+          )}
+        </div>
+        <input
+          id="terms-upload"
+          type="file"
+          accept=".pdf,.doc,.docx"
+          onChange={handleFileUpload}
+          className="hidden"
         />
       </div>
 
-      <div>
+      {/* Invite Vendors */}
+      <div className="space-y-3">
         <Label>Invite Vendors</Label>
-        <div className="grid grid-cols-2 gap-2 mt-2">
+        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
           {vendors.map((vendor: any) => (
             <div key={vendor.id} className="flex items-center space-x-2">
               <input
@@ -1130,23 +1159,27 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                 id={`vendor-${vendor.id}`}
                 checked={formData.selectedVendors.includes(vendor.id)}
                 onChange={() => handleVendorToggle(vendor.id)}
-                className="rounded"
+                className="rounded border-gray-300"
               />
-              <Label htmlFor={`vendor-${vendor.id}`} className="text-sm">
+              <Label htmlFor={`vendor-${vendor.id}`} className="text-sm cursor-pointer">
                 {vendor.companyName}
               </Label>
             </div>
           ))}
         </div>
+        <p className="text-sm text-muted-foreground">
+          Selected: {formData.selectedVendors.length} vendors
+        </p>
       </div>
 
-      <div className="flex justify-end space-x-3">
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
         <Button 
           type="submit" 
-          disabled={createAuctionMutation.isPending || !formData.termsUrl}
+          disabled={createAuctionMutation.isPending}
           data-testid="button-create-auction"
         >
           {createAuctionMutation.isPending ? "Creating..." : "Create Auction"}
