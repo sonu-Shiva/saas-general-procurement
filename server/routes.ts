@@ -1980,7 +1980,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // BOM routes
-  app.get('/api/boms', authMiddleware, requireRole('requester', 'admin'), async (req, res) => {
+  app.get('/api/boms', authMiddleware, requireRole('department_requester', 'admin'), async (req, res) => {
     try {
       const boms = await storage.getBoms();
       res.json(boms);
@@ -1990,7 +1990,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post('/api/boms', authMiddleware, requireRole('requester', 'admin'), async (req: any, res) => {
+  app.post('/api/boms', authMiddleware, requireRole('department_requester', 'admin'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -2036,7 +2036,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.put('/api/boms/:id', authMiddleware, requireRole('requester', 'admin'), async (req: any, res) => {
+  app.put('/api/boms/:id', authMiddleware, requireRole('department_requester', 'admin'), async (req: any, res) => {
     try {
       const bomId = req.params.id;
       const userId = req.user?.claims?.sub;
@@ -2060,7 +2060,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.delete('/api/boms/:id', authMiddleware, requireRole('requester', 'admin'), async (req: any, res) => {
+  app.delete('/api/boms/:id', authMiddleware, requireRole('department_requester', 'admin'), async (req: any, res) => {
     try {
       const bomId = req.params.id;
       const userId = req.user?.claims?.sub;
@@ -2682,13 +2682,13 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
           createdBy: userId,
         };
 
-        const bom = await storage.createBOM(bomData);
+        const bom = await storage.createBom(bomData);
         bomId = bom.id;
 
         // Create BOM items for manual entry
         if (data.bomLineItems && data.bomLineItems.length > 0) {
           for (const item of data.bomLineItems) {
-            await storage.createBOMItem({
+            await storage.createBomItem({
               bomId: bom.id,
               productId: item.productId || null,
               itemName: item.itemName,
