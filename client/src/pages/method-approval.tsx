@@ -67,8 +67,10 @@ export default function MethodApprovalPage() {
   };
 
   // Fetch pending sourcing events for approval
-  const { data: pendingEvents = [], isLoading } = useQuery<SourcingEvent[]>({
-    queryKey: ['/api/events/pending-approval']
+  const { data: pendingEvents = [], isLoading, error } = useQuery<SourcingEvent[]>({
+    queryKey: ['/api/events/pending-approval'],
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Process approval action
@@ -202,6 +204,33 @@ export default function MethodApprovalPage() {
             ))}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-16">
+            <div className="text-center space-y-4">
+              <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+              <div>
+                <h3 className="text-lg font-semibold">Error Loading Approval Events</h3>
+                <p className="text-muted-foreground">
+                  {error instanceof Error ? error.message : 'Failed to load pending approval events'}
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => window.location.reload()}
+                >
+                  Retry
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
