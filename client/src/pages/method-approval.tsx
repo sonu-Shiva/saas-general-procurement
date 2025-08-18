@@ -196,8 +196,8 @@ export default function MethodApproval() {
           </p>
         </div>
 
-      {/* Search */}
-      <Card>
+        {/* Search */}
+        <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="w-5 h-5" />
@@ -212,10 +212,10 @@ export default function MethodApproval() {
             data-testid="input-search-events"
           />
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-2">
@@ -268,10 +268,10 @@ export default function MethodApproval() {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
 
-      {/* Pending Events Table */}
-      <Card>
+        {/* Pending Events Table */}
+        <Card>
         <CardHeader>
           <CardTitle>Pending Method Approvals</CardTitle>
           <CardDescription>
