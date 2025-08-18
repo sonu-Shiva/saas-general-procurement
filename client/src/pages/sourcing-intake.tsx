@@ -91,9 +91,6 @@ export default function SourcingIntake() {
   const [spendEstimate, setSpendEstimate] = useState("");
   const [justification, setJustification] = useState("");
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
-  const [isRfxDialogOpen, setIsRfxDialogOpen] = useState(false);
-  const [isAuctionDialogOpen, setIsAuctionDialogOpen] = useState(false);
-  const [isDirectDialogOpen, setIsDirectDialogOpen] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -163,7 +160,7 @@ export default function SourcingIntake() {
       return;
     }
 
-    // Store PR context for the dialog components
+    // Store PR context for the creation pages
     const prContext = {
       prId: selectedPR.id,
       prNumber: selectedPR.requestNumber,
@@ -181,26 +178,25 @@ export default function SourcingIntake() {
     updatePRMethodMutation.mutate({ 
       prId: selectedPR.id, 
       method: method 
+    }, {
+      onSuccess: () => {
+        // Navigate to appropriate creation screen after successful method update
+        setTimeout(() => {
+          switch (method) {
+            case "rfx":
+              setLocation("/rfx");
+              break;
+            case "auction":
+              setLocation("/auctions");
+              break;
+            case "direct":
+              setLocation("/direct-procurement");
+              break;
+          }
+        }, 500);
+      }
     });
 
-    // Open appropriate dialog with prefilled information
-    switch (method) {
-      case "rfx":
-        setEventTitle(`RFx - ${selectedPR.title}`);
-        setEventDescription(`Request for information/quotation for ${selectedPR.description || selectedPR.title}`);
-        setIsRfxDialogOpen(true);
-        break;
-      case "auction":
-        setEventTitle(`Auction - ${selectedPR.title}`);
-        setEventDescription(`Auction for ${selectedPR.description || selectedPR.title}`);
-        setIsAuctionDialogOpen(true);
-        break;
-      case "direct":
-        setEventTitle(`Direct Procurement - ${selectedPR.title}`);
-        setEventDescription(`Direct procurement for ${selectedPR.description || selectedPR.title}`);
-        setIsDirectDialogOpen(true);
-        break;
-    }
     setIsMethodModalOpen(false);
   };
 
@@ -508,7 +504,7 @@ export default function SourcingIntake() {
           <DialogHeader>
             <DialogTitle>Select Procurement Method</DialogTitle>
             <DialogDescription>
-              Choose the appropriate procurement method. A prefilled creation dialog will open with PR details.
+              Choose the appropriate procurement method. You'll be redirected to the creation screen with PR details pre-filled.
             </DialogDescription>
           </DialogHeader>
 
@@ -567,7 +563,7 @@ export default function SourcingIntake() {
                     <span className="font-medium text-blue-900 dark:text-blue-100">Next Steps</span>
                   </div>
                   <p className="text-sm text-blue-700 dark:text-blue-300">
-                    A prefilled {selectedMethod === "rfx" ? "RFx creation" : selectedMethod === "auction" ? "auction creation" : "direct procurement"} dialog will open with the procurement request details.
+                    You will be redirected to the {selectedMethod === "rfx" ? "RFx Management" : selectedMethod === "auction" ? "Auction Center" : "Direct Procurement"} screen to create the event with the procurement request details pre-filled.
                   </p>
                 </div>
 
@@ -596,409 +592,7 @@ export default function SourcingIntake() {
         </DialogContent>
       </Dialog>
 
-      {/* RFx Creation Dialog */}
-      <Dialog open={isRfxDialogOpen} onOpenChange={setIsRfxDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create RFx Event</DialogTitle>
-            <DialogDescription>
-              Create a new RFx event with prefilled procurement request details
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            {selectedPR && (
-              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Procurement Request Context</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-blue-700 dark:text-blue-300">PR Number:</span>
-                    <span className="ml-2 font-medium">{selectedPR.requestNumber}</span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700 dark:text-blue-300">Department:</span>
-                    <span className="ml-2 font-medium">{selectedPR.department}</span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700 dark:text-blue-300">Budget:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedPR.estimatedBudget ? `₹${selectedPR.estimatedBudget.toLocaleString()}` : "N/A"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700 dark:text-blue-300">BOM Items:</span>
-                    <span className="ml-2 font-medium">{bomItems.length} items</span>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="rfx-title">Event Title *</Label>
-                <Input
-                  id="rfx-title"
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="Enter RFx event title"
-                  data-testid="input-rfx-title"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="rfx-description">Description</Label>
-                <Textarea
-                  id="rfx-description"
-                  value={eventDescription}
-                  onChange={(e) => setEventDescription(e.target.value)}
-                  placeholder="Enter event description"
-                  rows={3}
-                  data-testid="textarea-rfx-description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="rfx-spend">Spend Estimate</Label>
-                  <Input
-                    id="rfx-spend"
-                    value={spendEstimate}
-                    onChange={(e) => setSpendEstimate(e.target.value)}
-                    placeholder="Enter spend estimate"
-                    data-testid="input-rfx-spend"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="rfx-justification">Justification</Label>
-                  <Input
-                    id="rfx-justification"
-                    value={justification}
-                    onChange={(e) => setJustification(e.target.value)}
-                    placeholder="Enter justification"
-                    data-testid="input-rfx-justification"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Select Vendors *</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2">
-                  {vendors.map((vendor: any) => (
-                    <label key={vendor.id} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedVendors.includes(vendor.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedVendors([...selectedVendors, vendor.id]);
-                          } else {
-                            setSelectedVendors(selectedVendors.filter(id => id !== vendor.id));
-                          }
-                        }}
-                        className="rounded"
-                      />
-                      <span className="text-sm">{vendor.companyName}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={() => {
-                  // Navigate to RFx page with data
-                  sessionStorage.setItem('rfxFormData', JSON.stringify({
-                    title: eventTitle,
-                    description: eventDescription,
-                    spendEstimate: spendEstimate,
-                    justification: justification,
-                    selectedVendors: selectedVendors,
-                    procurementRequestId: selectedPR?.id
-                  }));
-                  setLocation("/rfx");
-                  setIsRfxDialogOpen(false);
-                }}
-                disabled={!eventTitle || selectedVendors.length === 0}
-                data-testid="button-create-rfx"
-                className="flex-1"
-              >
-                Create RFx Event
-              </Button>
-              <Button variant="outline" onClick={() => setIsRfxDialogOpen(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Auction Creation Dialog */}
-      <Dialog open={isAuctionDialogOpen} onOpenChange={setIsAuctionDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create Auction Event</DialogTitle>
-            <DialogDescription>
-              Create a new auction event with prefilled procurement request details
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            {selectedPR && (
-              <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
-                <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">Procurement Request Context</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-green-700 dark:text-green-300">PR Number:</span>
-                    <span className="ml-2 font-medium">{selectedPR.requestNumber}</span>
-                  </div>
-                  <div>
-                    <span className="text-green-700 dark:text-green-300">Department:</span>
-                    <span className="ml-2 font-medium">{selectedPR.department}</span>
-                  </div>
-                  <div>
-                    <span className="text-green-700 dark:text-green-300">Budget:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedPR.estimatedBudget ? `₹${selectedPR.estimatedBudget.toLocaleString()}` : "N/A"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-green-700 dark:text-green-300">BOM Items:</span>
-                    <span className="ml-2 font-medium">{bomItems.length} items</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="auction-title">Event Title *</Label>
-                <Input
-                  id="auction-title"
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="Enter auction title"
-                  data-testid="input-auction-title"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="auction-description">Description</Label>
-                <Textarea
-                  id="auction-description"
-                  value={eventDescription}
-                  onChange={(e) => setEventDescription(e.target.value)}
-                  placeholder="Enter auction description"
-                  rows={3}
-                  data-testid="textarea-auction-description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="auction-spend">Starting Price</Label>
-                  <Input
-                    id="auction-spend"
-                    value={spendEstimate}
-                    onChange={(e) => setSpendEstimate(e.target.value)}
-                    placeholder="Enter starting price"
-                    data-testid="input-auction-starting-price"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="auction-justification">Justification</Label>
-                  <Input
-                    id="auction-justification"
-                    value={justification}
-                    onChange={(e) => setJustification(e.target.value)}
-                    placeholder="Enter justification"
-                    data-testid="input-auction-justification"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Select Vendors *</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2">
-                  {vendors.map((vendor: any) => (
-                    <label key={vendor.id} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedVendors.includes(vendor.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedVendors([...selectedVendors, vendor.id]);
-                          } else {
-                            setSelectedVendors(selectedVendors.filter(id => id !== vendor.id));
-                          }
-                        }}
-                        className="rounded"
-                      />
-                      <span className="text-sm">{vendor.companyName}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={() => {
-                  // Navigate to auction page with data
-                  sessionStorage.setItem('auctionFormData', JSON.stringify({
-                    title: eventTitle,
-                    description: eventDescription,
-                    startingPrice: spendEstimate,
-                    justification: justification,
-                    selectedVendors: selectedVendors,
-                    procurementRequestId: selectedPR?.id
-                  }));
-                  setLocation("/auctions");
-                  setIsAuctionDialogOpen(false);
-                }}
-                disabled={!eventTitle || selectedVendors.length === 0}
-                data-testid="button-create-auction"
-                className="flex-1"
-              >
-                Create Auction Event
-              </Button>
-              <Button variant="outline" onClick={() => setIsAuctionDialogOpen(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Direct Procurement Dialog */}
-      <Dialog open={isDirectDialogOpen} onOpenChange={setIsDirectDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create Direct Procurement</DialogTitle>
-            <DialogDescription>
-              Create a direct procurement order with prefilled procurement request details
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            {selectedPR && (
-              <div className="bg-orange-50 dark:bg-orange-950 p-4 rounded-lg">
-                <h4 className="font-medium text-orange-900 dark:text-orange-100 mb-2">Procurement Request Context</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-orange-700 dark:text-orange-300">PR Number:</span>
-                    <span className="ml-2 font-medium">{selectedPR.requestNumber}</span>
-                  </div>
-                  <div>
-                    <span className="text-orange-700 dark:text-orange-300">Department:</span>
-                    <span className="ml-2 font-medium">{selectedPR.department}</span>
-                  </div>
-                  <div>
-                    <span className="text-orange-700 dark:text-orange-300">Budget:</span>
-                    <span className="ml-2 font-medium">
-                      {selectedPR.estimatedBudget ? `₹${selectedPR.estimatedBudget.toLocaleString()}` : "N/A"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-orange-700 dark:text-orange-300">BOM Items:</span>
-                    <span className="ml-2 font-medium">{bomItems.length} items</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="direct-title">Order Title *</Label>
-                <Input
-                  id="direct-title"
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="Enter order title"
-                  data-testid="input-direct-title"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="direct-description">Description</Label>
-                <Textarea
-                  id="direct-description"
-                  value={eventDescription}
-                  onChange={(e) => setEventDescription(e.target.value)}
-                  placeholder="Enter order description"
-                  rows={3}
-                  data-testid="textarea-direct-description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="direct-amount">Order Amount</Label>
-                  <Input
-                    id="direct-amount"
-                    value={spendEstimate}
-                    onChange={(e) => setSpendEstimate(e.target.value)}
-                    placeholder="Enter order amount"
-                    data-testid="input-direct-amount"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="direct-justification">Justification *</Label>
-                  <Input
-                    id="direct-justification"
-                    value={justification}
-                    onChange={(e) => setJustification(e.target.value)}
-                    placeholder="Enter justification for direct procurement"
-                    data-testid="input-direct-justification"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Select Vendor *</Label>
-                <Select value={selectedVendors[0] || ""} onValueChange={(value) => setSelectedVendors([value])}>
-                  <SelectTrigger data-testid="select-direct-vendor">
-                    <SelectValue placeholder="Select a vendor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vendors.map((vendor: any) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.companyName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={() => {
-                  // Navigate to direct procurement page with data
-                  sessionStorage.setItem('directFormData', JSON.stringify({
-                    title: eventTitle,
-                    description: eventDescription,
-                    orderAmount: spendEstimate,
-                    justification: justification,
-                    selectedVendor: selectedVendors[0],
-                    procurementRequestId: selectedPR?.id
-                  }));
-                  setLocation("/direct-procurement");
-                  setIsDirectDialogOpen(false);
-                }}
-                disabled={!eventTitle || !justification || selectedVendors.length === 0}
-                data-testid="button-create-direct"
-                className="flex-1"
-              >
-                Create Direct Order
-              </Button>
-              <Button variant="outline" onClick={() => setIsDirectDialogOpen(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

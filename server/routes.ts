@@ -2912,16 +2912,16 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       // Check if request is in correct status for method selection
-      if (!['request_approved', 'procurement_approved'].includes(request.overallStatus)) {
+      if (!['request_approved', 'procurement_method_pending', 'procurement_approved'].includes(request.overallStatus)) {
         return res.status(400).json({ 
           message: "Procurement method can only be set for approved requests" 
         });
       }
 
-      // Check if procurement method is already set
-      if (request.procurementMethod && request.procurementMethod !== 'null') {
+      // Allow method updates only if no sourcing event has been created yet
+      if (request.procurementMethod && request.procurementMethod !== 'null' && request.sourcingEventId) {
         return res.status(400).json({ 
-          message: "Procurement method has already been set for this request" 
+          message: "Cannot change procurement method - sourcing event already created" 
         });
       }
 
