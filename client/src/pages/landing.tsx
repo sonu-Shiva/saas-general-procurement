@@ -153,7 +153,7 @@ export default function Landing() {
               <div className="text-muted-foreground">Registered Vendors</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-accent">$2.5B</div>
+              <div className="text-3xl font-bold text-accent">₹2.5B</div>
               <div className="text-muted-foreground">Procurement Volume</div>
             </div>
             <div>

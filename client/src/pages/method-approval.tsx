@@ -177,7 +177,7 @@ export default function MethodApproval() {
     if (event.type === "DIRECT_PO") {
       const spendAmount = event.spendEstimate ? parseFloat(event.spendEstimate) : 0;
       if (spendAmount > 100000) {
-        issues.push("Direct PO not allowed for amounts > $100K. RFx or Auction required.");
+        issues.push("Direct PO not allowed for amounts > ₹100K. RFx or Auction required.");
       }
       if (!event.justification) {
         issues.push("Business justification required for Direct PO.");

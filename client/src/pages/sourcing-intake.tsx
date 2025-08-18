@@ -265,7 +265,7 @@ export default function SourcingIntake() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Est. Value</p>
                 <p className="text-2xl font-bold">
-                  ${filteredRequests.reduce((sum, pr) => sum + (pr.estimatedBudget || 0), 0).toLocaleString()}
+                  ₹{filteredRequests.reduce((sum, pr) => sum + (pr.estimatedBudget || 0), 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -344,7 +344,7 @@ export default function SourcingIntake() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {pr.estimatedBudget ? `$${pr.estimatedBudget.toLocaleString()}` : "N/A"}
+                      {pr.estimatedBudget ? `₹${pr.estimatedBudget.toLocaleString()}` : "N/A"}
                     </TableCell>
                     <TableCell>
                       {format(parseISO(pr.requestedDeliveryDate), "MMM d, yyyy")}
