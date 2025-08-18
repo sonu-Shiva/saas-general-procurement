@@ -200,7 +200,7 @@ export default function SourcingIntake() {
     setIsMethodModalOpen(false);
   };
 
-  const filteredRequests = procurementRequests.filter((pr: ProcurementRequest) =>
+  const filteredRequests = (procurementRequests as ProcurementRequest[]).filter((pr: ProcurementRequest) =>
     pr.requestNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
     pr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     pr.department.toLowerCase().includes(searchQuery.toLowerCase())
@@ -470,7 +470,7 @@ export default function SourcingIntake() {
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <Package className="w-5 h-5" />
-                    BOM Items ({bomItems.length})
+                    BOM Items ({(bomItems as BOMItem[]).length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -485,7 +485,7 @@ export default function SourcingIntake() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bomItems.map((item: BOMItem) => (
+                      {(bomItems as BOMItem[]).map((item: BOMItem) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.itemName}</TableCell>
                           <TableCell>{item.quantity} {item.uom}</TableCell>
