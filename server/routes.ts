@@ -2712,7 +2712,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         description: data.notes || null,
         department: data.department,
         bomId: bomId,
-        priority: data.urgency?.toLowerCase() || 'normal',
+        priority: data.urgency || 'medium',
         requestedBy: userId,
         requestedDeliveryDate: new Date(data.needByDate),
         justification: data.notes || null,

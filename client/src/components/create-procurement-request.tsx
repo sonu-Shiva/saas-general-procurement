@@ -61,7 +61,7 @@ interface CreateProcurementRequestFormData {
   title: string;
   department: string;
   needByDate: string;
-  urgency: "NORMAL" | "HIGH" | "CRITICAL";
+  urgency: "low" | "medium" | "high" | "urgent";
   budgetCode?: string;
   notes?: string;
   bomLineItems: BOMLineItem[];
@@ -80,7 +80,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
     title: "",
     department: "",
     needByDate: "",
-    urgency: "NORMAL",
+    urgency: "medium",
     budgetCode: "",
     notes: "",
     bomLineItems: [],
@@ -178,7 +178,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
       title: "",
       department: user?.department || "",
       needByDate: "",
-      urgency: "NORMAL",
+      urgency: "medium",
       budgetCode: "",
       notes: "",
       bomLineItems: [],
@@ -490,9 +490,10 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="NORMAL">Normal</SelectItem>
-                    <SelectItem value="HIGH">High</SelectItem>
-                    <SelectItem value="CRITICAL">Critical</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -858,8 +859,8 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                   <div>
                     <span className="font-medium">Urgency:</span> 
                     <Badge className={`ml-2 ${
-                      formData.urgency === "CRITICAL" ? "bg-red-100 text-red-800" :
-                      formData.urgency === "HIGH" ? "bg-orange-100 text-orange-800" :
+                      formData.urgency === "urgent" ? "bg-red-100 text-red-800" :
+                      formData.urgency === "high" ? "bg-orange-100 text-orange-800" :
                       "bg-green-100 text-green-800"
                     }`}>
                       {formData.urgency}
