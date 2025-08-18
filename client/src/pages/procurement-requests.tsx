@@ -258,64 +258,60 @@ export default function ProcurementRequests() {
   const queryClient = useQueryClient();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
-            {isRequester ? "My Requests" : "Procurement Requests"}
-          </h1>
-          <p className="text-muted-foreground">
-            {isRequester 
-              ? "Track and manage your procurement requests"
-              : "Manage procurement requests through the 5-step approval workflow"
-            }
-          </p>
-        </div>
-        
-        <div className="flex gap-2">
-          {isRequester && (
-            <div className="flex gap-2">
-              <Button
-                variant={viewMode === "table" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                data-testid="button-table-view"
-              >
-                Table
-              </Button>
-              <Button
-                variant={viewMode === "cards" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("cards")}
-                data-testid="button-cards-view"
-              >
-                Cards
-              </Button>
-            </div>
-          )}
-          {canCreateRequests && (
-            <CreateProcurementRequestDialog
-              trigger={
-                <Button data-testid="button-create-request">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Request
-                </Button>
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isRequester ? "My Requests" : "Procurement Requests"}
+            </h1>
+            <p className="text-muted-foreground">
+              {isRequester 
+                ? "Track and manage your procurement requests"
+                : "Manage procurement requests through the 5-step approval workflow"
               }
-            />
-          )}
+            </p>
+          </div>
+          
+          <div className="flex gap-2">
+            {isRequester && (
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === "table" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                  data-testid="button-table-view"
+                >
+                  Table
+                </Button>
+                <Button
+                  variant={viewMode === "cards" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("cards")}
+                  data-testid="button-cards-view"
+                >
+                  Cards
+                </Button>
+              </div>
+            )}
+            {canCreateRequests && (
+              <CreateProcurementRequestDialog
+                trigger={
+                  <Button data-testid="button-create-request">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Request
+                  </Button>
+                }
+              />
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Enhanced Filters */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
-            <Filter className="w-4 h-4" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+        {/* Search and Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {/* Search */}
             <div className="md:col-span-2">
               <Label htmlFor="search">Search</Label>
@@ -604,6 +600,7 @@ export default function ProcurementRequests() {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );
