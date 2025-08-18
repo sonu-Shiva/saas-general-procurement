@@ -12,6 +12,12 @@ import {
   Gavel,
   CheckCircle,
   Users,
+  ClipboardCheck,
+  Layers,
+  Target,
+  ShoppingCart,
+  BarChart3,
+  Package,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -46,56 +52,126 @@ export default function Dashboard() {
     );
   }
 
+  const userRole = (user as any)?.role;
+
+  // Role-based dashboard configurations
+  const getDashboardConfig = (role: string) => {
+    switch (role) {
+      case 'department_requester':
+        return {
+          title: 'Requester Dashboard',
+          subtitle: 'Create and track your procurement requests',
+          quickActions: [
+            { label: 'Create Request', href: '/procurement-requests', icon: FileText, variant: 'default' as const },
+            { label: 'My Requests', href: '/procurement-requests', icon: ClipboardCheck, variant: 'outline' as const },
+            { label: 'Create BOM', href: '/boms', icon: Layers, variant: 'outline' as const },
+          ]
+        };
+      
+      case 'dept_approver':
+        return {
+          title: 'Approver Dashboard',
+          subtitle: 'Review and approve procurement requests from your department',
+          quickActions: [
+            { label: 'Pending Approvals', href: '/procurement-requests', icon: CheckCircle, variant: 'default' as const },
+            { label: 'All Requests', href: '/procurement-requests', icon: FileText, variant: 'outline' as const },
+          ]
+        };
+      
+      case 'sourcing_exec':
+        return {
+          title: 'Sourcing Executive Dashboard',
+          subtitle: 'Manage vendor relationships and coordinate procurement events',
+          quickActions: [
+            { label: 'Sourcing Intake', href: '/sourcing-intake', icon: Target, variant: 'default' as const },
+            { label: 'New RFx', href: '/rfx', icon: FileText, variant: 'default' as const },
+            { label: 'Create Auction', href: '/auctions', icon: Gavel, variant: 'default' as const },
+            { label: 'Direct PO', href: '/direct-procurement', icon: ShoppingCart, variant: 'default' as const },
+            { label: 'Vendor Management', href: '/vendors', icon: Users, variant: 'outline' as const },
+          ]
+        };
+      
+      case 'sourcing_manager':
+        return {
+          title: 'Sourcing Manager Dashboard',
+          subtitle: 'Approve methods, oversee procurement strategy, and manage purchase orders',
+          quickActions: [
+            { label: 'Method Approval', href: '/method-approval', icon: CheckCircle, variant: 'default' as const },
+            { label: 'Purchase Orders', href: '/purchase-orders', icon: FileText, variant: 'default' as const },
+            { label: 'Analytics', href: '/analytics', icon: BarChart3, variant: 'outline' as const },
+          ]
+        };
+      
+      case 'buyer_admin':
+        return {
+          title: 'Admin Dashboard',
+          subtitle: 'Configure system settings, manage users, and oversee all procurement activities',
+          quickActions: [
+            { label: 'Product Catalogue', href: '/products', icon: Package, variant: 'default' as const },
+            { label: 'Vendor Management', href: '/vendors', icon: Users, variant: 'default' as const },
+            { label: 'Analytics', href: '/analytics', icon: BarChart3, variant: 'default' as const },
+            { label: 'All Requests', href: '/procurement-requests', icon: ClipboardCheck, variant: 'outline' as const },
+          ]
+        };
+      
+      case 'vendor':
+        return {
+          title: 'Vendor Portal',
+          subtitle: 'Manage your product catalogue and participate in RFx processes',
+          quickActions: [
+            { label: 'RFx Invitations', href: '/vendor-portal', icon: FileText, variant: 'default' as const },
+            { label: 'My Auctions', href: '/auctions', icon: Gavel, variant: 'default' as const },
+            { label: 'Purchase Orders', href: '/purchase-orders', icon: FileText, variant: 'default' as const },
+            { label: 'Product Catalogue', href: '/products', icon: Package, variant: 'outline' as const },
+          ]
+        };
+      
+      default:
+        return {
+          title: 'Procurement Dashboard',
+          subtitle: 'Welcome to the SCLEN Procurement Platform',
+          quickActions: []
+        };
+    }
+  };
+
+  const config = getDashboardConfig(userRole);
+
   return (
     <div className="p-6">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
-          Procurement Dashboard
-        </h1>
-        <p className="text-muted-foreground">
-          Welcome back, {(user as any)?.firstName || "User"}! Here's your procurement overview.
-        </p>
-      </div>
-
-      {/* Quick Actions */}
-      {(user as any)?.role !== 'vendor' && (
+      <div className="max-w-7xl mx-auto">
+        {/* Role-based Header */}
         <div className="mb-8">
-          <div className="flex flex-wrap gap-4">
-            <Button 
-              className="bg-primary hover:bg-primary/90"
-              onClick={() => setLocation('/rfx')}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              New RFx
-            </Button>
-            <Button 
-              className="bg-secondary hover:bg-secondary/90"
-              onClick={() => setLocation('/auctions')}
-            >
-              <Gavel className="w-4 h-4 mr-2" />
-              Create Auction
-            </Button>
-            <Button 
-              className="bg-accent hover:bg-accent/90"
-              onClick={() => setLocation('/direct-procurement')}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Direct PO
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => setLocation('/vendor-discovery')}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              AI Vendor Discovery
-            </Button>
-          </div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            {config.title}
+          </h1>
+          <p className="text-muted-foreground">
+            Welcome back, {(user as any)?.firstName || "User"}! {config.subtitle}
+          </p>
         </div>
-      )}
 
-      {/* Dashboard Cards */}
-      <DashboardCards stats={dashboardStats as any} isLoading={statsLoading || !dashboardStats} />
+        {/* Role-based Quick Actions */}
+        {config.quickActions.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+            <div className="flex flex-wrap gap-4">
+              {config.quickActions.map((action, index) => (
+                <Button 
+                  key={index}
+                  variant={action.variant}
+                  onClick={() => setLocation(action.href)}
+                  data-testid={`button-${action.label.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  <action.icon className="w-4 h-4 mr-2" />
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Role-filtered Dashboard Cards */}
+        <DashboardCards stats={dashboardStats as any} isLoading={statsLoading || !dashboardStats} userRole={userRole} />
 
       {/* Recent RFx Status Table */}
       <Card className="mt-8">
@@ -153,9 +229,10 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* AI Chat Widget */}
-      <div className="mt-8">
-        <AiChat />
+        {/* AI Chat Widget */}
+        <div className="mt-8">
+          <AiChat />
+        </div>
       </div>
     </div>
   );

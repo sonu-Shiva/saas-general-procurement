@@ -14,9 +14,24 @@ import type { DashboardStats } from "@/types";
 interface DashboardCardsProps {
   stats?: DashboardStats;
   isLoading?: boolean;
+  userRole?: string;
 }
 
-export default function DashboardCards({ stats, isLoading }: DashboardCardsProps) {
+export default function DashboardCards({ stats, isLoading, userRole }: DashboardCardsProps) {
+  // Role-based card filtering
+  const getVisibleCards = (role: string | undefined) => {
+    const allCards = [
+      { key: 'totalVendors', roles: ['sourcing_exec', 'buyer_admin', 'sourcing_manager'] },
+      { key: 'totalProducts', roles: ['buyer_admin', 'department_requester', 'vendor'] },
+      { key: 'totalPOs', roles: ['sourcing_exec', 'sourcing_manager', 'buyer_admin'] },
+      { key: 'totalRfx', roles: ['sourcing_exec', 'sourcing_manager'] }
+    ];
+    
+    if (!role) return allCards.map(card => card.key);
+    return allCards.filter(card => card.roles.includes(role)).map(card => card.key);
+  };
+  
+  const visibleCards = getVisibleCards(userRole);
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
