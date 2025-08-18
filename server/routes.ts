@@ -850,7 +850,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Vendor routes
-  app.get('/api/vendors', authMiddleware, requireRole('buyer', 'admin'), async (req, res) => {
+  app.get('/api/vendors', authMiddleware, requireRole('buyer', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       const vendors = await storage.getVendors();
       res.json(vendors);
@@ -860,7 +860,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post('/api/vendors', authMiddleware, requireRole('buyer', 'admin'), async (req, res) => {
+  app.post('/api/vendors', authMiddleware, requireRole('buyer', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       const vendor = await storage.createVendor(req.body);
       res.json(vendor);
@@ -1980,7 +1980,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // BOM routes
-  app.get('/api/boms', authMiddleware, requireRole('department_requester', 'admin'), async (req, res) => {
+  app.get('/api/boms', authMiddleware, requireRole('department_requester', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       const boms = await storage.getBoms();
       res.json(boms);
@@ -2912,9 +2912,16 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       // Check if request is in correct status for method selection
-      if (request.overallStatus !== 'request_approved') {
+      if (!['request_approved', 'procurement_approved'].includes(request.overallStatus)) {
         return res.status(400).json({ 
           message: "Procurement method can only be set for approved requests" 
+        });
+      }
+
+      // Check if procurement method is already set
+      if (request.procurementMethod && request.procurementMethod !== 'null') {
+        return res.status(400).json({ 
+          message: "Procurement method has already been set for this request" 
         });
       }
 
@@ -3357,7 +3364,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.get("/api/sourcing-events/pending", authMiddleware, requireRole('sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.get("/api/sourcing-events/pending", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
     try {
       const events = await storage.getSourcingEventsByStatus(['PENDING_SM_APPROVAL']);
       res.json(events);
