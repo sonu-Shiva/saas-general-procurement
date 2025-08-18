@@ -220,10 +220,10 @@ export default function SourcingIntake() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Sourcing Intake</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Sourcing Intake</h1>
           <p className="text-muted-foreground">
             Review approved procurement requests and select procurement methods
           </p>
@@ -232,22 +232,23 @@ export default function SourcingIntake() {
 
       {/* Search and Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <Search className="w-5 h-5" />
             Search & Filter
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="search">Search PRs</Label>
+        <CardContent className="pt-0">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="search" className="text-sm font-medium">Search PRs</Label>
               <Input
                 id="search"
                 placeholder="Search by PR number, title, or department..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 data-testid="input-search-prs"
+                className="mt-1"
               />
             </div>
           </div>
@@ -257,10 +258,12 @@ export default function SourcingIntake() {
       {/* Queue Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-orange-500" />
-              <div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Awaiting Method Selection</p>
                 <p className="text-2xl font-bold">{filteredRequests.length}</p>
               </div>
@@ -268,10 +271,12 @@ export default function SourcingIntake() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <IndianRupee className="w-5 h-5 text-green-500" />
-              <div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <IndianRupee className="w-4 h-4 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Total Est. Value</p>
                 <p className="text-2xl font-bold">
                   ₹{filteredRequests.reduce((sum, pr) => sum + (pr.estimatedBudget || 0), 0).toLocaleString()}
@@ -281,10 +286,12 @@ export default function SourcingIntake() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-500" />
-              <div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Urgent Priority</p>
                 <p className="text-2xl font-bold">
                   {filteredRequests.filter(pr => pr.priority === "urgent").length}
@@ -294,10 +301,12 @@ export default function SourcingIntake() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-purple-500" />
-              <div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                <Building2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Departments</p>
                 <p className="text-2xl font-bold">
                   {new Set(filteredRequests.map(pr => pr.department)).size}
@@ -310,13 +319,13 @@ export default function SourcingIntake() {
 
       {/* Procurement Requests Queue */}
       <Card>
-        <CardHeader>
-          <CardTitle>Approved Procurement Requests Queue</CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Approved Procurement Requests Queue</CardTitle>
           <CardDescription>
             Select procurement methods for approved requests
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {isLoading ? (
             <div className="text-center py-8">Loading procurement requests...</div>
           ) : filteredRequests.length === 0 ? (
@@ -397,8 +406,8 @@ export default function SourcingIntake() {
       {/* PR Details Modal */}
       <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Procurement Request Details</DialogTitle>
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl">Procurement Request Details</DialogTitle>
             <DialogDescription>
               Review the full details of the procurement request
             </DialogDescription>
@@ -408,13 +417,13 @@ export default function SourcingIntake() {
             <div className="space-y-6">
               {/* Basic Info */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <FileText className="w-5 h-5" />
                     Request Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-0">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>PR Number</Label>
@@ -458,13 +467,13 @@ export default function SourcingIntake() {
 
               {/* BOM Items */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <Package className="w-5 h-5" />
                     BOM Items ({bomItems.length})
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -501,8 +510,8 @@ export default function SourcingIntake() {
       {/* Method Selection Modal */}
       <Dialog open={isMethodModalOpen} onOpenChange={setIsMethodModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Select Procurement Method</DialogTitle>
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl">Select Procurement Method</DialogTitle>
             <DialogDescription>
               Choose the appropriate procurement method. The creation form will open with PR details pre-filled.
             </DialogDescription>
@@ -511,7 +520,7 @@ export default function SourcingIntake() {
           <div className="space-y-6">
             {/* Method Selection */}
             <div className="space-y-4">
-              <Label>Procurement Method *</Label>
+              <Label className="text-sm font-medium">Procurement Method *</Label>
               <div className="grid grid-cols-3 gap-4">
                 <Card 
                   className={`cursor-pointer transition-colors ${
@@ -595,15 +604,15 @@ export default function SourcingIntake() {
       {/* Create Form Dialog */}
       <Dialog open={isCreateFormDialogOpen} onOpenChange={setIsCreateFormDialogOpen}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl">
               Create {selectedMethodType === "rfx" ? "RFx Event" : selectedMethodType === "auction" ? "Auction Event" : "Direct Procurement"}
             </DialogTitle>
             <DialogDescription>
               Create a new {selectedMethodType} event with prefilled data from PR: {selectedPR?.requestNumber}
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+          <div className="overflow-y-auto max-h-[calc(90vh-120px)] pt-0">
             {selectedMethodType === "auction" && selectedPR && (
               <CreateAuctionFormEmbedded 
                 procurementRequest={selectedPR}
