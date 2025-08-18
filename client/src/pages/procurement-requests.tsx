@@ -258,7 +258,7 @@ export default function ProcurementRequests() {
   const queryClient = useQueryClient();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">
@@ -308,14 +308,14 @@ export default function ProcurementRequests() {
 
       {/* Enhanced Filters */}
       <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="w-5 h-5" />
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+            <Filter className="w-4 h-4" />
             Filters
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {/* Search */}
             <div className="md:col-span-2">
               <Label htmlFor="search">Search</Label>
