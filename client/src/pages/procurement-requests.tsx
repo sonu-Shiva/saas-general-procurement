@@ -257,120 +257,137 @@ export default function ProcurementRequests() {
 
   const queryClient = useQueryClient();
 
-  // Calculate statistics for the dashboard
-  const totalRequests = requests.length;
-  const pendingRequests = requests.filter(r => r.overallStatus === 'request_approval_pending' || r.overallStatus === 'procurement_method_pending').length;
-  const approvedRequests = requests.filter(r => r.overallStatus === 'request_approved' || r.overallStatus === 'procurement_approved').length;
-  const rejectedRequests = requests.filter(r => r.overallStatus === 'rejected').length;
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Procurement Requests</h1>
+          <h1 className="text-3xl font-bold">
+            {isRequester ? "My Requests" : "Procurement Requests"}
+          </h1>
           <p className="text-muted-foreground">
-            Manage procurement requests through the 5-step approval workflow
+            {isRequester 
+              ? "Track and manage your procurement requests"
+              : "Manage procurement requests through the 5-step approval workflow"
+            }
           </p>
         </div>
         
-        {canCreateRequests && (
-          <CreateProcurementRequestDialog
-            trigger={
-              <Button data-testid="button-create-request">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Request
+        <div className="flex gap-2">
+          {isRequester && (
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "table" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                data-testid="button-table-view"
+              >
+                Table
               </Button>
-            }
-          />
-        )}
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Total PRs</p>
-                <p className="text-3xl font-bold">{totalRequests}</p>
-              </div>
-              <Package className="h-8 w-8 text-blue-500" />
+              <Button
+                variant={viewMode === "cards" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("cards")}
+                data-testid="button-cards-view"
+              >
+                Cards
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Pending Approval</p>
-                <p className="text-3xl font-bold">{pendingRequests}</p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Approved</p>
-                <p className="text-3xl font-bold">{approvedRequests}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">Rejected</p>
-                <p className="text-3xl font-bold">{rejectedRequests}</p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Status Tabs Navigation */}
-      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="space-y-4">
-        <div className="flex items-center justify-between">
-          <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full max-w-4xl">
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              All ({totalRequests})
-            </TabsTrigger>
-            <TabsTrigger value="request_approval_pending" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Pending ({requests.filter(r => r.overallStatus === 'request_approval_pending').length})
-            </TabsTrigger>
-            <TabsTrigger value="request_approved" className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Approved ({requests.filter(r => r.overallStatus === 'request_approved').length})
-            </TabsTrigger>
-            <TabsTrigger value="rejected" className="flex items-center gap-2">
-              <XCircle className="h-4 w-4" />
-              Rejected ({rejectedRequests})
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by PR number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 w-64"
-              data-testid="input-search"
+          )}
+          {canCreateRequests && (
+            <CreateProcurementRequestDialog
+              trigger={
+                <Button data-testid="button-create-request">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Request
+                </Button>
+              }
             />
-          </div>
+          )}
         </div>
+      </div>
 
-        <TabsContent value={statusFilter} className="space-y-4">
+      {/* Enhanced Filters */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {/* Search */}
+            <div className="md:col-span-2">
+              <Label htmlFor="search">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Search PR#, title, department..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                  data-testid="input-search"
+                />
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <Label htmlFor="status-filter">Status</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger id="status-filter">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="request_approval_pending">Submitted</SelectItem>
+                  <SelectItem value="request_approved">Request Approved</SelectItem>
+                  <SelectItem value="procurement_method_pending">Procurement Pending</SelectItem>
+                  <SelectItem value="procurement_approved">Procurement Approved</SelectItem>
+                  <SelectItem value="in_procurement">In Procurement</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Priority Filter */}
+            <div>
+              <Label htmlFor="priority-filter">Priority</Label>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger id="priority-filter">
+                  <SelectValue placeholder="All Priorities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Department Filter */}
+            <div>
+              <Label htmlFor="department-filter">Department</Label>
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger id="department-filter">
+                  <SelectValue placeholder="All Departments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Requests Display */}
       <div className="space-y-4">
