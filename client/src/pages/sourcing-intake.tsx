@@ -91,6 +91,8 @@ export default function SourcingIntake() {
   const [spendEstimate, setSpendEstimate] = useState("");
   const [justification, setJustification] = useState("");
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
+  const [isCreateFormDialogOpen, setIsCreateFormDialogOpen] = useState(false);
+  const [selectedMethodType, setSelectedMethodType] = useState<"rfx" | "auction" | "direct" | null>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -180,20 +182,11 @@ export default function SourcingIntake() {
       method: method 
     }, {
       onSuccess: () => {
-        // Navigate to appropriate creation screen after successful method update
+        // Open the appropriate dialog with prefilled data
         setTimeout(() => {
-          switch (method) {
-            case "rfx":
-              setLocation("/rfx");
-              break;
-            case "auction":
-              setLocation("/auctions");
-              break;
-            case "direct":
-              setLocation("/direct-procurement");
-              break;
-          }
-        }, 500);
+          setSelectedMethodType(method);
+          setIsCreateFormDialogOpen(true);
+        }, 100);
       }
     });
 
@@ -504,7 +497,7 @@ export default function SourcingIntake() {
           <DialogHeader>
             <DialogTitle>Select Procurement Method</DialogTitle>
             <DialogDescription>
-              Choose the appropriate procurement method. You'll be redirected to the creation screen with PR details pre-filled.
+              Choose the appropriate procurement method. The creation form will open with PR details pre-filled.
             </DialogDescription>
           </DialogHeader>
 
@@ -563,7 +556,7 @@ export default function SourcingIntake() {
                     <span className="font-medium text-blue-900 dark:text-blue-100">Next Steps</span>
                   </div>
                   <p className="text-sm text-blue-700 dark:text-blue-300">
-                    You will be redirected to the {selectedMethod === "rfx" ? "RFx Management" : selectedMethod === "auction" ? "Auction Center" : "Direct Procurement"} screen to create the event with the procurement request details pre-filled.
+                    A creation form will open with the procurement request details pre-filled for easy {selectedMethod === "rfx" ? "RFx" : selectedMethod === "auction" ? "auction" : "direct procurement"} event creation.
                   </p>
                 </div>
 
@@ -592,7 +585,776 @@ export default function SourcingIntake() {
         </DialogContent>
       </Dialog>
 
+      {/* Create Form Dialog */}
+      <Dialog open={isCreateFormDialogOpen} onOpenChange={setIsCreateFormDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>
+              Create {selectedMethodType === "rfx" ? "RFx Event" : selectedMethodType === "auction" ? "Auction Event" : "Direct Procurement"}
+            </DialogTitle>
+            <DialogDescription>
+              Create a new {selectedMethodType} event with prefilled data from PR: {selectedPR?.requestNumber}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+            {selectedMethodType === "auction" && selectedPR && (
+              <CreateAuctionFormEmbedded 
+                procurementRequest={selectedPR}
+                bomItems={bomItems}
+                vendors={vendors}
+                onClose={() => {
+                  setIsCreateFormDialogOpen(false);
+                  setSelectedMethodType(null);
+                }}
+                onSuccess={() => {
+                  setIsCreateFormDialogOpen(false);
+                  setSelectedMethodType(null);
+                  queryClient.invalidateQueries({ queryKey: ["/api/procurement-requests/sourcing-queue"] });
+                  toast({
+                    title: "Success",
+                    description: "Auction created successfully from procurement request",
+                  });
+                }}
+              />
+            )}
+            {selectedMethodType === "rfx" && selectedPR && (
+              <CreateRfxFormEmbedded 
+                procurementRequest={selectedPR}
+                bomItems={bomItems}
+                vendors={vendors}
+                onClose={() => {
+                  setIsCreateFormDialogOpen(false);
+                  setSelectedMethodType(null);
+                }}
+                onSuccess={() => {
+                  setIsCreateFormDialogOpen(false);
+                  setSelectedMethodType(null);
+                  queryClient.invalidateQueries({ queryKey: ["/api/procurement-requests/sourcing-queue"] });
+                  toast({
+                    title: "Success",
+                    description: "RFx event created successfully from procurement request",
+                  });
+                }}
+              />
+            )}
+            {selectedMethodType === "direct" && selectedPR && (
+              <CreateDirectProcurementFormEmbedded 
+                procurementRequest={selectedPR}
+                bomItems={bomItems}
+                vendors={vendors}
+                onClose={() => {
+                  setIsCreateFormDialogOpen(false);
+                  setSelectedMethodType(null);
+                }}
+                onSuccess={() => {
+                  setIsCreateFormDialogOpen(false);
+                  setSelectedMethodType(null);
+                  queryClient.invalidateQueries({ queryKey: ["/api/procurement-requests/sourcing-queue"] });
+                  toast({
+                    title: "Success",
+                    description: "Direct procurement created successfully from procurement request",
+                  });
+                }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
+  );
+}
+
+// Embedded form components with prefilled data from PR context
+
+// Create Auction Form with prefilled data
+function CreateAuctionFormEmbedded({ procurementRequest, bomItems, vendors, onClose, onSuccess }: any) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [formData, setFormData] = useState({
+    name: `Auction for ${procurementRequest.title} (${procurementRequest.requestNumber})`,
+    description: procurementRequest.description || `Reverse auction for procurement request: ${procurementRequest.title}`,
+    bomId: procurementRequest.bomId,
+    ceilingPrice: procurementRequest.estimatedBudget || '',
+    startTime: '',
+    endTime: '',
+    selectedVendors: [] as string[],
+    selectedBomItems: bomItems.map((item: any) => item.id) || [],
+    termsUrl: '',
+  });
+
+  const [editableBomItems, setEditableBomItems] = useState<{[key: string]: {quantity: number, unitPrice: number}}>({});
+
+  const createAuctionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/auctions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          description: data.description,
+          bomId: data.bomId || null,
+          selectedBomItems: data.selectedBomItems || [],
+          selectedVendors: data.selectedVendors || [],
+          reservePrice: data.ceilingPrice,
+          startTime: data.startTime ? new Date(data.startTime).toISOString() : null,
+          endTime: data.endTime ? new Date(data.endTime).toISOString() : null,
+          status: 'scheduled',
+          termsUrl: data.termsUrl,
+        }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Auction created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create auction",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name || !formData.description) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.startTime || !formData.endTime) {
+      toast({
+        title: "Error",
+        description: "Please specify both start and end times for the auction",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const startDate = new Date(formData.startTime);
+    const endDate = new Date(formData.endTime);
+    if (endDate <= startDate) {
+      toast({
+        title: "Error",
+        description: "End time must be after start time",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createAuctionMutation.mutate(formData);
+  };
+
+  const handleVendorToggle = (vendorId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedVendors: prev.selectedVendors.includes(vendorId)
+        ? prev.selectedVendors.filter(id => id !== vendorId)
+        : [...prev.selectedVendors, vendorId]
+    }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* PR Context Display */}
+      <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+        <div className="flex items-center gap-2 mb-2">
+          <Package className="w-4 h-4 text-blue-600" />
+          <span className="font-medium text-blue-900 dark:text-blue-100">Procurement Request Context</span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">PR Number:</span>
+            <span className="ml-2 font-medium">{procurementRequest.requestNumber}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">Department:</span>
+            <span className="ml-2 font-medium">{procurementRequest.department}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">Budget:</span>
+            <span className="ml-2 font-medium">₹{procurementRequest.estimatedBudget?.toLocaleString() || 'Not specified'}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">BOM Items:</span>
+            <span className="ml-2 font-medium">{bomItems.length} items</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Basic Information */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="name">Auction Name *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="Enter auction name"
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="description">Description *</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Describe the auction requirements"
+            rows={3}
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="ceilingPrice">Ceiling Price (₹)</Label>
+          <Input
+            id="ceilingPrice"
+            type="number"
+            value={formData.ceilingPrice}
+            onChange={(e) => setFormData(prev => ({ ...prev, ceilingPrice: e.target.value }))}
+            placeholder="Maximum budget for this auction"
+            step="0.01"
+          />
+        </div>
+      </div>
+
+      {/* Timing */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="startTime">Start Time *</Label>
+          <Input
+            id="startTime"
+            type="datetime-local"
+            value={formData.startTime}
+            onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="endTime">End Time *</Label>
+          <Input
+            id="endTime"
+            type="datetime-local"
+            value={formData.endTime}
+            onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Vendor Selection */}
+      <div className="space-y-3">
+        <Label>Select Vendors</Label>
+        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+          {vendors.map((vendor: any) => (
+            <div key={vendor.id} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`vendor-${vendor.id}`}
+                checked={formData.selectedVendors.includes(vendor.id)}
+                onChange={() => handleVendorToggle(vendor.id)}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor={`vendor-${vendor.id}`} className="text-sm cursor-pointer">
+                {vendor.companyName}
+              </Label>
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Selected: {formData.selectedVendors.length} vendors
+        </p>
+      </div>
+
+      {/* Terms & Conditions */}
+      <div>
+        <Label htmlFor="termsUrl">Terms & Conditions URL</Label>
+        <Input
+          id="termsUrl"
+          type="url"
+          value={formData.termsUrl}
+          onChange={(e) => setFormData(prev => ({ ...prev, termsUrl: e.target.value }))}
+          placeholder="https://example.com/terms-and-conditions.pdf"
+        />
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-4 border-t">
+        <Button
+          type="submit"
+          disabled={createAuctionMutation.isPending}
+          className="flex-1"
+        >
+          {createAuctionMutation.isPending ? "Creating..." : "Create Auction"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// Create RFx Form with prefilled data
+function CreateRfxFormEmbedded({ procurementRequest, bomItems, vendors, onClose, onSuccess }: any) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [formData, setFormData] = useState({
+    title: `RFx for ${procurementRequest.title} (${procurementRequest.requestNumber})`,
+    type: 'rfq' as 'rfi' | 'rfp' | 'rfq',
+    scope: procurementRequest.description || `RFx for procurement request: ${procurementRequest.title}`,
+    criteria: '',
+    dueDate: '',
+    budget: procurementRequest.estimatedBudget || '',
+    contactPerson: '',
+    selectedVendors: [] as string[],
+  });
+
+  const createRfxMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/rfx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          type: data.type,
+          scope: data.scope,
+          criteria: data.criteria,
+          dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+          budget: data.budget,
+          contactPerson: data.contactPerson,
+          bomId: procurementRequest.bomId,
+          selectedVendors: data.selectedVendors,
+          status: 'draft',
+        }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "RFx event created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/rfx"] });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create RFx event",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.title || !formData.scope) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createRfxMutation.mutate(formData);
+  };
+
+  const handleVendorToggle = (vendorId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedVendors: prev.selectedVendors.includes(vendorId)
+        ? prev.selectedVendors.filter(id => id !== vendorId)
+        : [...prev.selectedVendors, vendorId]
+    }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* PR Context Display */}
+      <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+        <div className="flex items-center gap-2 mb-2">
+          <Package className="w-4 h-4 text-blue-600" />
+          <span className="font-medium text-blue-900 dark:text-blue-100">Procurement Request Context</span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">PR Number:</span>
+            <span className="ml-2 font-medium">{procurementRequest.requestNumber}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">Department:</span>
+            <span className="ml-2 font-medium">{procurementRequest.department}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">Budget:</span>
+            <span className="ml-2 font-medium">₹{procurementRequest.estimatedBudget?.toLocaleString() || 'Not specified'}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">BOM Items:</span>
+            <span className="ml-2 font-medium">{bomItems.length} items</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Basic Information */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="title">RFx Title *</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            placeholder="Enter RFx title"
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="type">RFx Type *</Label>
+          <Select value={formData.type} onValueChange={(value: 'rfi' | 'rfp' | 'rfq') => setFormData(prev => ({ ...prev, type: value }))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select RFx type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="rfi">RFI - Request for Information</SelectItem>
+              <SelectItem value="rfp">RFP - Request for Proposal</SelectItem>
+              <SelectItem value="rfq">RFQ - Request for Quotation</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="scope">Scope *</Label>
+          <Textarea
+            id="scope"
+            value={formData.scope}
+            onChange={(e) => setFormData(prev => ({ ...prev, scope: e.target.value }))}
+            placeholder="Describe the scope and requirements"
+            rows={3}
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="criteria">Evaluation Criteria</Label>
+          <Textarea
+            id="criteria"
+            value={formData.criteria}
+            onChange={(e) => setFormData(prev => ({ ...prev, criteria: e.target.value }))}
+            placeholder="Specify evaluation criteria and requirements"
+            rows={2}
+          />
+        </div>
+      </div>
+
+      {/* Additional Details */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="dueDate">Response Due Date</Label>
+          <Input
+            id="dueDate"
+            type="datetime-local"
+            value={formData.dueDate}
+            onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="budget">Budget (₹)</Label>
+          <Input
+            id="budget"
+            type="number"
+            value={formData.budget}
+            onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
+            placeholder="Estimated budget"
+            step="0.01"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="contactPerson">Contact Person</Label>
+        <Input
+          id="contactPerson"
+          value={formData.contactPerson}
+          onChange={(e) => setFormData(prev => ({ ...prev, contactPerson: e.target.value }))}
+          placeholder="Contact person for this RFx"
+        />
+      </div>
+
+      {/* Vendor Selection */}
+      <div className="space-y-3">
+        <Label>Select Vendors</Label>
+        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+          {vendors.map((vendor: any) => (
+            <div key={vendor.id} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`vendor-${vendor.id}`}
+                checked={formData.selectedVendors.includes(vendor.id)}
+                onChange={() => handleVendorToggle(vendor.id)}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor={`vendor-${vendor.id}`} className="text-sm cursor-pointer">
+                {vendor.companyName}
+              </Label>
+            </div>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Selected: {formData.selectedVendors.length} vendors
+        </p>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-4 border-t">
+        <Button
+          type="submit"
+          disabled={createRfxMutation.isPending}
+          className="flex-1"
+        >
+          {createRfxMutation.isPending ? "Creating..." : "Create RFx Event"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// Create Direct Procurement Form with prefilled data
+function CreateDirectProcurementFormEmbedded({ procurementRequest, bomItems, vendors, onClose, onSuccess }: any) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [formData, setFormData] = useState({
+    title: `Direct PO for ${procurementRequest.title} (${procurementRequest.requestNumber})`,
+    description: procurementRequest.description || `Direct procurement for: ${procurementRequest.title}`,
+    vendorId: '',
+    totalAmount: procurementRequest.estimatedBudget || '',
+    deliveryDate: '',
+    paymentTerms: '',
+    deliveryTerms: '',
+  });
+
+  const createDirectProcurementMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/direct-procurement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          vendorId: data.vendorId,
+          totalAmount: data.totalAmount,
+          deliveryDate: data.deliveryDate ? new Date(data.deliveryDate).toISOString() : null,
+          paymentTerms: data.paymentTerms,
+          deliveryTerms: data.deliveryTerms,
+          bomId: procurementRequest.bomId,
+          status: 'draft',
+        }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Direct procurement created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/direct-procurement"] });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create direct procurement",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.title || !formData.vendorId || !formData.totalAmount) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createDirectProcurementMutation.mutate(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* PR Context Display */}
+      <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+        <div className="flex items-center gap-2 mb-2">
+          <Package className="w-4 h-4 text-blue-600" />
+          <span className="font-medium text-blue-900 dark:text-blue-100">Procurement Request Context</span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">PR Number:</span>
+            <span className="ml-2 font-medium">{procurementRequest.requestNumber}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">Department:</span>
+            <span className="ml-2 font-medium">{procurementRequest.department}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">Budget:</span>
+            <span className="ml-2 font-medium">₹{procurementRequest.estimatedBudget?.toLocaleString() || 'Not specified'}</span>
+          </div>
+          <div>
+            <span className="text-blue-700 dark:text-blue-300">BOM Items:</span>
+            <span className="ml-2 font-medium">{bomItems.length} items</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Basic Information */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="title">Purchase Order Title *</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            placeholder="Enter PO title"
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Describe the procurement requirements"
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="vendorId">Select Vendor *</Label>
+          <Select value={formData.vendorId} onValueChange={(value) => setFormData(prev => ({ ...prev, vendorId: value }))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose vendor" />
+            </SelectTrigger>
+            <SelectContent>
+              {vendors.map((vendor: any) => (
+                <SelectItem key={vendor.id} value={vendor.id}>
+                  {vendor.companyName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="totalAmount">Total Amount (₹) *</Label>
+          <Input
+            id="totalAmount"
+            type="number"
+            value={formData.totalAmount}
+            onChange={(e) => setFormData(prev => ({ ...prev, totalAmount: e.target.value }))}
+            placeholder="Enter total amount"
+            step="0.01"
+            required
+          />
+        </div>
+      </div>
+
+      {/* Additional Details */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="deliveryDate">Expected Delivery Date</Label>
+          <Input
+            id="deliveryDate"
+            type="date"
+            value={formData.deliveryDate}
+            onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="paymentTerms">Payment Terms</Label>
+          <Input
+            id="paymentTerms"
+            value={formData.paymentTerms}
+            onChange={(e) => setFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
+            placeholder="e.g., Net 30 days"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="deliveryTerms">Delivery Terms</Label>
+          <Input
+            id="deliveryTerms"
+            value={formData.deliveryTerms}
+            onChange={(e) => setFormData(prev => ({ ...prev, deliveryTerms: e.target.value }))}
+            placeholder="e.g., FOB destination"
+          />
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-4 border-t">
+        <Button
+          type="submit"
+          disabled={createDirectProcurementMutation.isPending}
+          className="flex-1"
+        >
+          {createDirectProcurementMutation.isPending ? "Creating..." : "Create Purchase Order"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
