@@ -251,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const { role, vendorId } = req.body;
-    const validRoles = ['admin', 'requester', 'request_approver', 'buyer', 'procurement_approver', 'sourcing_manager', 'vendor'];
+    const validRoles = ['admin', 'department_requester', 'dept_approver', 'sourcing_exec', 'sourcing_manager', 'buyer_admin', 'vendor'];
 
     if (!validRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });

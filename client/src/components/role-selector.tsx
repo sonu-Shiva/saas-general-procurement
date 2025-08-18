@@ -43,8 +43,8 @@ const roleOptions = [
     color: "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300"
   },
   {
-    id: "requester",
-    title: "Requester",
+    id: "department_requester",
+    title: "Department Requester",
     description: "Department-level procurement request initiator",
     icon: Package,
     features: [
@@ -57,8 +57,8 @@ const roleOptions = [
     color: "bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300"
   },
   {
-    id: "request_approver",
-    title: "Request Approver",
+    id: "dept_approver",
+    title: "Department Approver",
     description: "Multi-level procurement request approval authority",
     icon: Users,
     features: [
@@ -71,8 +71,8 @@ const roleOptions = [
     color: "bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300"
   },
   {
-    id: "buyer",
-    title: "Buyer",
+    id: "sourcing_exec",
+    title: "Sourcing Executive",
     description: "Execute approved procurement through RFx, Auctions, or Direct methods",
     icon: ShoppingCart,
     features: [
@@ -85,16 +85,16 @@ const roleOptions = [
     color: "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300"
   },
   {
-    id: "procurement_approver",
-    title: "Procurement Approver",
-    description: "Multi-level approval for procurement methods and strategies",
+    id: "buyer_admin",
+    title: "Buyer Admin",
+    description: "System configuration and organizational management",
     icon: Building,
     features: [
-      "Approve procurement methods",
-      "Review RFx strategies",
-      "Approve auction parameters",
-      "Direct procurement approval",
-      "Strategic oversight"
+      "Configure budgets and approval matrices",
+      "Manage product catalogue governance",
+      "Handle organizational user/role management",
+      "System configuration",
+      "Organizational oversight"
     ],
     color: "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300"
   },

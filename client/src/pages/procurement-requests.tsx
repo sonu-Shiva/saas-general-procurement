@@ -74,7 +74,7 @@ function ApprovalActions({ request }: { request: ProcurementRequest }) {
   const [comments, setComments] = useState("");
   const [showComments, setShowComments] = useState(false);
 
-  const canApprove = user && ['request_approver', 'procurement_approver', 'admin'].includes(user.role);
+  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes(user.role);
   
   const approveMutation = useMutation({
     mutationFn: async (action: 'approve' | 'reject') => {
@@ -104,8 +104,8 @@ function ApprovalActions({ request }: { request: ProcurementRequest }) {
   if (!canApprove) return null;
 
   const needsApproval = (
-    (user.role === 'request_approver' && request.requestApprovalStatus === 'pending') ||
-    (user.role === 'procurement_approver' && request.procurementMethodStatus === 'pending')
+    (user.role === 'dept_approver' && request.requestApprovalStatus === 'pending') ||
+    (user.role === 'sourcing_manager' && request.procurementMethodStatus === 'pending')
   );
 
   if (!needsApproval) return null;
@@ -228,9 +228,9 @@ export default function ProcurementRequests() {
   const departments = Array.from(new Set(requests.map(r => r.department).filter(Boolean)));
 
   // Role-based capabilities
-  const canCreateRequests = user && ['requester', 'admin'].includes(user.role);
-  const canApprove = user && ['request_approver', 'procurement_approver', 'admin'].includes(user.role);
-  const isRequester = user && user.role === 'requester';
+  const canCreateRequests = user && ['department_requester', 'admin'].includes(user.role);
+  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes(user.role);
+  const isRequester = user && user.role === 'department_requester';
 
   // Withdraw request mutation
   const withdrawMutation = useMutation({
