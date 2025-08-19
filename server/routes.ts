@@ -576,26 +576,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Try as RFx first
       try {
-        const rfx = await storage.getRfxById(entityId);
+        console.log(`Trying to fetch RFx with ID: ${entityId}`);
+        const rfx = await storage.getRfxEvent(entityId);
+        console.log(`RFx found:`, rfx);
         if (rfx) {
           entity = rfx;
           entityType = 'rfx';
           termsPath = rfx.termsAndConditionsPath;
+          console.log(`RFx terms path:`, termsPath);
         }
       } catch (error) {
+        console.log(`Error fetching RFx:`, error);
         // Not an RFx, try auction
       }
       
       // If not found as RFx, try as auction
       if (!entity) {
         try {
-          const auction = await storage.getAuctionById(entityId);
+          console.log(`Trying to fetch auction with ID: ${entityId}`);
+          const auction = await storage.getAuction(entityId);
+          console.log(`Auction found:`, auction);
           if (auction) {
             entity = auction;
             entityType = 'auction';
             termsPath = auction.termsAndConditionsPath;
+            console.log(`Auction terms path:`, termsPath);
           }
         } catch (error) {
+          console.log(`Error fetching auction:`, error);
           // Not found as auction either
         }
       }
