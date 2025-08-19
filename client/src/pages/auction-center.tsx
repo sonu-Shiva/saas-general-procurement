@@ -509,7 +509,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
       </div>
 
       {/* Bid Results Cards */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {sortedBids.map((bid: any, index: number) => {
           const isWinner = index === 0;
           const rankLabel = `L${index + 1}`;
@@ -518,66 +518,62 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
           return (
             <div 
               key={bid.id} 
-              className={`p-6 rounded-lg border-2 shadow-sm ${
-                isWinner 
-                  ? 'border-green-400 bg-green-50' 
-                  : 'border-gray-200 bg-white'
-              }`}
+              className="bg-white rounded-lg border border-gray-300 p-4 shadow-sm"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-6">
-                  {/* Large Ranking Badge */}
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold shadow-lg ${
+                <div className="flex items-center space-x-4">
+                  {/* Ranking Circle - matches your reference */}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
                     isWinner 
-                      ? 'bg-green-500 text-white' 
+                      ? 'bg-green-500' 
                       : index === 1 
-                        ? 'bg-blue-500 text-white'
+                        ? 'bg-blue-500'
                         : index === 2
-                          ? 'bg-orange-500 text-white'
-                          : 'bg-gray-500 text-white'
+                          ? 'bg-orange-500'
+                          : index === 3
+                            ? 'bg-gray-500'
+                            : 'bg-gray-400'
                   }`}>
                     {index + 1}
                   </div>
 
-                  {/* Vendor Details */}
+                  {/* Vendor Info */}
                   <div className="flex-1">
-                    <div className="text-xl font-bold text-gray-900 mb-1">
+                    <div className="font-bold text-lg text-gray-900">
                       {vendorName}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-500">
                       {formatBidDateTime(bid.timestamp)}
                     </div>
                   </div>
                 </div>
 
-                {/* Price and Actions */}
-                <div className="flex items-center space-x-6">
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-gray-900">
-                      ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}
-                    </div>
+                <div className="flex items-center space-x-4">
+                  {/* Bid Price - Large and prominent */}
+                  <div className="text-2xl font-bold text-gray-900">
+                    ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}
                   </div>
 
-                  {/* L1, L2, L3 Badge */}
-                  <div className={`px-4 py-2 rounded-full text-base font-semibold ${
+                  {/* L1/L2/L3 Badge - matches your reference */}
+                  <div className={`px-2 py-1 rounded text-xs font-medium ${
                     isWinner 
-                      ? 'bg-green-200 text-green-800' 
+                      ? 'bg-green-100 text-green-700' 
                       : index === 1 
-                        ? 'bg-blue-200 text-blue-800'
+                        ? 'bg-blue-100 text-blue-700'
                         : index === 2
-                          ? 'bg-orange-200 text-orange-800'
-                          : 'bg-gray-200 text-gray-800'
+                          ? 'bg-orange-100 text-orange-700'
+                          : 'bg-gray-100 text-gray-700'
                   }`}>
                     {rankLabel} Bidder
                   </div>
 
-                  {/* Challenge Button for Sourcing Executives */}
+                  {/* Challenge Button */}
                   {canManageAuction && (auction?.status === 'completed' || auction?.status === 'closed') && (
                     <Button
                       variant="outline"
-                      size="default"
+                      size="sm"
                       onClick={() => handleSendChallenge(bid)}
-                      className="ml-2 px-6 py-2"
+                      className="text-sm"
                       data-testid={`button-challenge-${index}`}
                     >
                       Challenge
