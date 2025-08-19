@@ -15,6 +15,8 @@ import DirectProcurement from "@/pages/direct-procurement";
 import Analytics from "@/pages/analytics";
 import VendorDiscovery from "./pages/vendor-discovery";
 import VendorPortal from "./pages/vendor-portal";
+import VendorRfxDetails from "./pages/vendor-rfx-details";
+import VendorRfxResponse from "./pages/vendor-rfx-response";
 import ProcurementRequests from "@/pages/procurement-requests";
 import { lazy } from "react";
 
@@ -111,18 +113,8 @@ function Router() {
           <Route path="/method-approval" component={MethodApproval} />
           <Route path="/vendor-discovery" component={VendorDiscovery} />
           <Route path="/vendor-portal" component={VendorPortal} />
-          <Route path="/vendor/rfx-details/:id">
-            {(params) => {
-              const VendorRfxDetails = lazy(() => import('./pages/vendor-rfx-details'));
-              return <VendorRfxDetails {...params} />;
-            }}
-          </Route>
-          <Route path="/vendor/rfx-response/:id">
-            {(params) => {
-              const VendorRfxResponse = lazy(() => import('./pages/vendor-rfx-response'));
-              return <VendorRfxResponse {...params} />;
-            }}
-          </Route>
+          <Route path="/vendor/rfx-details/:id" component={VendorRfxDetails} />
+          <Route path="/vendor/rfx-response/:id" component={VendorRfxResponse} />
           <Route path="/purchase-orders" component={PurchaseOrders} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/direct-procurement" component={DirectProcurement} />
