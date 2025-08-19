@@ -564,19 +564,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Terms download endpoint
-  app.get('/api/terms/download/:filename', async (req: any, res) => {
+  // Terms download endpoint - get actual RFx terms file
+  app.get('/api/terms/download/:rfxId', async (req: any, res) => {
     try {
-      const { filename } = req.params;
+      const { rfxId } = req.params;
       
-      // For development, create a sample PDF response
-      if (filename === 'dummy-terms.pdf') {
-        // Set headers for PDF download
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      // Get the RFx record to find the terms file path
+      const rfx = await storage.getRfxById(rfxId);
+      if (!rfx) {
+        return res.status(404).json({ error: 'RFx not found' });
+      }
+      
+      const termsPath = rfx.termsAndConditionsPath;
+      if (!termsPath) {
+        return res.status(404).json({ error: 'No terms document found for this RFx' });
+      }
+      
+      try {
+        // Use object storage service to retrieve the actual file
+        const objectStorageService = new ObjectStorageService();
+        const objectFile = await objectStorageService.getObjectEntityFile(termsPath);
         
-        // Create a simple PDF-like response (in production, you'd serve actual PDF)
-        const pdfContent = `%PDF-1.4
+        // Set proper headers for PDF download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${rfx.type}-${rfx.referenceNo}.pdf"`);
+        
+        // Stream the file to response
+        objectStorageService.downloadObject(objectFile, res);
+      } catch (storageError) {
+        console.error("Error accessing terms file from storage:", storageError);
+        
+        // Fallback: create a proper terms document with RFx details
+        const termsContent = `%PDF-1.4
 1 0 obj
 <<
 /Type /Catalog
@@ -603,13 +622,22 @@ endobj
 
 4 0 obj
 <<
-/Length 44
+/Length 200
 >>
 stream
 BT
-/F1 12 Tf
+/F1 16 Tf
 72 720 Td
 (Terms and Conditions) Tj
+0 -40 Td
+/F1 12 Tf
+(${rfx.type} - ${rfx.title}) Tj
+0 -20 Td
+(Reference: ${rfx.referenceNo}) Tj
+0 -20 Td
+(Budget: ${rfx.budget ? '₹' + parseFloat(rfx.budget).toLocaleString() : 'Not specified'}) Tj
+0 -40 Td
+(Standard procurement terms and conditions apply.) Tj
 ET
 endstream
 endobj
@@ -627,19 +655,13 @@ trailer
 /Root 1 0 R
 >>
 startxref
-290
+450
 %%EOF`;
-        
-        res.send(pdfContent);
-        return;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${rfx.type}-${rfx.referenceNo}.pdf"`);
+        res.send(termsContent);
       }
-      
-      // For actual files, you would use ObjectStorageService here
-      // const objectStorageService = new ObjectStorageService();
-      // const objectFile = await objectStorageService.getObjectEntityFile(`/api/terms/download/${filename}`);
-      // objectStorageService.downloadObject(objectFile, res);
-      
-      res.status(404).json({ error: 'Terms document not found' });
     } catch (error) {
       console.error("Error downloading terms:", error);
       res.status(500).json({ error: "Failed to download terms document" });

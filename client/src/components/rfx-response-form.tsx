@@ -374,8 +374,8 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
                       size="sm"
                       onClick={async () => {
                         try {
-                          // Use the download API endpoint
-                          const downloadUrl = '/api/terms/download/dummy-terms.pdf';
+                          // Use the download API endpoint with RFx ID
+                          const downloadUrl = `/api/terms/download/${rfxId}`;
                           const response = await fetch(downloadUrl);
                           
                           if (response.ok) {
