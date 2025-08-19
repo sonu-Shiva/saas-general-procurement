@@ -381,39 +381,34 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
                       variant="outline"
                       size="sm"
                       onClick={async () => {
-                        if (termsPath && termsPath !== '/dummy-terms.pdf') {
-                          try {
-                            // Download the file using fetch and blob
-                            const response = await fetch(termsPath);
-                            if (response.ok) {
-                              const blob = await response.blob();
-                              const url = window.URL.createObjectURL(blob);
-                              const link = document.createElement('a');
-                              link.href = url;
-                              link.download = `terms-and-conditions-${rfxType}-${rfxData.referenceNo}.pdf`;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                              window.URL.revokeObjectURL(url);
-                              toast({
-                                title: "Download Started",
-                                description: "Terms and conditions document is being downloaded.",
-                              });
-                            } else {
-                              throw new Error('Download failed');
-                            }
-                          } catch (error) {
+                        try {
+                          // Use the download API endpoint
+                          const downloadUrl = '/api/terms/download/dummy-terms.pdf';
+                          const response = await fetch(downloadUrl);
+                          
+                          if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `terms-and-conditions-${rfxType}-${rfxData.referenceNo}.pdf`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
                             toast({
-                              title: "Download Failed",
-                              description: "Unable to download terms document. Please try viewing it online.",
-                              variant: "destructive",
+                              title: "Download Started",
+                              description: "Terms and conditions document is being downloaded.",
                             });
+                          } else {
+                            throw new Error(`Download failed with status: ${response.status}`);
                           }
-                        } else {
-                          // Create a generic terms document or show message
+                        } catch (error) {
+                          console.error('Download error:', error);
                           toast({
-                            title: "Terms Document",
-                            description: "Standard terms and conditions apply for this " + rfxType,
+                            title: "Download Failed", 
+                            description: "Unable to download terms document. Please try again.",
+                            variant: "destructive",
                           });
                         }
                       }}

@@ -564,6 +564,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Terms download endpoint
+  app.get('/api/terms/download/:filename', async (req: any, res) => {
+    try {
+      const { filename } = req.params;
+      
+      // For development, create a sample PDF response
+      if (filename === 'dummy-terms.pdf') {
+        // Set headers for PDF download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        // Create a simple PDF-like response (in production, you'd serve actual PDF)
+        const pdfContent = `%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+
+4 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(Terms and Conditions) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000198 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+290
+%%EOF`;
+        
+        res.send(pdfContent);
+        return;
+      }
+      
+      // For actual files, you would use ObjectStorageService here
+      // const objectStorageService = new ObjectStorageService();
+      // const objectFile = await objectStorageService.getObjectEntityFile(`/api/terms/download/${filename}`);
+      // objectStorageService.downloadObject(objectFile, res);
+      
+      res.status(404).json({ error: 'Terms document not found' });
+    } catch (error) {
+      console.error("Error downloading terms:", error);
+      res.status(500).json({ error: "Failed to download terms document" });
+    }
+  });
+
 
 
   app.get('/api/vendor/rfx-responses', async (req: any, res) => {
