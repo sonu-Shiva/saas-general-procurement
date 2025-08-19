@@ -239,7 +239,7 @@ export default function AuctionCenter() {
   const [selectedAuctionForView, setSelectedAuctionForView] = useState<any>(null);
   const [isAuctionDetailsOpen, setIsAuctionDetailsOpen] = useState(false);
   const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false);
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+  const [acceptedTermsMap, setAcceptedTermsMap] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -347,8 +347,12 @@ export default function AuctionCenter() {
 
   const handleViewLiveBidding = (auction: any) => {
     if (isVendor && auction.status === 'live') {
-      // Check if vendor has accepted terms for this auction before bidding
-      if (auction.termsAndConditionsPath && !hasAcceptedTerms) {
+      // Create a unique key for this vendor-auction combination
+      const userId = (user as any)?.id;
+      const termsKey = `${userId}-${auction.id}`;
+      
+      // Check if vendor has accepted terms for this specific auction before bidding
+      if (auction.termsAndConditionsPath && !acceptedTermsMap[termsKey]) {
         setSelectedAuctionForView(auction);
         setIsTermsDialogOpen(true);
         return;
@@ -369,9 +373,18 @@ export default function AuctionCenter() {
   };
 
   const handleTermsAccepted = () => {
-    setHasAcceptedTerms(true);
-    setIsTermsDialogOpen(false);
-    if (selectedAuctionForView) {
+    const userId = (user as any)?.id;
+    if (selectedAuctionForView && userId) {
+      // Create unique key for this vendor-auction combination
+      const termsKey = `${userId}-${selectedAuctionForView.id}`;
+      
+      // Mark terms as accepted for this specific vendor-auction pair
+      setAcceptedTermsMap(prev => ({
+        ...prev,
+        [termsKey]: true
+      }));
+      
+      setIsTermsDialogOpen(false);
       setSelectedAuction(selectedAuctionForView);
       setIsLiveBiddingOpen(true);
     }
@@ -948,9 +961,9 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
       } catch (error) {
         console.error("Error fetching BOM items:", error);
         console.error("Error details:", {
-          message: error.message,
-          status: error.status,
-          response: error.response
+          message: (error as any)?.message,
+          status: (error as any)?.status,
+          response: (error as any)?.response
         });
         throw error; // Re-throw to trigger error state
       }
@@ -1270,7 +1283,7 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
                 <p>BOM ID: {formData.bomId}</p>
                 <p>bomItems: {JSON.stringify(bomItems)}</p>
                 <p>Loading: {String(bomItemsLoading)}</p>
-                <p>Error: {bomItemsError?.message || 'None'}</p>
+                <p>Error: {(bomItemsError as any)?.message || 'None'}</p>
               </div>
             </div>
           ) : (
