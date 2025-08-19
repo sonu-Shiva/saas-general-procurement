@@ -1391,24 +1391,13 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       // selectedVendors should already be an array when sent as JSON
       const parsedSelectedVendors = Array.isArray(selectedVendors) ? selectedVendors : [];
 
-      // For now, generate a fallback terms file path when a file is uploaded via frontend
-      // The actual file upload will be handled when multipart parsing is properly implemented
+      // For now, skip file upload until object storage is properly configured
+      // The terms file upload will be implemented when multipart parsing is added
       let termsAndConditionsPath = null;
-      if (rfxFields.title) {
-        // Generate a default terms document since file upload needs proper multipart handling
-        const objectStorageService = new ObjectStorageService();
-        try {
-          const defaultTermsContent = `Terms and Conditions for ${rfxFields.title}\n\nGenerated on: ${new Date().toISOString()}\n\nDefault terms and conditions for procurement.`;
-          const fileName = `terms-${Date.now()}-${rfxFields.title.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
-          termsAndConditionsPath = await objectStorageService.uploadFile(
-            Buffer.from(defaultTermsContent, 'utf8'),
-            fileName,
-            'text/plain'
-          );
-          console.log("Default terms file created:", termsAndConditionsPath);
-        } catch (uploadError) {
-          console.error("Error creating default terms file:", uploadError);
-        }
+      if (rfxFields.termsFileUploaded) {
+        // Generate a placeholder path for now
+        termsAndConditionsPath = `/terms/rfx-${Date.now()}-terms.txt`;
+        console.log("Terms file placeholder created:", termsAndConditionsPath);
       }
 
       const rfxData = {

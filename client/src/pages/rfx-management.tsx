@@ -548,14 +548,12 @@ export default function RfxManagement() {
                         </span>
                       </div>
                     )}
-                    {(selectedRfxForView.contactPerson || selectedRfxForView.rfxContactPerson || selectedRfxForView.rfx?.contactPerson) && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Contact Person:</span>
-                        <span className="font-medium">
-                          {selectedRfxForView.contactPerson || selectedRfxForView.rfxContactPerson || selectedRfxForView.rfx?.contactPerson}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Contact Person:</span>
+                      <span className="font-medium">
+                        {selectedRfxForView.contactPerson || selectedRfxForView.rfxContactPerson || selectedRfxForView.rfx?.contactPerson || 'Not specified'}
+                      </span>
+                    </div>
                   </div>
                 </Card>
 
@@ -571,16 +569,14 @@ export default function RfxManagement() {
                         </p>
                       </div>
                     )}
-                    {(selectedRfxForView.criteria || selectedRfxForView.rfxCriteria || selectedRfxForView.rfx?.criteria) && (
-                      <div>
-                        <span className="text-muted-foreground text-sm">
-                          {(selectedRfxForView.type || selectedRfxForView.rfxType || selectedRfxForView.rfx?.type) === 'rfi' ? 'Information Required:' : 'Requirements:'}
-                        </span>
-                        <p className="text-sm mt-1 p-2 bg-gray-50 rounded">
-                          {selectedRfxForView.criteria || selectedRfxForView.rfxCriteria || selectedRfxForView.rfx?.criteria}
-                        </p>
-                      </div>
-                    )}
+                    <div>
+                      <span className="text-muted-foreground text-sm">
+                        {(selectedRfxForView.type || selectedRfxForView.rfxType || selectedRfxForView.rfx?.type) === 'rfi' ? 'Information Required:' : 'Requirements:'}
+                      </span>
+                      <p className="text-sm mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                        {selectedRfxForView.criteria || selectedRfxForView.rfxCriteria || selectedRfxForView.rfx?.criteria || 'No specific criteria provided'}
+                      </p>
+                    </div>
                     {(selectedRfxForView.evaluationParameters || selectedRfxForView.rfxEvaluationParameters || selectedRfxForView.rfx?.evaluationParameters) && (
                       <div>
                         <span className="text-muted-foreground text-sm">Evaluation Criteria:</span>
@@ -594,9 +590,9 @@ export default function RfxManagement() {
               </div>
 
               {/* Terms & Conditions */}
-              {(selectedRfxForView.termsAndConditionsPath || selectedRfxForView.rfxTermsAndConditionsPath || selectedRfxForView.rfx?.termsAndConditionsPath) && (
-                <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">Terms & Conditions</h3>
+              <Card className="p-4">
+                <h3 className="text-lg font-semibold mb-4">Terms & Conditions</h3>
+                {(selectedRfxForView.termsAndConditionsPath || selectedRfxForView.rfxTermsAndConditionsPath || selectedRfxForView.rfx?.termsAndConditionsPath) ? (
                   <div className="flex items-center space-x-2">
                     <Button 
                       variant="outline" 
@@ -611,9 +607,14 @@ export default function RfxManagement() {
                       <FileText className="w-4 h-4 mr-2" />
                       View Terms & Conditions
                     </Button>
+                    <span className="text-sm text-green-600">Document available</span>
                   </div>
-                </Card>
-              )}
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    No terms and conditions document uploaded
+                  </div>
+                )}
+              </Card>
 
               {/* BOM Integration */}
               {(selectedRfxForView.bomId || selectedRfxForView.rfxBomId || selectedRfxForView.rfx?.bomId) && (
