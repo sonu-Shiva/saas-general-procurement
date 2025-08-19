@@ -23,9 +23,9 @@ function getRfxTypeColor(type: string) {
 export default function VendorRfxDetails() {
   const { id } = useParams();
 
-  // Fetch RFx details - using default query client behavior
+  // Fetch RFx details using vendor-specific endpoint
   const { data: rfx, isLoading, error } = useQuery({
-    queryKey: [`/api/rfx/${id}`],
+    queryKey: [`/api/vendor/rfx/${id}`],
     enabled: !!id,
   });
 

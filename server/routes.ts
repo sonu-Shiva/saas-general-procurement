@@ -1576,6 +1576,54 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Get specific RFx details for vendor
+  app.get('/api/vendor/rfx/:id', async (req: any, res) => {
+    try {
+      const { id: rfxId } = req.params;
+      console.log('Vendor RFx details - RFx ID:', rfxId);
+      console.log('Vendor RFx details - Current user ID:', currentDevUser.id);
+      console.log('Vendor RFx details - Current user role:', currentDevUser.role);
+
+      // In development mode, use currentDevUser instead of req.user
+      const userId = currentDevUser.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // For development, check if current user is in vendor role
+      if (currentDevUser.role !== 'vendor') {
+        console.log('User role check failed for RFx details. Current role:', currentDevUser.role);
+        return res.status(403).json({ message: "Access denied. Vendors only." });
+      }
+
+      // Find vendor profile
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        console.log("No vendor profile found for user:", userId);
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      // Check if vendor has been invited to this RFx
+      const invitation = await storage.getRfxVendorInvitation(rfxId, vendor.id);
+      if (!invitation) {
+        console.log("Vendor not invited to this RFx:", rfxId, vendor.id);
+        return res.status(403).json({ message: "You are not invited to this RFx" });
+      }
+
+      // Get the RFx details
+      const rfx = await storage.getRfxEvent(rfxId);
+      if (!rfx) {
+        return res.status(404).json({ message: "RFx not found" });
+      }
+
+      console.log("Retrieved RFx details for vendor:", rfx.title);
+      res.json(rfx);
+    } catch (error) {
+      console.error("Error fetching vendor RFx details:", error);
+      res.status(500).json({ message: "Failed to fetch RFx details" });
+    }
+  });
+
   // Vendor RFx responses route
   app.get('/api/vendor/rfx-responses', async (req: any, res) => {
     try {
