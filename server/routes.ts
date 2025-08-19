@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { nanoid } from "nanoid";
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from "./storage";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "./objectStorage";
 import {
   users,
   vendors,
@@ -678,20 +678,71 @@ startxref
       
       try {
         // Use object storage service to retrieve the actual file
+        console.log("Downloading actual uploaded file from:", termsPath);
         const objectStorageService = new ObjectStorageService();
-        const objectFile = await objectStorageService.getObjectEntityFile(termsPath);
         
-        // Set proper headers for PDF download
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${entity.type}-${entity.referenceNo || entity.title}.pdf"`);
+        // Check if it's a full Google Cloud Storage URL
+        if (termsPath.startsWith('https://storage.googleapis.com/')) {
+          console.log("Processing Google Cloud Storage URL");
+          // Extract bucket and object path from the full URL
+          const url = new URL(termsPath);
+          const pathParts = url.pathname.split('/');
+          const bucketName = pathParts[1];
+          const objectName = pathParts.slice(2).join('/');
+          
+          console.log("Bucket:", bucketName, "Object:", objectName);
+          
+          const bucket = objectStorageClient.bucket(bucketName);
+          const file = bucket.file(objectName);
+          
+          // Check if file exists
+          const [exists] = await file.exists();
+          if (!exists) {
+            throw new Error("File not found in storage");
+          }
+          
+          // Get file metadata to determine content type
+          const [metadata] = await file.getMetadata();
+          const contentType = metadata.contentType || 'application/pdf';
+          
+          // Set proper headers for download
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${entity.type}-${entity.referenceNo || entity.title}.${contentType.includes('pdf') ? 'pdf' : 'txt'}"`);
+          
+          // Stream the file to response
+          const stream = file.createReadStream();
+          stream.on('error', (err) => {
+            console.error('File stream error:', err);
+            if (!res.headersSent) {
+              res.status(500).json({ error: 'Error streaming file' });
+            }
+          });
+          
+          stream.pipe(res);
+          return;
+        } else {
+          // Handle relative path (old format)
+          const objectFile = await objectStorageService.getObjectEntityFile(termsPath);
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${entity.type}-${entity.referenceNo || entity.title}.pdf"`);
+          objectStorageService.downloadObject(objectFile, res);
+          return;
+        }
         
-        // Stream the file to response
-        objectStorageService.downloadObject(objectFile, res);
       } catch (storageError) {
         console.error("Error accessing terms file from storage:", storageError);
         
         // Fallback: create a proper terms document with entity details
-        const termsContent = `%PDF-1.4
+        const termsContent = `TERMS AND CONDITIONS ERROR
+
+Unable to retrieve uploaded terms document.
+Error: ${storageError.message}
+
+RFx Details:
+${entity.type?.toUpperCase() || 'PROCUREMENT'} - ${entity.title || 'Untitled'}
+Reference: ${entity.referenceNo || entity.id}
+
+Please contact support for assistance.`;
 1 0 obj
 <<
 /Type /Catalog
