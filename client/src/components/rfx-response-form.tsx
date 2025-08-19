@@ -65,7 +65,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
   const rfxType = (rfxData.type || rfx.rfxType || rfx.type || 'rfx').toUpperCase();
   const termsPath = rfxData.termsAndConditionsPath || rfx.rfxTermsAndConditionsPath || rfx.termsAndConditionsPath;
   const rfxId = rfx.rfxId || rfx.id || rfxData.id;
-  const budgetAmount = rfxData.budgetAmount || rfx.budgetAmount;
+  const budgetAmount = parseFloat(rfxData.budget || rfx.budget || rfxData.budgetAmount || rfx.budgetAmount || 0);
 
   console.log('RfxResponseForm - Debug data:', {
     rfx,
@@ -281,10 +281,10 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
                 </div>
               </div>
             )}
-            {(rfxData.budget || rfx.rfxBudget) && (
+            {budgetAmount > 0 && (
               <div>
                 <div className="text-sm text-muted-foreground">Budget</div>
-                <div className="font-medium">₹{(rfxData.budget || rfx.rfxBudget)?.toLocaleString()}</div>
+                <div className="font-medium">₹{budgetAmount.toLocaleString()}</div>
               </div>
             )}
           </div>
