@@ -1,0 +1,125 @@
+chunk-RPCDYKBN.js?v=5e2aa6fc:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: true
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: null
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: true
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: null
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: false
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: null
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: true
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: null
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: false
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']
+queryClient.ts:15 Fetch finished loading: PATCH "https://b66231d0-1d21-4c13-a6b7-b97aa4f459d3-00-e3m5sn2rrnzv.kirk.replit.dev/api/auth/user/role".
+apiRequest @ queryClient.ts:15
+switchRole @ useAuth.ts:61
+handleRoleSelect @ role-selector.tsx:178
+callCallback2 @ chunk-RPCDYKBN.js?v=5e2aa6fc:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=5e2aa6fc:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=5e2aa6fc:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=5e2aa6fc:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=5e2aa6fc:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=5e2aa6fc:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=5e2aa6fc:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=5e2aa6fc:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=5e2aa6fc:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=5e2aa6fc:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=5e2aa6fc:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=5e2aa6fc:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=5e2aa6fc:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=5e2aa6fc:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=5e2aa6fc:5449
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: true
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: null
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: true
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: null
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']
+vendor-portal.tsx:86 DEBUG: All invitations: []
+vendor-portal.tsx:87 DEBUG: Pending invitations: []
+vendor-portal.tsx:88 DEBUG: Responded invitations: []
+queryClient.ts:58 Fetch failed loading: GET "https://b66231d0-1d21-4c13-a6b7-b97aa4f459d3-00-e3m5sn2rrnzv.kirk.replit.dev/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332".
+queryFn @ queryClient.ts:58
+fetchFn @ @tanstack_react-query.js?v=5e2aa6fc:840
+run @ @tanstack_react-query.js?v=5e2aa6fc:494
+(anonymous) @ @tanstack_react-query.js?v=5e2aa6fc:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=5e2aa6fc:515
+Promise.catch
+run @ @tanstack_react-query.js?v=5e2aa6fc:498
+start @ @tanstack_react-query.js?v=5e2aa6fc:536
+fetch @ @tanstack_react-query.js?v=5e2aa6fc:926
+(anonymous) @ @tanstack_react-query.js?v=5e2aa6fc:1726
+(anonymous) @ @tanstack_react-query.js?v=5e2aa6fc:1725
+batch @ @tanstack_react-query.js?v=5e2aa6fc:583
+refetchQueries @ @tanstack_react-query.js?v=5e2aa6fc:1724
+(anonymous) @ @tanstack_react-query.js?v=5e2aa6fc:1716
+batch @ @tanstack_react-query.js?v=5e2aa6fc:583
+invalidateQueries @ @tanstack_react-query.js?v=5e2aa6fc:1705
+switchRole @ useAuth.ts:71
+await in switchRole
+handleRoleSelect @ role-selector.tsx:178
+callCallback2 @ chunk-RPCDYKBN.js?v=5e2aa6fc:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=5e2aa6fc:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=5e2aa6fc:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=5e2aa6fc:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=5e2aa6fc:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=5e2aa6fc:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=5e2aa6fc:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=5e2aa6fc:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=5e2aa6fc:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=5e2aa6fc:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=5e2aa6fc:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=5e2aa6fc:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=5e2aa6fc:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=5e2aa6fc:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=5e2aa6fc:5449
+vendor-portal.tsx:86 DEBUG: All invitations: (5) [{…}, {…}, {…}, {…}, {…}]
+vendor-portal.tsx:87 DEBUG: Pending invitations: (2) [{…}, {…}]
+vendor-portal.tsx:88 DEBUG: Responded invitations: (2) [{…}, {…}]
+vendor-portal.tsx:172 DEBUG: Invitation details: {rfxId: 'd13641f7-d49c-4a83-9bfa-2caf31d08332', status: 'invited', isExpired: false, rfxDueDate: '2025-08-22T13:34:00.000Z', shouldShowRespond: true}
+vendor-portal.tsx:172 DEBUG: Invitation details: {rfxId: 'dd29b77f-aafb-4ab6-aa7d-bbcacb055a40', status: 'invited', isExpired: false, rfxDueDate: '2025-08-22T15:41:00.000Z', shouldShowRespond: true}
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: true
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: null
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']
+vendor-rfx-response.tsx:25 VendorRfxResponse - ID from URL: d13641f7-d49c-4a83-9bfa-2caf31d08332
+vendor-rfx-response.tsx:26 VendorRfxResponse - RFx data: undefined
+vendor-rfx-response.tsx:27 VendorRfxResponse - Loading: false
+vendor-rfx-response.tsx:28 VendorRfxResponse - Error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+vendor-rfx-response.tsx:29 VendorRfxResponse - Query key: ['/api/rfx/d13641f7-d49c-4a83-9bfa-2caf31d08332']

@@ -1152,6 +1152,21 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Get single RFx by ID
+  app.get('/api/rfx/:id', authMiddleware, requireRole('buyer', 'procurement_approver', 'vendor', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const rfx = await storage.getRfxEvent(id);
+      if (!rfx) {
+        return res.status(404).json({ message: "RFx not found" });
+      }
+      res.json(rfx);
+    } catch (error) {
+      console.error("Error fetching RFx:", error);
+      res.status(500).json({ message: "Failed to fetch RFx" });
+    }
+  });
+
   app.post('/api/rfx', authMiddleware, requireRole('buyer', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req: any, res) => {
     try {
       console.log("RFx creation request received:", req.body);

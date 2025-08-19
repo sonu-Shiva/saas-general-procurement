@@ -59,6 +59,7 @@ export const queryClient = new QueryClient({
             signal,
             credentials: 'include',
             headers: {
+              'Accept': 'application/json',
               'Content-Type': 'application/json',
             }
           });
@@ -71,7 +72,17 @@ export const queryClient = new QueryClient({
             throw new Error(`HTTP error! status: ${response.status}`);
           }
 
-          return response.json();
+          // Check if response is actually JSON before parsing
+          const text = await response.text();
+          try {
+            return JSON.parse(text);
+          } catch (error) {
+            // If response is HTML instead of JSON, throw a specific error
+            if (text.includes('<!DOCTYPE')) {
+              throw new Error(`Unexpected token '<', "<!DOCTYPE "... is not valid JSON`);
+            }
+            throw new Error(`Failed to parse JSON response: ${error}`);
+          }
         } catch (error) {
           // Properly handle and rethrow errors
           if (error instanceof Error) {
