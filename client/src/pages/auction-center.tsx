@@ -425,13 +425,29 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
       return;
     }
     
-    toast({
-      title: "Issue PO",
-      description: `Issuing purchase order for ${selectedVendors.size} selected vendor(s).`
-    });
-    
-    // Here you would typically call an API to create the PO
-    // onCreatePO?.(auction);
+    // Call the onCreatePO function if provided
+    if (onCreatePO && auction) {
+      const selectedVendorsBids = Array.from(selectedVendors).map(vendorId => {
+        const bidsArray = Array.isArray(bids) ? bids : [];
+        return bidsArray.find((bid: any) => bid.vendorId === vendorId);
+      }).filter(Boolean);
+      
+      onCreatePO({
+        ...auction,
+        selectedBids: selectedVendorsBids,
+        selectedVendors: Array.from(selectedVendors)
+      });
+      
+      toast({
+        title: "Success",
+        description: `Purchase order created for ${selectedVendors.size} selected vendor(s).`
+      });
+    } else {
+      toast({
+        title: "Issue PO",
+        description: `Issuing purchase order for ${selectedVendors.size} selected vendor(s).`
+      });
+    }
   };
   
   // Fetch auction details
@@ -555,134 +571,136 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
         <p className="text-muted-foreground mb-4">Ranked by bid amount (lowest first)</p>
       </div>
 
-      {/* Optimized Grid Layout - Full width utilization */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sortedBids.map((bid: any, index: number) => {
-          const isWinner = index === 0;
-          const rankLabel = `L${index + 1}`;
-          const vendorName = bid.vendorCompanyName || bid.companyName || `Vendor ${index + 1}`;
-          
-          // Check if there's a challenge for this vendor
-          const hasChallenge = challengePrices.some((cp: any) => cp.vendorId === bid.vendorId);
-          const challengeStatus = challengePrices.find((cp: any) => cp.vendorId === bid.vendorId)?.status || null;
-          
-          return (
-            <div 
-              key={bid.vendorId} 
-              className="bg-white rounded-lg border border-gray-200 p-8 shadow-sm hover:shadow-md transition-shadow min-h-[400px] flex flex-col justify-between"
-            >
-              <div className="flex flex-col h-full">
-                {/* Header with checkbox and ranking */}
-                <div className="flex items-center justify-between mb-6">
-                  <input 
-                    type="checkbox" 
-                    className="w-6 h-6 text-blue-600 rounded"
-                    checked={selectedVendors.has(bid.vendorId)}
-                    onChange={(e) => handleVendorSelection(bid.vendorId, e.target.checked)}
-                    data-testid={`checkbox-vendor-${index}`}
-                  />
-                  
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-2xl ${
-                    isWinner 
-                      ? 'bg-green-500' 
-                      : index === 1 
-                        ? 'bg-blue-500'
-                        : index === 2
-                          ? 'bg-orange-500'
-                          : index === 3
-                            ? 'bg-purple-500'
-                            : 'bg-gray-500'
-                  }`}>
-                    {index + 1}
-                  </div>
-                  
-                  <div className={`px-4 py-2 rounded-full text-base font-medium ${
-                    isWinner 
-                      ? 'bg-green-100 text-green-800' 
-                      : index === 1 
-                        ? 'bg-blue-100 text-blue-800'
-                        : index === 2
-                          ? 'bg-orange-100 text-orange-800'
-                          : index === 3
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {rankLabel} Bidder
-                  </div>
-                </div>
-
-                {/* Vendor Name */}
-                <div className="mb-6 text-center">
-                  <h3 className="font-bold text-2xl text-gray-900 mb-2">
-                    {vendorName}
-                  </h3>
-                  <p className="text-base text-gray-500">
-                    {formatBidDateTime(bid.timestamp)}
-                  </p>
-                </div>
-
-                {/* Bid Price - Prominent Display */}
-                <div className="mb-8 text-center bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 flex-grow">
-                  <div className="text-lg text-gray-600 mb-2">Bid Price:</div>
-                  <div className="text-4xl font-bold text-purple-600 mb-2">
-                    ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}/MT
-                  </div>
-                  <div className="text-base text-green-600 font-medium">
-                    Savings: {((15000 - parseFloat(bid.amount || bid.bidAmount || 0)) / 15000 * 100).toFixed(2)}%
-                  </div>
-                </div>
-
-                {/* Challenge Price Section */}
-                <div className="mb-6 text-center bg-gray-50 rounded-lg p-4">
-                  <div className="text-base text-gray-600 mb-3">Challenge Price</div>
-                  {hasChallenge ? (
-                    <div>
-                      <div className="font-bold text-2xl text-gray-900 mb-2">₹14800/MT</div>
-                      <div className={`inline-block px-4 py-2 rounded-full text-base font-medium ${
-                        challengeStatus === 'accepted' 
-                          ? 'bg-green-100 text-green-700' 
-                          : challengeStatus === 'rejected'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {challengeStatus === 'accepted' ? 'Accepted' : 
-                         challengeStatus === 'rejected' ? 'Rejected' : 'Pending'}
-                      </div>
+      {/* Horizontal Scroll Layout for Cards */}
+      <div className="overflow-x-auto pb-4">
+        <div className="flex gap-6 min-w-max">
+          {sortedBids.map((bid: any, index: number) => {
+            const isWinner = index === 0;
+            const rankLabel = `L${index + 1}`;
+            const vendorName = bid.vendorCompanyName || bid.companyName || `Vendor ${index + 1}`;
+            
+            // Check if there's a challenge for this vendor
+            const hasChallenge = challengePrices.some((cp: any) => cp.vendorId === bid.vendorId);
+            const challengeStatus = challengePrices.find((cp: any) => cp.vendorId === bid.vendorId)?.status || null;
+            
+            return (
+              <div 
+                key={bid.vendorId} 
+                className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow min-h-[350px] w-[320px] flex-shrink-0 flex flex-col justify-between"
+              >
+                <div className="flex flex-col h-full">
+                  {/* Header with checkbox and ranking */}
+                  <div className="flex items-center justify-between mb-4">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 text-blue-600 rounded"
+                      checked={selectedVendors.has(bid.vendorId)}
+                      onChange={(e) => handleVendorSelection(bid.vendorId, e.target.checked)}
+                      data-testid={`checkbox-vendor-${index}`}
+                    />
+                    
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                      isWinner 
+                        ? 'bg-green-500' 
+                        : index === 1 
+                          ? 'bg-blue-500'
+                          : index === 2
+                            ? 'bg-orange-500'
+                            : index === 3
+                              ? 'bg-purple-500'
+                              : 'bg-gray-500'
+                    }`}>
+                      {index + 1}
                     </div>
-                  ) : (
-                    <div className="text-gray-400 text-base">No challenge sent</div>
-                  )}
-                </div>
+                    
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      isWinner 
+                        ? 'bg-green-100 text-green-800' 
+                        : index === 1 
+                          ? 'bg-blue-100 text-blue-800'
+                          : index === 2
+                            ? 'bg-orange-100 text-orange-800'
+                            : index === 3
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {rankLabel} Bidder
+                    </div>
+                  </div>
 
-                {/* Action Button */}
-                <div className="mt-auto">
-                  {canManageAuction && (auction?.status === 'completed' || auction?.status === 'closed') && (
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => handleSendChallenge(bid)}
-                      className="w-full text-base py-3"
-                      data-testid={`button-challenge-${index}`}
-                    >
-                      Challenge
-                    </Button>
-                  )}
-                  
-                  {hasChallenge && challengeStatus === 'rejected' && (
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="w-full text-base text-red-600 border-red-300 mt-3 py-3"
-                      data-testid={`button-counter-${index}`}
-                    >
-                      Send Counter Price
-                    </Button>
-                  )}
+                  {/* Vendor Name */}
+                  <div className="mb-4 text-center">
+                    <h3 className="font-bold text-lg text-gray-900 mb-1">
+                      {vendorName}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {formatBidDateTime(bid.timestamp)}
+                    </p>
+                  </div>
+
+                  {/* Bid Price - Prominent Display */}
+                  <div className="mb-4 text-center bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4 flex-grow">
+                    <div className="text-sm text-gray-600 mb-1">Bid Price:</div>
+                    <div className="text-2xl font-bold text-purple-600 mb-1">
+                      ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}/MT
+                    </div>
+                    <div className="text-sm text-green-600 font-medium">
+                      Savings: {((15000 - parseFloat(bid.amount || bid.bidAmount || 0)) / 15000 * 100).toFixed(2)}%
+                    </div>
+                  </div>
+
+                  {/* Challenge Price Section */}
+                  <div className="mb-4 text-center bg-gray-50 rounded-lg p-3">
+                    <div className="text-sm text-gray-600 mb-2">Challenge Price</div>
+                    {hasChallenge ? (
+                      <div>
+                        <div className="font-bold text-lg text-gray-900 mb-1">₹14800/MT</div>
+                        <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          challengeStatus === 'accepted' 
+                            ? 'bg-green-100 text-green-700' 
+                            : challengeStatus === 'rejected'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {challengeStatus === 'accepted' ? 'Accepted' : 
+                           challengeStatus === 'rejected' ? 'Rejected' : 'Pending'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 text-sm">No challenge sent</div>
+                    )}
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="mt-auto">
+                    {canManageAuction && (auction?.status === 'completed' || auction?.status === 'closed') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSendChallenge(bid)}
+                        className="w-full text-sm"
+                        data-testid={`button-challenge-${index}`}
+                      >
+                        Challenge
+                      </Button>
+                    )}
+                    
+                    {hasChallenge && challengeStatus === 'rejected' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-sm text-red-600 border-red-300 mt-2"
+                        data-testid={`button-counter-${index}`}
+                      >
+                        Send Counter Price
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Issue PO Section */}
@@ -710,12 +728,13 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
 
 
-        {/* Create PO Button for completed auctions */}
-        {sortedBids.length > 0 && onCreatePO && auction && (
+        {/* Create PO Button for completed auctions - Always visible when there are bids */}
+        {sortedBids.length > 0 && (
           <div className="text-center mt-6 pt-4 border-t">
             <Button 
-              onClick={() => onCreatePO({ ...auction, winningBid: sortedBids[0] })}
-              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => onCreatePO && onCreatePO({ ...auction, winningBid: sortedBids[0] })}
+              className="bg-green-600 hover:bg-green-700"
+              disabled={!onCreatePO}
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
               Create Purchase Order
@@ -1479,11 +1498,13 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onViewAuctionDe
                   Results
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-7xl w-[95vw]">
-                <DialogHeader>
+              <DialogContent className="max-w-6xl w-[90vw] max-h-[85vh] overflow-hidden">
+                <DialogHeader className="pb-2">
                   <DialogTitle>Auction Results - {auction.name}</DialogTitle>
                 </DialogHeader>
-                <AuctionResults auctionId={auction.id} onCreatePO={onCreatePO} />
+                <div className="overflow-y-auto max-h-[calc(85vh-80px)] pr-2">
+                  <AuctionResults auctionId={auction.id} onCreatePO={onCreatePO} />
+                </div>
               </DialogContent>
             </Dialog>
           )}
