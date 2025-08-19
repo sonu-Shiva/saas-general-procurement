@@ -296,6 +296,12 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
   // Check if user can send challenges and extend auctions
   const canManageAuction = ['sourcing_exec', 'sourcing_manager', 'admin'].includes((user as any)?.role || '');
+  const isVendor = (user as any)?.role === 'vendor';
+
+  // For vendors, show the VendorChallengeView instead
+  if (isVendor) {
+    return <VendorChallengeView auctionId={auctionId} />;
+  }
 
   // Fetch counter prices for sourcing executives
   const { data: counterPrices = [] } = useQuery({
@@ -705,8 +711,8 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
         </div>
       </div>
 
-      {/* Issue PO Section */}
-      {canManageAuction && (
+      {/* Issue PO Section - Only for non-vendors */}
+      {canManageAuction && !isVendor && (
         <div className="mt-6 pt-4 border-t">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">Issue Purchase Order</h4>
@@ -730,8 +736,8 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
 
 
-        {/* Create PO Button for completed auctions - Always visible when there are bids */}
-        {sortedBids.length > 0 && (
+        {/* Create PO Button for completed auctions - Only visible for non-vendors */}
+        {sortedBids.length > 0 && !isVendor && (
           <div className="text-center mt-6 pt-4 border-t">
             <Button 
               onClick={() => onCreatePO && onCreatePO({ ...auction, winningBid: sortedBids[0] })}
