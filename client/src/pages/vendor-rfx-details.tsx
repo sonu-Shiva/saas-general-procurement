@@ -23,10 +23,9 @@ function getRfxTypeColor(type: string) {
 export default function VendorRfxDetails() {
   const { id } = useParams();
 
-  // Fetch RFx details - using the exact same pattern as vendor-portal
+  // Fetch RFx details - using default query client behavior
   const { data: rfx, isLoading, error } = useQuery({
     queryKey: [`/api/rfx/${id}`],
-    queryFn: () => apiRequest(`/api/rfx/${id}`),
     enabled: !!id,
   });
 
@@ -39,7 +38,6 @@ export default function VendorRfxDetails() {
   // Fetch BOM details if available
   const { data: bom } = useQuery({
     queryKey: [`/api/boms/${rfx?.bomId}`],
-    queryFn: () => apiRequest(`/api/boms/${rfx?.bomId}`),
     enabled: !!rfx?.bomId
   });
 

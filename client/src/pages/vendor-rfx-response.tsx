@@ -11,17 +11,15 @@ export default function VendorRfxResponse() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
 
-  // Fetch RFx details - using the exact same pattern as vendor-portal
+  // Fetch RFx details - using default query client behavior
   const { data: rfx, isLoading: rfxLoading, error: rfxError } = useQuery({
     queryKey: [`/api/rfx/${id}`],
-    queryFn: () => apiRequest(`/api/rfx/${id}`),
     enabled: !!id,
   });
 
   // Check if response already exists
   const { data: existingResponses = [] } = useQuery({
     queryKey: ['/api/vendor/rfx-responses'],
-    queryFn: () => apiRequest('/api/vendor/rfx-responses'),
   });
 
   console.log('VendorRfxResponse - ID from URL:', id);
