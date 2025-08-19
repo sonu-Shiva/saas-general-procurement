@@ -239,7 +239,15 @@ export default function AuctionCenter() {
   const [selectedAuctionForView, setSelectedAuctionForView] = useState<any>(null);
   const [isAuctionDetailsOpen, setIsAuctionDetailsOpen] = useState(false);
   const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false);
-  const [acceptedTermsMap, setAcceptedTermsMap] = useState<Record<string, boolean>>({});
+  // Load accepted terms from localStorage on component mount
+  const [acceptedTermsMap, setAcceptedTermsMap] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('acceptedAuctionTerms');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -379,10 +387,14 @@ export default function AuctionCenter() {
       const termsKey = `${userId}-${selectedAuctionForView.id}`;
       
       // Mark terms as accepted for this specific vendor-auction pair
-      setAcceptedTermsMap(prev => ({
-        ...prev,
+      const newAcceptedTermsMap = {
+        ...acceptedTermsMap,
         [termsKey]: true
-      }));
+      };
+      
+      // Update state and save to localStorage
+      setAcceptedTermsMap(newAcceptedTermsMap);
+      localStorage.setItem('acceptedAuctionTerms', JSON.stringify(newAcceptedTermsMap));
       
       setIsTermsDialogOpen(false);
       setSelectedAuction(selectedAuctionForView);
