@@ -1511,6 +1511,126 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
     }
   };
 
+  const [challengeAmount, setChallengeAmount] = useState('');
+  const [challengeNotes, setChallengeNotes] = useState('');
+  const [extensionDuration, setExtensionDuration] = useState('');
+  const [extensionReason, setExtensionReason] = useState('');
+  const [selectedBidForChallenge, setSelectedBidForChallenge] = useState<any>(null);
+  const [isExtendDialogOpen, setIsExtendDialogOpen] = useState(false);
+  const [isChallengeDialogOpen, setIsChallengeDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Check if user can send challenges and extend auctions
+  const canManageAuction = ['sourcing_exec', 'sourcing_manager', 'admin'].includes((user as any)?.role || '');
+
+  // Fetch counter prices for sourcing executives
+  const { data: counterPrices = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "counter-prices"],
+    queryFn: () => apiRequest(`/api/auctions/${auction.id}/counter-prices`),
+    refetchInterval: 3000,
+    retry: false,
+    enabled: canManageAuction
+  });
+
+  // Create challenge price mutation
+  const challengePriceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest(`/api/auctions/${auction.id}/challenge-price`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Challenge price sent successfully" });
+      setIsChallengeDialogOpen(false);
+      setChallengeAmount('');
+      setChallengeNotes('');
+      setSelectedBidForChallenge(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to send challenge price",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Extend auction mutation
+  const extendAuctionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest(`/api/auctions/${auction.id}/extend`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Auction extended successfully" });
+      setIsExtendDialogOpen(false);
+      setExtensionDuration('');
+      setExtensionReason('');
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to extend auction",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSendChallenge = (bid: any) => {
+    setSelectedBidForChallenge(bid);
+    setIsChallengeDialogOpen(true);
+  };
+
+  const submitChallenge = () => {
+    if (!selectedBidForChallenge || !challengeAmount) return;
+
+    challengePriceMutation.mutate({
+      bidId: selectedBidForChallenge.id,
+      vendorId: selectedBidForChallenge.vendorId,
+      challengeAmount: parseFloat(challengeAmount),
+      notes: challengeNotes
+    });
+  };
+
+  const submitExtension = () => {
+    if (!extensionDuration) return;
+
+    extendAuctionMutation.mutate({
+      durationMinutes: parseInt(extensionDuration),
+      reason: extensionReason
+    });
+  };
+
+  // Counter price response mutation
+  const respondToCounterMutation = useMutation({
+    mutationFn: async ({ counterId, action }: { counterId: string; action: 'accept' | 'reject' }) => {
+      return apiRequest(`/api/auctions/${auction.id}/counter-prices/${counterId}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (_, { action }) => {
+      toast({ title: "Success", description: `Counter price ${action}ed successfully` });
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions", auction.id, "counter-prices"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to respond to counter price",
+        variant: "destructive"
+      });
+    }
+  });
+
   return (
     <div className="space-y-6">
       {/* Auction Summary */}
@@ -1540,6 +1660,92 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Auction Management Controls */}
+      {canManageAuction && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Auction Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-4">
+              <Button 
+                onClick={() => setIsExtendDialogOpen(true)}
+                variant="outline"
+                className="flex items-center space-x-2"
+              >
+                <Clock className="w-4 h-4" />
+                <span>Extend Auction</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Counter Prices Section for Sourcing Executives */}
+      {canManageAuction && counterPrices.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <MessageSquare className="w-5 h-5" />
+              <span>Counter Offers</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {counterPrices.map((counter: any) => (
+                <div key={counter.id} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium">
+                        Counter Offer: ₹{parseFloat(counter.counterAmount).toFixed(2)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        From {counter.vendorCompanyName || 'Vendor'} on {new Date(counter.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Original challenge: ₹{parseFloat(counter.originalChallengeAmount || 0).toFixed(2)}
+                      </div>
+                      {counter.notes && (
+                        <div className="text-sm mt-2 p-2 bg-white rounded border">
+                          <strong>Notes:</strong> {counter.notes}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex space-x-2">
+                      {counter.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => respondToCounterMutation.mutate({ counterId: counter.id, action: 'accept' })}
+                            disabled={respondToCounterMutation.isPending}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => respondToCounterMutation.mutate({ counterId: counter.id, action: 'reject' })}
+                            disabled={respondToCounterMutation.isPending}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                      {counter.status !== 'pending' && (
+                        <Badge variant={counter.status === 'accepted' ? 'secondary' : 'destructive'}>
+                          {counter.status}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Live Bid History */}
       <Card>
@@ -1583,6 +1789,16 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
                       <div className="text-right">
                         <div className="font-semibold">₹{parseFloat(bid.amount).toFixed(2)}</div>
                         <div className="flex items-center space-x-2">
+                          {canManageAuction && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSendChallenge(bid)}
+                              className="text-xs h-6"
+                            >
+                              Challenge
+                            </Button>
+                          )}
                           {index === 0 && (
                             <Badge variant="secondary" className="text-xs">Latest</Badge>
                           )}
@@ -1618,6 +1834,95 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
           </p>
         </CardContent>
       </Card>
+
+      {/* Challenge Price Dialog */}
+      <Dialog open={isChallengeDialogOpen} onOpenChange={setIsChallengeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Challenge Price</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Vendor: {selectedBidForChallenge?.vendorCompanyName}</Label>
+              <p className="text-sm text-muted-foreground">Current bid: ₹{selectedBidForChallenge?.amount}</p>
+            </div>
+            <div>
+              <Label htmlFor="challenge-amount">Challenge Amount (₹)</Label>
+              <Input
+                id="challenge-amount"
+                type="number"
+                value={challengeAmount}
+                onChange={(e) => setChallengeAmount(e.target.value)}
+                placeholder="Enter challenge price"
+              />
+            </div>
+            <div>
+              <Label htmlFor="challenge-notes">Notes (Optional)</Label>
+              <Textarea
+                id="challenge-notes"
+                value={challengeNotes}
+                onChange={(e) => setChallengeNotes(e.target.value)}
+                placeholder="Add notes for the vendor"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsChallengeDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={submitChallenge}
+                disabled={!challengeAmount || challengePriceMutation.isPending}
+              >
+                {challengePriceMutation.isPending ? "Sending..." : "Send Challenge"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extend Auction Dialog */}
+      <Dialog open={isExtendDialogOpen} onOpenChange={setIsExtendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Extend Auction</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Current end time: {new Date(auction.endTime).toLocaleString()}</Label>
+            </div>
+            <div>
+              <Label htmlFor="extension-duration">Extension Duration (minutes)</Label>
+              <Input
+                id="extension-duration"
+                type="number"
+                value={extensionDuration}
+                onChange={(e) => setExtensionDuration(e.target.value)}
+                placeholder="Enter minutes to extend"
+              />
+            </div>
+            <div>
+              <Label htmlFor="extension-reason">Reason</Label>
+              <Textarea
+                id="extension-reason"
+                value={extensionReason}
+                onChange={(e) => setExtensionReason(e.target.value)}
+                placeholder="Reason for extending the auction"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsExtendDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={submitExtension}
+                disabled={!extensionDuration || extendAuctionMutation.isPending}
+              >
+                {extendAuctionMutation.isPending ? "Extending..." : "Extend Auction"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1626,6 +1931,10 @@ function LiveAuctionView({ auction, ws, onClose }: any) {
 function LiveBiddingInterface({ auction, ws, onClose }: any) {
   const [currentBid, setCurrentBid] = useState('');
   const [bids, setBids] = useState<any[]>([]);
+  const [counterAmount, setCounterAmount] = useState('');
+  const [counterNotes, setCounterNotes] = useState('');
+  const [selectedChallenge, setSelectedChallenge] = useState<any>(null);
+  const [isCounterDialogOpen, setIsCounterDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -1638,9 +1947,79 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
     retry: false,
   });
 
+  // Fetch challenge prices for this vendor
+  const { data: challengePrices = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "challenge-prices"],
+    queryFn: () => apiRequest(`/api/auctions/${auction.id}/challenge-prices`),
+    refetchInterval: 3000, // Refresh every 3 seconds
+    retry: false,
+  });
+
   useEffect(() => {
     setBids(auctionBids);
   }, [auctionBids]);
+
+  // Challenge price response mutations
+  const respondToChallengeMutation = useMutation({
+    mutationFn: async ({ challengeId, action }: { challengeId: string; action: 'accept' | 'reject' }) => {
+      return apiRequest(`/api/auctions/${auction.id}/challenge-prices/${challengeId}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (_, { action }) => {
+      toast({ title: "Success", description: `Challenge price ${action}ed successfully` });
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions", auction.id, "challenge-prices"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to respond to challenge price",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Counter price mutation
+  const counterPriceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest(`/api/auctions/${auction.id}/counter-price`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Counter price sent successfully" });
+      setIsCounterDialogOpen(false);
+      setCounterAmount('');
+      setCounterNotes('');
+      setSelectedChallenge(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to send counter price",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSendCounter = (challenge: any) => {
+    setSelectedChallenge(challenge);
+    setIsCounterDialogOpen(true);
+  };
+
+  const submitCounter = () => {
+    if (!selectedChallenge || !counterAmount) return;
+
+    counterPriceMutation.mutate({
+      challengeId: selectedChallenge.id,
+      counterAmount: parseFloat(counterAmount),
+      notes: counterNotes
+    });
+  };
 
   const formatBidDateTime = (timestamp: string) => {
     try {
@@ -1899,6 +2278,117 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Challenge Prices Section */}
+      {challengePrices.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span>Challenge Prices</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {challengePrices.map((challenge: any) => (
+                <div key={challenge.id} className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-medium">Challenge Price: ₹{parseFloat(challenge.challengeAmount).toFixed(2)}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Sent by sourcing team on {new Date(challenge.createdAt).toLocaleDateString()}
+                      </div>
+                      {challenge.notes && (
+                        <div className="text-sm mt-2 p-2 bg-white rounded border">
+                          <strong>Notes:</strong> {challenge.notes}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex space-x-2">
+                      {challenge.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => respondToChallengeMutation.mutate({ challengeId: challenge.id, action: 'accept' })}
+                            disabled={respondToChallengeMutation.isPending}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => respondToChallengeMutation.mutate({ challengeId: challenge.id, action: 'reject' })}
+                            disabled={respondToChallengeMutation.isPending}
+                          >
+                            Reject
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendCounter(challenge)}
+                          >
+                            Counter Offer
+                          </Button>
+                        </>
+                      )}
+                      {challenge.status !== 'pending' && (
+                        <Badge variant={challenge.status === 'accepted' ? 'secondary' : 'destructive'}>
+                          {challenge.status}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Counter Price Dialog */}
+      <Dialog open={isCounterDialogOpen} onOpenChange={setIsCounterDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Counter Price</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Challenge Amount: ₹{selectedChallenge?.challengeAmount}</Label>
+              <p className="text-sm text-muted-foreground">Respond with your counter offer</p>
+            </div>
+            <div>
+              <Label htmlFor="counter-amount">Counter Amount (₹)</Label>
+              <Input
+                id="counter-amount"
+                type="number"
+                value={counterAmount}
+                onChange={(e) => setCounterAmount(e.target.value)}
+                placeholder="Enter counter price"
+              />
+            </div>
+            <div>
+              <Label htmlFor="counter-notes">Notes (Optional)</Label>
+              <Textarea
+                id="counter-notes"
+                value={counterNotes}
+                onChange={(e) => setCounterNotes(e.target.value)}
+                placeholder="Add notes for your counter offer"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsCounterDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={submitCounter}
+                disabled={!counterAmount || counterPriceMutation.isPending}
+              >
+                {counterPriceMutation.isPending ? "Sending..." : "Send Counter Offer"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
