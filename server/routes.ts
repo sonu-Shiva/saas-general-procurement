@@ -565,7 +565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Terms download endpoint - get actual RFx terms file
-  app.get('/api/terms/download/:rfxId', async (req: any, res) => {
+  app.get('/api/terms/download/:rfxId', authMiddleware, async (req: any, res) => {
     try {
       const { rfxId } = req.params;
       

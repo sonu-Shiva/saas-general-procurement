@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Send, FileText, Clock, Package, Upload, X, AlertTriangle, Trash2, Download } from "lucide-react";
-// Removed TermsAcceptanceDialog - using simple checkbox approach like auctions
+import { TermsAcceptanceDialog } from "./TermsAcceptanceDialog";
 import { RfxAttachmentUploader } from "./RfxAttachmentUploader";
 
 const createRfxResponseSchema = (budgetAmount?: number) => z.object({
@@ -57,7 +57,7 @@ interface AttachmentInfo {
 export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProps) {
   const { toast } = useToast();
   const [attachments, setAttachments] = useState<AttachmentInfo[]>([]);
-  // Remove terms dialog - use simple checkbox approach like auctions
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Handle nested RFx data structure properly - vendor invitations come with rfx nested
@@ -150,14 +150,38 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
     setAttachments(prev => prev.filter(att => att.id !== attachmentId));
   };
 
-  // Simple terms handling - no dialog needed (like auctions)
-  const handleTermsAccepted = () => {
-    setTermsAccepted(true);
-    form.setValue('termsAccepted', true);
-    toast({
-      title: "Terms Accepted",
-      description: "You can now submit your response",
-    });
+  const handleTermsAccepted = async () => {
+    try {
+      const response = await fetch('/api/terms/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entityType: 'rfx',
+          entityId: rfxId,
+          termsAndConditionsPath: termsPath,
+        }),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setTermsAccepted(true);
+        form.setValue('termsAccepted', true);
+        setShowTermsDialog(false);
+        toast({
+          title: "Terms Accepted",
+          description: "You can now submit your response",
+        });
+      } else {
+        throw new Error('Failed to accept terms');
+      }
+    } catch (error) {
+      console.error('Terms acceptance error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept terms",
+        variant: "destructive",
+      });
+    }
   };
 
   const submitResponseMutation = useMutation({
@@ -312,104 +336,26 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
             <div className="flex-1">
               <h3 className="font-medium mb-2">Terms & Conditions *</h3>
               {termsAccepted ? (
-                <div className="text-sm text-green-700">
-                  ✓ You have accepted the terms and conditions for this {rfxType}.
+                <div className="flex items-center space-x-2 text-green-700">
+                  <div className="w-4 h-4 rounded-full bg-green-600 flex items-center justify-center">
+                    <span className="text-white text-xs">✓</span>
+                  </div>
+                  <span className="text-sm font-medium">Terms & Conditions Accepted</span>
                 </div>
               ) : (
                 <>
                   <p className="text-sm text-red-700 mb-3">
                     <strong>MANDATORY:</strong> You must accept the terms and conditions before submitting your response.
                   </p>
-                  <div className="flex items-center space-x-3 mb-3">
-                    <Checkbox
-                      id="terms-checkbox"
-                      checked={termsAccepted}
-                      onCheckedChange={(checked) => {
-                        setTermsAccepted(checked === true);
-                        form.setValue('termsAccepted', checked === true);
-                      }}
-                      data-testid="checkbox-terms"
-                    />
-                    <Label htmlFor="terms-checkbox" className="text-sm">
-                      I accept the terms and conditions for this {rfxType}
-                    </Label>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (termsPath && termsPath !== '/dummy-terms.pdf') {
-                          window.open(termsPath, '_blank');
-                        } else {
-                          // Show terms content in new tab
-                          const termsContent = `
-                            <html>
-                              <head><title>Terms and Conditions - ${rfxType}</title></head>
-                              <body style="font-family: Arial, sans-serif; padding: 20px;">
-                                <h1>Terms and Conditions</h1>
-                                <h2>${rfxType} - ${rfxData.title}</h2>
-                                <h3>Reference: ${rfxData.referenceNo}</h3>
-                                <p>Standard terms and conditions apply for this ${rfxType}.</p>
-                                <p>By accepting these terms, you agree to participate in this procurement process.</p>
-                              </body>
-                            </html>
-                          `;
-                          const newTab = window.open();
-                          if (newTab) {
-                            newTab.document.write(termsContent);
-                            newTab.document.close();
-                          }
-                        }
-                      }}
-                      data-testid="button-view-terms"
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      View Terms
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        try {
-                          // Use the download API endpoint with RFx ID
-                          const downloadUrl = `/api/terms/download/${rfxId}`;
-                          const response = await fetch(downloadUrl);
-                          
-                          if (response.ok) {
-                            const blob = await response.blob();
-                            const url = window.URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `terms-and-conditions-${rfxType}-${rfxData.referenceNo}.pdf`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            window.URL.revokeObjectURL(url);
-                            toast({
-                              title: "Download Started",
-                              description: "Terms and conditions document is being downloaded.",
-                            });
-                          } else {
-                            throw new Error(`Download failed with status: ${response.status}`);
-                          }
-                        } catch (error) {
-                          console.error('Download error:', error);
-                          toast({
-                            title: "Download Failed", 
-                            description: "Unable to download terms document. Please try again.",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                      data-testid="button-download-terms"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download Terms
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setShowTermsDialog(true)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    data-testid="button-accept-terms"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Download & Read Terms & Conditions
+                  </Button>
                 </>
               )}
             </div>
@@ -668,6 +614,26 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
           </CardContent>
         </Card>
       </form>
+
+      {/* Terms Acceptance Dialog - Auction Style */}
+      {showTermsDialog && (
+        <TermsAcceptanceDialog
+          open={showTermsDialog}
+          onOpenChange={setShowTermsDialog}
+          termsAndConditionsPath={termsPath || `/api/terms/download/${rfxId}`}
+          rfxTitle={rfxData.title || rfx.rfxTitle}
+          rfxType={rfxType}
+          onAccept={handleTermsAccepted}
+          onDecline={() => {
+            setShowTermsDialog(false);
+            toast({
+              title: "Terms Required",
+              description: "You must accept the terms & conditions to submit your response.",
+              variant: "destructive",
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
