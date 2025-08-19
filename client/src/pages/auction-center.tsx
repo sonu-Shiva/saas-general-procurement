@@ -33,7 +33,9 @@ import {
   Bell,
   Calendar,
   ShoppingCart,
-  Upload
+  Upload,
+  FileText,
+  AlertTriangle
 } from "lucide-react";
 
 // Auction Results Component  
@@ -234,6 +236,10 @@ export default function AuctionCenter() {
   const [isLiveBiddingOpen, setIsLiveBiddingOpen] = useState(false);
   const [isPODialogOpen, setIsPODialogOpen] = useState(false);
   const [selectedAuctionForPO, setSelectedAuctionForPO] = useState<any>(null);
+  const [selectedAuctionForView, setSelectedAuctionForView] = useState<any>(null);
+  const [isAuctionDetailsOpen, setIsAuctionDetailsOpen] = useState(false);
+  const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -340,13 +346,40 @@ export default function AuctionCenter() {
   };
 
   const handleViewLiveBidding = (auction: any) => {
+    if (isVendor && auction.status === 'live') {
+      // Check if vendor has accepted terms for this auction before bidding
+      if (auction.termsAndConditionsPath && !hasAcceptedTerms) {
+        setSelectedAuctionForView(auction);
+        setIsTermsDialogOpen(true);
+        return;
+      }
+    }
     setSelectedAuction(auction);
     setIsLiveBiddingOpen(true);
+  };
+
+  const handleViewAuctionDetails = (auction: any) => {
+    setSelectedAuctionForView(auction);
+    setIsAuctionDetailsOpen(true);
   };
 
   const handleCreatePOFromAuction = (auction: any) => {
     setSelectedAuctionForPO(auction);
     setIsPODialogOpen(true);
+  };
+
+  const handleTermsAccepted = () => {
+    setHasAcceptedTerms(true);
+    setIsTermsDialogOpen(false);
+    if (selectedAuctionForView) {
+      setSelectedAuction(selectedAuctionForView);
+      setIsLiveBiddingOpen(true);
+    }
+  };
+
+  const handleTermsDeclined = () => {
+    setIsTermsDialogOpen(false);
+    setSelectedAuctionForView(null);
   };
 
   return (
@@ -475,6 +508,7 @@ export default function AuctionCenter() {
                   onStart={() => handleStartAuction(auction.id)}
                   onViewLive={() => handleViewLiveBidding(auction)}
                   onCreatePO={handleCreatePOFromAuction}
+                  onViewAuctionDetails={handleViewAuctionDetails}
                   isLive={liveAuctions.has(auction.id)}
                   isVendor={isVendor}
                 />
@@ -531,12 +565,212 @@ export default function AuctionCenter() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Auction Details Dialog for Vendors */}
+      {isVendor && (
+        <Dialog open={isAuctionDetailsOpen} onOpenChange={setIsAuctionDetailsOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Auction Details - {selectedAuctionForView?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+              {selectedAuctionForView && (
+                <AuctionDetailsView 
+                  auction={selectedAuctionForView}
+                  onClose={() => setIsAuctionDetailsOpen(false)}
+                  onBidNow={() => {
+                    setIsAuctionDetailsOpen(false);
+                    handleViewLiveBidding(selectedAuctionForView);
+                  }}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Terms Acceptance Dialog */}
+      {isVendor && (
+        <TermsAcceptanceDialog
+          open={isTermsDialogOpen}
+          onOpenChange={setIsTermsDialogOpen}
+          rfxTitle={selectedAuctionForView?.name || ''}
+          rfxType="auction"
+          termsAndConditionsPath={selectedAuctionForView?.termsAndConditionsPath}
+          onAccept={handleTermsAccepted}
+          onDecline={handleTermsDeclined}
+        />
+      )}
+    </div>
+  );
+}
+
+// Auction Details View Component for Vendors
+function AuctionDetailsView({ auction, onClose, onBidNow }: { auction: any; onClose: () => void; onBidNow: () => void }) {
+  const { data: bomItems = [] } = useQuery({
+    queryKey: ["/api/boms", auction.bomId, "items"],
+    queryFn: async () => {
+      if (!auction.bomId) return [];
+      try {
+        const itemsResponse = await apiRequest(`/api/boms/${auction.bomId}/items`);
+        return Array.isArray(itemsResponse) ? itemsResponse : [];
+      } catch (error) {
+        console.error("Error fetching BOM items:", error);
+        return [];
+      }
+    },
+    enabled: !!auction.bomId,
+    retry: false,
+  });
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Auction Header */}
+      <div className="border-b pb-4">
+        <h2 className="text-2xl font-bold text-foreground mb-2">{auction.name}</h2>
+        <p className="text-muted-foreground">{auction.description}</p>
+        <div className="flex items-center space-x-4 mt-3">
+          <Badge className={
+            auction.status === 'scheduled' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+            auction.status === 'live' ? 'bg-green-100 text-green-700 border-green-200' :
+            'bg-gray-100 text-gray-700 border-gray-200'
+          }>
+            {auction.status.toUpperCase()}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Auction Details Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Pricing Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Ceiling Price:</span>
+              <span className="font-semibold">₹{parseFloat(auction.reservePrice || '0').toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Current Bid:</span>
+              <span className="font-semibold text-green-600">₹{auction.currentBid || 'No bids yet'}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Timeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Start Time:</span>
+              <span className="font-semibold">{formatDateTime(auction.startTime)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">End Time:</span>
+              <span className="font-semibold">{formatDateTime(auction.endTime)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* BOM Items */}
+      {bomItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Required Items (Bill of Materials)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {bomItems.map((item: any) => (
+                <div key={item.id} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <div className="font-medium">{item.productName}</div>
+                    <div className="text-sm text-muted-foreground">{item.description}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">Qty: {item.quantity}</div>
+                    <div className="text-sm text-muted-foreground">Est. ₹{parseFloat(item.unitPrice || '0').toLocaleString('en-IN')}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Terms & Conditions */}
+      {auction.termsAndConditionsPath && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Terms & Conditions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="font-medium">Terms Acceptance Required</span>
+              </div>
+              <p className="text-yellow-700 text-sm mb-3">
+                You must download, read, and accept the terms & conditions before participating in this auction.
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <a href={auction.termsAndConditionsPath} target="_blank" rel="noopener noreferrer">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Download Terms & Conditions
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 pt-4 border-t">
+        {auction.status === 'live' && (
+          <Button 
+            onClick={onBidNow}
+            className="flex-1 bg-green-600 hover:bg-green-700"
+            data-testid="button-bid-now"
+          >
+            <Gavel className="w-4 h-4 mr-2" />
+            Start Bidding
+          </Button>
+        )}
+        <Button variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      </div>
     </div>
   );
 }
 
 // Auction Card Component
-function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendor }: any) {
+function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onViewAuctionDetails, isLive, isVendor }: any) {
   const getRemainingTime = (endTime: string) => {
     const end = new Date(endTime);
     const now = new Date();
@@ -608,6 +842,12 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
                 Start
               </Button>
             </>
+          )}
+          {isVendor && (
+            <Button variant="outline" size="sm" onClick={() => onViewAuctionDetails && onViewAuctionDetails(auction)} data-testid="button-view-auction-details">
+              <Eye className="w-4 h-4 mr-1" />
+              View
+            </Button>
           )}
           {auction.status === 'live' && (
             <Button variant="ghost" size="sm" onClick={onViewLive} data-testid="button-view-live">
