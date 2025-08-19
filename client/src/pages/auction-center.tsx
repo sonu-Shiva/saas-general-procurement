@@ -506,81 +506,85 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
       <div className="text-center">
         <h3 className="text-lg font-semibold mb-2">Final Rankings</h3>
         <p className="text-muted-foreground mb-4">Ranked by bid amount (lowest first)</p>
-        <div className="space-y-2">
-          {sortedBids.map((bid: any, index: number) => (
-            <Card key={bid.id} className={index === 0 ? 'border-green-500 bg-green-50' : ''}>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      index === 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div>
-                      <div className="font-medium">
-                        {(() => {
-                          // Debug logging for results dialog
-                          console.log('=== RESULTS DIALOG DEBUG ===');
-                          console.log('bid.vendorId:', bid.vendorId);
-                          console.log('user.vendorId:', (user as any)?.vendorId);
-                          console.log('user.id:', (user as any)?.id);
-                          
-                          // Try both vendorId and id for comparison
-                          const isCurrentUser = bid.vendorId === (user as any)?.vendorId || 
-                                               bid.vendorId === (user as any)?.id;
-                          const isVendorUser = (user as any)?.role === 'vendor';
-                          
-                          console.log('isCurrentUser:', isCurrentUser);
-                          console.log('isVendorUser:', isVendorUser);
-                          
-                          if (isCurrentUser) {
-                            return 'Your Bid';
-                          } else if (isVendorUser) {
-                            return 'Vendor';
-                          } else {
-                            return bid.vendorCompanyName || 
-                                   bid.vendor?.companyName || 
-                                   bid.vendorName || 
-                                   (bid.vendorId ? `Vendor ${bid.vendorId.substring(0, 8)}` : 'Unknown Vendor');
-                          }
-                        })()}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatBidDateTime(bid.timestamp || bid.createdAt || bid.submittedAt)}
-                      </div>
-                    </div>
+      </div>
+
+      {/* Bid Results Cards */}
+      <div className="space-y-3">
+        {sortedBids.map((bid: any, index: number) => {
+          const isWinner = index === 0;
+          const rankLabel = `L${index + 1}`;
+          const vendorName = bid.vendorCompanyName || bid.companyName || `Vendor ${index + 1}`;
+          
+          return (
+            <Card 
+              key={bid.id} 
+              className={`p-4 ${isWinner ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  {/* Ranking Badge */}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                    isWinner 
+                      ? 'bg-green-500 text-white' 
+                      : index === 1 
+                        ? 'bg-blue-500 text-white'
+                        : index === 2
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-gray-400 text-white'
+                  }`}>
+                    {index + 1}
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-semibold">
-                      ₹{parseFloat(bid.amount || bid.bidAmount || '0').toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                  {/* Vendor Details */}
+                  <div className="flex-1">
+                    <div className="font-semibold text-lg text-gray-900">
+                      {vendorName}
                     </div>
-                    <div className="flex items-center space-x-2 mt-1">
-                      {canManageAuction && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleSendChallenge(bid)}
-                          className="text-xs h-6"
-                        >
-                          Challenge
-                        </Button>
-                      )}
-                      <Badge className={`${
-                        index === 0 ? 'bg-green-100 text-green-700 border-green-200' :
-                        index === 1 ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                        index === 2 ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                        'bg-gray-100 text-gray-700 border-gray-200'
-                      }`}>
-                        L{index + 1} Bidder
-                      </Badge>
+                    <div className="text-sm text-gray-600">
+                      {formatBidDateTime(bid.timestamp)}
                     </div>
                   </div>
                 </div>
-              </CardContent>
+
+                {/* Price and Actions */}
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-gray-900">
+                      ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* L1, L2, L3 Badge */}
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    isWinner 
+                      ? 'bg-green-100 text-green-800' 
+                      : index === 1 
+                        ? 'bg-blue-100 text-blue-800'
+                        : index === 2
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {rankLabel} Bidder
+                  </div>
+
+                  {/* Challenge Button for Sourcing Executives */}
+                  {canManageAuction && (auction?.status === 'completed' || auction?.status === 'closed') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSendChallenge(bid)}
+                      className="ml-2"
+                      data-testid={`button-challenge-${index}`}
+                    >
+                      Challenge
+                    </Button>
+                  )}
+                </div>
+              </div>
             </Card>
-          ))}
-        </div>
+          );
+        })}
+      </div>
 
         {/* Challenge Prices Sent Section for Sourcing Executives */}
         {canManageAuction && (
@@ -758,8 +762,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
           </DialogContent>
         </Dialog>
       </div>
-    </div>
-  );
+    );
 }
 
 export default function AuctionCenter() {
