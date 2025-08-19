@@ -89,7 +89,7 @@ export default function RfxManagement() {
 
   // Filter RFx events based on role and search criteria
   const filteredRfxEvents = useMemo(() => {
-    if (!rfxEvents) return [];
+    if (!rfxEvents || !Array.isArray(rfxEvents)) return [];
 
     return rfxEvents.filter((rfx: any) => {
       // Search filter
@@ -342,7 +342,7 @@ export default function RfxManagement() {
         {!isVendor && (
           <div className="flex items-center space-x-2">
             {/* Development Test Buttons */}
-            {user?.email === 'dev@sclen.com' && rfxEvents && rfxEvents.length > 0 && (
+            {(user as any)?.email === 'dev@sclen.com' && Array.isArray(rfxEvents) && rfxEvents.length > 0 && (
               <div className="mb-4 flex gap-2">
                 <Button 
                   onClick={handleCreateVendorInvitations}
@@ -351,9 +351,9 @@ export default function RfxManagement() {
                 >
                   🧪 Test: Create Vendor Invitations (All)
                 </Button>
-                {isVendor && (
+                {isVendor && rfxEvents[0] && (
                   <Button 
-                    onClick={() => handleInviteCurrentVendor(rfxEvents[0]?.id)}
+                    onClick={() => handleInviteCurrentVendor(rfxEvents[0].id)}
                     variant="outline"
                     className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
                   >
