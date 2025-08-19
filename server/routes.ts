@@ -1118,14 +1118,25 @@ Focus on established businesses with verifiable contact information.`;
 
       const { status, type } = req.query;
 
-      // Buyers/admins see all RFx they created
-      if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager') {
-        const rfxEvents = await storage.getRfxEvents({
-          status: status as string,
-          type: type as string,
-          createdBy: userId,
-        });
-        res.json(rfxEvents);
+      // Buyers/admins/sourcing roles see all RFx they can access
+      if (['buyer_admin', 'buyer_user', 'sourcing_manager', 'sourcing_exec', 'department_requester', 'dept_approver'].includes(user.role)) {
+        // For sourcing roles, show all RFx events, not just ones they created
+        if (user.role === 'sourcing_manager' || user.role === 'sourcing_exec') {
+          const rfxEvents = await storage.getRfxEvents({
+            status: status as string,
+            type: type as string,
+            // No createdBy filter - show all RFx events
+          });
+          res.json(rfxEvents);
+        } else {
+          // For other buyer roles, show RFx they created
+          const rfxEvents = await storage.getRfxEvents({
+            status: status as string,
+            type: type as string,
+            createdBy: userId,
+          });
+          res.json(rfxEvents);
+        }
       } 
       // Vendors see only RFx they are invited to participate in
       else if (user.role === 'vendor') {
@@ -1139,7 +1150,12 @@ Focus on established businesses with verifiable contact information.`;
         }
       } 
       else {
-        res.json([]);
+        // Default fallback - show all RFx for unrecognized roles
+        const rfxEvents = await storage.getRfxEvents({
+          status: status as string,
+          type: type as string,
+        });
+        res.json(rfxEvents);
       }
     } catch (error) {
       console.error("Error fetching RFx events:", error);
@@ -1507,10 +1523,19 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(401).json({ message: "User not found" });
       }
 
-      // Buyers/admins see all auctions they created
-      if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager') {
-        const auctions = await storage.getAuctions({ createdBy: userId });
-        res.json(auctions);
+      // Buyers/admins/sourcing roles see all auctions they can access
+      if (['buyer_admin', 'buyer_user', 'sourcing_manager', 'sourcing_exec', 'department_requester', 'dept_approver'].includes(user.role)) {
+        // For sourcing roles, show all auctions, not just ones they created
+        if (user.role === 'sourcing_manager' || user.role === 'sourcing_exec') {
+          const auctions = await storage.getAuctions({
+            // No createdBy filter - show all auctions
+          });
+          res.json(auctions);
+        } else {
+          // For other buyer roles, show auctions they created
+          const auctions = await storage.getAuctions({ createdBy: userId });
+          res.json(auctions);
+        }
       } 
       // Vendors see only auctions they are invited to participate in
       else if (user.role === 'vendor') {
@@ -1518,7 +1543,9 @@ Focus on established businesses with verifiable contact information.`;
         res.json(auctions);
       } 
       else {
-        res.json([]);
+        // Default fallback - show all auctions for unrecognized roles
+        const auctions = await storage.getAuctions({});
+        res.json(auctions);
       }
     } catch (error) {
       console.error("Error fetching auctions:", error);
