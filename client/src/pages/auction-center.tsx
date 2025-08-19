@@ -516,28 +516,32 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
           const vendorName = bid.vendorCompanyName || bid.companyName || `Vendor ${index + 1}`;
           
           return (
-            <Card 
+            <div 
               key={bid.id} 
-              className={`p-4 ${isWinner ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}
+              className={`p-6 rounded-lg border-2 shadow-sm ${
+                isWinner 
+                  ? 'border-green-400 bg-green-50' 
+                  : 'border-gray-200 bg-white'
+              }`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  {/* Ranking Badge */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                <div className="flex items-center space-x-6">
+                  {/* Large Ranking Badge */}
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold shadow-lg ${
                     isWinner 
                       ? 'bg-green-500 text-white' 
                       : index === 1 
                         ? 'bg-blue-500 text-white'
                         : index === 2
                           ? 'bg-orange-500 text-white'
-                          : 'bg-gray-400 text-white'
+                          : 'bg-gray-500 text-white'
                   }`}>
                     {index + 1}
                   </div>
 
                   {/* Vendor Details */}
                   <div className="flex-1">
-                    <div className="font-semibold text-lg text-gray-900">
+                    <div className="text-xl font-bold text-gray-900 mb-1">
                       {vendorName}
                     </div>
                     <div className="text-sm text-gray-600">
@@ -547,22 +551,22 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                 </div>
 
                 {/* Price and Actions */}
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-6">
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-3xl font-bold text-gray-900">
                       ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}
                     </div>
                   </div>
 
                   {/* L1, L2, L3 Badge */}
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  <div className={`px-4 py-2 rounded-full text-base font-semibold ${
                     isWinner 
-                      ? 'bg-green-100 text-green-800' 
+                      ? 'bg-green-200 text-green-800' 
                       : index === 1 
-                        ? 'bg-blue-100 text-blue-800'
+                        ? 'bg-blue-200 text-blue-800'
                         : index === 2
-                          ? 'bg-orange-100 text-orange-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-orange-200 text-orange-800'
+                          : 'bg-gray-200 text-gray-800'
                   }`}>
                     {rankLabel} Bidder
                   </div>
@@ -571,9 +575,9 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                   {canManageAuction && (auction?.status === 'completed' || auction?.status === 'closed') && (
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={() => handleSendChallenge(bid)}
-                      className="ml-2"
+                      className="ml-2 px-6 py-2"
                       data-testid={`button-challenge-${index}`}
                     >
                       Challenge
@@ -581,7 +585,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                   )}
                 </div>
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
