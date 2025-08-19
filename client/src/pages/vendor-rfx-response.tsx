@@ -20,9 +20,11 @@ export default function VendorRfxResponse() {
     queryKey: ["/api/vendor/rfx-responses"],
   });
 
+  console.log('VendorRfxResponse - ID from URL:', id);
   console.log('VendorRfxResponse - RFx data:', rfx);
   console.log('VendorRfxResponse - Loading:', rfxLoading);
   console.log('VendorRfxResponse - Error:', rfxError);
+  console.log('VendorRfxResponse - Query key:', [`/api/rfx/${id}`]);
 
   if (rfxLoading) {
     return (

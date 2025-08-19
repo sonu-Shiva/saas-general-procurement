@@ -27,9 +27,11 @@ export default function VendorRfxDetails() {
     queryKey: [`/api/rfx/${id}`],
   });
 
+  console.log('VendorRfxDetails - ID from URL:', id);
   console.log('VendorRfxDetails - RFx data:', rfx);
   console.log('VendorRfxDetails - Loading:', isLoading);
   console.log('VendorRfxDetails - Error:', error);
+  console.log('VendorRfxDetails - Query key:', [`/api/rfx/${id}`]);
 
   // Fetch BOM details if available
   const { data: bom } = useQuery({
