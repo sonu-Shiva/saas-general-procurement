@@ -17,14 +17,14 @@ import { RfxAttachmentUploader } from "./RfxAttachmentUploader";
 
 const createRfxResponseSchema = (budgetAmount?: number) => z.object({
   response: z.string().min(1, "Response is required"),
-  quotedPrice: z.string().optional().refine((val) => {
-    if (!val || val === "") return true; // Optional field
+  quotedPrice: z.string().min(1, "Quoted price is required").refine((val) => {
     const price = parseFloat(val);
     if (isNaN(price)) return false;
-    if (budgetAmount && price >= budgetAmount) return false;
-    return price > 0;
+    if (price <= 0) return false;
+    if (budgetAmount && budgetAmount > 0 && price >= budgetAmount) return false;
+    return true;
   }, {
-    message: budgetAmount 
+    message: budgetAmount && budgetAmount > 0
       ? `Quoted price must be less than budget (₹${budgetAmount.toLocaleString()})`
       : "Quoted price must be a valid positive number"
   }),
@@ -63,7 +63,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
   // Handle nested RFx data structure properly - vendor invitations come with rfx nested
   const rfxData = rfx.rfx || rfx;
   const rfxType = (rfxData.type || rfx.rfxType || rfx.type || 'rfx').toUpperCase();
-  const termsPath = rfxData.termsAndConditionsPath || rfx.rfxTermsAndConditionsPath || rfx.termsAndConditionsPath;
+  const termsPath = rfxData.termsAndConditionsPath || rfx.rfxTermsAndConditionsPath || rfx.termsAndConditionsPath || '/dummy-terms.pdf'; // Always show terms section
   const rfxId = rfx.rfxId || rfx.id || rfxData.id;
   const budgetAmount = parseFloat(rfxData.budget || rfx.budget || rfxData.budgetAmount || rfx.budgetAmount || 0);
 
@@ -238,10 +238,33 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
   });
 
   const onSubmit = (data: RfxResponseFormData) => {
-    if (termsPath && !termsAccepted) {
-      setShowTermsDialog(true);
+    console.log('Form submission attempted:', data);
+    console.log('Terms accepted:', termsAccepted);
+    console.log('Form errors:', form.formState.errors);
+    
+    // Check terms acceptance
+    if (!termsAccepted) {
+      toast({
+        title: "Terms Required",
+        description: "You must accept the terms and conditions before submitting.",
+        variant: "destructive",
+      });
       return;
     }
+    
+    // Check price validation
+    if (data.quotedPrice && budgetAmount > 0) {
+      const price = parseFloat(data.quotedPrice);
+      if (price >= budgetAmount) {
+        toast({
+          title: "Invalid Price",
+          description: `Quoted price (₹${price.toLocaleString()}) must be less than budget (₹${budgetAmount.toLocaleString()})`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     submitResponseMutation.mutate(data);
   };
 
@@ -305,8 +328,56 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
         </CardContent>
       </Card>
 
-      {/* Terms & Conditions */}
-      {termsPath && (
+      {/* Terms & Conditions - Always required */}
+      <Card className={`border-2 ${termsAccepted ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+        <CardContent className="p-4">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className={`w-5 h-5 mt-0.5 ${termsAccepted ? 'text-green-600' : 'text-red-600'}`} />
+            <div className="flex-1">
+              <h3 className="font-medium mb-2">Terms & Conditions *</h3>
+              {termsAccepted ? (
+                <div className="text-sm text-green-700">
+                  ✓ You have accepted the terms and conditions for this {rfxType}.
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-red-700 mb-3">
+                    <strong>MANDATORY:</strong> You must accept the terms and conditions before submitting your response.
+                  </p>
+                  <div className="flex items-center space-x-3 mb-3">
+                    <Checkbox
+                      id="terms-checkbox"
+                      checked={termsAccepted}
+                      onCheckedChange={(checked) => {
+                        setTermsAccepted(checked === true);
+                        form.setValue('termsAccepted', checked === true);
+                      }}
+                      data-testid="checkbox-terms"
+                    />
+                    <Label htmlFor="terms-checkbox" className="text-sm">
+                      I accept the terms and conditions for this {rfxType}
+                    </Label>
+                  </div>
+                  {termsPath !== '/dummy-terms.pdf' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(termsPath, '_blank')}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      View Terms Document
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Keep original terms section for backward compatibility */}
+      {false && termsPath && (
         <Card className={`border-2 ${termsAccepted ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'}`}>
           <CardContent className="p-4">
             <div className="flex items-start space-x-3">
@@ -516,14 +587,14 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
         {/* Terms Acceptance Reminder and Form Actions */}
         <Card className="border-2 border-primary/20 bg-primary/5">
           <CardContent className="p-6">
-            {termsPath && !termsAccepted && (
-              <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                <div className="flex items-center space-x-2 text-orange-800">
+            {!termsAccepted && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center space-x-2 text-red-800">
                   <AlertTriangle className="w-5 h-5" />
                   <span className="font-medium">Terms & Conditions Required</span>
                 </div>
-                <p className="text-sm text-orange-700 mt-2">
-                  You must accept the terms and conditions before submitting your response.
+                <p className="text-sm text-red-700 mt-2">
+                  You must accept the terms and conditions above before submitting your response.
                 </p>
               </div>
             )}
@@ -539,7 +610,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
               </Button>
               <Button 
                 type="submit" 
-                disabled={submitResponseMutation.isPending || (termsPath && !termsAccepted)}
+                disabled={submitResponseMutation.isPending || !termsAccepted || !form.formState.isValid}
                 className="bg-primary hover:bg-primary/90 min-w-[180px]"
                 data-testid="button-submit"
               >
