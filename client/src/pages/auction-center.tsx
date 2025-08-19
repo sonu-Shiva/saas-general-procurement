@@ -613,8 +613,11 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
             const vendorName = bid.vendorCompanyName || bid.companyName || `Vendor ${index + 1}`;
             
             // Check if there's a challenge for this vendor
-            const hasChallenge = challengePrices.some((cp: any) => cp.vendorId === bid.vendorId);
-            const challengeStatus = challengePrices.find((cp: any) => cp.vendorId === bid.vendorId)?.status || null;
+            const hasChallenge = challengePricesData.some((cp: any) => cp.vendorId === bid.vendorId);
+            const challengeStatus = challengePricesData.find((cp: any) => cp.vendorId === bid.vendorId)?.status || null;
+            
+            // Check if there's a counter price for this vendor
+            const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === bid.vendorId);
             
             return (
               <div 
@@ -704,6 +707,64 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                     )}
                   </div>
 
+                  {/* Counter Prices Section - Show within vendor card */}
+                  {vendorCounterPrices.length > 0 && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-sm font-medium text-blue-800 mb-2">Counter Prices</div>
+                      {vendorCounterPrices.map((counterPrice: any) => (
+                        <div key={counterPrice.id} className="mb-3 last:mb-0">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="font-medium text-sm">₹{parseFloat(counterPrice.counterAmount).toFixed(2)}</div>
+                              <div className="text-xs text-gray-600">
+                                vs Challenge: ₹{parseFloat(counterPrice.challengeInfo?.challengeAmount || 0).toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="flex space-x-1">
+                              {counterPrice.status === 'pending' && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => respondToCounterMutation.mutate({ 
+                                      counterId: counterPrice.id, 
+                                      action: 'accept' 
+                                    })}
+                                    disabled={respondToCounterMutation.isPending}
+                                    className="bg-green-600 hover:bg-green-700 text-xs px-2 py-1"
+                                  >
+                                    Accept
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => respondToCounterMutation.mutate({ 
+                                      counterId: counterPrice.id, 
+                                      action: 'reject' 
+                                    })}
+                                    disabled={respondToCounterMutation.isPending}
+                                    className="text-red-600 border-red-300 hover:bg-red-50 text-xs px-2 py-1"
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                              {counterPrice.status !== 'pending' && (
+                                <Badge variant={counterPrice.status === 'accepted' ? 'secondary' : 'destructive'} className="text-xs">
+                                  {counterPrice.status}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          {counterPrice.notes && (
+                            <div className="text-xs text-gray-600 mt-1 p-2 bg-white rounded border">
+                              {counterPrice.notes}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Action Button */}
                   <div className="mt-auto">
                     {canManageAuction && (auction?.status === 'completed' || auction?.status === 'closed') && (
@@ -715,17 +776,6 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                         data-testid={`button-challenge-${index}`}
                       >
                         Challenge
-                      </Button>
-                    )}
-                    
-                    {hasChallenge && challengeStatus === 'rejected' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-sm text-red-600 border-red-300 mt-2"
-                        data-testid={`button-counter-${index}`}
-                      >
-                        Send Counter Price
                       </Button>
                     )}
                   </div>
@@ -761,73 +811,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
 
 
-      {/* Counter Prices Section - Show vendor-submitted counter prices to sourcing executives */}
-      {canManageAuction && allCounterPrices.length > 0 && (
-        <div className="mt-6 pt-4 border-t">
-          <h4 className="font-medium mb-4">Vendor Counter Prices</h4>
-          <div className="space-y-3">
-            {allCounterPrices.map((counterPrice: any) => (
-              <div key={counterPrice.id} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="font-medium">
-                      Counter Price: ₹{parseFloat(counterPrice.counterAmount).toFixed(2)}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Original Challenge: ₹{parseFloat(counterPrice.challengeInfo?.challengeAmount || 0).toFixed(2)} • 
-                      From: {counterPrice.challengeInfo?.vendorCompanyName || 'Unknown Vendor'}
-                    </div>
-                    {counterPrice.notes && (
-                      <div className="text-sm mt-2 p-2 bg-white rounded border">
-                        <strong>Vendor Notes:</strong> {counterPrice.notes}
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500 mt-2">
-                      Submitted: {new Date(counterPrice.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="flex space-x-2 ml-4">
-                    {counterPrice.status === 'pending' && (
-                      <>
-                        <Button
-                          size="sm"
-                          onClick={() => respondToCounterMutation.mutate({ 
-                            counterId: counterPrice.id, 
-                            action: 'accept' 
-                          })}
-                          disabled={respondToCounterMutation.isPending}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => respondToCounterMutation.mutate({ 
-                            counterId: counterPrice.id, 
-                            action: 'reject' 
-                          })}
-                          disabled={respondToCounterMutation.isPending}
-                          className="text-red-600 border-red-300 hover:bg-red-50"
-                        >
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                    {counterPrice.status !== 'pending' && (
-                      <Badge variant={
-                        counterPrice.status === 'accepted' ? 'secondary' : 'destructive'
-                      }>
-                        {counterPrice.status}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
 
         {/* Create PO Button for completed auctions - Only visible for non-vendors */}
         {sortedBids.length > 0 && !isVendor && (
