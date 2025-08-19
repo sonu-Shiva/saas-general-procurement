@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -796,6 +797,9 @@ function AuctionDetailsView({ auction, onClose, onBidNow }: { auction: any; onCl
 
 // Auction Card Component
 function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onViewAuctionDetails, isLive, isVendor }: any) {
+  const [location, setLocation] = useLocation();
+  const { user } = useAuth();
+  
   const getRemainingTime = (endTime: string) => {
     const end = new Date(endTime);
     const now = new Date();
@@ -881,20 +885,40 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onViewAuctionDe
             </Button>
           )}
           {(auction.status === 'live' || auction.status === 'completed' || auction.status === 'closed') && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" data-testid="button-view-results">
-                  <Trophy className="w-4 h-4 mr-1" />
-                  Results
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Auction Results - {auction.name}</DialogTitle>
-                </DialogHeader>
-                <AuctionResults auctionId={auction.id} onCreatePO={onCreatePO} />
-              </DialogContent>
-            </Dialog>
+            (() => {
+              const isSourceingRole = (user as any)?.role === 'sourcing_exec' || (user as any)?.role === 'sourcing_manager';
+              
+              if (isSourceingRole) {
+                return (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setLocation(`/auctions/${auction.id}/results`)}
+                    data-testid="button-view-results"
+                  >
+                    <Trophy className="w-4 h-4 mr-1" />
+                    Results
+                  </Button>
+                );
+              } else {
+                return (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" data-testid="button-view-results">
+                        <Trophy className="w-4 h-4 mr-1" />
+                        Results
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Auction Results - {auction.name}</DialogTitle>
+                      </DialogHeader>
+                      <AuctionResults auctionId={auction.id} onCreatePO={onCreatePO} />
+                    </DialogContent>
+                  </Dialog>
+                );
+              }
+            })()
           )}
           {!isVendor && (auction.status === 'completed' || auction.status === 'closed') && (
             <Button variant="ghost" size="sm" onClick={() => onCreatePO(auction)} data-testid="button-create-po">

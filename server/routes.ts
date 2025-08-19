@@ -2647,6 +2647,151 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // ===== CHALLENGE PRICING, COUNTER PRICING & AUCTION EXTENSIONS =====
+
+  // Create challenge price (Sourcing Exec/Manager)
+  app.post('/api/auctions/:auctionId/challenge-price', authMiddleware, requireRole('sourcing_exec', 'sourcing_manager'), async (req: any, res) => {
+    try {
+      const { auctionId } = req.params;
+      const { vendorId, bidId, proposedPrice, reason } = req.body;
+      const userId = req.user?.claims?.sub || 'dev-user-123';
+
+      const challengePrice = await storage.createChallengePrice({
+        auctionId,
+        vendorId,
+        bidId,
+        proposedPrice: proposedPrice.toString(),
+        reason,
+        createdBy: userId,
+        status: 'PENDING'
+      });
+
+      res.json(challengePrice);
+    } catch (error) {
+      console.error("Error creating challenge price:", error);
+      res.status(500).json({ message: "Failed to create challenge price" });
+    }
+  });
+
+  // Get challenge prices for auction
+  app.get('/api/auctions/:auctionId/challenge-prices', authMiddleware, async (req: any, res) => {
+    try {
+      const { auctionId } = req.params;
+      const { vendorId } = req.query;
+      
+      const challengePrices = await storage.getChallengePrices({
+        auctionId,
+        vendorId: vendorId as string
+      });
+
+      res.json(challengePrices);
+    } catch (error) {
+      console.error("Error fetching challenge prices:", error);
+      res.status(500).json({ message: "Failed to fetch challenge prices" });
+    }
+  });
+
+  // Update challenge price status (Vendor)
+  app.patch('/api/challenge-prices/:id/status', authMiddleware, requireRole('vendor'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const challengePrice = await storage.updateChallengePriceStatus(id, status);
+      res.json(challengePrice);
+    } catch (error) {
+      console.error("Error updating challenge price status:", error);
+      res.status(500).json({ message: "Failed to update challenge price status" });
+    }
+  });
+
+  // Create counter price (Vendor)
+  app.post('/api/challenge-prices/:challengePriceId/counter-price', authMiddleware, requireRole('vendor'), async (req: any, res) => {
+    try {
+      const { challengePriceId } = req.params;
+      const { proposedPrice, reason } = req.body;
+      const userId = req.user?.claims?.sub || 'dev-user-123';
+
+      const counterPrice = await storage.createCounterPrice({
+        challengePriceId,
+        proposedPrice: proposedPrice.toString(),
+        reason,
+        createdBy: userId,
+        status: 'PENDING'
+      });
+
+      res.json(counterPrice);
+    } catch (error) {
+      console.error("Error creating counter price:", error);
+      res.status(500).json({ message: "Failed to create counter price" });
+    }
+  });
+
+  // Get counter prices for challenge
+  app.get('/api/challenge-prices/:challengePriceId/counter-prices', authMiddleware, async (req: any, res) => {
+    try {
+      const { challengePriceId } = req.params;
+      
+      const counterPrices = await storage.getCounterPrices(challengePriceId);
+      res.json(counterPrices);
+    } catch (error) {
+      console.error("Error fetching counter prices:", error);
+      res.status(500).json({ message: "Failed to fetch counter prices" });
+    }
+  });
+
+  // Update counter price status (Sourcing Exec/Manager)
+  app.patch('/api/counter-prices/:id/status', authMiddleware, requireRole('sourcing_exec', 'sourcing_manager'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const counterPrice = await storage.updateCounterPriceStatus(id, status);
+      res.json(counterPrice);
+    } catch (error) {
+      console.error("Error updating counter price status:", error);
+      res.status(500).json({ message: "Failed to update counter price status" });
+    }
+  });
+
+  // Create auction extension (Sourcing Exec)
+  app.post('/api/auctions/:auctionId/extend', authMiddleware, requireRole('sourcing_exec'), async (req: any, res) => {
+    try {
+      const { auctionId } = req.params;
+      const { newEndTime, reason } = req.body;
+      const userId = req.user?.claims?.sub || 'dev-user-123';
+
+      const extension = await storage.createAuctionExtension({
+        auctionId,
+        previousEndTime: new Date(),
+        newEndTime: new Date(newEndTime),
+        reason,
+        createdBy: userId
+      });
+
+      // Update auction end time
+      await storage.updateAuctionEndTime(auctionId, new Date(newEndTime));
+
+      res.json({ extension, message: 'Auction extended successfully' });
+    } catch (error) {
+      console.error("Error extending auction:", error);
+      res.status(500).json({ message: "Failed to extend auction" });
+    }
+  });
+
+  // Get auction extensions
+  app.get('/api/auctions/:auctionId/extensions', authMiddleware, async (req: any, res) => {
+    try {
+      const { auctionId } = req.params;
+      
+      const extensions = await storage.getAuctionExtensions(auctionId);
+      res.json(extensions);
+    } catch (error) {
+      console.error("Error fetching auction extensions:", error);
+      res.status(500).json({ message: "Failed to fetch auction extensions" });
+    }
+  });
+
   // ===== NEW MULTI-ROLE APPROVAL WORKFLOW ROUTES =====
 
   // Enhanced Procurement Request creation route (new PR endpoint)
