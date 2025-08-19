@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Send, FileText, Clock, Package, Upload, X, AlertTriangle, Trash2, Download } from "lucide-react";
-import { TermsAcceptanceDialog } from "./TermsAcceptanceDialog";
+// Removed TermsAcceptanceDialog - using simple checkbox approach like auctions
 import { RfxAttachmentUploader } from "./RfxAttachmentUploader";
 
 const createRfxResponseSchema = (budgetAmount?: number) => z.object({
@@ -57,7 +57,7 @@ interface AttachmentInfo {
 export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProps) {
   const { toast } = useToast();
   const [attachments, setAttachments] = useState<AttachmentInfo[]>([]);
-  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  // Remove terms dialog - use simple checkbox approach like auctions
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Handle nested RFx data structure properly - vendor invitations come with rfx nested
@@ -150,38 +150,14 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
     setAttachments(prev => prev.filter(att => att.id !== attachmentId));
   };
 
-  const handleTermsAccepted = async () => {
-    try {
-      const response = await fetch('/api/terms/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entityType: 'rfx',
-          entityId: rfxId,
-          termsAndConditionsPath: termsPath,
-        }),
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        setTermsAccepted(true);
-        form.setValue('termsAccepted', true);
-        setShowTermsDialog(false);
-        toast({
-          title: "Terms Accepted",
-          description: "You can now submit your response",
-        });
-      } else {
-        throw new Error('Failed to accept terms');
-      }
-    } catch (error) {
-      console.error('Terms acceptance error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to accept terms",
-        variant: "destructive",
-      });
-    }
+  // Simple terms handling - no dialog needed (like auctions)
+  const handleTermsAccepted = () => {
+    setTermsAccepted(true);
+    form.setValue('termsAccepted', true);
+    toast({
+      title: "Terms Accepted",
+      description: "You can now submit your response",
+    });
   };
 
   const submitResponseMutation = useMutation({
@@ -367,8 +343,24 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
                         if (termsPath && termsPath !== '/dummy-terms.pdf') {
                           window.open(termsPath, '_blank');
                         } else {
-                          // Open generic terms document or show terms dialog
-                          setShowTermsDialog(true);
+                          // Show terms content in new tab
+                          const termsContent = `
+                            <html>
+                              <head><title>Terms and Conditions - ${rfxType}</title></head>
+                              <body style="font-family: Arial, sans-serif; padding: 20px;">
+                                <h1>Terms and Conditions</h1>
+                                <h2>${rfxType} - ${rfxData.title}</h2>
+                                <h3>Reference: ${rfxData.referenceNo}</h3>
+                                <p>Standard terms and conditions apply for this ${rfxType}.</p>
+                                <p>By accepting these terms, you agree to participate in this procurement process.</p>
+                              </body>
+                            </html>
+                          `;
+                          const newTab = window.open();
+                          if (newTab) {
+                            newTab.document.write(termsContent);
+                            newTab.document.close();
+                          }
                         }
                       }}
                       data-testid="button-view-terms"
@@ -676,26 +668,6 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
           </CardContent>
         </Card>
       </form>
-
-      {/* Terms Acceptance Dialog */}
-      {showTermsDialog && termsPath && (
-        <TermsAcceptanceDialog
-          open={showTermsDialog}
-          onOpenChange={setShowTermsDialog}
-          termsAndConditionsPath={termsPath}
-          rfxTitle={rfxData.title || rfx.rfxTitle}
-          rfxType={rfxType}
-          onAccept={handleTermsAccepted}
-          onDecline={() => {
-            setShowTermsDialog(false);
-            toast({
-              title: "Terms Required",
-              description: "You must accept the terms & conditions to submit your response.",
-              variant: "destructive",
-            });
-          }}
-        />
-      )}
     </div>
   );
 }
