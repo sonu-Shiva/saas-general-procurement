@@ -733,16 +733,7 @@ startxref
         console.error("Error accessing terms file from storage:", storageError);
         
         // Fallback: create a proper terms document with entity details
-        const termsContent = `TERMS AND CONDITIONS ERROR
-
-Unable to retrieve uploaded terms document.
-Error: ${storageError.message}
-
-RFx Details:
-${entity.type?.toUpperCase() || 'PROCUREMENT'} - ${entity.title || 'Untitled'}
-Reference: ${entity.referenceNo || entity.id}
-
-Please contact support for assistance.`;
+        const termsContent = `%PDF-1.4
 1 0 obj
 <<
 /Type /Catalog
@@ -769,22 +760,26 @@ endobj
 
 4 0 obj
 <<
-/Length 200
+/Length 300
 >>
 stream
 BT
 /F1 16 Tf
 72 720 Td
-(Terms and Conditions) Tj
+(TERMS AND CONDITIONS ERROR) Tj
 0 -40 Td
 /F1 12 Tf
-(${entity.type} - ${entity.title}) Tj
+(Unable to retrieve uploaded terms document.) Tj
 0 -20 Td
-(Reference: ${entity.referenceNo || entity.title}) Tj
-0 -20 Td
-(Budget: ${entity.budget ? '₹' + parseFloat(entity.budget).toLocaleString() : 'Not specified'}) Tj
+(Error: ${storageError.message}) Tj
 0 -40 Td
-(Standard procurement terms and conditions apply.) Tj
+(RFx Details:) Tj
+0 -20 Td
+(${entity.type?.toUpperCase() || 'PROCUREMENT'} - ${entity.title || 'Untitled'}) Tj
+0 -20 Td
+(Reference: ${entity.referenceNo || entity.id}) Tj
+0 -40 Td
+(Please contact support for assistance.) Tj
 ET
 endstream
 endobj
