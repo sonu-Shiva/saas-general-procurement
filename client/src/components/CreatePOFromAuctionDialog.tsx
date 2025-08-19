@@ -89,12 +89,22 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
         // Use the lowest (winning) bid from this vendor
         const lowestBid = vendorBids.sort((a: any, b: any) => Number(a.amount) - Number(b.amount))[0];
         
-        // Check if there's an accepted counter price for this vendor
+        // Check for accepted challenge price for this vendor
+        const vendorChallengePrice = challengePrices.find((cp: any) => cp.vendorId === selectedVendor && cp.status === 'accepted');
+        
+        // Check for accepted counter price for this vendor
         const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === selectedVendor);
         const acceptedCounterPrice = vendorCounterPrices.find((cp: any) => cp.status === 'accepted');
         
-        // Use counter price if accepted, otherwise use original bid
-        const finalAmount = acceptedCounterPrice ? acceptedCounterPrice.counterAmount : lowestBid.amount;
+        // Priority: Counter price > Challenge price > Original bid
+        let finalAmount: string;
+        if (acceptedCounterPrice) {
+          finalAmount = acceptedCounterPrice.counterAmount;
+        } else if (vendorChallengePrice) {
+          finalAmount = vendorChallengePrice.challengeAmount;
+        } else {
+          finalAmount = lowestBid.amount;
+        }
         setBidAmount(finalAmount);
       }
     }
@@ -212,18 +222,28 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
     const vendorBestBids = vendorsWithBids.map((vendor: any) => {
       const bestBid = getVendorBestBid(vendor.id);
       
+      // Check for accepted challenge price for this vendor
+      const vendorChallengePrice = challengePrices.find((cp: any) => cp.vendorId === vendor.id && cp.status === 'accepted');
+      
       // Check for accepted counter price for this vendor
       const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === vendor.id);
       const acceptedCounterPrice = vendorCounterPrices.find((cp: any) => cp.status === 'accepted');
       
-      const finalAmount = acceptedCounterPrice ? 
-        parseFloat(acceptedCounterPrice.counterAmount) : 
-        (bestBid ? Number(bestBid.amount) : 999999);
+      // Priority: Counter price > Challenge price > Original bid
+      let finalAmount: number;
+      if (acceptedCounterPrice) {
+        finalAmount = parseFloat(acceptedCounterPrice.counterAmount);
+      } else if (vendorChallengePrice) {
+        finalAmount = parseFloat(vendorChallengePrice.challengeAmount);
+      } else {
+        finalAmount = bestBid ? Number(bestBid.amount) : 999999;
+      }
       
       return {
         vendor,
         bestBid,
         acceptedCounterPrice,
+        acceptedChallengePrice: vendorChallengePrice,
         amount: finalAmount,
         originalAmount: bestBid ? Number(bestBid.amount) : 999999
       };
@@ -234,6 +254,7 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
       ...item.vendor,
       bestBid: item.bestBid,
       acceptedCounterPrice: item.acceptedCounterPrice,
+      acceptedChallengePrice: item.acceptedChallengePrice,
       finalAmount: item.amount,
       originalAmount: item.originalAmount,
       ranking: `L${index + 1}`
@@ -260,7 +281,9 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
             </div>
             <div>
               <Label className="text-sm font-medium">Status</Label>
-              <Badge variant="outline">{auction.status.toUpperCase()}</Badge>
+              <div className="mt-1">
+                <Badge variant="outline">{auction.status.toUpperCase()}</Badge>
+              </div>
             </div>
           </div>
           <div>
@@ -276,18 +299,21 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
               <div>
                 <Label className="text-sm font-medium">Winning Bid</Label>
                 {(() => {
-                  // Calculate actual winning amount considering counter prices
+                  // Calculate actual winning amount considering counter prices and challenge prices
                   if (rankedVendors.length > 0) {
                     const winningVendor = rankedVendors[0];
-                    const winningAmount = winningVendor.acceptedCounterPrice ? 
-                      winningVendor.finalAmount : 
-                      (auction.winningBid?.amount || auction.currentBid);
+                    const originalBidAmount = winningVendor.bestBid ? winningVendor.bestBid.amount : (auction.winningBid?.amount || auction.currentBid);
+                    const winningAmount = winningVendor.finalAmount;
+                    
+                    // Check if final amount is different from original (either counter price or challenge price accepted)
+                    const hasFinalPriceChange = parseFloat(winningAmount) !== parseFloat(originalBidAmount);
+                    
                     return (
                       <div>
                         <p className="text-lg font-bold text-green-600">₹{winningAmount}</p>
-                        {winningVendor.acceptedCounterPrice && (
+                        {hasFinalPriceChange && (
                           <p className="text-sm text-gray-500 line-through">
-                            Original: ₹{auction.winningBid?.amount || auction.currentBid}
+                            Original: ₹{originalBidAmount}
                           </p>
                         )}
                       </div>
@@ -342,7 +368,7 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
                           </div>
                           {vendor.bestBid && (
                             <div className="flex flex-col items-end ml-4 flex-shrink-0">
-                              {vendor.acceptedCounterPrice ? (
+                              {(vendor.acceptedCounterPrice || vendor.acceptedChallengePrice) ? (
                                 <>
                                   <Badge variant="secondary" className="text-xs mb-1">
                                     Final: ₹{vendor.finalAmount}
@@ -373,6 +399,7 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
                   <Label className="text-sm font-medium">Selected Vendor Pricing</Label>
                   <div className="space-y-1">
                     {(() => {
+                      const vendorChallengePrice = challengePrices.find((cp: any) => cp.vendorId === selectedVendor && cp.status === 'accepted');
                       const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === selectedVendor);
                       const acceptedCounterPrice = vendorCounterPrices.find((cp: any) => cp.status === 'accepted');
                       
@@ -382,6 +409,29 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-green-600 font-medium">
                                 🎯 Final Price (Counter Accepted): ₹{acceptedCounterPrice.counterAmount}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Original bids:
+                            </div>
+                            {getVendorBids(selectedVendor).slice(0, 2).map((bid: any, index: number) => (
+                              <div key={bid.id} className="flex justify-between items-center text-sm opacity-75">
+                                <span className="text-muted-foreground line-through">
+                                  {index === 0 ? '🏆 Best' : `#${index + 1}`}: ₹{bid.amount}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(bid.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      } else if (vendorChallengePrice) {
+                        return (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-blue-600 font-medium">
+                                ⚡ Final Price (Challenge Accepted): ₹{vendorChallengePrice.challengeAmount}
                               </span>
                             </div>
                             <div className="text-xs text-gray-500">

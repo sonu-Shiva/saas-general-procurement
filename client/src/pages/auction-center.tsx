@@ -568,18 +568,37 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
   const latestBids = Array.from(latestBidsMap.values());
 
-  // Sort latest bids by final amount (considering accepted counter prices)
+  // Sort latest bids by final amount (considering accepted challenge prices and counter prices)
   const sortedBids = [...latestBids].sort((a: any, b: any) => {
+    // Get challenge prices for both vendors
+    const challengePriceA = challengePricesData.find((cp: any) => cp.vendorId === a.vendorId && cp.status === 'accepted');
+    const challengePriceB = challengePricesData.find((cp: any) => cp.vendorId === b.vendorId && cp.status === 'accepted');
+    
     // Get counter prices for both vendors
     const counterPricesA = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === a.vendorId);
     const counterPricesB = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === b.vendorId);
     
-    // Get final amounts (accepted counter price or original bid)
+    // Get final amounts (priority: counter price > challenge price > original bid)
     const acceptedCounterA = counterPricesA.find((cp: any) => cp.status === 'accepted');
     const acceptedCounterB = counterPricesB.find((cp: any) => cp.status === 'accepted');
     
-    const finalAmountA = acceptedCounterA ? parseFloat(acceptedCounterA.counterAmount) : (Number(a.amount || a.bidAmount) || 999999);
-    const finalAmountB = acceptedCounterB ? parseFloat(acceptedCounterB.counterAmount) : (Number(b.amount || b.bidAmount) || 999999);
+    let finalAmountA: number, finalAmountB: number;
+    
+    if (acceptedCounterA) {
+      finalAmountA = parseFloat(acceptedCounterA.counterAmount);
+    } else if (challengePriceA) {
+      finalAmountA = parseFloat(challengePriceA.challengeAmount);
+    } else {
+      finalAmountA = Number(a.amount || a.bidAmount) || 999999;
+    }
+    
+    if (acceptedCounterB) {
+      finalAmountB = parseFloat(acceptedCounterB.counterAmount);
+    } else if (challengePriceB) {
+      finalAmountB = parseFloat(challengePriceB.challengeAmount);
+    } else {
+      finalAmountB = Number(b.amount || b.bidAmount) || 999999;
+    }
     
     return finalAmountA - finalAmountB;
   });
@@ -629,9 +648,18 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
             // Check if there's a counter price for this vendor
             const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === bid.vendorId);
             
-            // Get the final price (counter price if accepted, otherwise original bid)
+            // Get the final price (priority: counter price > challenge price > original bid)
             const acceptedCounterPrice = vendorCounterPrices.find((cp: any) => cp.status === 'accepted');
-            const finalPrice = acceptedCounterPrice ? parseFloat(acceptedCounterPrice.counterAmount) : parseFloat(bid.amount || bid.bidAmount || 0);
+            const acceptedChallengePrice = challengePricesData.find((cp: any) => cp.vendorId === bid.vendorId && cp.status === 'accepted');
+            
+            let finalPrice: number;
+            if (acceptedCounterPrice) {
+              finalPrice = parseFloat(acceptedCounterPrice.counterAmount);
+            } else if (acceptedChallengePrice) {
+              finalPrice = parseFloat(acceptedChallengePrice.challengeAmount);
+            } else {
+              finalPrice = parseFloat(bid.amount || bid.bidAmount || 0);
+            }
             
             return (
               <div 
@@ -688,12 +716,22 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                     </p>
                   </div>
 
-                  {/* Final Price Display - Shows counter price if accepted */}
+                  {/* Final Price Display - Shows counter/challenge price if accepted */}
                   <div className="mb-4 text-center bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4 flex-grow">
                     {acceptedCounterPrice ? (
                       <>
                         <div className="text-sm text-gray-600 mb-1">Final Price (Counter Accepted):</div>
                         <div className="text-2xl font-bold text-green-600 mb-1">
+                          ₹{finalPrice.toLocaleString()}/MT
+                        </div>
+                        <div className="text-xs text-gray-500 line-through">
+                          Original: ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}/MT
+                        </div>
+                      </>
+                    ) : acceptedChallengePrice ? (
+                      <>
+                        <div className="text-sm text-gray-600 mb-1">Final Price (Challenge Accepted):</div>
+                        <div className="text-2xl font-bold text-blue-600 mb-1">
                           ₹{finalPrice.toLocaleString()}/MT
                         </div>
                         <div className="text-xs text-gray-500 line-through">
