@@ -613,50 +613,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!termsPath) {
-        // No terms document uploaded, generate a default terms PDF
-        console.log(`No terms document found for ${entityType} ${entityId}, generating default terms PDF`);
+        // No terms document uploaded, generate a simple text document with terms
+        console.log(`No terms document found for ${entityType} ${entityId}, generating default terms document`);
         
-        const defaultTermsContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
+        const defaultTermsContent = `TERMS AND CONDITIONS
 
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
+${entity.type?.toUpperCase() || 'PROCUREMENT'} - ${entity.title || 'Untitled'}
+Reference: ${entity.referenceNo || entity.id}
+Budget: ${entity.budget ? '₹' + parseFloat(entity.budget).toLocaleString() : 'Not specified'}
 
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
->>
-endobj
+GENERAL TERMS:
+1. This procurement is conducted under the terms and conditions specified herein.
+2. All submitted proposals must be valid for a minimum of 30 days from the due date.
+3. The buyer reserves the right to reject any or all proposals without stating reasons.
+4. Payment terms shall be as mutually agreed upon contract execution.
+5. Delivery terms and conditions will be specified in the purchase order.
 
-4 0 obj
-<<
-/Length 300
->>
-stream
-BT
-/F1 16 Tf
-72 720 Td
-(Terms and Conditions) Tj
-0 -40 Td
-/F1 12 Tf
-(${entity.type?.toUpperCase() || 'PROCUREMENT'} - ${entity.title || 'Untitled'}) Tj
-0 -20 Td
-(Reference: ${entity.referenceNo || entity.id}) Tj
-0 -20 Td
-(Budget: ${entity.budget ? '₹' + parseFloat(entity.budget).toLocaleString() : 'Not specified'}) Tj
+COMPLIANCE REQUIREMENTS:
+1. All vendors must comply with applicable local and national regulations.
+2. Quality standards must meet or exceed industry specifications.
+3. All submissions must be complete and accurate.
+
+EVALUATION CRITERIA:
+${entity.criteria || 'Standard evaluation criteria apply including price, quality, delivery terms, and vendor capability.'}
+
+SCOPE OF WORK:
+${entity.scope || 'As detailed in the procurement specifications.'}
+
+Due Date: ${entity.dueDate ? new Date(entity.dueDate).toLocaleDateString() : 'Not specified'}
+Contact: ${entity.contactPerson || 'Procurement Team'}
+
+---
+Document generated on: ${new Date().toLocaleString()}
+For queries, please contact the procurement team.
 0 -40 Td
 (Standard procurement terms and conditions apply.) Tj
 0 -20 Td
@@ -681,8 +670,8 @@ startxref
 500
 %%EOF`;
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${entity.type}-${entity.referenceNo || entity.id}.pdf"`);
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${entity.type}-${entity.referenceNo || entity.id}.txt"`);
         res.send(defaultTermsContent);
         return;
       }
