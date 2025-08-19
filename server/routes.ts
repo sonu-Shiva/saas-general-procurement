@@ -1604,7 +1604,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       // Check if vendor has been invited to this RFx
-      const invitation = await storage.getRfxVendorInvitation(rfxId, vendor.id);
+      const invitation = await storage.getRfxInvitation(rfxId, vendor.id);
       if (!invitation) {
         console.log("Vendor not invited to this RFx:", rfxId, vendor.id);
         return res.status(403).json({ message: "You are not invited to this RFx" });
