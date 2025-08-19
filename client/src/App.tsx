@@ -23,7 +23,6 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import SourcingIntake from "./pages/sourcing-intake";
 import MethodApproval from "./pages/method-approval";
-import AuctionResults from "./pages/auction-results";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -108,7 +107,6 @@ function Router() {
           <Route path="/pr-approval/:id" component={lazy(() => import('./pages/pr-approval'))} />
           <Route path="/rfx" component={RfxManagement} />
           <Route path="/auctions" component={AuctionCenter} />
-          <Route path="/auctions/:id/results" component={AuctionResults} />
           <Route path="/sourcing-intake" component={SourcingIntake} />
           <Route path="/method-approval" component={MethodApproval} />
           <Route path="/vendor-discovery" component={VendorDiscovery} />

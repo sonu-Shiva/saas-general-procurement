@@ -11,9 +11,6 @@ import {
   auctions,
   auctionParticipants,
   bids,
-  challengePrices,
-  counterPrices,
-  auctionExtensions,
   purchaseOrders,
   poLineItems,
   directProcurementOrders,
@@ -50,12 +47,6 @@ import {
   type InsertAuctionParticipant,
   type Bid,
   type InsertBid,
-  type ChallengePrice,
-  type InsertChallengePrice,
-  type CounterPrice,
-  type InsertCounterPrice,
-  type AuctionExtension,
-  type InsertAuctionExtension,
   type PurchaseOrder,
   type InsertPurchaseOrder,
   type PoLineItem,
@@ -241,21 +232,6 @@ export interface IStorage {
   getSourcingEventsByStatus(statuses: string[]): Promise<SourcingEvent[]>;
   updateSourcingEvent(id: string, updates: Partial<SourcingEvent>): Promise<SourcingEvent>;
   getProcurementRequestsByStatus(statuses: string[]): Promise<ProcurementRequest[]>;
-
-  // Challenge Price operations
-  createChallengePrice(challengePrice: InsertChallengePrice): Promise<ChallengePrice>;
-  getChallengePrices(filters?: { auctionId?: string; vendorId?: string; bidId?: string }): Promise<ChallengePrice[]>;
-  updateChallengePriceStatus(id: string, status: string): Promise<ChallengePrice>;
-
-  // Counter Price operations
-  createCounterPrice(counterPrice: InsertCounterPrice): Promise<CounterPrice>;
-  getCounterPrices(challengePriceId: string): Promise<CounterPrice[]>;
-  updateCounterPriceStatus(id: string, status: string): Promise<CounterPrice>;
-
-  // Auction Extension operations
-  createAuctionExtension(extension: InsertAuctionExtension): Promise<AuctionExtension>;
-  getAuctionExtensions(auctionId: string): Promise<AuctionExtension[]>;
-  updateAuctionEndTime(auctionId: string, newEndTime: Date): Promise<Auction>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1992,105 +1968,6 @@ export class DatabaseStorage implements IStorage {
       console.error("Error fetching procurement requests by status:", error);
       throw error;
     }
-  }
-
-  // ===== CHALLENGE PRICE OPERATIONS =====
-  private challengePricesStore: ChallengePrice[] = [];
-
-  async createChallengePrice(challengePrice: InsertChallengePrice): Promise<ChallengePrice> {
-    const newChallengePrice: ChallengePrice = {
-      id: nanoid(),
-      ...challengePrice,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.challengePricesStore.push(newChallengePrice);
-    return newChallengePrice;
-  }
-
-  async getChallengePrices(filters?: { auctionId?: string; vendorId?: string; bidId?: string }): Promise<ChallengePrice[]> {
-    let result = this.challengePricesStore;
-    
-    if (filters?.auctionId) {
-      result = result.filter(cp => cp.auctionId === filters.auctionId);
-    }
-    if (filters?.vendorId) {
-      result = result.filter(cp => cp.vendorId === filters.vendorId);
-    }
-    if (filters?.bidId) {
-      result = result.filter(cp => cp.bidId === filters.bidId);
-    }
-    
-    return result;
-  }
-
-  async updateChallengePriceStatus(id: string, status: string): Promise<ChallengePrice> {
-    const index = this.challengePricesStore.findIndex(cp => cp.id === id);
-    if (index === -1) throw new Error('Challenge price not found');
-    
-    this.challengePricesStore[index] = {
-      ...this.challengePricesStore[index],
-      status: status as any,
-      updatedAt: new Date()
-    };
-    
-    return this.challengePricesStore[index];
-  }
-
-  // ===== COUNTER PRICE OPERATIONS =====
-  private counterPricesStore: CounterPrice[] = [];
-
-  async createCounterPrice(counterPrice: InsertCounterPrice): Promise<CounterPrice> {
-    const newCounterPrice: CounterPrice = {
-      id: nanoid(),
-      ...counterPrice,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.counterPricesStore.push(newCounterPrice);
-    return newCounterPrice;
-  }
-
-  async getCounterPrices(challengePriceId: string): Promise<CounterPrice[]> {
-    return this.counterPricesStore.filter(cp => cp.challengePriceId === challengePriceId);
-  }
-
-  async updateCounterPriceStatus(id: string, status: string): Promise<CounterPrice> {
-    const index = this.counterPricesStore.findIndex(cp => cp.id === id);
-    if (index === -1) throw new Error('Counter price not found');
-    
-    this.counterPricesStore[index] = {
-      ...this.counterPricesStore[index],
-      status: status as any,
-      updatedAt: new Date()
-    };
-    
-    return this.counterPricesStore[index];
-  }
-
-  // ===== AUCTION EXTENSION OPERATIONS =====
-  private auctionExtensionsStore: AuctionExtension[] = [];
-
-  async createAuctionExtension(extension: InsertAuctionExtension): Promise<AuctionExtension> {
-    const newExtension: AuctionExtension = {
-      id: nanoid(),
-      ...extension,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.auctionExtensionsStore.push(newExtension);
-    return newExtension;
-  }
-
-  async getAuctionExtensions(auctionId: string): Promise<AuctionExtension[]> {
-    return this.auctionExtensionsStore.filter(ext => ext.auctionId === auctionId);
-  }
-
-  async updateAuctionEndTime(auctionId: string, newEndTime: Date): Promise<Auction> {
-    const auction = await this.getAuction(auctionId);
-    if (!auction) throw new Error('Auction not found');
-    
-    return await this.updateAuction(auctionId, { endTime: newEndTime });
   }
 }
 

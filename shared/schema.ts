@@ -245,43 +245,6 @@ export const bids = pgTable("bids", {
   isWinning: boolean("is_winning").default(false),
 });
 
-// Challenge pricing system
-export const challengePrices = pgTable("challenge_prices", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  auctionId: uuid("auction_id").references(() => auctions.id, { onDelete: "cascade" }).notNull(),
-  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(), // Target vendor
-  sourcingUserId: varchar("sourcing_user_id").references(() => users.id).notNull(), // Sourcing user who sent challenge
-  challengeAmount: decimal("challenge_amount", { precision: 12, scale: 2 }).notNull(),
-  originalBidId: uuid("original_bid_id").references(() => bids.id), // Reference to original bid being challenged
-  status: varchar("status", { enum: ["pending", "accepted", "rejected"] }).default("pending"),
-  vendorResponse: text("vendor_response"), // Optional response from vendor
-  respondedAt: timestamp("responded_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Counter pricing system (when vendor rejects challenge)
-export const counterPrices = pgTable("counter_prices", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  challengePriceId: uuid("challenge_price_id").references(() => challengePrices.id, { onDelete: "cascade" }).notNull(),
-  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
-  counterAmount: decimal("counter_amount", { precision: 12, scale: 2 }).notNull(),
-  status: varchar("status", { enum: ["pending", "accepted", "rejected"] }).default("pending"),
-  sourcingResponse: text("sourcing_response"), // Optional response from sourcing team
-  respondedAt: timestamp("responded_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Auction extensions
-export const auctionExtensions = pgTable("auction_extensions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  auctionId: uuid("auction_id").references(() => auctions.id, { onDelete: "cascade" }).notNull(),
-  extendedBy: varchar("extended_by").references(() => users.id).notNull(),
-  originalEndTime: timestamp("original_end_time").notNull(),
-  newEndTime: timestamp("new_end_time").notNull(),
-  extensionReason: text("extension_reason"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 export const purchaseOrders = pgTable("purchase_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   poNumber: varchar("po_number", { length: 100 }).unique().notNull(),
@@ -712,7 +675,7 @@ export const auctionParticipantsRelations = relations(auctionParticipants, ({ on
   }),
 }));
 
-export const bidsRelations = relations(bids, ({ one, many }) => ({
+export const bidsRelations = relations(bids, ({ one }) => ({
   auction: one(auctions, {
     fields: [bids.auctionId],
     references: [auctions.id],
@@ -720,49 +683,6 @@ export const bidsRelations = relations(bids, ({ one, many }) => ({
   vendor: one(vendors, {
     fields: [bids.vendorId],
     references: [vendors.id],
-  }),
-  challengePrices: many(challengePrices),
-}));
-
-export const challengePricesRelations = relations(challengePrices, ({ one, many }) => ({
-  auction: one(auctions, {
-    fields: [challengePrices.auctionId],
-    references: [auctions.id],
-  }),
-  vendor: one(vendors, {
-    fields: [challengePrices.vendorId],
-    references: [vendors.id],
-  }),
-  sourcingUser: one(users, {
-    fields: [challengePrices.sourcingUserId],
-    references: [users.id],
-  }),
-  originalBid: one(bids, {
-    fields: [challengePrices.originalBidId],
-    references: [bids.id],
-  }),
-  counterPrices: many(counterPrices),
-}));
-
-export const counterPricesRelations = relations(counterPrices, ({ one }) => ({
-  challengePrice: one(challengePrices, {
-    fields: [counterPrices.challengePriceId],
-    references: [challengePrices.id],
-  }),
-  vendor: one(vendors, {
-    fields: [counterPrices.vendorId],
-    references: [vendors.id],
-  }),
-}));
-
-export const auctionExtensionsRelations = relations(auctionExtensions, ({ one }) => ({
-  auction: one(auctions, {
-    fields: [auctionExtensions.auctionId],
-    references: [auctions.id],
-  }),
-  extendedBy: one(users, {
-    fields: [auctionExtensions.extendedBy],
-    references: [users.id],
   }),
 }));
 
@@ -947,32 +867,6 @@ export const insertBidSchema = createInsertSchema(bids).omit({
   amount: z.union([z.string(), z.number()]).transform((val) => String(val)),
 });
 
-export const insertChallengePriceSchema = createInsertSchema(challengePrices).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  challengeAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
-});
-
-export const insertCounterPriceSchema = createInsertSchema(counterPrices).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  counterAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
-});
-
-export const insertAuctionExtensionSchema = createInsertSchema(auctionExtensions).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  originalEndTime: z.union([z.string(), z.date()]).transform((val) =>
-    typeof val === 'string' ? new Date(val) : val
-  ),
-  newEndTime: z.union([z.string(), z.date()]).transform((val) =>
-    typeof val === 'string' ? new Date(val) : val
-  ),
-});
-
 export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({
   id: true,
   createdAt: true,
@@ -1068,12 +962,6 @@ export type AuctionParticipant = typeof auctionParticipants.$inferSelect;
 export type InsertAuctionParticipant = z.infer<typeof insertAuctionParticipantSchema>;
 export type Bid = typeof bids.$inferSelect;
 export type InsertBid = z.infer<typeof insertBidSchema>;
-export type ChallengePrice = typeof challengePrices.$inferSelect;
-export type InsertChallengePrice = z.infer<typeof insertChallengePriceSchema>;
-export type CounterPrice = typeof counterPrices.$inferSelect;
-export type InsertCounterPrice = z.infer<typeof insertCounterPriceSchema>;
-export type AuctionExtension = typeof auctionExtensions.$inferSelect;
-export type InsertAuctionExtension = z.infer<typeof insertAuctionExtensionSchema>;
 export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
 export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
 export type PoLineItem = typeof poLineItems.$inferSelect;
