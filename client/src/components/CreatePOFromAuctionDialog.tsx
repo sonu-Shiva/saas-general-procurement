@@ -37,6 +37,45 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
     }
   });
 
+  // Fetch challenge prices for this auction
+  const { data: challengePrices = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "challenge-prices"],
+    queryFn: async () => {
+      const response = await fetch(`/api/auctions/${auction.id}/challenge-prices`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch challenge prices');
+      return response.json();
+    }
+  });
+
+  // Fetch all counter prices for all challenge prices in this auction
+  const { data: allCounterPrices = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "all-counter-prices"], 
+    queryFn: async () => {
+      const allCounters: any[] = [];
+      for (const challenge of challengePrices) {
+        try {
+          const response = await fetch(`/api/challenge-prices/${challenge.id}/counter-prices`, {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const counterPrices = await response.json();
+            const enhancedCounters = counterPrices.map((cp: any) => ({
+              ...cp,
+              challengeInfo: challenge
+            }));
+            allCounters.push(...enhancedCounters);
+          }
+        } catch (error) {
+          console.log(`No counter prices for challenge ${challenge.id}`);
+        }
+      }
+      return allCounters;
+    },
+    enabled: challengePrices.length > 0
+  });
+
   // Fetch vendors
   const { data: vendors, isLoading: isLoadingVendors } = useQuery({
     queryKey: ["/api/vendors"]
@@ -49,10 +88,17 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
       if (vendorBids.length > 0) {
         // Use the lowest (winning) bid from this vendor
         const lowestBid = vendorBids.sort((a: any, b: any) => Number(a.amount) - Number(b.amount))[0];
-        setBidAmount(lowestBid.amount);
+        
+        // Check if there's an accepted counter price for this vendor
+        const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === selectedVendor);
+        const acceptedCounterPrice = vendorCounterPrices.find((cp: any) => cp.status === 'accepted');
+        
+        // Use counter price if accepted, otherwise use original bid
+        const finalAmount = acceptedCounterPrice ? acceptedCounterPrice.counterAmount : lowestBid.amount;
+        setBidAmount(finalAmount);
       }
     }
-  }, [selectedVendor, auctionBids]);
+  }, [selectedVendor, auctionBids, allCounterPrices]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,13 +208,24 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
   const getVendorsWithRankings = () => {
     if (!vendorsWithBids.length || !auctionBids) return [];
     
-    // Get best bid for each vendor and sort by amount
+    // Get best final amount for each vendor (considering counter prices)
     const vendorBestBids = vendorsWithBids.map((vendor: any) => {
       const bestBid = getVendorBestBid(vendor.id);
+      
+      // Check for accepted counter price for this vendor
+      const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === vendor.id);
+      const acceptedCounterPrice = vendorCounterPrices.find((cp: any) => cp.status === 'accepted');
+      
+      const finalAmount = acceptedCounterPrice ? 
+        parseFloat(acceptedCounterPrice.counterAmount) : 
+        (bestBid ? Number(bestBid.amount) : 999999);
+      
       return {
         vendor,
         bestBid,
-        amount: bestBid ? Number(bestBid.amount) : 999999
+        acceptedCounterPrice,
+        amount: finalAmount,
+        originalAmount: bestBid ? Number(bestBid.amount) : 999999
       };
     }).sort((a, b) => a.amount - b.amount);
 
@@ -176,6 +233,9 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
     return vendorBestBids.map((item, index) => ({
       ...item.vendor,
       bestBid: item.bestBid,
+      acceptedCounterPrice: item.acceptedCounterPrice,
+      finalAmount: item.amount,
+      originalAmount: item.originalAmount,
       ranking: `L${index + 1}`
     }));
   };
@@ -215,7 +275,26 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
             {(auction.winningBid?.amount || auction.currentBid) && (
               <div>
                 <Label className="text-sm font-medium">Winning Bid</Label>
-                <p className="text-lg font-bold text-green-600">₹{auction.winningBid?.amount || auction.currentBid}</p>
+                {(() => {
+                  // Calculate actual winning amount considering counter prices
+                  if (rankedVendors.length > 0) {
+                    const winningVendor = rankedVendors[0];
+                    const winningAmount = winningVendor.acceptedCounterPrice ? 
+                      winningVendor.finalAmount : 
+                      (auction.winningBid?.amount || auction.currentBid);
+                    return (
+                      <div>
+                        <p className="text-lg font-bold text-green-600">₹{winningAmount}</p>
+                        {winningVendor.acceptedCounterPrice && (
+                          <p className="text-sm text-gray-500 line-through">
+                            Original: ₹{auction.winningBid?.amount || auction.currentBid}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+                  return <p className="text-lg font-bold text-green-600">₹{auction.winningBid?.amount || auction.currentBid}</p>;
+                })()}
               </div>
             )}
           </div>
@@ -262,9 +341,22 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
                             </div>
                           </div>
                           {vendor.bestBid && (
-                            <Badge variant="outline" className="text-xs ml-4 flex-shrink-0">
-                              Best: ₹{vendor.bestBid.amount}
-                            </Badge>
+                            <div className="flex flex-col items-end ml-4 flex-shrink-0">
+                              {vendor.acceptedCounterPrice ? (
+                                <>
+                                  <Badge variant="secondary" className="text-xs mb-1">
+                                    Final: ₹{vendor.finalAmount}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs line-through">
+                                    ₹{vendor.originalAmount}
+                                  </Badge>
+                                </>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">
+                                  Best: ₹{vendor.bestBid.amount}
+                                </Badge>
+                              )}
+                            </div>
                           )}
                         </div>
                       </SelectItem>
@@ -278,18 +370,48 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
             {selectedVendor && (
               <Card className="p-4 bg-blue-50 border-blue-200">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Selected Vendor Bids</Label>
+                  <Label className="text-sm font-medium">Selected Vendor Pricing</Label>
                   <div className="space-y-1">
-                    {getVendorBids(selectedVendor).slice(0, 3).map((bid: any, index: number) => (
-                      <div key={bid.id} className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">
-                          {index === 0 ? '🏆 Best' : `#${index + 1}`}: ₹{bid.amount}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(bid.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
+                    {(() => {
+                      const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === selectedVendor);
+                      const acceptedCounterPrice = vendorCounterPrices.find((cp: any) => cp.status === 'accepted');
+                      
+                      if (acceptedCounterPrice) {
+                        return (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-green-600 font-medium">
+                                🎯 Final Price (Counter Accepted): ₹{acceptedCounterPrice.counterAmount}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Original bids:
+                            </div>
+                            {getVendorBids(selectedVendor).slice(0, 2).map((bid: any, index: number) => (
+                              <div key={bid.id} className="flex justify-between items-center text-sm opacity-75">
+                                <span className="text-muted-foreground line-through">
+                                  {index === 0 ? '🏆 Best' : `#${index + 1}`}: ₹{bid.amount}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(bid.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      
+                      return getVendorBids(selectedVendor).slice(0, 3).map((bid: any, index: number) => (
+                        <div key={bid.id} className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">
+                            {index === 0 ? '🏆 Best' : `#${index + 1}`}: ₹{bid.amount}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(bid.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
               </Card>

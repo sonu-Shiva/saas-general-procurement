@@ -568,11 +568,20 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
 
   const latestBids = Array.from(latestBidsMap.values());
 
-  // Sort latest bids by amount (ascending - lowest first)  
+  // Sort latest bids by final amount (considering accepted counter prices)
   const sortedBids = [...latestBids].sort((a: any, b: any) => {
-    const amountA = Number(a.amount || a.bidAmount) || 999999;
-    const amountB = Number(b.amount || b.bidAmount) || 999999;
-    return amountA - amountB;
+    // Get counter prices for both vendors
+    const counterPricesA = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === a.vendorId);
+    const counterPricesB = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === b.vendorId);
+    
+    // Get final amounts (accepted counter price or original bid)
+    const acceptedCounterA = counterPricesA.find((cp: any) => cp.status === 'accepted');
+    const acceptedCounterB = counterPricesB.find((cp: any) => cp.status === 'accepted');
+    
+    const finalAmountA = acceptedCounterA ? parseFloat(acceptedCounterA.counterAmount) : (Number(a.amount || a.bidAmount) || 999999);
+    const finalAmountB = acceptedCounterB ? parseFloat(acceptedCounterB.counterAmount) : (Number(b.amount || b.bidAmount) || 999999);
+    
+    return finalAmountA - finalAmountB;
   });
 
 
@@ -619,6 +628,10 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
             
             // Check if there's a counter price for this vendor
             const vendorCounterPrices = allCounterPrices.filter((cp: any) => cp.challengeInfo?.vendorId === bid.vendorId);
+            
+            // Get the final price (counter price if accepted, otherwise original bid)
+            const acceptedCounterPrice = vendorCounterPrices.find((cp: any) => cp.status === 'accepted');
+            const finalPrice = acceptedCounterPrice ? parseFloat(acceptedCounterPrice.counterAmount) : parseFloat(bid.amount || bid.bidAmount || 0);
             
             return (
               <div 
@@ -675,14 +688,28 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                     </p>
                   </div>
 
-                  {/* Bid Price - Prominent Display */}
+                  {/* Final Price Display - Shows counter price if accepted */}
                   <div className="mb-4 text-center bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4 flex-grow">
-                    <div className="text-sm text-gray-600 mb-1">Bid Price:</div>
-                    <div className="text-2xl font-bold text-purple-600 mb-1">
-                      ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}/MT
-                    </div>
+                    {acceptedCounterPrice ? (
+                      <>
+                        <div className="text-sm text-gray-600 mb-1">Final Price (Counter Accepted):</div>
+                        <div className="text-2xl font-bold text-green-600 mb-1">
+                          ₹{finalPrice.toLocaleString()}/MT
+                        </div>
+                        <div className="text-xs text-gray-500 line-through">
+                          Original: ₹{parseFloat(bid.amount || bid.bidAmount || 0).toLocaleString()}/MT
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm text-gray-600 mb-1">Bid Price:</div>
+                        <div className="text-2xl font-bold text-purple-600 mb-1">
+                          ₹{finalPrice.toLocaleString()}/MT
+                        </div>
+                      </>
+                    )}
                     <div className="text-sm text-green-600 font-medium">
-                      Savings: {((15000 - parseFloat(bid.amount || bid.bidAmount || 0)) / 15000 * 100).toFixed(2)}%
+                      Savings: {((15000 - finalPrice) / 15000 * 100).toFixed(2)}%
                     </div>
                   </div>
 
