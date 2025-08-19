@@ -555,8 +555,8 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
         <p className="text-muted-foreground mb-4">Ranked by bid amount (lowest first)</p>
       </div>
 
-      {/* Clean Horizontal Grid Layout - Wider dialog allows more columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+      {/* Clean Horizontal Grid Layout - Better space utilization */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
         {sortedBids.map((bid: any, index: number) => {
           const isWinner = index === 0;
           const rankLabel = `L${index + 1}`;
@@ -706,79 +706,7 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
         </div>
       )}
 
-      {/* Challenge Prices Sent Section for Sourcing Executives */}
-        {canManageAuction && (
-          <div className="mt-6 pt-4 border-t">
-            <div className="mb-4">
-              <h4 className="font-medium mb-3 flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4" />
-                <span>Sent Challenge Prices</span>
-              </h4>
-              <ChallengeTracker auctionId={auctionId} />
-            </div>
-          </div>
-        )}
 
-        {/* Counter Prices Section for Sourcing Executives */}
-        {canManageAuction && counterPrices.length > 0 && (
-          <div className="mt-4">
-            <h4 className="font-medium mb-3 flex items-center space-x-2">
-              <MessageSquare className="w-4 h-4" />
-              <span>Counter Offers</span>
-            </h4>
-            <div className="space-y-3">
-              {counterPrices.map((counter: any) => (
-                <div key={counter.id} className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">
-                        Counter Offer: ₹{parseFloat(counter.counterAmount).toFixed(2)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        From {counter.vendorCompanyName || 'Vendor'} on {new Date(counter.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Original challenge: ₹{parseFloat(counter.originalChallengeAmount || 0).toFixed(2)}
-                      </div>
-                      {counter.notes && (
-                        <div className="text-sm mt-2 p-2 bg-white rounded border">
-                          <strong>Notes:</strong> {counter.notes}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex space-x-2">
-                      {counter.status === 'pending' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => respondToCounterMutation.mutate({ counterId: counter.id, action: 'accept' })}
-                            disabled={respondToCounterMutation.isPending}
-                          >
-                            Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => respondToCounterMutation.mutate({ counterId: counter.id, action: 'reject' })}
-                            disabled={respondToCounterMutation.isPending}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      {counter.status !== 'pending' && (
-                        <Badge variant={counter.status === 'accepted' ? 'secondary' : 'destructive'}>
-                          {counter.status}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Create PO Button for completed auctions */}
         {sortedBids.length > 0 && onCreatePO && auction && (
