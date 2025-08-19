@@ -303,13 +303,37 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
     return <VendorChallengeView auctionId={auctionId} />;
   }
 
-  // Fetch counter prices for sourcing executives
-  const { data: counterPrices = [] } = useQuery({
-    queryKey: ["/api/auctions", auctionId, "counter-prices"],
-    queryFn: () => apiRequest(`/api/auctions/${auctionId}/counter-prices`),
-    refetchInterval: 3000,
+  // Fetch challenge prices first, then get counter prices for each  
+  const { data: challengePricesData = [] } = useQuery({
+    queryKey: ["/api/auctions", auctionId, "challenge-prices"],
+    queryFn: () => apiRequest(`/api/auctions/${auctionId}/challenge-prices`),
     retry: false,
     enabled: canManageAuction
+  });
+
+  // Get all counter prices for all challenge prices in this auction
+  const { data: allCounterPrices = [] } = useQuery({
+    queryKey: ["/api/auctions", auctionId, "all-counter-prices"], 
+    queryFn: async () => {
+      const allCounters: any[] = [];
+      for (const challenge of challengePricesData) {
+        try {
+          const counterPrices = await apiRequest(`/api/challenge-prices/${challenge.id}/counter-prices`);
+          // Add challenge info to each counter price for display
+          const enhancedCounters = counterPrices.map((cp: any) => ({
+            ...cp,
+            challengeInfo: challenge
+          }));
+          allCounters.push(...enhancedCounters);
+        } catch (error) {
+          console.log(`No counter prices for challenge ${challenge.id}`);
+        }
+      }
+      return allCounters;
+    },
+    refetchInterval: 3000,
+    retry: false,
+    enabled: canManageAuction && challengePricesData.length > 0
   });
 
   // Create challenge price mutation
@@ -362,18 +386,19 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
     }
   });
 
-  // Counter price response mutation
+  // Counter price response mutation  
   const respondToCounterMutation = useMutation({
     mutationFn: async ({ counterId, action }: { counterId: string; action: 'accept' | 'reject' }) => {
-      return apiRequest(`/api/auctions/${auctionId}/counter-prices/${counterId}/respond`, {
+      return apiRequest(`/api/counter-prices/${counterId}/respond`, {
         method: 'POST',
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ status: action }),
         headers: { 'Content-Type': 'application/json' }
       });
     },
     onSuccess: (_, { action }) => {
       toast({ title: "Success", description: `Counter price ${action}ed successfully` });
-      queryClient.invalidateQueries({ queryKey: ["/api/auctions", auctionId, "counter-prices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions", auctionId, "all-counter-prices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions", auctionId, "challenge-prices"] });
     },
     onError: (error: any) => {
       toast({ 
@@ -735,6 +760,74 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
       )}
 
 
+
+      {/* Counter Prices Section - Show vendor-submitted counter prices to sourcing executives */}
+      {canManageAuction && allCounterPrices.length > 0 && (
+        <div className="mt-6 pt-4 border-t">
+          <h4 className="font-medium mb-4">Vendor Counter Prices</h4>
+          <div className="space-y-3">
+            {allCounterPrices.map((counterPrice: any) => (
+              <div key={counterPrice.id} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="font-medium">
+                      Counter Price: ₹{parseFloat(counterPrice.counterAmount).toFixed(2)}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Original Challenge: ₹{parseFloat(counterPrice.challengeInfo?.challengeAmount || 0).toFixed(2)} • 
+                      From: {counterPrice.challengeInfo?.vendorCompanyName || 'Unknown Vendor'}
+                    </div>
+                    {counterPrice.notes && (
+                      <div className="text-sm mt-2 p-2 bg-white rounded border">
+                        <strong>Vendor Notes:</strong> {counterPrice.notes}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500 mt-2">
+                      Submitted: {new Date(counterPrice.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex space-x-2 ml-4">
+                    {counterPrice.status === 'pending' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => respondToCounterMutation.mutate({ 
+                            counterId: counterPrice.id, 
+                            action: 'accept' 
+                          })}
+                          disabled={respondToCounterMutation.isPending}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => respondToCounterMutation.mutate({ 
+                            counterId: counterPrice.id, 
+                            action: 'reject' 
+                          })}
+                          disabled={respondToCounterMutation.isPending}
+                          className="text-red-600 border-red-300 hover:bg-red-50"
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    {counterPrice.status !== 'pending' && (
+                      <Badge variant={
+                        counterPrice.status === 'accepted' ? 'secondary' : 'destructive'
+                      }>
+                        {counterPrice.status}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
         {/* Create PO Button for completed auctions - Only visible for non-vendors */}
         {sortedBids.length > 0 && !isVendor && (
