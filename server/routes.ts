@@ -2716,6 +2716,104 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Vendor-specific endpoint to get challenges for a vendor
+  app.get('/api/vendor/auctions/:auctionId/challenges', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { auctionId } = req.params;
+      const userId = req.user?.claims?.sub;
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Get vendor profile for this user
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      // Get challenge prices for this vendor
+      const challengePrices = await storage.getChallengePrices({
+        auctionId,
+        vendorId: vendor.id,
+      });
+
+      res.json(challengePrices);
+    } catch (error: any) {
+      console.error("Error fetching vendor challenges:", error);
+      res.status(500).json({ message: "Failed to fetch challenges", error: error.message });
+    }
+  });
+
+  // Vendor response to challenge price
+  app.post('/api/vendor/challenges/:challengeId/respond', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { challengeId } = req.params;
+      const { action, counterAmount, notes } = req.body;
+      const userId = req.user?.claims?.sub;
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Get vendor profile for this user
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor profile not found" });
+      }
+
+      // Validate action
+      if (!['accept', 'reject', 'counter'].includes(action)) {
+        return res.status(400).json({ message: "Invalid action. Must be 'accept', 'reject', or 'counter'" });
+      }
+
+      // For counter action, validate counterAmount
+      if (action === 'counter' && (!counterAmount || isNaN(parseFloat(counterAmount)))) {
+        return res.status(400).json({ message: "Counter amount is required for counter action" });
+      }
+
+      // Get the challenge to verify ownership
+      const challenge = await storage.getChallengePrice(challengeId);
+      if (!challenge) {
+        return res.status(404).json({ message: "Challenge price not found" });
+      }
+
+      if (challenge.vendorId !== vendor.id) {
+        return res.status(403).json({ message: "You can only respond to your own challenges" });
+      }
+
+      if (challenge.status !== 'pending') {
+        return res.status(400).json({ message: "Challenge has already been responded to" });
+      }
+
+      // Update challenge status
+      await storage.updateChallengePrice(challengeId, {
+        status: action === 'counter' ? 'rejected' : action, // Set to rejected first for counter
+        respondedAt: new Date(),
+      });
+
+      // If counter, create counter price
+      if (action === 'counter') {
+        await storage.createCounterPrice({
+          challengePriceId: challengeId,
+          auctionId: challenge.auctionId,
+          vendorId: vendor.id,
+          counterAmount: counterAmount.toString(),
+          notes,
+        });
+
+        // Update challenge status to countered (but this is not in the valid enum)
+        // Actually we need to use 'rejected' status as per schema
+        await storage.updateChallengePrice(challengeId, { status: 'rejected' });
+      }
+
+      res.json({ success: true, action, challengeId });
+    } catch (error: any) {
+      console.error("Error responding to challenge:", error);
+      res.status(500).json({ message: "Failed to respond to challenge", error: error.message });
+    }
+  });
+
   // Respond to challenge price (vendor action)
   app.post('/api/challenge-prices/:challengeId/respond', authMiddleware, async (req: any, res: any) => {
     try {

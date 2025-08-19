@@ -39,6 +39,245 @@ import {
   MessageSquare
 } from "lucide-react";
 
+// Challenge Tracker Component for Sourcing Executives
+function ChallengeTracker({ auctionId }: { auctionId: string }) {
+  const { data: challengePrices = [] } = useQuery({
+    queryKey: ["/api/auctions", auctionId, "challenge-prices"],
+    queryFn: () => apiRequest(`/api/auctions/${auctionId}/challenge-prices`),
+    refetchInterval: 3000
+  });
+
+  if (challengePrices.length === 0) {
+    return (
+      <div className="text-sm text-muted-foreground italic">
+        No challenge prices sent yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {challengePrices.map((challenge: any) => (
+        <div key={challenge.id} className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="font-medium">
+                Challenge to {challenge.vendorCompanyName}: ₹{parseFloat(challenge.challengeAmount).toFixed(2)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Original bid: ₹{parseFloat(challenge.originalBidAmount || 0).toFixed(2)} • 
+                Sent on {new Date(challenge.createdAt).toLocaleDateString()}
+              </div>
+              {challenge.notes && (
+                <div className="text-sm mt-2 p-2 bg-white rounded border">
+                  <strong>Notes:</strong> {challenge.notes}
+                </div>
+              )}
+            </div>
+            <Badge variant={
+              challenge.status === 'accepted' ? 'secondary' :
+              challenge.status === 'rejected' ? 'destructive' :
+              challenge.status === 'countered' ? 'outline' : 'default'
+            }>
+              {challenge.status}
+            </Badge>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Vendor Challenge View Component
+function VendorChallengeView({ auctionId }: { auctionId: string }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [counterAmount, setCounterAmount] = useState('');
+  const [counterNotes, setCounterNotes] = useState('');
+  const [selectedChallenge, setSelectedChallenge] = useState<any>(null);
+  const [isCounterDialogOpen, setIsCounterDialogOpen] = useState(false);
+
+  const { data: challengePrices = [] } = useQuery({
+    queryKey: ["/api/vendor/auctions", auctionId, "challenges"],
+    queryFn: () => apiRequest(`/api/vendor/auctions/${auctionId}/challenges`),
+    refetchInterval: 3000,
+    enabled: (user as any)?.role === 'vendor'
+  });
+
+  const respondToChallengeQuery = useMutation({
+    mutationFn: async ({ challengeId, action, counterAmount, notes }: any) => {
+      return apiRequest(`/api/vendor/challenges/${challengeId}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ action, counterAmount, notes }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (_, { action }) => {
+      toast({ title: "Success", description: `Challenge ${action} successfully` });
+      setIsCounterDialogOpen(false);
+      setCounterAmount('');
+      setCounterNotes('');
+      setSelectedChallenge(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/vendor/auctions", auctionId, "challenges"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to respond to challenge",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleAccept = (challenge: any) => {
+    respondToChallengeQuery.mutate({
+      challengeId: challenge.id,
+      action: 'accept'
+    });
+  };
+
+  const handleReject = (challenge: any) => {
+    respondToChallengeQuery.mutate({
+      challengeId: challenge.id,
+      action: 'reject'
+    });
+  };
+
+  const handleCounter = (challenge: any) => {
+    setSelectedChallenge(challenge);
+    setIsCounterDialogOpen(true);
+  };
+
+  const submitCounter = () => {
+    if (!selectedChallenge || !counterAmount) return;
+
+    respondToChallengeQuery.mutate({
+      challengeId: selectedChallenge.id,
+      action: 'counter',
+      counterAmount: parseFloat(counterAmount),
+      notes: counterNotes
+    });
+  };
+
+  if (challengePrices.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <h4 className="font-medium mb-3 flex items-center space-x-2">
+        <AlertTriangle className="w-4 h-4" />
+        <span>Challenge Prices</span>
+      </h4>
+      <div className="space-y-3">
+        {challengePrices.map((challenge: any) => (
+          <div key={challenge.id} className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="font-medium">
+                  Challenge Price: ₹{parseFloat(challenge.challengeAmount).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Your original bid: ₹{parseFloat(challenge.originalBidAmount || 0).toFixed(2)} • 
+                  Received on {new Date(challenge.createdAt).toLocaleDateString()}
+                </div>
+                {challenge.notes && (
+                  <div className="text-sm mt-2 p-2 bg-white rounded border">
+                    <strong>Buyer Notes:</strong> {challenge.notes}
+                  </div>
+                )}
+              </div>
+              <div className="flex space-x-2">
+                {challenge.status === 'pending' && (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAccept(challenge)}
+                      disabled={respondToChallengeQuery.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleReject(challenge)}
+                      disabled={respondToChallengeQuery.isPending}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCounter(challenge)}
+                      disabled={respondToChallengeQuery.isPending}
+                    >
+                      Counter
+                    </Button>
+                  </>
+                )}
+                {challenge.status !== 'pending' && (
+                  <Badge variant={
+                    challenge.status === 'accepted' ? 'secondary' :
+                    challenge.status === 'rejected' ? 'destructive' :
+                    challenge.status === 'countered' ? 'outline' : 'default'
+                  }>
+                    {challenge.status}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Counter Price Dialog */}
+      <Dialog open={isCounterDialogOpen} onOpenChange={setIsCounterDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Counter Price</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Challenge Price: ₹{selectedChallenge?.challengeAmount}</Label>
+              <p className="text-sm text-muted-foreground">Your original bid: ₹{selectedChallenge?.originalBidAmount}</p>
+            </div>
+            <div>
+              <Label htmlFor="counter-amount">Counter Amount (₹)</Label>
+              <Input
+                id="counter-amount"
+                type="number"
+                value={counterAmount}
+                onChange={(e) => setCounterAmount(e.target.value)}
+                placeholder="Enter your counter price"
+              />
+            </div>
+            <div>
+              <Label htmlFor="counter-notes">Notes (Optional)</Label>
+              <Textarea
+                id="counter-notes"
+                value={counterNotes}
+                onChange={(e) => setCounterNotes(e.target.value)}
+                placeholder="Add notes for the buyer"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsCounterDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={submitCounter}
+                disabled={!counterAmount || respondToChallengeQuery.isPending}
+              >
+                {respondToChallengeQuery.isPending ? "Sending..." : "Send Counter"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // Auction Results Component  
 function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreatePO?: (auction: any) => void }) {
   const { user } = useAuth();
@@ -343,22 +582,15 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
           ))}
         </div>
 
-        {/* Auction Management Controls */}
+        {/* Challenge Prices Sent Section for Sourcing Executives */}
         {canManageAuction && (
           <div className="mt-6 pt-4 border-t">
             <div className="mb-4">
-              <h4 className="font-medium mb-3">Auction Management</h4>
-              <div className="flex space-x-3">
-                <Button 
-                  onClick={() => setIsExtendDialogOpen(true)}
-                  variant="outline"
-                  className="flex items-center space-x-2"
-                  size="sm"
-                >
-                  <Clock className="w-4 h-4" />
-                  <span>Extend Auction</span>
-                </Button>
-              </div>
+              <h4 className="font-medium mb-3 flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Sent Challenge Prices</span>
+              </h4>
+              <ChallengeTracker auctionId={auctionId} />
             </div>
           </div>
         )}
@@ -855,11 +1087,14 @@ export default function AuctionCenter() {
           <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
             {selectedAuction && (
               isVendor ? (
-                <LiveBiddingInterface 
-                  auction={selectedAuction}
-                  ws={ws}
-                  onClose={() => setIsLiveBiddingOpen(false)}
-                />
+                <div>
+                  <LiveBiddingInterface 
+                    auction={selectedAuction}
+                    ws={ws}
+                    onClose={() => setIsLiveBiddingOpen(false)}
+                  />
+                  <VendorChallengeView auctionId={selectedAuction.id} />
+                </div>
               ) : (
                 <LiveAuctionView 
                   auction={selectedAuction}
