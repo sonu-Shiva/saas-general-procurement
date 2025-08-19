@@ -605,7 +605,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!termsPath) {
-        return res.status(404).json({ error: `No terms document found for this ${entityType}` });
+        // No terms document uploaded, generate a default terms PDF
+        console.log(`No terms document found for ${entityType} ${entityId}, generating default terms PDF`);
+        
+        const defaultTermsContent = `%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+
+4 0 obj
+<<
+/Length 300
+>>
+stream
+BT
+/F1 16 Tf
+72 720 Td
+(Terms and Conditions) Tj
+0 -40 Td
+/F1 12 Tf
+(${entity.type?.toUpperCase() || 'PROCUREMENT'} - ${entity.title || 'Untitled'}) Tj
+0 -20 Td
+(Reference: ${entity.referenceNo || entity.id}) Tj
+0 -20 Td
+(Budget: ${entity.budget ? '₹' + parseFloat(entity.budget).toLocaleString() : 'Not specified'}) Tj
+0 -40 Td
+(Standard procurement terms and conditions apply.) Tj
+0 -20 Td
+(By participating, you agree to comply with all requirements.) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000198 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+500
+%%EOF`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${entity.type}-${entity.referenceNo || entity.id}.pdf"`);
+        res.send(defaultTermsContent);
+        return;
       }
       
       try {
