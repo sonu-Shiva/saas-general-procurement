@@ -620,9 +620,10 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
         <TermsAcceptanceDialog
           open={showTermsDialog}
           onOpenChange={setShowTermsDialog}
-          termsAndConditionsPath={termsPath || `/api/terms/download/${rfxId}`}
+          termsAndConditionsPath={termsPath}
           rfxTitle={rfxData.title || rfx.rfxTitle}
           rfxType={rfxType}
+          rfxId={rfxId}
           onAccept={handleTermsAccepted}
           onDecline={() => {
             setShowTermsDialog(false);

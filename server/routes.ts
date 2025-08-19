@@ -564,20 +564,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Terms download endpoint - get actual RFx terms file
-  app.get('/api/terms/download/:rfxId', authMiddleware, async (req: any, res) => {
+  // Terms download endpoint - handles both RFx and auction downloads
+  app.get('/api/terms/download/:entityId', authMiddleware, async (req: any, res) => {
     try {
-      const { rfxId } = req.params;
+      const { entityId } = req.params;
       
-      // Get the RFx record to find the terms file path
-      const rfx = await storage.getRfxById(rfxId);
-      if (!rfx) {
-        return res.status(404).json({ error: 'RFx not found' });
+      // Try to get RFx first, then auction
+      let termsPath: string | null = null;
+      let entityType = '';
+      let entity: any = null;
+      
+      // Try as RFx first
+      try {
+        const rfx = await storage.getRfxById(entityId);
+        if (rfx) {
+          entity = rfx;
+          entityType = 'rfx';
+          termsPath = rfx.termsAndConditionsPath;
+        }
+      } catch (error) {
+        // Not an RFx, try auction
       }
       
-      const termsPath = rfx.termsAndConditionsPath;
+      // If not found as RFx, try as auction
+      if (!entity) {
+        try {
+          const auction = await storage.getAuctionById(entityId);
+          if (auction) {
+            entity = auction;
+            entityType = 'auction';
+            termsPath = auction.termsAndConditionsPath;
+          }
+        } catch (error) {
+          // Not found as auction either
+        }
+      }
+      
+      if (!entity) {
+        return res.status(404).json({ error: 'Entity not found' });
+      }
+      
       if (!termsPath) {
-        return res.status(404).json({ error: 'No terms document found for this RFx' });
+        return res.status(404).json({ error: `No terms document found for this ${entityType}` });
       }
       
       try {
@@ -587,14 +615,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Set proper headers for PDF download
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${rfx.type}-${rfx.referenceNo}.pdf"`);
+        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${entity.type}-${entity.referenceNo || entity.title}.pdf"`);
         
         // Stream the file to response
         objectStorageService.downloadObject(objectFile, res);
       } catch (storageError) {
         console.error("Error accessing terms file from storage:", storageError);
         
-        // Fallback: create a proper terms document with RFx details
+        // Fallback: create a proper terms document with entity details
         const termsContent = `%PDF-1.4
 1 0 obj
 <<
@@ -631,11 +659,11 @@ BT
 (Terms and Conditions) Tj
 0 -40 Td
 /F1 12 Tf
-(${rfx.type} - ${rfx.title}) Tj
+(${entity.type} - ${entity.title}) Tj
 0 -20 Td
-(Reference: ${rfx.referenceNo}) Tj
+(Reference: ${entity.referenceNo || entity.title}) Tj
 0 -20 Td
-(Budget: ${rfx.budget ? '₹' + parseFloat(rfx.budget).toLocaleString() : 'Not specified'}) Tj
+(Budget: ${entity.budget ? '₹' + parseFloat(entity.budget).toLocaleString() : 'Not specified'}) Tj
 0 -40 Td
 (Standard procurement terms and conditions apply.) Tj
 ET
@@ -659,7 +687,7 @@ startxref
 %%EOF`;
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${rfx.type}-${rfx.referenceNo}.pdf"`);
+        res.setHeader('Content-Disposition', `attachment; filename="terms-and-conditions-${entity.type}-${entity.referenceNo || entity.title}.pdf"`);
         res.send(termsContent);
       }
     } catch (error) {

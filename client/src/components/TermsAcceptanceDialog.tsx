@@ -11,6 +11,8 @@ interface TermsAcceptanceDialogProps {
   termsAndConditionsPath?: string;
   rfxTitle: string;
   rfxType: string;
+  rfxId?: string; // Added for RFx ID
+  auctionId?: string; // Added for auction ID
   onAccept: () => void;
   onDecline: () => void;
 }
@@ -21,6 +23,8 @@ export function TermsAcceptanceDialog({
   termsAndConditionsPath,
   rfxTitle,
   rfxType,
+  rfxId,
+  auctionId,
   onAccept,
   onDecline,
 }: TermsAcceptanceDialogProps) {
@@ -41,20 +45,37 @@ export function TermsAcceptanceDialog({
 
   const handleDownloadTerms = () => {
     console.log('DEBUG: Terms path:', termsAndConditionsPath);
-    if (termsAndConditionsPath) {
-      let filename = termsAndConditionsPath;
-      // Extract filename from full URL if needed
-      if (filename.includes('/')) {
-        filename = filename.split('/').pop() || 'terms.pdf';
+    console.log('DEBUG: RFx ID:', rfxId);
+    console.log('DEBUG: Auction ID:', auctionId);
+    
+    let downloadUrl: string;
+    
+    if (rfxId) {
+      // For RFx, use the unified terms endpoint
+      downloadUrl = `/api/terms/download/${rfxId}`;
+    } else if (auctionId) {
+      // For auctions, use the unified terms endpoint
+      downloadUrl = `/api/terms/download/${auctionId}`;
+    } else if (termsAndConditionsPath) {
+      // Fallback to the provided path (might be full URL)
+      if (termsAndConditionsPath.startsWith('/api/')) {
+        downloadUrl = termsAndConditionsPath;
+      } else {
+        // Extract filename and use old endpoint as fallback
+        let filename = termsAndConditionsPath;
+        if (filename.includes('/')) {
+          filename = filename.split('/').pop() || 'terms.pdf';
+        }
+        downloadUrl = `/api/terms/download/${filename}`;
       }
-      
-      const downloadUrl = `/api/terms/download/${filename}`;
-      console.log('DEBUG: Opening URL:', downloadUrl);
-      window.open(downloadUrl, '_blank');
-      setHasReadTerms(true);
     } else {
-      console.error('DEBUG: No terms path provided');
+      console.error('DEBUG: No download method available');
+      return;
     }
+    
+    console.log('DEBUG: Opening URL:', downloadUrl);
+    window.open(downloadUrl, '_blank');
+    setHasReadTerms(true);
   };
 
   const canAccept = hasReadTerms && hasAgreedToTerms;
