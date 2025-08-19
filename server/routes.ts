@@ -1388,13 +1388,8 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
       const { selectedVendors, ...rfxFields } = req.body;
       
-      // Parse selectedVendors if it's a string
-      let parsedSelectedVendors;
-      try {
-        parsedSelectedVendors = typeof selectedVendors === 'string' ? JSON.parse(selectedVendors) : selectedVendors;
-      } catch (error) {
-        parsedSelectedVendors = [];
-      }
+      // selectedVendors should already be an array when sent as JSON
+      const parsedSelectedVendors = Array.isArray(selectedVendors) ? selectedVendors : [];
 
       // For now, generate a fallback terms file path when a file is uploaded via frontend
       // The actual file upload will be handled when multipart parsing is properly implemented
@@ -1420,8 +1415,8 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         ...rfxFields,
         createdBy: userId,
         referenceNo: `RFX-${Date.now()}`,
-        status: req.body.status || "active",
-        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : null,
+        status: rfxFields.status || "draft",
+        dueDate: rfxFields.dueDate ? new Date(rfxFields.dueDate) : null,
         termsAndConditionsPath,
         termsAndConditionsRequired: !!termsAndConditionsPath,
       };

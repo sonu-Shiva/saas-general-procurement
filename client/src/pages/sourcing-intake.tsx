@@ -1199,26 +1199,28 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, allBoms, vendors,
 
   const createRfxMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Create FormData for file upload
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', data.title);
-      formDataToSend.append('type', data.type);
-      formDataToSend.append('scope', data.scope);
-      formDataToSend.append('criteria', data.criteria);
-      formDataToSend.append('dueDate', data.dueDate ? new Date(data.dueDate).toISOString() : '');
-      formDataToSend.append('budget', data.budget || '');
-      formDataToSend.append('contactPerson', data.contactPerson);
-      formDataToSend.append('bomId', procurementRequest.bomId || '');
-      formDataToSend.append('selectedVendors', JSON.stringify(data.selectedVendors));
-      formDataToSend.append('status', 'draft');
-      
-      if (data.termsFile) {
-        formDataToSend.append('termsFile', data.termsFile);
-      }
+      // Send as JSON since file upload will be handled server-side for now
+      const requestData = {
+        title: data.title,
+        type: data.type,
+        scope: data.scope,
+        criteria: data.criteria,
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
+        budget: data.budget || '',
+        contactPerson: data.contactPerson,
+        bomId: procurementRequest.bomId || '',
+        selectedVendors: data.selectedVendors,
+        status: 'draft',
+        // Note: Terms file upload will be implemented with proper multipart parsing
+        termsFileUploaded: !!data.termsFile
+      };
 
       const response = await fetch("/api/rfx", {
         method: "POST",
-        body: formDataToSend,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData),
         credentials: "include",
       });
 
