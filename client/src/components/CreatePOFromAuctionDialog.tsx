@@ -158,6 +158,30 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
     auctionBids?.some((bid: any) => bid.vendorId === vendor.id)
   ) : [];
 
+  // Calculate rankings for vendors with bids
+  const getVendorsWithRankings = () => {
+    if (!vendorsWithBids.length || !auctionBids) return [];
+    
+    // Get best bid for each vendor and sort by amount
+    const vendorBestBids = vendorsWithBids.map((vendor: any) => {
+      const bestBid = getVendorBestBid(vendor.id);
+      return {
+        vendor,
+        bestBid,
+        amount: bestBid ? Number(bestBid.amount) : 999999
+      };
+    }).sort((a, b) => a.amount - b.amount);
+
+    // Add ranking to each vendor
+    return vendorBestBids.map((item, index) => ({
+      ...item.vendor,
+      bestBid: item.bestBid,
+      ranking: `L${index + 1}`
+    }));
+  };
+
+  const rankedVendors = getVendorsWithRankings();
+
   return (
     <div className="space-y-6">
       {/* Auction Information */}
@@ -216,18 +240,30 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
                   <SelectValue placeholder="Choose a vendor who participated" />
                 </SelectTrigger>
                 <SelectContent>
-                  {vendorsWithBids.map((vendor: any) => {
-                    const bestBid = getVendorBestBid(vendor.id);
+                  {rankedVendors.map((vendor: any) => {
                     return (
                       <SelectItem key={vendor.id} value={vendor.id}>
                         <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center space-x-2">
-                            <Building2 className="w-4 h-4" />
-                            <span>{vendor.companyName}</span>
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                              vendor.ranking === 'L1' 
+                                ? 'bg-green-500' 
+                                : vendor.ranking === 'L2'
+                                  ? 'bg-blue-500'
+                                  : vendor.ranking === 'L3'
+                                    ? 'bg-orange-500'
+                                    : 'bg-gray-500'
+                            }`}>
+                              {vendor.ranking}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Building2 className="w-4 h-4" />
+                              <span>{vendor.companyName}</span>
+                            </div>
                           </div>
-                          {bestBid && (
+                          {vendor.bestBid && (
                             <Badge variant="outline" className="text-xs">
-                              Best: ₹{bestBid.amount}
+                              Best: ₹{vendor.bestBid.amount}
                             </Badge>
                           )}
                         </div>
