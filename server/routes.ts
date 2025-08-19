@@ -82,13 +82,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { role } = req.body;
-      const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
+      console.log('DEBUG: Role change request:', { role, body: req.body });
       
-      if (!validRoles.includes(role)) {
-        return res.status(400).json({ message: 'Invalid role' });
+      // Extended valid roles list based on the frontend role options
+      const validRoles = [
+        'buyer_admin', 
+        'buyer_user', 
+        'sourcing_manager', 
+        'vendor',
+        'sourcing_exec',
+        'department_requester',
+        'dept_approver'
+      ];
+      
+      console.log('DEBUG: Valid roles:', validRoles);
+      
+      if (!role || !validRoles.includes(role)) {
+        console.log('DEBUG: Invalid role provided:', role);
+        return res.status(400).json({ message: `Invalid role. Valid roles: ${validRoles.join(', ')}` });
       }
 
+      console.log('DEBUG: Changing role from', currentDevUser.role, 'to', role);
       currentDevUser.role = role;
+      console.log('DEBUG: Role change successful:', currentDevUser);
       res.json(currentDevUser);
     });
 
