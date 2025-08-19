@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Send, FileText, Clock, Package, Upload, X, AlertTriangle, Trash2 } from "lucide-react";
+import { Send, FileText, Clock, Package, Upload, X, AlertTriangle, Trash2, Download } from "lucide-react";
 import { TermsAcceptanceDialog } from "./TermsAcceptanceDialog";
 import { RfxAttachmentUploader } from "./RfxAttachmentUploader";
 
@@ -358,17 +358,71 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
                       I accept the terms and conditions for this {rfxType}
                     </Label>
                   </div>
-                  {termsPath !== '/dummy-terms.pdf' && (
+                  <div className="flex flex-wrap gap-2 mt-3">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(termsPath, '_blank')}
+                      onClick={() => {
+                        if (termsPath && termsPath !== '/dummy-terms.pdf') {
+                          window.open(termsPath, '_blank');
+                        } else {
+                          // Open generic terms document or show terms dialog
+                          setShowTermsDialog(true);
+                        }
+                      }}
+                      data-testid="button-view-terms"
                     >
                       <FileText className="w-4 h-4 mr-2" />
-                      View Terms Document
+                      View Terms
                     </Button>
-                  )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        if (termsPath && termsPath !== '/dummy-terms.pdf') {
+                          try {
+                            // Download the file using fetch and blob
+                            const response = await fetch(termsPath);
+                            if (response.ok) {
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = `terms-and-conditions-${rfxType}-${rfxData.referenceNo}.pdf`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              window.URL.revokeObjectURL(url);
+                              toast({
+                                title: "Download Started",
+                                description: "Terms and conditions document is being downloaded.",
+                              });
+                            } else {
+                              throw new Error('Download failed');
+                            }
+                          } catch (error) {
+                            toast({
+                              title: "Download Failed",
+                              description: "Unable to download terms document. Please try viewing it online.",
+                              variant: "destructive",
+                            });
+                          }
+                        } else {
+                          // Create a generic terms document or show message
+                          toast({
+                            title: "Terms Document",
+                            description: "Standard terms and conditions apply for this " + rfxType,
+                          });
+                        }
+                      }}
+                      data-testid="button-download-terms"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Terms
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
