@@ -15,19 +15,29 @@ import { Send, FileText, Clock, Package, Upload, X, AlertTriangle, Trash2 } from
 import { TermsAcceptanceDialog } from "./TermsAcceptanceDialog";
 import { RfxAttachmentUploader } from "./RfxAttachmentUploader";
 
-const rfxResponseSchema = z.object({
+const createRfxResponseSchema = (budgetAmount?: number) => z.object({
   response: z.string().min(1, "Response is required"),
-  quotedPrice: z.string().optional(),
+  quotedPrice: z.string().optional().refine((val) => {
+    if (!val || val === "") return true; // Optional field
+    const price = parseFloat(val);
+    if (isNaN(price)) return false;
+    if (budgetAmount && price >= budgetAmount) return false;
+    return price > 0;
+  }, {
+    message: budgetAmount 
+      ? `Quoted price must be less than budget (₹${budgetAmount.toLocaleString()})`
+      : "Quoted price must be a valid positive number"
+  }),
   deliveryTerms: z.string().optional(),
   paymentTerms: z.string().optional(),
   leadTime: z.string().optional(),
   attachments: z.array(z.string()).optional(),
   termsAccepted: z.boolean().refine(val => val === true, {
-    message: "You must accept the terms and conditions"
+    message: "You must accept the terms and conditions to submit your response"
   }),
 });
 
-type RfxResponseFormData = z.infer<typeof rfxResponseSchema>;
+type RfxResponseFormData = z.infer<ReturnType<typeof createRfxResponseSchema>>;
 
 interface RfxResponseFormProps {
   rfx: any;
@@ -55,15 +65,18 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
   const rfxType = (rfxData.type || rfx.rfxType || rfx.type || 'rfx').toUpperCase();
   const termsPath = rfxData.termsAndConditionsPath || rfx.rfxTermsAndConditionsPath || rfx.termsAndConditionsPath;
   const rfxId = rfx.rfxId || rfx.id || rfxData.id;
+  const budgetAmount = rfxData.budgetAmount || rfx.budgetAmount;
 
   console.log('RfxResponseForm - Debug data:', {
     rfx,
     rfxData,
     rfxId,
     rfxType,
-    termsPath
+    termsPath,
+    budgetAmount
   });
 
+  const rfxResponseSchema = createRfxResponseSchema(budgetAmount);
   const form = useForm<RfxResponseFormData>({
     resolver: zodResolver(rfxResponseSchema),
     defaultValues: {
@@ -342,7 +355,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
           <CardHeader>
             <CardTitle>Your Response</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="response">
                 {rfxType === 'RFI' ? 'Information Response' : 
@@ -358,6 +371,7 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
                   'Provide your detailed quote with specifications and pricing...'
                 }
                 className="border-2 border-border focus:border-primary"
+                data-testid="textarea-response"
               />
               {form.formState.errors.response && (
                 <p className="text-sm text-destructive">{form.formState.errors.response.message}</p>
@@ -366,48 +380,60 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
 
             {rfxType !== 'RFI' && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="quotedPrice">
+                    <Label htmlFor="quotedPrice" className="text-sm font-medium">
                       {rfxType === 'RFP' ? 'Proposed Price' : 'Quoted Price'}
+                      {budgetAmount && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          (Budget: ₹{budgetAmount.toLocaleString()})
+                        </span>
+                      )}
                     </Label>
                     <Input
                       id="quotedPrice"
                       {...form.register("quotedPrice")}
                       placeholder="e.g., ₹50,000"
                       className="border-2 border-border focus:border-primary"
+                      data-testid="input-quoted-price"
                     />
+                    {form.formState.errors.quotedPrice && (
+                      <p className="text-sm text-destructive">{form.formState.errors.quotedPrice.message}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="leadTime">Delivery/Lead Time</Label>
+                    <Label htmlFor="leadTime" className="text-sm font-medium">Delivery/Lead Time</Label>
                     <Input
                       id="leadTime"
                       {...form.register("leadTime")}
                       placeholder="e.g., 2-3 weeks"
                       className="border-2 border-border focus:border-primary"
+                      data-testid="input-lead-time"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="deliveryTerms">Delivery Terms</Label>
+                    <Label htmlFor="deliveryTerms" className="text-sm font-medium">Delivery Terms</Label>
                     <Textarea
                       id="deliveryTerms"
                       {...form.register("deliveryTerms")}
                       rows={3}
                       placeholder="Specify delivery terms, conditions, and logistics..."
                       className="border-2 border-border focus:border-primary"
+                      data-testid="textarea-delivery-terms"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="paymentTerms">Payment Terms</Label>
+                    <Label htmlFor="paymentTerms" className="text-sm font-medium">Payment Terms</Label>
                     <Textarea
                       id="paymentTerms"
                       {...form.register("paymentTerms")}
                       rows={3}
                       placeholder="Specify payment terms, conditions, and schedule..."
                       className="border-2 border-border focus:border-primary"
+                      data-testid="textarea-payment-terms"
                     />
                   </div>
                 </div>
@@ -487,26 +513,48 @@ export function RfxResponseForm({ rfx, onClose, onSuccess }: RfxResponseFormProp
           </CardContent>
         </Card>
 
-        {/* Form Actions */}
-        <div className="flex justify-between items-center pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={submitResponseMutation.isPending || (termsPath && !termsAccepted)}
-            className="bg-primary hover:bg-primary/90"
-          >
-            {submitResponseMutation.isPending ? (
-              "Submitting..."
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Submit {rfxType} Response
-              </>
+        {/* Terms Acceptance Reminder and Form Actions */}
+        <Card className="border-2 border-primary/20 bg-primary/5">
+          <CardContent className="p-6">
+            {termsPath && !termsAccepted && (
+              <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-center space-x-2 text-orange-800">
+                  <AlertTriangle className="w-5 h-5" />
+                  <span className="font-medium">Terms & Conditions Required</span>
+                </div>
+                <p className="text-sm text-orange-700 mt-2">
+                  You must accept the terms and conditions before submitting your response.
+                </p>
+              </div>
             )}
-          </Button>
-        </div>
+            
+            <div className="flex justify-between items-center">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                data-testid="button-cancel"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={submitResponseMutation.isPending || (termsPath && !termsAccepted)}
+                className="bg-primary hover:bg-primary/90 min-w-[180px]"
+                data-testid="button-submit"
+              >
+                {submitResponseMutation.isPending ? (
+                  "Submitting..."
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Submit {rfxType} Response
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </form>
 
       {/* Terms Acceptance Dialog */}
