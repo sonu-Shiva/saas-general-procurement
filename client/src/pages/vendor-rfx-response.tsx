@@ -5,19 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, FileText, CheckCircle, Clock } from 'lucide-react';
 import { RfxResponseForm } from '@/components/rfx-response-form';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function VendorRfxResponse() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
 
-  // Fetch RFx details - using the same pattern as vendor-portal
+  // Fetch RFx details - using the exact same pattern as vendor-portal
   const { data: rfx, isLoading: rfxLoading, error: rfxError } = useQuery({
     queryKey: [`/api/rfx/${id}`],
+    queryFn: () => apiRequest(`/api/rfx/${id}`),
+    enabled: !!id,
   });
 
   // Check if response already exists
   const { data: existingResponses = [] } = useQuery({
-    queryKey: ["/api/vendor/rfx-responses"],
+    queryKey: ['/api/vendor/rfx-responses'],
+    queryFn: () => apiRequest('/api/vendor/rfx-responses'),
   });
 
   console.log('VendorRfxResponse - ID from URL:', id);
