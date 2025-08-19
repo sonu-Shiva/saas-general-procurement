@@ -543,6 +543,8 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
     return amountA - amountB;
   });
 
+
+
   const formatBidDateTime = (timestamp: string) => {
     try {
       if (!timestamp) return 'Time not available';

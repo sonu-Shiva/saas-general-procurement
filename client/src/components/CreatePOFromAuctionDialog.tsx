@@ -188,10 +188,10 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
               <Label className="text-sm font-medium">Ceiling Price</Label>
               <p className="text-lg font-bold text-blue-600">₹{auction.reservePrice}</p>
             </div>
-            {auction.currentBid && (
+            {(auction.winningBid?.amount || auction.currentBid) && (
               <div>
                 <Label className="text-sm font-medium">Winning Bid</Label>
-                <p className="text-lg font-bold text-green-600">₹{auction.currentBid}</p>
+                <p className="text-lg font-bold text-green-600">₹{auction.winningBid?.amount || auction.currentBid}</p>
               </div>
             )}
           </div>
