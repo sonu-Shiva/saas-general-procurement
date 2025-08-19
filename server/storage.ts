@@ -11,6 +11,9 @@ import {
   auctions,
   auctionParticipants,
   bids,
+  challengePrices,
+  counterPrices,
+  auctionExtensions,
   purchaseOrders,
   poLineItems,
   directProcurementOrders,
@@ -47,6 +50,12 @@ import {
   type InsertAuctionParticipant,
   type Bid,
   type InsertBid,
+  type ChallengePrice,
+  type InsertChallengePrice,
+  type CounterPrice,
+  type InsertCounterPrice,
+  type AuctionExtension,
+  type InsertAuctionExtension,
   type PurchaseOrder,
   type InsertPurchaseOrder,
   type PoLineItem,
@@ -162,6 +171,25 @@ export interface IStorage {
   getAuctionBids(auctionId: string): Promise<Bid[]>;
   getLatestBid(auctionId: string): Promise<Bid | undefined>;
   getAuctionItems(auctionId: string): Promise<any[]>;
+
+  // Challenge Price operations
+  createChallengePrice(challengePrice: InsertChallengePrice): Promise<ChallengePrice>;
+  getChallengePrice(id: string): Promise<ChallengePrice | undefined>;
+  getChallengePrices(filters?: { auctionId?: string; vendorId?: string; status?: string }): Promise<ChallengePrice[]>;
+  updateChallengePrice(id: string, updates: Partial<InsertChallengePrice>): Promise<ChallengePrice>;
+  respondToChallengePrice(id: string, status: 'accepted' | 'rejected', vendorResponse?: string): Promise<ChallengePrice>;
+
+  // Counter Price operations
+  createCounterPrice(counterPrice: InsertCounterPrice): Promise<CounterPrice>;
+  getCounterPrice(id: string): Promise<CounterPrice | undefined>;
+  getCounterPrices(filters?: { challengePriceId?: string; auctionId?: string; vendorId?: string; status?: string }): Promise<CounterPrice[]>;
+  updateCounterPrice(id: string, updates: Partial<InsertCounterPrice>): Promise<CounterPrice>;
+  respondToCounterPrice(id: string, status: 'accepted' | 'rejected', sourcingResponse?: string): Promise<CounterPrice>;
+
+  // Auction Extension operations
+  createAuctionExtension(extension: InsertAuctionExtension): Promise<AuctionExtension>;
+  getAuctionExtensions(auctionId: string): Promise<AuctionExtension[]>;
+  extendAuction(auctionId: string, durationMinutes: number, reason: string, extendedBy: string): Promise<{ auction: Auction; extension: AuctionExtension }>;
 
   // Purchase Order operations
   createPurchaseOrder(po: InsertPurchaseOrder): Promise<PurchaseOrder>;
@@ -1255,6 +1283,183 @@ export class DatabaseStorage implements IStorage {
     // Get BOM items for the auction
     const bomItems = await this.getBomItems(auction.bomId);
     return bomItems;
+  }
+
+  // Challenge Price operations
+  async createChallengePrice(challengePrice: InsertChallengePrice): Promise<ChallengePrice> {
+    const challengeData = {
+      ...challengePrice,
+      id: challengePrice.id || uuidv4(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const [newChallengePrice] = await this.db.insert(challengePrices).values(challengeData).returning();
+    return newChallengePrice;
+  }
+
+  async getChallengePrice(id: string): Promise<ChallengePrice | undefined> {
+    const [challengePrice] = await this.db.select().from(challengePrices).where(eq(challengePrices.id, id));
+    return challengePrice;
+  }
+
+  async getChallengePrices(filters?: { auctionId?: string; vendorId?: string; status?: string }): Promise<ChallengePrice[]> {
+    const conditions = [];
+
+    if (filters?.auctionId) {
+      conditions.push(eq(challengePrices.auctionId, filters.auctionId));
+    }
+    if (filters?.vendorId) {
+      conditions.push(eq(challengePrices.vendorId, filters.vendorId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(challengePrices.status, filters.status as any));
+    }
+
+    return await this.db
+      .select()
+      .from(challengePrices)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(challengePrices.createdAt));
+  }
+
+  async updateChallengePrice(id: string, updates: Partial<InsertChallengePrice>): Promise<ChallengePrice> {
+    const [challengePrice] = await this.db
+      .update(challengePrices)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(challengePrices.id, id))
+      .returning();
+    return challengePrice;
+  }
+
+  async respondToChallengePrice(id: string, status: 'accepted' | 'rejected', vendorResponse?: string): Promise<ChallengePrice> {
+    const [challengePrice] = await this.db
+      .update(challengePrices)
+      .set({
+        status,
+        vendorResponse,
+        respondedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(challengePrices.id, id))
+      .returning();
+    return challengePrice;
+  }
+
+  // Counter Price operations
+  async createCounterPrice(counterPrice: InsertCounterPrice): Promise<CounterPrice> {
+    const counterData = {
+      ...counterPrice,
+      id: counterPrice.id || uuidv4(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const [newCounterPrice] = await this.db.insert(counterPrices).values(counterData).returning();
+    return newCounterPrice;
+  }
+
+  async getCounterPrice(id: string): Promise<CounterPrice | undefined> {
+    const [counterPrice] = await this.db.select().from(counterPrices).where(eq(counterPrices.id, id));
+    return counterPrice;
+  }
+
+  async getCounterPrices(filters?: { challengePriceId?: string; auctionId?: string; vendorId?: string; status?: string }): Promise<CounterPrice[]> {
+    const conditions = [];
+
+    if (filters?.challengePriceId) {
+      conditions.push(eq(counterPrices.challengePriceId, filters.challengePriceId));
+    }
+    if (filters?.auctionId) {
+      conditions.push(eq(counterPrices.auctionId, filters.auctionId));
+    }
+    if (filters?.vendorId) {
+      conditions.push(eq(counterPrices.vendorId, filters.vendorId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(counterPrices.status, filters.status as any));
+    }
+
+    return await this.db
+      .select()
+      .from(counterPrices)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(counterPrices.createdAt));
+  }
+
+  async updateCounterPrice(id: string, updates: Partial<InsertCounterPrice>): Promise<CounterPrice> {
+    const [counterPrice] = await this.db
+      .update(counterPrices)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(counterPrices.id, id))
+      .returning();
+    return counterPrice;
+  }
+
+  async respondToCounterPrice(id: string, status: 'accepted' | 'rejected', sourcingResponse?: string): Promise<CounterPrice> {
+    const [counterPrice] = await this.db
+      .update(counterPrices)
+      .set({
+        status,
+        sourcingResponse,
+        respondedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(counterPrices.id, id))
+      .returning();
+    return counterPrice;
+  }
+
+  // Auction Extension operations
+  async createAuctionExtension(extension: InsertAuctionExtension): Promise<AuctionExtension> {
+    const extensionData = {
+      ...extension,
+      id: extension.id || uuidv4(),
+      createdAt: new Date(),
+    };
+    const [newExtension] = await this.db.insert(auctionExtensions).values(extensionData).returning();
+    return newExtension;
+  }
+
+  async getAuctionExtensions(auctionId: string): Promise<AuctionExtension[]> {
+    return await this.db
+      .select()
+      .from(auctionExtensions)
+      .where(eq(auctionExtensions.auctionId, auctionId))
+      .orderBy(desc(auctionExtensions.createdAt));
+  }
+
+  async extendAuction(auctionId: string, durationMinutes: number, reason: string, extendedBy: string): Promise<{ auction: Auction; extension: AuctionExtension }> {
+    // Get current auction
+    const auction = await this.getAuction(auctionId);
+    if (!auction) {
+      throw new Error('Auction not found');
+    }
+
+    // Check if auction can be extended
+    if (auction.extensionCount >= auction.maxExtensions) {
+      throw new Error('Maximum extensions reached');
+    }
+
+    // Calculate new end time
+    const currentEndTime = new Date(auction.endTime);
+    const newEndTime = new Date(currentEndTime.getTime() + durationMinutes * 60 * 1000);
+
+    // Update auction
+    const updatedAuction = await this.updateAuction(auctionId, {
+      endTime: newEndTime,
+      extensionCount: auction.extensionCount + 1,
+    });
+
+    // Create extension record
+    const extension = await this.createAuctionExtension({
+      auctionId,
+      originalEndTime: currentEndTime,
+      newEndTime,
+      durationMinutes,
+      reason,
+      extendedBy,
+    });
+
+    return { auction: updatedAuction, extension };
   }
 
   // Purchase Order operations

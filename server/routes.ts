@@ -35,6 +35,9 @@ import {
   insertAuctionSchema,
   insertAuctionParticipantSchema,
   insertBidSchema,
+  insertChallengePriceSchema,
+  insertCounterPriceSchema,
+  insertAuctionExtensionSchema,
   insertPurchaseOrderSchema,
   insertPoLineItemSchema,
   insertApprovalSchema,
@@ -2644,6 +2647,258 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         message: "Failed to create purchase order from auction",
         error: error.message || "Unknown error"
       });
+    }
+  });
+
+  // ===== CHALLENGE PRICING, COUNTER PRICING & AUCTION EXTENSION ROUTES =====
+
+  // Create challenge price
+  app.post('/api/auctions/:auctionId/challenge-price', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { auctionId } = req.params;
+      const { bidId, vendorId, challengeAmount, notes } = req.body;
+      const userId = req.user?.claims?.sub;
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Validate user role (only sourcing executives can create challenges)
+      const user = await storage.getUser(userId);
+      if (!user || !['sourcing_exec', 'sourcing_manager', 'admin'].includes(user.role)) {
+        return res.status(403).json({ message: "Only sourcing executives can create challenge prices" });
+      }
+
+      // Validate required fields
+      if (!bidId || !vendorId || !challengeAmount) {
+        return res.status(400).json({ message: "Bid ID, vendor ID, and challenge amount are required" });
+      }
+
+      // Verify auction exists
+      const auction = await storage.getAuction(auctionId);
+      if (!auction) {
+        return res.status(404).json({ message: "Auction not found" });
+      }
+
+      // Create challenge price
+      const challengePrice = await storage.createChallengePrice({
+        auctionId,
+        vendorId,
+        bidId,
+        challengeAmount: challengeAmount.toString(),
+        challengedBy: userId,
+        notes,
+      });
+
+      res.json({ success: true, challengePrice });
+    } catch (error: any) {
+      console.error("Error creating challenge price:", error);
+      res.status(500).json({ message: "Failed to create challenge price", error: error.message });
+    }
+  });
+
+  // Get challenge prices for auction
+  app.get('/api/auctions/:auctionId/challenge-prices', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { auctionId } = req.params;
+      const { vendorId, status } = req.query;
+
+      const challengePrices = await storage.getChallengePrices({
+        auctionId,
+        vendorId: vendorId as string,
+        status: status as string,
+      });
+
+      res.json(challengePrices);
+    } catch (error: any) {
+      console.error("Error fetching challenge prices:", error);
+      res.status(500).json({ message: "Failed to fetch challenge prices", error: error.message });
+    }
+  });
+
+  // Respond to challenge price (vendor action)
+  app.post('/api/challenge-prices/:challengeId/respond', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { challengeId } = req.params;
+      const { status, vendorResponse } = req.body;
+      const userId = req.user?.claims?.sub;
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Validate status
+      if (!['accepted', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Status must be either 'accepted' or 'rejected'" });
+      }
+
+      // Get challenge price to verify vendor
+      const challengePrice = await storage.getChallengePrice(challengeId);
+      if (!challengePrice) {
+        return res.status(404).json({ message: "Challenge price not found" });
+      }
+
+      // Verify user is the vendor for this challenge
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor || vendor.id !== challengePrice.vendorId) {
+        return res.status(403).json({ message: "You can only respond to your own challenge prices" });
+      }
+
+      // Update challenge price
+      const updatedChallengePrice = await storage.respondToChallengePrice(challengeId, status, vendorResponse);
+
+      res.json({ success: true, challengePrice: updatedChallengePrice });
+    } catch (error: any) {
+      console.error("Error responding to challenge price:", error);
+      res.status(500).json({ message: "Failed to respond to challenge price", error: error.message });
+    }
+  });
+
+  // Create counter price (vendor action after rejecting challenge)
+  app.post('/api/challenge-prices/:challengeId/counter-price', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { challengeId } = req.params;
+      const { counterAmount, notes } = req.body;
+      const userId = req.user?.claims?.sub;
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Validate required fields
+      if (!counterAmount) {
+        return res.status(400).json({ message: "Counter amount is required" });
+      }
+
+      // Get challenge price
+      const challengePrice = await storage.getChallengePrice(challengeId);
+      if (!challengePrice) {
+        return res.status(404).json({ message: "Challenge price not found" });
+      }
+
+      // Verify vendor can create counter price
+      const vendor = await storage.getVendorByUserId(userId);
+      if (!vendor || vendor.id !== challengePrice.vendorId) {
+        return res.status(403).json({ message: "You can only create counter prices for your own challenges" });
+      }
+
+      // Verify challenge was rejected
+      if (challengePrice.status !== 'rejected') {
+        return res.status(400).json({ message: "Counter price can only be created for rejected challenges" });
+      }
+
+      // Create counter price
+      const counterPrice = await storage.createCounterPrice({
+        challengePriceId: challengeId,
+        auctionId: challengePrice.auctionId,
+        vendorId: challengePrice.vendorId,
+        counterAmount: counterAmount.toString(),
+        notes,
+      });
+
+      res.json({ success: true, counterPrice });
+    } catch (error: any) {
+      console.error("Error creating counter price:", error);
+      res.status(500).json({ message: "Failed to create counter price", error: error.message });
+    }
+  });
+
+  // Get counter prices
+  app.get('/api/challenge-prices/:challengeId/counter-prices', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { challengeId } = req.params;
+
+      const counterPrices = await storage.getCounterPrices({
+        challengePriceId: challengeId,
+      });
+
+      res.json(counterPrices);
+    } catch (error: any) {
+      console.error("Error fetching counter prices:", error);
+      res.status(500).json({ message: "Failed to fetch counter prices", error: error.message });
+    }
+  });
+
+  // Respond to counter price (sourcing team action)
+  app.post('/api/counter-prices/:counterId/respond', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { counterId } = req.params;
+      const { status, sourcingResponse } = req.body;
+      const userId = req.user?.claims?.sub;
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Validate user role
+      const user = await storage.getUser(userId);
+      if (!user || !['sourcing_exec', 'sourcing_manager', 'admin'].includes(user.role)) {
+        return res.status(403).json({ message: "Only sourcing team can respond to counter prices" });
+      }
+
+      // Validate status
+      if (!['accepted', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: "Status must be either 'accepted' or 'rejected'" });
+      }
+
+      // Update counter price
+      const updatedCounterPrice = await storage.respondToCounterPrice(counterId, status, sourcingResponse);
+
+      res.json({ success: true, counterPrice: updatedCounterPrice });
+    } catch (error: any) {
+      console.error("Error responding to counter price:", error);
+      res.status(500).json({ message: "Failed to respond to counter price", error: error.message });
+    }
+  });
+
+  // Extend auction
+  app.post('/api/auctions/:auctionId/extend', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { auctionId } = req.params;
+      const { durationMinutes, reason } = req.body;
+      const userId = req.user?.claims?.sub;
+
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Validate user role (only sourcing executives can extend auctions)
+      const user = await storage.getUser(userId);
+      if (!user || !['sourcing_exec', 'sourcing_manager', 'admin'].includes(user.role)) {
+        return res.status(403).json({ message: "Only sourcing executives can extend auctions" });
+      }
+
+      // Validate required fields
+      if (!durationMinutes || durationMinutes <= 0) {
+        return res.status(400).json({ message: "Valid duration in minutes is required" });
+      }
+
+      // Extend auction
+      const result = await storage.extendAuction(auctionId, durationMinutes, reason || "Manual extension", userId);
+
+      res.json({ 
+        success: true, 
+        auction: result.auction, 
+        extension: result.extension,
+        message: "Auction extended successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error extending auction:", error);
+      res.status(500).json({ message: "Failed to extend auction", error: error.message });
+    }
+  });
+
+  // Get auction extensions
+  app.get('/api/auctions/:auctionId/extensions', authMiddleware, async (req: any, res: any) => {
+    try {
+      const { auctionId } = req.params;
+
+      const extensions = await storage.getAuctionExtensions(auctionId);
+
+      res.json(extensions);
+    } catch (error: any) {
+      console.error("Error fetching auction extensions:", error);
+      res.status(500).json({ message: "Failed to fetch auction extensions", error: error.message });
     }
   });
 

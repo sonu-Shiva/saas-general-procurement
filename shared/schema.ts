@@ -215,10 +215,14 @@ export const auctions = pgTable("auctions", {
   items: jsonb("items"),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
+  originalEndTime: timestamp("original_end_time").notNull(), // Track original end time
+  extensionCount: integer("extension_count").default(0), // Track number of extensions
+  maxExtensions: integer("max_extensions").default(3), // Max allowed extensions
+  extensionDurationMinutes: integer("extension_duration_minutes").default(30), // Default extension duration
   reservePrice: decimal("reserve_price", { precision: 12, scale: 2 }),
   currentBid: decimal("current_bid", { precision: 12, scale: 2 }),
   bidRules: jsonb("bid_rules"),
-  status: varchar("status", { enum: ["scheduled", "live", "completed", "cancelled"] }).default("scheduled"),
+  status: varchar("status", { enum: ["scheduled", "live", "completed", "cancelled", "closed"] }).default("scheduled"),
   winnerId: uuid("winner_id").references(() => vendors.id),
   winningBid: decimal("winning_bid", { precision: 12, scale: 2 }),
   termsAndConditionsPath: varchar("terms_and_conditions_path", { length: 500 }), // Path to T&C PDF
@@ -243,6 +247,49 @@ export const bids = pgTable("bids", {
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   timestamp: timestamp("timestamp").defaultNow(),
   isWinning: boolean("is_winning").default(false),
+});
+
+// Challenge Price System
+export const challengePrices = pgTable("challenge_prices", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  auctionId: uuid("auction_id").references(() => auctions.id, { onDelete: "cascade" }).notNull(),
+  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  bidId: uuid("bid_id").references(() => bids.id).notNull(), // Reference to the bid being challenged
+  challengeAmount: decimal("challenge_amount", { precision: 12, scale: 2 }).notNull(),
+  challengedBy: varchar("challenged_by").references(() => users.id).notNull(), // Sourcing Executive
+  status: varchar("status", { enum: ["pending", "accepted", "rejected"] }).default("pending"),
+  vendorResponse: text("vendor_response"), // Optional response text from vendor
+  respondedAt: timestamp("responded_at"),
+  notes: text("notes"), // Notes from sourcing executive
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Counter Price System
+export const counterPrices = pgTable("counter_prices", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  challengePriceId: uuid("challenge_price_id").references(() => challengePrices.id, { onDelete: "cascade" }).notNull(),
+  auctionId: uuid("auction_id").references(() => auctions.id, { onDelete: "cascade" }).notNull(),
+  vendorId: uuid("vendor_id").references(() => vendors.id).notNull(),
+  counterAmount: decimal("counter_amount", { precision: 12, scale: 2 }).notNull(),
+  status: varchar("status", { enum: ["pending", "accepted", "rejected"] }).default("pending"),
+  sourcingResponse: text("sourcing_response"), // Response from sourcing team
+  respondedAt: timestamp("responded_at"),
+  notes: text("notes"), // Notes from vendor
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Auction Extensions Log
+export const auctionExtensions = pgTable("auction_extensions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  auctionId: uuid("auction_id").references(() => auctions.id, { onDelete: "cascade" }).notNull(),
+  originalEndTime: timestamp("original_end_time").notNull(),
+  newEndTime: timestamp("new_end_time").notNull(),
+  durationMinutes: integer("duration_minutes").notNull(),
+  reason: text("reason"), // Reason for extension
+  extendedBy: varchar("extended_by").references(() => users.id).notNull(), // Sourcing Executive
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const purchaseOrders = pgTable("purchase_orders", {
@@ -661,6 +708,9 @@ export const auctionsRelations = relations(auctions, ({ one, many }) => ({
   }),
   participants: many(auctionParticipants),
   bids: many(bids),
+  challengePrices: many(challengePrices),
+  counterPrices: many(counterPrices),
+  extensions: many(auctionExtensions),
   purchaseOrders: many(purchaseOrders),
 }));
 
@@ -675,7 +725,7 @@ export const auctionParticipantsRelations = relations(auctionParticipants, ({ on
   }),
 }));
 
-export const bidsRelations = relations(bids, ({ one }) => ({
+export const bidsRelations = relations(bids, ({ one, many }) => ({
   auction: one(auctions, {
     fields: [bids.auctionId],
     references: [auctions.id],
@@ -683,6 +733,53 @@ export const bidsRelations = relations(bids, ({ one }) => ({
   vendor: one(vendors, {
     fields: [bids.vendorId],
     references: [vendors.id],
+  }),
+  challengePrices: many(challengePrices),
+}));
+
+export const challengePricesRelations = relations(challengePrices, ({ one, many }) => ({
+  auction: one(auctions, {
+    fields: [challengePrices.auctionId],
+    references: [auctions.id],
+  }),
+  vendor: one(vendors, {
+    fields: [challengePrices.vendorId],
+    references: [vendors.id],
+  }),
+  bid: one(bids, {
+    fields: [challengePrices.bidId],
+    references: [bids.id],
+  }),
+  challengedBy: one(users, {
+    fields: [challengePrices.challengedBy],
+    references: [users.id],
+  }),
+  counterPrices: many(counterPrices),
+}));
+
+export const counterPricesRelations = relations(counterPrices, ({ one }) => ({
+  challengePrice: one(challengePrices, {
+    fields: [counterPrices.challengePriceId],
+    references: [challengePrices.id],
+  }),
+  auction: one(auctions, {
+    fields: [counterPrices.auctionId],
+    references: [auctions.id],
+  }),
+  vendor: one(vendors, {
+    fields: [counterPrices.vendorId],
+    references: [vendors.id],
+  }),
+}));
+
+export const auctionExtensionsRelations = relations(auctionExtensions, ({ one }) => ({
+  auction: one(auctions, {
+    fields: [auctionExtensions.auctionId],
+    references: [auctions.id],
+  }),
+  extendedBy: one(users, {
+    fields: [auctionExtensions.extendedBy],
+    references: [users.id],
   }),
 }));
 
@@ -850,6 +947,9 @@ export const insertAuctionSchema = createInsertSchema(auctions).omit({
   endTime: z.union([z.string(), z.date()]).optional().transform((val) =>
     val ? (typeof val === 'string' ? new Date(val) : val) : undefined
   ),
+  originalEndTime: z.union([z.string(), z.date()]).optional().transform((val) =>
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
   bomId: z.string().nullable().optional(),
   selectedBomItems: z.array(z.string()).optional(),
   selectedVendors: z.array(z.string()).optional(),
@@ -991,4 +1091,44 @@ export const insertSourcingEventSchema = createInsertSchema(sourcingEvents).omit
 
 export type SourcingEvent = typeof sourcingEvents.$inferSelect;
 export type InsertSourcingEvent = z.infer<typeof insertSourcingEventSchema>;
+
+// Challenge Price schemas
+export const insertChallengePriceSchema = createInsertSchema(challengePrices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  challengeAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
+});
+
+export type ChallengePrice = typeof challengePrices.$inferSelect;
+export type InsertChallengePrice = z.infer<typeof insertChallengePriceSchema>;
+
+// Counter Price schemas
+export const insertCounterPriceSchema = createInsertSchema(counterPrices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  counterAmount: z.union([z.string(), z.number()]).transform((val) => String(val)),
+});
+
+export type CounterPrice = typeof counterPrices.$inferSelect;
+export type InsertCounterPrice = z.infer<typeof insertCounterPriceSchema>;
+
+// Auction Extension schemas
+export const insertAuctionExtensionSchema = createInsertSchema(auctionExtensions).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  originalEndTime: z.union([z.string(), z.date()]).transform((val) =>
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  newEndTime: z.union([z.string(), z.date()]).transform((val) =>
+    typeof val === 'string' ? new Date(val) : val
+  ),
+});
+
+export type AuctionExtension = typeof auctionExtensions.$inferSelect;
+export type InsertAuctionExtension = z.infer<typeof insertAuctionExtensionSchema>;
 
