@@ -12,16 +12,18 @@ Role-based access control priority: Strict enforcement of user role permissions 
 ## Recent Changes
 
 ### Enhanced Auction System with Challenge/Counter Pricing & Extensions (August 19, 2025)
-- **COMPLETED**: Full implementation of three new auction features
-- **CHALLENGE PRICING**: Sourcing executives can send challenge prices against vendor quotes with Accept/Reject options
+- **COMPLETED**: Full implementation of three new auction features with proper placement and functionality
+- **CHALLENGE PRICING**: Sourcing executives can send challenge prices against vendor quotes post-auction completion
 - **COUNTER PRICING**: Vendors can send counter prices after rejecting challenge prices with Accept/Reject options
-- **AUCTION EXTENSIONS**: Sourcing executives can extend auction duration with proper tracking and validation
+- **AUCTION EXTENSIONS**: Sourcing executives can extend auction duration during live bidding only
 - **DATABASE SCHEMA**: Added three new tables: challenge_prices, counter_prices, auction_extensions
 - **API ENDPOINTS**: Complete backend support for all three feature sets with role-based access control
-- **STORAGE INTERFACE**: Extended DatabaseStorage with comprehensive CRUD operations for new features
-- **SECURITY**: Role-based restrictions ensuring only authorized users can perform specific actions
-- **VALIDATION**: Comprehensive validation for all new endpoints including business logic constraints
-- **INTEGRATION**: Seamlessly integrated with existing auction workflow and user roles
+- **STORAGE INTERFACE**: Extended DatabaseStorage with comprehensive CRUD operations and vendor/bid joins
+- **CHALLENGE TRACKING**: Displays correct vendor company names and original bid amounts with conditional notes
+- **VENDOR INTERFACE**: Complete challenge response system with accept/reject/counter functionality
+- **FEATURE PLACEMENT**: Extension available only during live bidding, challenge/counter pricing post-auction
+- **DATA INTEGRITY**: Fixed API joins to show authentic vendor names and bid amounts in challenge tracking
+- **NOTES HANDLING**: Conditional display of notes only for challenges that include them
 
 ### Method Approval System Implementation (January 13, 2025)
 - **COMPLETED**: Full Method Approval screen for SOURCING_MANAGER role with policy enforcement

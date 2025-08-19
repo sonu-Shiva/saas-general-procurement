@@ -68,7 +68,7 @@ function ChallengeTracker({ auctionId }: { auctionId: string }) {
                 Original bid: ₹{parseFloat(challenge.originalBidAmount || 0).toFixed(2)} • 
                 Sent on {new Date(challenge.createdAt).toLocaleDateString()}
               </div>
-              {challenge.notes && (
+              {challenge.notes && challenge.notes.trim() && (
                 <div className="text-sm mt-2 p-2 bg-white rounded border">
                   <strong>Notes:</strong> {challenge.notes}
                 </div>
