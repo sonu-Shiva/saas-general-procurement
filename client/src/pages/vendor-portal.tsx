@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { Link } from "wouter";
 import { 
   Clock, 
   CheckCircle, 
@@ -217,18 +218,22 @@ export default function VendorPortal() {
                             {(invitation.status === 'invited' || invitation.status === 'active') && 
                              !isExpired && 
                              invitation.status !== 'responded' && (
-                              <Button 
-                                variant="default" 
-                                size="sm" 
-                                data-testid={`button-respond-${invitation.rfxId}`}
-                                className="bg-primary hover:bg-primary/90"
-                              >
-                                Respond
-                              </Button>
+                              <Link href={`/vendor/rfx-response/${invitation.rfxId}`}>
+                                <Button 
+                                  variant="default" 
+                                  size="sm" 
+                                  data-testid={`button-respond-${invitation.rfxId}`}
+                                  className="bg-primary hover:bg-primary/90"
+                                >
+                                  Respond
+                                </Button>
+                              </Link>
                             )}
-                            <Button variant="outline" size="sm" data-testid={`button-view-${invitation.rfxId}`}>
-                              View
-                            </Button>
+                            <Link href={`/vendor/rfx-details/${invitation.rfxId}`}>
+                              <Button variant="outline" size="sm" data-testid={`button-view-${invitation.rfxId}`}>
+                                View
+                              </Button>
+                            </Link>
                           </div>
                         </div>
                       </div>
