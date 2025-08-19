@@ -12,9 +12,13 @@ export default function VendorRfxResponse() {
   const [, setLocation] = useLocation();
 
   // Fetch RFx details
-  const { data: rfx, isLoading: rfxLoading } = useQuery({
+  const { data: rfx, isLoading: rfxLoading, error: rfxError } = useQuery({
     queryKey: ["/api/rfx", id],
-    queryFn: () => apiRequest(`/api/rfx/${id}`)
+    queryFn: async () => {
+      const result = await apiRequest(`/api/rfx/${id}`);
+      console.log('VendorRfxResponse - Fetched RFx data:', result);
+      return result;
+    }
   });
 
   // Check if response already exists
@@ -22,6 +26,10 @@ export default function VendorRfxResponse() {
     queryKey: ["/api/vendor/rfx-responses"],
     queryFn: () => apiRequest("/api/vendor/rfx-responses")
   });
+
+  console.log('VendorRfxResponse - RFx data:', rfx);
+  console.log('VendorRfxResponse - Loading:', rfxLoading);
+  console.log('VendorRfxResponse - Error:', rfxError);
 
   if (rfxLoading) {
     return (

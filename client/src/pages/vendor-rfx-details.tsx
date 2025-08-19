@@ -24,10 +24,18 @@ export default function VendorRfxDetails() {
   const { id } = useParams();
 
   // Fetch RFx details
-  const { data: rfx, isLoading } = useQuery({
+  const { data: rfx, isLoading, error } = useQuery({
     queryKey: ["/api/rfx", id],
-    queryFn: () => apiRequest(`/api/rfx/${id}`)
+    queryFn: async () => {
+      const result = await apiRequest(`/api/rfx/${id}`);
+      console.log('VendorRfxDetails - Fetched RFx data:', result);
+      return result;
+    }
   });
+
+  console.log('VendorRfxDetails - RFx data:', rfx);
+  console.log('VendorRfxDetails - Loading:', isLoading);
+  console.log('VendorRfxDetails - Error:', error);
 
   // Fetch BOM details if available
   const { data: bom } = useQuery({
