@@ -1315,11 +1315,36 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(challengePrices.status, filters.status as any));
     }
 
-    return await this.db
+    // Get basic challenge prices first
+    const basicChallengePrices = await this.db
       .select()
       .from(challengePrices)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(challengePrices.createdAt));
+
+    // Enrich with vendor and bid information
+    const enrichedChallengePrices = [];
+    for (const challenge of basicChallengePrices) {
+      // Get vendor details
+      const [vendor] = await this.db
+        .select({ companyName: vendors.companyName })
+        .from(vendors)
+        .where(eq(vendors.id, challenge.vendorId));
+
+      // Get bid details
+      const [bid] = await this.db
+        .select({ amount: bids.amount })
+        .from(bids)
+        .where(eq(bids.id, challenge.bidId));
+
+      enrichedChallengePrices.push({
+        ...challenge,
+        vendorCompanyName: vendor?.companyName || 'Unknown Vendor',
+        originalBidAmount: bid?.amount || '0',
+      });
+    }
+
+    return enrichedChallengePrices;
   }
 
   async updateChallengePrice(id: string, updates: Partial<InsertChallengePrice>): Promise<ChallengePrice> {

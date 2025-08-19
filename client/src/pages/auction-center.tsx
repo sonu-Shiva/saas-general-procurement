@@ -62,7 +62,7 @@ function ChallengeTracker({ auctionId }: { auctionId: string }) {
           <div className="flex justify-between items-start">
             <div>
               <div className="font-medium">
-                Challenge to {challenge.vendorCompanyName}: ₹{parseFloat(challenge.challengeAmount).toFixed(2)}
+                Challenge to {challenge.vendorCompanyName || 'Unknown Vendor'}: ₹{parseFloat(challenge.challengeAmount).toFixed(2)}
               </div>
               <div className="text-sm text-muted-foreground">
                 Original bid: ₹{parseFloat(challenge.originalBidAmount || 0).toFixed(2)} • 
