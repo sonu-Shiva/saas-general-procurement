@@ -243,9 +243,9 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
                   {rankedVendors.map((vendor: any) => {
                     return (
                       <SelectItem key={vendor.id} value={vendor.id}>
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                        <div className="flex items-center justify-between w-full min-w-0">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0 ${
                               vendor.ranking === 'L1' 
                                 ? 'bg-green-500' 
                                 : vendor.ranking === 'L2'
@@ -256,13 +256,13 @@ export function CreatePOFromAuctionDialog({ auction, onClose, onSuccess }: Creat
                             }`}>
                               {vendor.ranking}
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Building2 className="w-4 h-4" />
-                              <span>{vendor.companyName}</span>
+                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                              <Building2 className="w-4 h-4 flex-shrink-0" />
+                              <span className="truncate">{vendor.companyName}</span>
                             </div>
                           </div>
                           {vendor.bestBid && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs ml-4 flex-shrink-0">
                               Best: ₹{vendor.bestBid.amount}
                             </Badge>
                           )}
