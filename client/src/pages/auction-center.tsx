@@ -555,8 +555,8 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
         <p className="text-muted-foreground mb-4">Ranked by bid amount (lowest first)</p>
       </div>
 
-      {/* Clean Horizontal Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Clean Horizontal Grid Layout - Wider dialog allows more columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
         {sortedBids.map((bid: any, index: number) => {
           const isWinner = index === 0;
           const rankLabel = `L${index + 1}`;
@@ -1549,7 +1549,7 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onViewAuctionDe
                   Results
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-7xl w-[95vw]">
                 <DialogHeader>
                   <DialogTitle>Auction Results - {auction.name}</DialogTitle>
                 </DialogHeader>
