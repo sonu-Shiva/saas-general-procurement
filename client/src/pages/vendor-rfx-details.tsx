@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, Clock, FileText, Building, Mail, IndianRupee } from 'lucide-react';
 import { format } from 'date-fns';
-import { apiRequest } from '@/lib/queryClient';
 
 function getRfxTypeColor(type: string) {
   switch (type?.toLowerCase()) {
@@ -23,14 +22,9 @@ function getRfxTypeColor(type: string) {
 export default function VendorRfxDetails() {
   const { id } = useParams();
 
-  // Fetch RFx details
+  // Fetch RFx details - using the same pattern as vendor-portal
   const { data: rfx, isLoading, error } = useQuery({
-    queryKey: ["/api/rfx", id],
-    queryFn: async () => {
-      const result = await apiRequest(`/api/rfx/${id}`);
-      console.log('VendorRfxDetails - Fetched RFx data:', result);
-      return result;
-    }
+    queryKey: [`/api/rfx/${id}`],
   });
 
   console.log('VendorRfxDetails - RFx data:', rfx);
@@ -39,8 +33,7 @@ export default function VendorRfxDetails() {
 
   // Fetch BOM details if available
   const { data: bom } = useQuery({
-    queryKey: ["/api/boms", rfx?.bomId],
-    queryFn: () => apiRequest(`/api/boms/${rfx.bomId}`),
+    queryKey: [`/api/boms/${rfx?.bomId}`],
     enabled: !!rfx?.bomId
   });
 
