@@ -35,7 +35,8 @@ import {
   ShoppingCart,
   Upload,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  MessageSquare
 } from "lucide-react";
 
 // Auction Results Component  
