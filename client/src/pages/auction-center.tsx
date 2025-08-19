@@ -389,9 +389,10 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
   // Counter price response mutation  
   const respondToCounterMutation = useMutation({
     mutationFn: async ({ counterId, action }: { counterId: string; action: 'accept' | 'reject' }) => {
+      const status = action === 'accept' ? 'accepted' : 'rejected';
       return apiRequest(`/api/counter-prices/${counterId}/respond`, {
         method: 'POST',
-        body: JSON.stringify({ status: action }),
+        body: JSON.stringify({ status }),
         headers: { 'Content-Type': 'application/json' }
       });
     },
@@ -774,8 +775,9 @@ function AuctionResults({ auctionId, onCreatePO }: { auctionId: string; onCreate
                         onClick={() => handleSendChallenge(bid)}
                         className="w-full text-sm"
                         data-testid={`button-challenge-${index}`}
+                        disabled={hasChallenge}
                       >
-                        Challenge
+                        {hasChallenge ? 'Challenge Sent' : 'Challenge'}
                       </Button>
                     )}
                   </div>
