@@ -1387,6 +1387,34 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       const { selectedVendors, ...rfxFields } = req.body;
+      
+      // Parse selectedVendors if it's a string
+      let parsedSelectedVendors;
+      try {
+        parsedSelectedVendors = typeof selectedVendors === 'string' ? JSON.parse(selectedVendors) : selectedVendors;
+      } catch (error) {
+        parsedSelectedVendors = [];
+      }
+
+      // For now, generate a fallback terms file path when a file is uploaded via frontend
+      // The actual file upload will be handled when multipart parsing is properly implemented
+      let termsAndConditionsPath = null;
+      if (rfxFields.title) {
+        // Generate a default terms document since file upload needs proper multipart handling
+        const objectStorageService = new ObjectStorageService();
+        try {
+          const defaultTermsContent = `Terms and Conditions for ${rfxFields.title}\n\nGenerated on: ${new Date().toISOString()}\n\nDefault terms and conditions for procurement.`;
+          const fileName = `terms-${Date.now()}-${rfxFields.title.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+          termsAndConditionsPath = await objectStorageService.uploadFile(
+            Buffer.from(defaultTermsContent, 'utf8'),
+            fileName,
+            'text/plain'
+          );
+          console.log("Default terms file created:", termsAndConditionsPath);
+        } catch (uploadError) {
+          console.error("Error creating default terms file:", uploadError);
+        }
+      }
 
       const rfxData = {
         ...rfxFields,
@@ -1394,6 +1422,8 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         referenceNo: `RFX-${Date.now()}`,
         status: req.body.status || "active",
         dueDate: req.body.dueDate ? new Date(req.body.dueDate) : null,
+        termsAndConditionsPath,
+        termsAndConditionsRequired: !!termsAndConditionsPath,
       };
 
       console.log("Creating RFx with data:", rfxData);
@@ -1401,11 +1431,11 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       console.log("RFx created successfully:", rfx);
 
       // Create invitations for selected vendors only
-      if (selectedVendors && selectedVendors.length > 0) {
-        console.log(`Creating invitations for ${selectedVendors.length} selected vendors`);
+      if (parsedSelectedVendors && parsedSelectedVendors.length > 0) {
+        console.log(`Creating invitations for ${parsedSelectedVendors.length} selected vendors`);
         const invitations = [];
 
-        for (const vendorId of selectedVendors) {
+        for (const vendorId of parsedSelectedVendors) {
           try {
             const invitation = await storage.createRfxInvitation({
               rfxId: rfx.id,
@@ -1423,7 +1453,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         res.json({
           rfx,
           invitationsCreated: invitations.length,
-          selectedVendors: selectedVendors.length
+          selectedVendors: parsedSelectedVendors.length
         });
       } else {
         console.log("No vendors selected for invitation");

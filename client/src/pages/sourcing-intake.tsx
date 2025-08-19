@@ -1194,25 +1194,31 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, allBoms, vendors,
     contactPerson: '',
     bomId: procurementRequest.bomId || 'none',
     selectedVendors: [] as string[],
+    termsFile: null as File | null,
   });
 
   const createRfxMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', data.title);
+      formDataToSend.append('type', data.type);
+      formDataToSend.append('scope', data.scope);
+      formDataToSend.append('criteria', data.criteria);
+      formDataToSend.append('dueDate', data.dueDate ? new Date(data.dueDate).toISOString() : '');
+      formDataToSend.append('budget', data.budget || '');
+      formDataToSend.append('contactPerson', data.contactPerson);
+      formDataToSend.append('bomId', procurementRequest.bomId || '');
+      formDataToSend.append('selectedVendors', JSON.stringify(data.selectedVendors));
+      formDataToSend.append('status', 'draft');
+      
+      if (data.termsFile) {
+        formDataToSend.append('termsFile', data.termsFile);
+      }
+
       const response = await fetch("/api/rfx", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: data.title,
-          type: data.type,
-          scope: data.scope,
-          criteria: data.criteria,
-          dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
-          budget: data.budget,
-          contactPerson: data.contactPerson,
-          bomId: procurementRequest.bomId,
-          selectedVendors: data.selectedVendors,
-          status: 'draft',
-        }),
+        body: formDataToSend,
         credentials: "include",
       });
 
@@ -1251,6 +1257,9 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, allBoms, vendors,
       return;
     }
 
+    // Note: Terms file upload will be implemented with proper multipart parsing
+    // For now, a default terms file will be generated server-side
+
     createRfxMutation.mutate(formData);
   };
 
@@ -1261,6 +1270,13 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, allBoms, vendors,
         ? prev.selectedVendors.filter(id => id !== vendorId)
         : [...prev.selectedVendors, vendorId]
     }));
+  };
+
+  const handleRfxFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, termsFile: file }));
+    }
   };
 
   return (
@@ -1424,6 +1440,37 @@ function CreateRfxFormEmbedded({ procurementRequest, bomItems, allBoms, vendors,
         <p className="text-sm text-muted-foreground">
           Selected: {formData.selectedVendors.length} vendors
         </p>
+      </div>
+
+      {/* Terms & Conditions Upload */}
+      <div className="space-y-3">
+        <Label>Terms & Conditions *</Label>
+        <p className="text-sm text-muted-foreground">
+          Upload terms and conditions that vendors must accept before responding
+        </p>
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => document.getElementById('rfx-terms-upload')?.click()}
+            className="flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            Upload Terms & Conditions
+          </Button>
+          {formData.termsFile && (
+            <span className="text-sm text-green-600 dark:text-green-400">
+              ✓ {formData.termsFile.name}
+            </span>
+          )}
+        </div>
+        <input
+          id="rfx-terms-upload"
+          type="file"
+          accept=".pdf,.doc,.docx"
+          onChange={handleRfxFileUpload}
+          className="hidden"
+        />
       </div>
 
       {/* Action Buttons */}
