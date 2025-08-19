@@ -76,9 +76,8 @@ export default function VendorPortal() {
 
   const pendingInvitations = invitations.filter((inv: any) => {
     const invStatus = inv.status || 'invited';
-    const dueDate = inv.rfx?.dueDate || inv.rfxDueDate;
-    const isNotExpired = dueDate ? new Date(dueDate) > new Date() : true;
-    return (invStatus === 'invited' || invStatus === 'active') && invStatus !== 'responded' && isNotExpired;
+    // Show all invited/active invitations regardless of due date for vendor visibility
+    return (invStatus === 'invited' || invStatus === 'active') && invStatus !== 'responded';
   });
   
   const respondedInvitations = invitations.filter((inv: any) => inv.status === 'responded');
@@ -120,7 +119,7 @@ export default function VendorPortal() {
           <CardContent className="flex items-center p-6">
             <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
             <div>
-              <p className="text-2xl font-bold">{pendingInvitations.filter((inv: any) => inv.rfxStatus === 'active').length}</p>
+              <p className="text-2xl font-bold">{pendingInvitations.filter((inv: any) => !inv.rfx?.dueDate || new Date(inv.rfx.dueDate) > new Date()).length}</p>
               <p className="text-sm text-muted-foreground">Active</p>
             </div>
           </CardContent>
@@ -228,6 +227,11 @@ export default function VendorPortal() {
                                   Respond
                                 </Button>
                               </Link>
+                            )}
+                            {isExpired && invitation.status !== 'responded' && (
+                              <Badge variant="outline" className="text-red-600">
+                                Expired
+                              </Badge>
                             )}
                             <Link href={`/vendor/rfx-details/${invitation.rfxId}`}>
                               <Button variant="outline" size="sm" data-testid={`button-view-${invitation.rfxId}`}>
