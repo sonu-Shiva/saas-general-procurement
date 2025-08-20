@@ -88,15 +88,8 @@ export default function AdminUserManagement() {
     isActive: true,
   });
 
-  // Check if user is admin
-  if ((currentUser as any)?.role !== "admin") {
-    return (
-      <div className="p-6 text-center">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
-        <p className="text-gray-600">Only administrators can access user management.</p>
-      </div>
-    );
-  }
+  // Check if user is admin - moved after hooks to avoid hooks order issues
+  const isAdmin = (currentUser as any)?.role === "admin";
 
   // Fetch users
   const { data: users = [], isLoading, refetch } = useQuery({
@@ -251,6 +244,16 @@ export default function AdminUserManagement() {
   const totalUsers = users.length;
   const activeUsers = users.filter((u: User) => u.isActive).length;
   const inactiveUsers = totalUsers - activeUsers;
+
+  // If not admin, show access denied
+  if (!isAdmin) {
+    return (
+      <div className="p-6 text-center">
+        <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+        <p className="text-gray-600">Only administrators can access user management.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -485,7 +488,7 @@ export default function AdminUserManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
+                  {users.map((user: User) => (
                     <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                       <TableCell>
                         <div>
