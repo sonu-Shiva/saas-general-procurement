@@ -4560,8 +4560,39 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       const { id } = req.params;
       const updates = req.body;
 
-      const option = await storage.updateDropdownOption(id, updates);
-      res.json(option);
+      // First get the option to see which configuration it belongs to
+      const option = await storage.getDropdownOption(id);
+      if (!option) {
+        return res.status(404).json({ message: "Option not found" });
+      }
+
+      // Get configuration to determine which source table to sync
+      const config = await storage.getDropdownConfiguration(option.configurationId);
+      if (!config) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+
+      // Update the dropdown option
+      const updatedOption = await storage.updateDropdownOption(id, updates);
+
+      // Sync with source table based on configuration type
+      if (config.fieldName === 'department' && updates.label && option.value) {
+        // Update departments table
+        await storage.executeQuery(`
+          UPDATE departments 
+          SET name = $1, updated_at = NOW() 
+          WHERE code = $2
+        `, [updates.label, option.value]);
+      } else if (config.fieldName === 'category' && updates.label && option.value) {
+        // Update product_categories table
+        await storage.executeQuery(`
+          UPDATE product_categories 
+          SET name = $1, updated_at = NOW() 
+          WHERE LOWER(REPLACE(name, ' ', '_')) = $2
+        `, [updates.label, option.value]);
+      }
+
+      res.json(updatedOption);
     } catch (error) {
       console.error("Error updating dropdown option:", error);
       res.status(500).json({ message: "Internal server error" });

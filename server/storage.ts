@@ -2515,6 +2515,21 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // Get dropdown configuration by ID
+  async getDropdownConfiguration(id: string): Promise<DropdownConfiguration | undefined> {
+    try {
+      const [config] = await this.db
+        .select()
+        .from(dropdownConfigurations)
+        .where(eq(dropdownConfigurations.id, id))
+        .limit(1);
+      return config;
+    } catch (error) {
+      console.error("Error fetching dropdown configuration:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
