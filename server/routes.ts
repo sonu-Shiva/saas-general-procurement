@@ -4546,6 +4546,24 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         updatedAt: new Date(),
       };
 
+      // Handle sort order for new options
+      if (!optionData.sortOrder) {
+        // Get the maximum sort order for this configuration and add 1
+        const maxSort = await storage.executeQuery(`
+          SELECT COALESCE(MAX(sort_order), 0) as max_sort 
+          FROM dropdown_options 
+          WHERE configuration_id = $1
+        `, [req.body.configurationId]);
+        optionData.sortOrder = (maxSort.rows[0].max_sort || 0) + 1;
+      } else {
+        // If sort order is specified, shift existing items
+        await storage.executeQuery(`
+          UPDATE dropdown_options 
+          SET sort_order = sort_order + 1, updated_at = NOW()
+          WHERE configuration_id = $1 AND sort_order >= $2
+        `, [req.body.configurationId, optionData.sortOrder]);
+      }
+
       const option = await storage.createDropdownOption(optionData);
 
       // Also add to source table if needed
@@ -4591,6 +4609,16 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       const config = await storage.getDropdownConfiguration(option.configurationId);
       if (!config) {
         return res.status(404).json({ message: "Configuration not found" });
+      }
+
+      // Handle sort order conflicts before updating
+      if (updates.sortOrder !== undefined && updates.sortOrder !== option.sortOrder) {
+        // If changing sort order, we need to handle potential conflicts
+        await storage.executeQuery(`
+          UPDATE dropdown_options 
+          SET sort_order = sort_order + 1, updated_at = NOW()
+          WHERE configuration_id = $1 AND sort_order >= $2 AND id != $3
+        `, [option.configurationId, updates.sortOrder, id]);
       }
 
       // Update the dropdown option
