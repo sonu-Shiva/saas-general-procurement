@@ -4549,7 +4549,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       // Handle sort order for new options
       if (!optionData.sortOrder) {
         // Get the maximum sort order for this configuration and add 1
-        const maxSort = await storage.executeQuery(`
+        const maxSort = await storage.executeRawQuery(`
           SELECT COALESCE(MAX(sort_order), 0) as max_sort 
           FROM dropdown_options 
           WHERE configuration_id = $1
@@ -4557,7 +4557,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         optionData.sortOrder = (maxSort.rows[0].max_sort || 0) + 1;
       } else {
         // If sort order is specified, shift existing items
-        await storage.executeQuery(`
+        await storage.executeRawQuery(`
           UPDATE dropdown_options 
           SET sort_order = sort_order + 1, updated_at = NOW()
           WHERE configuration_id = $1 AND sort_order >= $2
@@ -4571,14 +4571,14 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       if (config) {
         if (config.fieldName === 'department' && req.body.label && req.body.value) {
           // Add to departments table
-          await storage.executeQuery(`
+          await storage.executeRawQuery(`
             INSERT INTO departments (id, name, code, created_at, updated_at) 
             VALUES (gen_random_uuid(), $1, $2, NOW(), NOW())
             ON CONFLICT (code) DO NOTHING
           `, [req.body.label, req.body.value]);
         } else if (config.fieldName === 'category' && req.body.label && req.body.value) {
           // Add to product_categories table
-          await storage.executeQuery(`
+          await storage.executeRawQuery(`
             INSERT INTO product_categories (id, name, code, level, created_at, updated_at) 
             VALUES (gen_random_uuid(), $1, $2, 1, NOW(), NOW())
             ON CONFLICT (code) DO NOTHING
@@ -4614,7 +4614,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       // Handle sort order conflicts before updating
       if (updates.sortOrder !== undefined && updates.sortOrder !== option.sortOrder) {
         // If changing sort order, we need to handle potential conflicts
-        await storage.executeQuery(`
+        await storage.executeRawQuery(`
           UPDATE dropdown_options 
           SET sort_order = sort_order + 1, updated_at = NOW()
           WHERE configuration_id = $1 AND sort_order >= $2 AND id != $3
@@ -4627,14 +4627,14 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       // Sync with source table based on configuration type
       if (config.fieldName === 'department' && updates.label && option.value) {
         // Update departments table
-        await storage.executeQuery(`
+        await storage.executeRawQuery(`
           UPDATE departments 
           SET name = $1, updated_at = NOW() 
           WHERE code = $2
         `, [updates.label, option.value]);
       } else if (config.fieldName === 'category' && updates.label && option.value) {
         // Update product_categories table
-        await storage.executeQuery(`
+        await storage.executeRawQuery(`
           UPDATE product_categories 
           SET name = $1, updated_at = NOW() 
           WHERE LOWER(REPLACE(name, ' ', '_')) = $2

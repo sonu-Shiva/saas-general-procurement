@@ -2530,6 +2530,22 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // Execute raw SQL query (needed for complex operations)
+  async executeRawQuery(query: string, params: any[] = []): Promise<any> {
+    try {
+      const client = await this.pool.connect();
+      try {
+        const result = await client.query(query, params);
+        return result;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error("Database query error:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
