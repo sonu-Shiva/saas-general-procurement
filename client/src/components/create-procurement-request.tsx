@@ -128,6 +128,34 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
       code: option.value
     }));
 
+  // Fetch urgency options from dropdown configuration
+  const { data: urgencyConfig } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', 'urgency', 'procurement-requests'],
+    queryFn: async () => {
+      const configs = await apiRequest('/api/admin/dropdown-configurations');
+      return configs.find((config: any) => 
+        config.fieldName === 'urgency' && config.screen === 'procurement-requests'
+      );
+    }
+  });
+
+  const { data: urgencyOptions = [] } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', urgencyConfig?.id, 'options'],
+    queryFn: async () => {
+      if (!urgencyConfig?.id) return [];
+      return apiRequest(`/api/admin/dropdown-configurations/${urgencyConfig.id}/options`);
+    },
+    enabled: !!urgencyConfig?.id
+  });
+
+  // Transform urgency options with proper sorting
+  const urgencyChoices = urgencyOptions
+    .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    .map((option: any) => ({
+      value: option.value,
+      label: option.label
+    }));
+
   // Get existing BOMs for selection
   const { data: existingBoms = [] } = useQuery<Array<{id: string; name: string; version: string; description?: string}>>({
     queryKey: ['/api/boms'],
@@ -514,10 +542,21 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    {urgencyChoices.length > 0 ? (
+                      urgencyChoices.map((choice) => (
+                        <SelectItem key={choice.value} value={choice.value}>
+                          {choice.label}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      // Fallback to hardcoded values if configuration not loaded
+                      <>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
