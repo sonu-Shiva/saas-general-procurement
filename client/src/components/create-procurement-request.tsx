@@ -99,10 +99,34 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
     queryKey: ['/api/products'],
   });
 
-  // Get available departments for dropdown
-  const { data: departments = [] } = useQuery<Array<{id: string; name: string; code: string}>>({
-    queryKey: ['/api/departments'],
+  // Fetch departments from dropdown configuration for proper sorting
+  const { data: departmentConfig } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', 'department', 'procurement-requests'],
+    queryFn: async () => {
+      const configs = await apiRequest('/api/admin/dropdown-configurations');
+      return configs.find((config: any) => 
+        config.fieldName === 'department' && config.screen === 'procurement-requests'
+      );
+    }
   });
+
+  const { data: departmentOptions = [] } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', departmentConfig?.id, 'options'],
+    queryFn: async () => {
+      if (!departmentConfig?.id) return [];
+      return apiRequest(`/api/admin/dropdown-configurations/${departmentConfig.id}/options`);
+    },
+    enabled: !!departmentConfig?.id
+  });
+
+  // Transform dropdown options to match department format and ensure proper sorting
+  const departments = departmentOptions
+    .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    .map((option: any) => ({
+      id: option.id,
+      name: option.label,
+      code: option.value
+    }));
 
   // Get existing BOMs for selection
   const { data: existingBoms = [] } = useQuery<Array<{id: string; name: string; version: string; description?: string}>>({
