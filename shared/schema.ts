@@ -1205,3 +1205,36 @@ export type InsertDropdownConfiguration = z.infer<typeof insertDropdownConfigura
 export type DropdownOption = typeof dropdownOptions.$inferSelect;
 export type InsertDropdownOption = z.infer<typeof insertDropdownOptionSchema>;
 
+// Audit Logs - Comprehensive activity tracking for Admin role
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").references(() => users.id), // Who performed the action
+  entityType: varchar("entity_type", { length: 100 }).notNull(), // What was affected (user, vendor, bom, rfx, etc.)
+  entityId: varchar("entity_id", { length: 255 }), // ID of the affected entity
+  action: varchar("action", { length: 100 }).notNull(), // What action was performed (create, update, delete, view, login, etc.)
+  description: text("description").notNull(), // Human-readable description of the action
+  previousData: jsonb("previous_data"), // Previous state (for updates/deletes)
+  newData: jsonb("new_data"), // New state (for creates/updates)
+  metadata: jsonb("metadata"), // Additional context (IP address, user agent, etc.)
+  severity: varchar("severity", { enum: ["low", "medium", "high", "critical"] }).default("low"), // Importance level
+  sessionId: varchar("session_id", { length: 255 }), // Session identifier
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6 address
+  userAgent: text("user_agent"), // Browser/client information
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+}, (table) => [
+  index("idx_audit_logs_user_id").on(table.userId),
+  index("idx_audit_logs_entity_type").on(table.entityType),
+  index("idx_audit_logs_action").on(table.action),
+  index("idx_audit_logs_timestamp").on(table.timestamp),
+  index("idx_audit_logs_severity").on(table.severity),
+]);
+
+// Audit Log schema
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+

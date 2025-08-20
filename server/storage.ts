@@ -86,11 +86,14 @@ import {
   type InsertDropdownConfiguration,
   type DropdownOption,
   type InsertDropdownOption,
+  auditLogs,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from "nanoid";
 import { v4 as uuidv4 } from 'uuid';
-import { desc, eq, like, asc, and, sql, inArray, isNull, or } from "drizzle-orm";
+import { desc, eq, like, asc, and, sql, inArray, isNull, or, count, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations - mandatory for Replit Auth
@@ -272,6 +275,27 @@ export interface IStorage {
   getSourcingEventsByStatus(statuses: string[]): Promise<SourcingEvent[]>;
   updateSourcingEvent(id: string, updates: Partial<SourcingEvent>): Promise<SourcingEvent>;
   getProcurementRequestsByStatus(statuses: string[]): Promise<ProcurementRequest[]>;
+
+  // Audit Log operations (Admin only)
+  createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(filters?: {
+    userId?: string;
+    entityType?: string;
+    action?: string;
+    severity?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<AuditLog[]>;
+  getAuditLogStats(timeRange?: 'day' | 'week' | 'month'): Promise<{
+    totalActions: number;
+    criticalEvents: number;
+    securityEvents: number;
+    activeUsers: number;
+    topActions: Array<{ action: string; count: number }>;
+    recentActivities: AuditLog[];
+  }>;
 
   // Dropdown Configuration operations
   createDropdownConfiguration(config: InsertDropdownConfiguration): Promise<DropdownConfiguration>;
@@ -2552,6 +2576,130 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error updating product category:", error);
     }
+  }
+
+  // Audit Log operations (Admin only)
+  async createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog> {
+    const [newAuditLog] = await this.db.insert(auditLogs).values(auditLog).returning();
+    return newAuditLog;
+  }
+
+  async getAuditLogs(filters?: {
+    userId?: string;
+    entityType?: string;
+    action?: string;
+    severity?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<AuditLog[]> {
+    const conditions: any[] = [];
+
+    if (filters?.userId) {
+      conditions.push(eq(auditLogs.userId, filters.userId));
+    }
+
+    if (filters?.entityType) {
+      conditions.push(eq(auditLogs.entityType, filters.entityType));
+    }
+
+    if (filters?.action) {
+      conditions.push(eq(auditLogs.action, filters.action));
+    }
+
+    if (filters?.severity) {
+      conditions.push(eq(auditLogs.severity, filters.severity));
+    }
+
+    if (filters?.startDate) {
+      conditions.push(gte(auditLogs.timestamp, filters.startDate));
+    }
+
+    if (filters?.endDate) {
+      conditions.push(lte(auditLogs.timestamp, filters.endDate));
+    }
+
+    const logs = await this.db
+      .select()
+      .from(auditLogs)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(filters?.limit || 100)
+      .offset(filters?.offset || 0);
+
+    return logs;
+  }
+
+  async getAuditLogStats(timeRange: 'day' | 'week' | 'month' = 'day'): Promise<{
+    totalActions: number;
+    criticalEvents: number;
+    securityEvents: number;
+    activeUsers: number;
+    topActions: Array<{ action: string; count: number }>;
+    recentActivities: AuditLog[];
+  }> {
+    const now = new Date();
+    let startDate: Date;
+
+    switch (timeRange) {
+      case 'day':
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+    }
+
+    // Get total actions count
+    const [totalActionsResult] = await this.db
+      .select({ count: count() })
+      .from(auditLogs)
+      .where(gte(auditLogs.timestamp, startDate));
+
+    // Get critical events count
+    const [criticalEventsResult] = await this.db
+      .select({ count: count() })
+      .from(auditLogs)
+      .where(and(
+        gte(auditLogs.timestamp, startDate),
+        eq(auditLogs.severity, 'critical')
+      ));
+
+    // Get security events count
+    const [securityEventsResult] = await this.db
+      .select({ count: count() })
+      .from(auditLogs)
+      .where(and(
+        gte(auditLogs.timestamp, startDate),
+        eq(auditLogs.entityType, 'security')
+      ));
+
+    // Get active users count (simplified - count distinct user IDs)
+    const activeUsersResult = await this.db
+      .select({ userId: auditLogs.userId })
+      .from(auditLogs)
+      .where(gte(auditLogs.timestamp, startDate))
+      .groupBy(auditLogs.userId);
+
+    // Get recent activities
+    const recentActivities = await this.db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(10);
+
+    return {
+      totalActions: totalActionsResult?.count || 0,
+      criticalEvents: criticalEventsResult?.count || 0,
+      securityEvents: securityEventsResult?.count || 0,
+      activeUsers: activeUsersResult?.length || 0,
+      topActions: [], // Simplified for now - would need more complex query for action counts
+      recentActivities,
+    };
   }
 }
 

@@ -27,6 +27,7 @@ import SourcingIntake from "./pages/sourcing-intake";
 import MethodApproval from "./pages/method-approval";
 import AdminDropdownConfig from "./pages/admin-dropdown-config";
 import AdminUserManagement from "./pages/admin-user-management";
+import AuditLogsPage from "./pages/AuditLogsPage";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -121,6 +122,7 @@ function Router() {
           <Route path="/analytics" component={Analytics} />
           <Route path="/admin/dropdown-config" component={AdminDropdownConfig} />
           <Route path="/admin/user-management" component={AdminUserManagement} />
+          <Route path="/admin/audit-logs" component={AuditLogsPage} />
           <Route path="/direct-procurement" component={DirectProcurement} />
           <Route>
             <div className="p-8 text-center">

@@ -4209,6 +4209,39 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Audit Log routes (Admin only)
+  app.get('/api/audit-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const filters = {
+        userId: req.query.userId as string,
+        entityType: req.query.entityType as string,
+        action: req.query.action as string,
+        severity: req.query.severity as string,
+        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 100,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+      };
+
+      const logs = await storage.getAuditLogs(filters);
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+      res.status(500).json({ message: 'Failed to fetch audit logs' });
+    }
+  });
+
+  app.get('/api/audit-logs/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const timeRange = (req.query.timeRange as 'day' | 'week' | 'month') || 'day';
+      const stats = await storage.getAuditLogStats(timeRange);
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching audit log stats:', error);
+      res.status(500).json({ message: 'Failed to fetch audit log statistics' });
+    }
+  });
+
   // Delete procurement request
   app.delete('/api/procurement-requests/:id', isAuthenticated, async (req: any, res) => {
     try {
