@@ -64,7 +64,7 @@ const ROLE_OPTIONS = [
   { 
     value: "sourcing_exec", 
     label: "Sourcing Executive",
-    description: "Execute sourcing activities, conduct vendor negotiations, manage auction processes, create purchase orders"
+    description: "Full procurement execution - create BOMs, manage product catalog, create procurement methods, purchase orders, vendor relationships"
   },
   { 
     value: "sourcing_manager", 
@@ -635,11 +635,15 @@ export default function AdminUserManagement() {
                     )}
                     {role.value === "sourcing_exec" && (
                       <>
+                        <li>• Create and manage BOMs</li>
+                        <li>• Manage product catalog</li>
+                        <li>• Create procurement methods</li>
+                        <li>• Create and manage purchase orders</li>
                         <li>• Execute sourcing activities</li>
                         <li>• Conduct vendor negotiations</li>
                         <li>• Manage auction processes</li>
-                        <li>• Create and manage purchase orders</li>
                         <li>• Handle vendor communications</li>
+                        <li>• Manage vendor relationships</li>
                       </>
                     )}
                     {role.value === "vendor" && (

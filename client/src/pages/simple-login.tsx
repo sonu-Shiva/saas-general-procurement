@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 
 export default function SimpleLogin() {
-  const [selectedRole, setSelectedRole] = useState("buyer_admin");
+  const [selectedRole, setSelectedRole] = useState("admin");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { login, switchRole } = useAuth();
@@ -76,10 +76,12 @@ export default function SimpleLogin() {
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="buyer_user">Buyer</SelectItem>
-                  <SelectItem value="vendor">Vendor</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="department_requester">Department Requester</SelectItem>
+                  <SelectItem value="dept_approver">Department Approver</SelectItem>
+                  <SelectItem value="sourcing_exec">Sourcing Executive</SelectItem>
                   <SelectItem value="sourcing_manager">Sourcing Manager</SelectItem>
-                  <SelectItem value="buyer_admin">Buyer Admin</SelectItem>
+                  <SelectItem value="vendor">Vendor</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -73,31 +73,21 @@ const roleOptions = [
   {
     id: "sourcing_exec",
     title: "Sourcing Executive",
-    description: "Execute approved procurement through RFx, Auctions, or Direct methods",
+    description: "Full procurement execution - create BOMs, manage product catalog, create procurement methods, purchase orders, vendor relationships",
     icon: ShoppingCart,
     features: [
-      "Process approved requests",
-      "Manage RFx processes",
-      "Conduct auctions",
-      "Direct procurement",
-      "Vendor selection"
+      "Create and manage BOMs",
+      "Manage product catalog",
+      "Create procurement methods",
+      "Create and manage purchase orders",
+      "Execute sourcing activities",
+      "Conduct vendor negotiations",
+      "Manage auction processes",
+      "Handle vendor communications"
     ],
     color: "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300"
   },
-  {
-    id: "buyer_admin",
-    title: "Buyer Admin",
-    description: "System configuration and organizational management",
-    icon: Building,
-    features: [
-      "Configure budgets and approval matrices",
-      "Manage product catalogue governance",
-      "Handle organizational user/role management",
-      "System configuration",
-      "Organizational oversight"
-    ],
-    color: "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300"
-  },
+
   {
     id: "sourcing_manager",
     title: "Sourcing Manager",
