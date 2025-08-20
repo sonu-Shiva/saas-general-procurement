@@ -21,9 +21,9 @@ export default function DashboardCards({ stats, isLoading, userRole }: Dashboard
   // Role-based card filtering
   const getVisibleCards = (role: string | undefined) => {
     const allCards = [
-      { key: 'totalVendors', roles: ['sourcing_exec', 'buyer_admin', 'sourcing_manager'] },
-      { key: 'totalProducts', roles: ['buyer_admin', 'department_requester', 'vendor'] },
-      { key: 'totalPOs', roles: ['sourcing_exec', 'sourcing_manager', 'buyer_admin'] },
+      { key: 'totalVendors', roles: ['sourcing_exec', 'sourcing_manager', 'admin'] },
+      { key: 'totalProducts', roles: ['sourcing_exec', 'department_requester', 'vendor', 'admin'] },
+      { key: 'totalPOs', roles: ['sourcing_exec', 'sourcing_manager', 'admin'] },
       { key: 'totalRfx', roles: ['sourcing_exec', 'sourcing_manager'] }
     ];
     

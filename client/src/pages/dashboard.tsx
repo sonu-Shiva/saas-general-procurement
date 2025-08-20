@@ -102,7 +102,7 @@ export default function Dashboard() {
           ]
         };
       
-      case 'buyer_admin':
+      case 'sourcing_exec':
         return {
           title: 'Admin Dashboard',
           subtitle: 'Configure system settings, manage users, and oversee all procurement activities',

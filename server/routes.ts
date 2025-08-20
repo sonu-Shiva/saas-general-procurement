@@ -256,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const { role, vendorId } = req.body;
-    const validRoles = ['admin', 'department_requester', 'dept_approver', 'sourcing_exec', 'sourcing_manager', 'buyer_admin', 'vendor'];
+    const validRoles = ['admin', 'department_requester', 'dept_approver', 'sourcing_exec', 'sourcing_manager', 'vendor'];
 
     if (!validRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
@@ -1101,7 +1101,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Vendor routes
-  app.get('/api/vendors', authMiddleware, requireRole('buyer', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.get('/api/vendors', authMiddleware, requireRole('admin', 'sourcing_exec', 'sourcing_manager'), async (req, res) => {
     try {
       const vendors = await storage.getVendors();
       res.json(vendors);
@@ -1111,7 +1111,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post('/api/vendors', authMiddleware, requireRole('buyer', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.post('/api/vendors', authMiddleware, requireRole('admin', 'sourcing_exec', 'sourcing_manager'), async (req, res) => {
     try {
       const vendor = await storage.createVendor(req.body);
       res.json(vendor);
@@ -1121,7 +1121,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.patch('/api/vendors/:id', authMiddleware, requireRole('buyer', 'admin'), async (req, res) => {
+  app.patch('/api/vendors/:id', authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       const vendorId = req.params.id;
 
@@ -1139,7 +1139,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.delete('/api/vendors/:id', authMiddleware, requireRole('buyer', 'admin'), async (req, res) => {
+  app.delete('/api/vendors/:id', authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       const vendorId = req.params.id;
 
@@ -1390,7 +1390,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   }
 
   // RFx routes
-  app.get('/api/rfx', authMiddleware, requireRole('buyer', 'procurement_approver', 'vendor', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.get('/api/rfx', authMiddleware, requireRole('admin', 'sourcing_exec', 'sourcing_manager', 'vendor'), async (req, res) => {
     try {
       const rfxEvents = await storage.getRfxEvents();
       res.json(rfxEvents);
@@ -1401,7 +1401,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Get single RFx by ID
-  app.get('/api/rfx/:id', authMiddleware, requireRole('buyer', 'procurement_approver', 'vendor', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.get('/api/rfx/:id', authMiddleware, requireRole('admin', 'sourcing_exec', 'sourcing_manager', 'vendor'), async (req, res) => {
     try {
       const { id } = req.params;
       const rfx = await storage.getRfxEvent(id);
@@ -1415,7 +1415,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post('/api/rfx', authMiddleware, requireRole('buyer', 'admin', 'sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req: any, res) => {
+  app.post('/api/rfx', authMiddleware, requireRole('admin', 'sourcing_exec', 'sourcing_manager'), async (req: any, res) => {
     try {
       console.log("RFx creation request received:", req.body);
       const userId = req.user?.claims?.sub;
@@ -2078,7 +2078,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Purchase Order routes
-  app.get('/api/purchase-orders', authMiddleware, requireRole('buyer', 'sourcing_manager', 'vendor', 'admin'), async (req: any, res) => {
+  app.get('/api/purchase-orders', authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'vendor', 'admin'), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       const user = await storage.getUser(userId);
@@ -2097,7 +2097,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
         // Client-side filtering will handle status filtering since getPurchaseOrders doesn't support status array filtering yet
         purchaseOrders = purchaseOrders.filter((po: any) => ['issued', 'acknowledged'].includes(po.status));
       } else {
-        // For buyers/sourcing managers, show all POs
+        // For sourcing execs/managers, show all POs
         purchaseOrders = await storage.getPurchaseOrders();
       }
 
@@ -3525,7 +3525,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Sourcing queue - approved PRs ready for sourcing exec intake
-  app.get("/api/procurement-requests/sourcing-queue", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.get("/api/procurement-requests/sourcing-queue", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       // Fetch approved procurement requests that haven't been assigned to sourcing yet
       const requests = await storage.getProcurementRequestsByStatus(['approved']);
@@ -3570,7 +3570,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Update procurement method for sourcing executives
-  app.patch("/api/procurement-requests/:id/method", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.patch("/api/procurement-requests/:id/method", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       const { procurementMethod } = req.body;
       const requestId = req.params.id;
@@ -4015,7 +4015,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Sourcing queue endpoint for sourcing executives
-  app.get("/api/procurement-requests/sourcing-queue-v2", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.get("/api/procurement-requests/sourcing-queue-v2", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       const requests = await storage.getProcurementRequestsByStatus(['request_approved']);
       res.json(requests);
@@ -4026,7 +4026,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Sourcing events endpoints
-  app.post("/api/sourcing-events", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.post("/api/sourcing-events", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
       const eventData = {
@@ -4042,7 +4042,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.get("/api/sourcing-events/pending", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.get("/api/sourcing-events/pending", authMiddleware, requireRole('sourcing_exec', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       const events = await storage.getSourcingEventsByStatus(['PENDING_SM_APPROVAL']);
       res.json(events);
@@ -4052,7 +4052,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post("/api/sourcing-events/:id/approve", authMiddleware, requireRole('sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.post("/api/sourcing-events/:id/approve", authMiddleware, requireRole('sourcing_manager', 'admin'), async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
       const { comments } = req.body;
@@ -4070,7 +4070,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post("/api/sourcing-events/:id/reject", authMiddleware, requireRole('sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.post("/api/sourcing-events/:id/reject", authMiddleware, requireRole('sourcing_manager', 'admin'), async (req, res) => {
     try {
       const { comments } = req.body;
 
@@ -4086,7 +4086,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post("/api/sourcing-events/:id/request_changes", authMiddleware, requireRole('sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.post("/api/sourcing-events/:id/request_changes", authMiddleware, requireRole('sourcing_manager', 'admin'), async (req, res) => {
     try {
       const { comments } = req.body;
 
@@ -4103,7 +4103,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   });
 
   // Approval Action routes
-  app.post("/api/approval-requests/:id/approve", authMiddleware, requireRole('dept_approver', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.post("/api/approval-requests/:id/approve", authMiddleware, requireRole('dept_approver', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
@@ -4122,7 +4122,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       // Check if user has approval authority based on role
-      const canApprove = ['dept_approver', 'sourcing_manager', 'buyer_admin'].includes(user.role);
+      const canApprove = ['dept_approver', 'sourcing_manager', 'admin'].includes(user.role);
       if (!canApprove) {
         return res.status(403).json({ message: "You don't have approval authority" });
       }
@@ -4161,7 +4161,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
-  app.post("/api/approval-requests/:id/reject", authMiddleware, requireRole('dept_approver', 'sourcing_manager', 'buyer_admin'), async (req, res) => {
+  app.post("/api/approval-requests/:id/reject", authMiddleware, requireRole('dept_approver', 'sourcing_manager', 'admin'), async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
       const user = await storage.getUser(userId);
@@ -4180,7 +4180,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       }
 
       // Check if user has approval authority
-      const canApprove = ['dept_approver', 'sourcing_manager', 'buyer_admin'].includes(user.role);
+      const canApprove = ['dept_approver', 'sourcing_manager', 'admin'].includes(user.role);
       if (!canApprove) {
         return res.status(403).json({ message: "You don't have approval authority" });
       }

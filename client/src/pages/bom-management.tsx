@@ -71,8 +71,8 @@ export default function BomManagement() {
     );
   }
 
-  // Check if user is a buyer (can create BOMs)
-  const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
+  // Check if user can create BOMs
+  const isBuyer = (user as any)?.role === 'department_requester' || (user as any)?.role === 'sourcing_exec' || (user as any)?.role === 'sourcing_manager' || (user as any)?.role === 'admin';
   const isVendor = (user as any)?.role === 'vendor';
 
   const { data: boms = [], isLoading } = useQuery({
@@ -243,8 +243,8 @@ export default function BomManagement() {
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">
                       {isVendor 
-                        ? "BOM creation is restricted to buyers. Switch to a buyer role to create BOMs."
-                        : "Please select a buyer role to access BOM management features."
+                        ? "BOM creation is restricted to authorized roles. Switch to Department Requester, Sourcing Executive, or Admin role to create BOMs."
+                        : "Please select an authorized role to access BOM management features."
                       }
                     </p>
                   </div>

@@ -52,7 +52,7 @@ export default function ProductCatalogue() {
   // Check if user is a vendor (can create products)
   const isVendor = (user as any)?.role === 'vendor';
   // Check if user is a buyer (can view products and create BOMs)
-  const isBuyer = (user as any)?.role === 'buyer_admin' || (user as any)?.role === 'buyer_user' || (user as any)?.role === 'sourcing_manager';
+  const isBuyer = (user as any)?.role === 'sourcing_exec' || (user as any)?.role === 'sourcing_manager' || (user as any)?.role === 'admin';
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),

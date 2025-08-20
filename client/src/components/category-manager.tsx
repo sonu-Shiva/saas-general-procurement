@@ -176,8 +176,8 @@ export default function CategoryManager({
 
   // Check if user can create/manage categories (both vendors and buyers can create categories)
   const canManageCategories = (user as any)?.role === 'vendor' || 
-                              (user as any)?.role === 'buyer_admin' || 
-                              (user as any)?.role === 'buyer_user' || 
+                              (user as any)?.role === 'sourcing_exec' || 
+                              (user as any)?.role === 'admin' || 
                               (user as any)?.role === 'sourcing_manager';
   
 

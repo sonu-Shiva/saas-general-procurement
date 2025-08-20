@@ -6,7 +6,7 @@ let currentDevUser = {
   email: 'dev@sclen.com',
   firstName: 'Developer',
   lastName: 'User',
-  role: 'buyer_admin'
+  role: 'sourcing_exec'
 };
 
 let isLoggedIn = true;
@@ -39,7 +39,7 @@ export function setupDevAuth(app: Express) {
     }
 
     const { role } = req.body;
-    const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
+    const validRoles = ['admin', 'department_requester', 'dept_approver', 'sourcing_exec', 'sourcing_manager', 'vendor'];
     
     if (!validRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
