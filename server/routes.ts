@@ -4547,6 +4547,27 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       };
 
       const option = await storage.createDropdownOption(optionData);
+
+      // Also add to source table if needed
+      const config = await storage.getDropdownConfiguration(req.body.configurationId);
+      if (config) {
+        if (config.fieldName === 'department' && req.body.label && req.body.value) {
+          // Add to departments table
+          await storage.executeQuery(`
+            INSERT INTO departments (id, name, code, created_at, updated_at) 
+            VALUES (gen_random_uuid(), $1, $2, NOW(), NOW())
+            ON CONFLICT (code) DO NOTHING
+          `, [req.body.label, req.body.value]);
+        } else if (config.fieldName === 'category' && req.body.label && req.body.value) {
+          // Add to product_categories table
+          await storage.executeQuery(`
+            INSERT INTO product_categories (id, name, code, level, created_at, updated_at) 
+            VALUES (gen_random_uuid(), $1, $2, 1, NOW(), NOW())
+            ON CONFLICT (code) DO NOTHING
+          `, [req.body.label, req.body.value]);
+        }
+      }
+
       res.status(201).json(option);
     } catch (error) {
       console.error("Error creating dropdown option:", error);
