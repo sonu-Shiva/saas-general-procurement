@@ -62,19 +62,14 @@ const ROLE_OPTIONS = [
     description: "Approve/reject procurement requests from their department, view department analytics"
   },
   { 
-    value: "buyer_user", 
-    label: "Buyer",
-    description: "Create purchase orders, manage vendor relationships, process approved requests"
+    value: "sourcing_exec", 
+    label: "Sourcing Executive",
+    description: "Execute sourcing activities, conduct vendor negotiations, manage auction processes, create purchase orders"
   },
   { 
     value: "sourcing_manager", 
     label: "Sourcing Manager",
     description: "Approve procurement methods, manage RFx processes, oversee sourcing strategy"
-  },
-  { 
-    value: "sourcing_exec", 
-    label: "Sourcing Executive",
-    description: "Execute sourcing activities, conduct vendor negotiations, manage auction processes"
   },
   { 
     value: "vendor", 
@@ -254,7 +249,6 @@ export default function AdminUserManagement() {
       sourcing_manager: "bg-blue-100 text-blue-800",
       sourcing_exec: "bg-purple-100 text-purple-800",
       dept_approver: "bg-green-100 text-green-800",
-      buyer_user: "bg-yellow-100 text-yellow-800",
       department_requester: "bg-indigo-100 text-indigo-800",
       vendor: "bg-gray-100 text-gray-800",
     };
@@ -630,14 +624,7 @@ export default function AdminUserManagement() {
                         <li>• Set department policies</li>
                       </>
                     )}
-                    {role.value === "buyer_user" && (
-                      <>
-                        <li>• Create and manage purchase orders</li>
-                        <li>• Manage vendor relationships</li>
-                        <li>• Process approved requests</li>
-                        <li>• Execute procurement transactions</li>
-                      </>
-                    )}
+
                     {role.value === "sourcing_manager" && (
                       <>
                         <li>• Approve procurement methods</li>
@@ -651,6 +638,7 @@ export default function AdminUserManagement() {
                         <li>• Execute sourcing activities</li>
                         <li>• Conduct vendor negotiations</li>
                         <li>• Manage auction processes</li>
+                        <li>• Create and manage purchase orders</li>
                         <li>• Handle vendor communications</li>
                       </>
                     )}
