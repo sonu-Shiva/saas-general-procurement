@@ -102,22 +102,7 @@ export default function AdminDropdownConfig() {
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(new Set());
 
-  // Check if user has admin access - only Admin role
-  const userRole = (user as any)?.role;
-  const hasAdminAccess = userRole === 'admin';
-
-  if (!hasAdminAccess) {
-    return (
-      <div className="max-w-2xl mx-auto text-center p-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Access Restricted</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          You don't have permission to access dropdown configuration management.
-        </p>
-      </div>
-    );
-  }
-
-  // Fetch configurations
+  // Fetch configurations - moved before access control to maintain hooks order
   const { data: configurations, isLoading: configsLoading } = useQuery<DropdownConfiguration[]>({
     queryKey: ['/api/admin/dropdown-configurations', { screen: selectedScreen !== 'all' ? selectedScreen : undefined, category: selectedCategory !== 'all' ? selectedCategory : undefined }],
   });
@@ -255,6 +240,21 @@ export default function AdminDropdownConfig() {
     queryFn: () => selectedConfigId ? apiRequest(`/api/admin/dropdown-configurations/${selectedConfigId}/options`) : Promise.resolve([]),
     enabled: !!selectedConfigId,
   });
+
+  // Check if user has admin access - only Admin role (after all hooks)
+  const userRole = (user as any)?.role;
+  const hasAdminAccess = userRole === 'admin';
+
+  if (!hasAdminAccess) {
+    return (
+      <div className="max-w-2xl mx-auto text-center p-8">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Access Restricted</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          You don't have permission to access dropdown configuration management.
+        </p>
+      </div>
+    );
+  }
 
   // Handle form submissions
   const onConfigSubmit = (data: ConfigurationFormData) => {
