@@ -4438,6 +4438,188 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Dropdown Configuration Management API
+  // Get all dropdown configurations with optional filters
+  app.get("/api/admin/dropdown-configurations", async (req: any, res: any) => {
+    try {
+      const { screen, category, isActive } = req.query;
+      const filters = {
+        ...(screen && { screen }),
+        ...(category && { category }),
+        ...(isActive !== undefined && { isActive: isActive === 'true' }),
+      };
+      
+      const configurations = await storage.getDropdownConfigurations(filters);
+      res.json(configurations);
+    } catch (error) {
+      console.error("Error fetching dropdown configurations:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get a specific dropdown configuration
+  app.get("/api/admin/dropdown-configurations/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const configuration = await storage.getDropdownConfiguration(id);
+      
+      if (!configuration) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+      
+      res.json(configuration);
+    } catch (error) {
+      console.error("Error fetching dropdown configuration:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create a new dropdown configuration
+  app.post("/api/admin/dropdown-configurations", async (req: any, res: any) => {
+    try {
+      const configData = {
+        id: nanoid(),
+        ...req.body,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const configuration = await storage.createDropdownConfiguration(configData);
+      res.status(201).json(configuration);
+    } catch (error) {
+      console.error("Error creating dropdown configuration:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update a dropdown configuration
+  app.put("/api/admin/dropdown-configurations/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const configuration = await storage.updateDropdownConfiguration(id, updates);
+      res.json(configuration);
+    } catch (error) {
+      console.error("Error updating dropdown configuration:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete a dropdown configuration
+  app.delete("/api/admin/dropdown-configurations/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteDropdownConfiguration(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Configuration not found" });
+      }
+      
+      res.json({ message: "Configuration deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting dropdown configuration:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Dropdown Options API
+  // Get options for a specific configuration
+  app.get("/api/admin/dropdown-configurations/:configId/options", async (req: any, res: any) => {
+    try {
+      const { configId } = req.params;
+      const options = await storage.getDropdownOptions(configId);
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching dropdown options:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create a new dropdown option
+  app.post("/api/admin/dropdown-options", async (req: any, res: any) => {
+    try {
+      const optionData = {
+        id: nanoid(),
+        ...req.body,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const option = await storage.createDropdownOption(optionData);
+      res.status(201).json(option);
+    } catch (error) {
+      console.error("Error creating dropdown option:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update a dropdown option
+  app.put("/api/admin/dropdown-options/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const option = await storage.updateDropdownOption(id, updates);
+      res.json(option);
+    } catch (error) {
+      console.error("Error updating dropdown option:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete a dropdown option
+  app.delete("/api/admin/dropdown-options/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteDropdownOption(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Option not found" });
+      }
+      
+      res.json({ message: "Option deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting dropdown option:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Bulk update options for a configuration
+  app.put("/api/admin/dropdown-configurations/:configId/options", async (req: any, res: any) => {
+    try {
+      const { configId } = req.params;
+      const { options } = req.body;
+
+      // Add IDs and timestamps to options if not present
+      const processedOptions = options.map((option: any) => ({
+        ...option,
+        id: option.id || nanoid(),
+        configurationId: configId,
+        createdAt: option.createdAt || new Date(),
+        updatedAt: new Date(),
+      }));
+
+      const updatedOptions = await storage.bulkUpdateDropdownOptions(configId, processedOptions);
+      res.json(updatedOptions);
+    } catch (error) {
+      console.error("Error bulk updating dropdown options:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Public API for frontend to get dropdown options by screen
+  app.get("/api/dropdowns/:screen", async (req: any, res: any) => {
+    try {
+      const { screen } = req.params;
+      const options = await storage.getDropdownOptionsByScreen(screen);
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching dropdown options by screen:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

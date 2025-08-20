@@ -163,6 +163,38 @@ export const bomItems = pgTable("bom_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Admin Configuration System for Dropdown Values
+export const dropdownConfigurations = pgTable("dropdown_configurations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  screen: varchar("screen", { length: 255 }).notNull(), // e.g., "rfx-management", "vendor-portal", "analytics"
+  category: varchar("category", { length: 100 }).notNull(), // e.g., "status", "type", "priority", "location"
+  fieldName: varchar("field_name", { length: 100 }).notNull(), // e.g., "rfx_status", "rfx_type", "priority_level"
+  displayName: varchar("display_name", { length: 255 }).notNull(), // Human-readable name
+  description: text("description"), // Description of what this configuration is for
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const dropdownOptions = pgTable("dropdown_options", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  configurationId: uuid("configuration_id").references(() => dropdownConfigurations.id, { onDelete: "cascade" }).notNull(),
+  value: varchar("value", { length: 255 }).notNull(), // The actual value used in code
+  label: varchar("label", { length: 255 }).notNull(), // Display label for users
+  description: text("description"), // Optional description
+  color: varchar("color", { length: 50 }), // Optional color for UI (e.g., for status indicators)
+  icon: varchar("icon", { length: 100 }), // Optional icon name from lucide-react
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  sortOrder: integer("sort_order").default(0),
+  metadata: jsonb("metadata"), // Additional configuration data
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const rfxEvents = pgTable("rfx_events", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -540,6 +572,28 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   createdDirectProcurementOrders: many(directProcurementOrders),
   approvals: many(approvals),
   notifications: many(notifications),
+  createdDropdownConfigurations: many(dropdownConfigurations),
+  createdDropdownOptions: many(dropdownOptions),
+}));
+
+// Dropdown Configuration Relations
+export const dropdownConfigurationsRelations = relations(dropdownConfigurations, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [dropdownConfigurations.createdBy],
+    references: [users.id],
+  }),
+  options: many(dropdownOptions),
+}));
+
+export const dropdownOptionsRelations = relations(dropdownOptions, ({ one }) => ({
+  configuration: one(dropdownConfigurations, {
+    fields: [dropdownOptions.configurationId],
+    references: [dropdownConfigurations.id],
+  }),
+  createdBy: one(users, {
+    fields: [dropdownOptions.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const vendorsRelations = relations(vendors, ({ one, many }) => ({
@@ -1131,4 +1185,23 @@ export const insertAuctionExtensionSchema = createInsertSchema(auctionExtensions
 
 export type AuctionExtension = typeof auctionExtensions.$inferSelect;
 export type InsertAuctionExtension = z.infer<typeof insertAuctionExtensionSchema>;
+
+// Dropdown Configuration schemas
+export const insertDropdownConfigurationSchema = createInsertSchema(dropdownConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDropdownOptionSchema = createInsertSchema(dropdownOptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type DropdownConfiguration = typeof dropdownConfigurations.$inferSelect;
+export type InsertDropdownConfiguration = z.infer<typeof insertDropdownConfigurationSchema>;
+
+export type DropdownOption = typeof dropdownOptions.$inferSelect;
+export type InsertDropdownOption = z.infer<typeof insertDropdownOptionSchema>;
 

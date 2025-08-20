@@ -26,6 +26,8 @@ import {
   approvalConfigurations,
   approvalHistory,
   departments,
+  dropdownConfigurations,
+  dropdownOptions,
   type User,
   type UpsertUser,
   type Vendor,
@@ -80,6 +82,10 @@ import {
   type InsertApprovalHistory,
   type Department,
   type InsertDepartment,
+  type DropdownConfiguration,
+  type InsertDropdownConfiguration,
+  type DropdownOption,
+  type InsertDropdownOption,
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from "nanoid";
@@ -260,6 +266,22 @@ export interface IStorage {
   getSourcingEventsByStatus(statuses: string[]): Promise<SourcingEvent[]>;
   updateSourcingEvent(id: string, updates: Partial<SourcingEvent>): Promise<SourcingEvent>;
   getProcurementRequestsByStatus(statuses: string[]): Promise<ProcurementRequest[]>;
+
+  // Dropdown Configuration operations
+  createDropdownConfiguration(config: InsertDropdownConfiguration): Promise<DropdownConfiguration>;
+  getDropdownConfiguration(id: string): Promise<DropdownConfiguration | undefined>;
+  getDropdownConfigurations(filters?: { screen?: string; category?: string; isActive?: boolean }): Promise<DropdownConfiguration[]>;
+  updateDropdownConfiguration(id: string, updates: Partial<InsertDropdownConfiguration>): Promise<DropdownConfiguration>;
+  deleteDropdownConfiguration(id: string): Promise<boolean>;
+
+  // Dropdown Option operations
+  createDropdownOption(option: InsertDropdownOption): Promise<DropdownOption>;
+  getDropdownOption(id: string): Promise<DropdownOption | undefined>;
+  getDropdownOptions(configurationId: string): Promise<DropdownOption[]>;
+  getDropdownOptionsByScreen(screen: string): Promise<{ [key: string]: DropdownOption[] }>;
+  updateDropdownOption(id: string, updates: Partial<InsertDropdownOption>): Promise<DropdownOption>;
+  deleteDropdownOption(id: string): Promise<boolean>;
+  bulkUpdateDropdownOptions(configurationId: string, options: InsertDropdownOption[]): Promise<DropdownOption[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2196,6 +2218,236 @@ export class DatabaseStorage implements IStorage {
       return requests;
     } catch (error) {
       console.error("Error fetching procurement requests by status:", error);
+      throw error;
+    }
+  }
+
+  // Dropdown Configuration operations
+  async createDropdownConfiguration(config: InsertDropdownConfiguration): Promise<DropdownConfiguration> {
+    try {
+      const [newConfig] = await this.db
+        .insert(dropdownConfigurations)
+        .values(config)
+        .returning();
+      return newConfig;
+    } catch (error) {
+      console.error("Error creating dropdown configuration:", error);
+      throw error;
+    }
+  }
+
+  async getDropdownConfiguration(id: string): Promise<DropdownConfiguration | undefined> {
+    try {
+      const [config] = await this.db
+        .select()
+        .from(dropdownConfigurations)
+        .where(eq(dropdownConfigurations.id, id))
+        .limit(1);
+      return config;
+    } catch (error) {
+      console.error("Error fetching dropdown configuration:", error);
+      throw error;
+    }
+  }
+
+  async getDropdownConfigurations(filters?: { screen?: string; category?: string; isActive?: boolean }): Promise<DropdownConfiguration[]> {
+    try {
+      let query = this.db.select().from(dropdownConfigurations);
+      const conditions = [];
+
+      if (filters?.screen) {
+        conditions.push(eq(dropdownConfigurations.screen, filters.screen));
+      }
+
+      if (filters?.category) {
+        conditions.push(eq(dropdownConfigurations.category, filters.category));
+      }
+
+      if (filters?.isActive !== undefined) {
+        conditions.push(eq(dropdownConfigurations.isActive, filters.isActive));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      return await query.orderBy(asc(dropdownConfigurations.sortOrder), asc(dropdownConfigurations.displayName));
+    } catch (error) {
+      console.error("Error fetching dropdown configurations:", error);
+      throw error;
+    }
+  }
+
+  async updateDropdownConfiguration(id: string, updates: Partial<InsertDropdownConfiguration>): Promise<DropdownConfiguration> {
+    try {
+      const updateData = {
+        ...updates,
+        updatedAt: new Date(),
+      };
+
+      const [updatedConfig] = await this.db
+        .update(dropdownConfigurations)
+        .set(updateData)
+        .where(eq(dropdownConfigurations.id, id))
+        .returning();
+
+      return updatedConfig;
+    } catch (error) {
+      console.error("Error updating dropdown configuration:", error);
+      throw error;
+    }
+  }
+
+  async deleteDropdownConfiguration(id: string): Promise<boolean> {
+    try {
+      const result = await this.db
+        .delete(dropdownConfigurations)
+        .where(eq(dropdownConfigurations.id, id));
+      
+      return (result as any).rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting dropdown configuration:", error);
+      throw error;
+    }
+  }
+
+  // Dropdown Option operations
+  async createDropdownOption(option: InsertDropdownOption): Promise<DropdownOption> {
+    try {
+      const [newOption] = await this.db
+        .insert(dropdownOptions)
+        .values(option)
+        .returning();
+      return newOption;
+    } catch (error) {
+      console.error("Error creating dropdown option:", error);
+      throw error;
+    }
+  }
+
+  async getDropdownOption(id: string): Promise<DropdownOption | undefined> {
+    try {
+      const [option] = await this.db
+        .select()
+        .from(dropdownOptions)
+        .where(eq(dropdownOptions.id, id))
+        .limit(1);
+      return option;
+    } catch (error) {
+      console.error("Error fetching dropdown option:", error);
+      throw error;
+    }
+  }
+
+  async getDropdownOptions(configurationId: string): Promise<DropdownOption[]> {
+    try {
+      const options = await this.db
+        .select()
+        .from(dropdownOptions)
+        .where(and(
+          eq(dropdownOptions.configurationId, configurationId),
+          eq(dropdownOptions.isActive, true)
+        ))
+        .orderBy(asc(dropdownOptions.sortOrder), asc(dropdownOptions.label));
+      
+      return options;
+    } catch (error) {
+      console.error("Error fetching dropdown options:", error);
+      throw error;
+    }
+  }
+
+  async getDropdownOptionsByScreen(screen: string): Promise<{ [key: string]: DropdownOption[] }> {
+    try {
+      const result = await this.db
+        .select({
+          config: dropdownConfigurations,
+          option: dropdownOptions
+        })
+        .from(dropdownConfigurations)
+        .innerJoin(dropdownOptions, eq(dropdownOptions.configurationId, dropdownConfigurations.id))
+        .where(and(
+          eq(dropdownConfigurations.screen, screen),
+          eq(dropdownConfigurations.isActive, true),
+          eq(dropdownOptions.isActive, true)
+        ))
+        .orderBy(
+          asc(dropdownConfigurations.sortOrder),
+          asc(dropdownOptions.sortOrder),
+          asc(dropdownOptions.label)
+        );
+
+      // Group options by field name
+      const grouped: { [key: string]: DropdownOption[] } = {};
+      
+      for (const row of result) {
+        const fieldName = row.config.fieldName;
+        if (!grouped[fieldName]) {
+          grouped[fieldName] = [];
+        }
+        grouped[fieldName].push(row.option);
+      }
+
+      return grouped;
+    } catch (error) {
+      console.error("Error fetching dropdown options by screen:", error);
+      throw error;
+    }
+  }
+
+  async updateDropdownOption(id: string, updates: Partial<InsertDropdownOption>): Promise<DropdownOption> {
+    try {
+      const updateData = {
+        ...updates,
+        updatedAt: new Date(),
+      };
+
+      const [updatedOption] = await this.db
+        .update(dropdownOptions)
+        .set(updateData)
+        .where(eq(dropdownOptions.id, id))
+        .returning();
+
+      return updatedOption;
+    } catch (error) {
+      console.error("Error updating dropdown option:", error);
+      throw error;
+    }
+  }
+
+  async deleteDropdownOption(id: string): Promise<boolean> {
+    try {
+      const result = await this.db
+        .delete(dropdownOptions)
+        .where(eq(dropdownOptions.id, id));
+      
+      return (result as any).rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting dropdown option:", error);
+      throw error;
+    }
+  }
+
+  async bulkUpdateDropdownOptions(configurationId: string, options: InsertDropdownOption[]): Promise<DropdownOption[]> {
+    try {
+      // First, delete existing options
+      await this.db
+        .delete(dropdownOptions)
+        .where(eq(dropdownOptions.configurationId, configurationId));
+
+      // Then insert new options
+      if (options.length === 0) {
+        return [];
+      }
+
+      const newOptions = await this.db
+        .insert(dropdownOptions)
+        .values(options.map(option => ({ ...option, configurationId })))
+        .returning();
+
+      return newOptions;
+    } catch (error) {
+      console.error("Error bulk updating dropdown options:", error);
       throw error;
     }
   }
