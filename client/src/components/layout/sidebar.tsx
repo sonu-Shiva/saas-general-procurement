@@ -17,6 +17,7 @@ import {
   ClipboardCheck,
   Target,
   CheckCircle,
+  Settings,
 } from "lucide-react";
 
 const navigation = [
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders", allowedRoles: ['sourcing_exec', 'sourcing_manager', 'vendor', 'admin'] },
   { name: "Analytics", href: "/analytics", icon: BarChart3, allowedRoles: ['sourcing_manager', 'buyer_admin', 'admin'] },
   { name: "Method Approval", href: "/method-approval", icon: CheckCircle, allowedRoles: ['sourcing_manager', 'admin'] },
+  { name: "Admin: Dropdown Config", href: "/admin/dropdown-config", icon: Settings, allowedRoles: ['admin'] },
 ];
 
 export default function Sidebar() {

@@ -25,6 +25,7 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import SourcingIntake from "./pages/sourcing-intake";
 import MethodApproval from "./pages/method-approval";
+import AdminDropdownConfig from "./pages/admin-dropdown-config";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -117,6 +118,7 @@ function Router() {
           <Route path="/vendor/rfx-response/:id" component={VendorRfxResponse} />
           <Route path="/purchase-orders" component={PurchaseOrders} />
           <Route path="/analytics" component={Analytics} />
+          <Route path="/admin/dropdown-config" component={AdminDropdownConfig} />
           <Route path="/direct-procurement" component={DirectProcurement} />
           <Route>
             <div className="p-8 text-center">

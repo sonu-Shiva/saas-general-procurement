@@ -102,9 +102,9 @@ export default function AdminDropdownConfig() {
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(new Set());
 
-  // Check if user has admin access
+  // Check if user has admin access - only Admin role
   const userRole = (user as any)?.role;
-  const hasAdminAccess = ['admin', 'buyer_admin', 'sourcing_manager'].includes(userRole);
+  const hasAdminAccess = userRole === 'admin';
 
   if (!hasAdminAccess) {
     return (
