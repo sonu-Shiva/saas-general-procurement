@@ -4540,7 +4540,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
   app.post("/api/admin/dropdown-options", async (req: any, res: any) => {
     try {
       const optionData = {
-        id: nanoid(),
+        id: uuidv4(),
         ...req.body,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -4625,7 +4625,7 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       // Add IDs and timestamps to options if not present
       const processedOptions = options.map((option: any) => ({
         ...option,
-        id: option.id || nanoid(),
+        id: option.id || uuidv4(),
         configurationId: configId,
         createdAt: option.createdAt || new Date(),
         updatedAt: new Date(),
