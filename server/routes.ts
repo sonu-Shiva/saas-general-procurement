@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { nanoid } from "nanoid";
 import { v4 as uuidv4 } from 'uuid';
+import { eq, and, gte, ne, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "./objectStorage";
 import {
@@ -21,7 +22,8 @@ import {
   poLineItems,
   directProcurementOrders,
   bids,
-  notifications
+  notifications,
+  dropdownOptions
 } from "@shared/schema";
 import {
   insertVendorSchema,
@@ -4614,11 +4616,23 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       // Handle sort order conflicts before updating
       if (updates.sortOrder !== undefined && updates.sortOrder !== option.sortOrder) {
         // If changing sort order, we need to handle potential conflicts
-        await storage.executeRawQuery(`
-          UPDATE dropdown_options 
-          SET sort_order = sort_order + 1, updated_at = NOW()
-          WHERE configuration_id = $1 AND sort_order >= $2 AND id != $3
-        `, [option.configurationId, updates.sortOrder, id]);
+        try {
+          await storage.db
+            .update(dropdownOptions)
+            .set({ 
+              sortOrder: sql`sort_order + 1`,
+              updatedAt: new Date()
+            })
+            .where(
+              and(
+                eq(dropdownOptions.configurationId, option.configurationId),
+                gte(dropdownOptions.sortOrder, updates.sortOrder),
+                ne(dropdownOptions.id, id)
+              )
+            );
+        } catch (error) {
+          console.error("Error handling sort order conflicts:", error);
+        }
       }
 
       // Update the dropdown option
