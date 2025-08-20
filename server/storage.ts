@@ -2531,14 +2531,26 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Execute raw SQL query (needed for complex operations)
-  async executeRawQuery(query: string, params: any[] = []): Promise<any> {
+  // Helper methods for syncing with source tables
+  async updateDepartmentByCode(code: string, updates: { name: string }): Promise<void> {
     try {
-      const result = await this.db.execute(sql.raw(query, params));
-      return result;
+      await this.db
+        .update(departments)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(departments.code, code));
     } catch (error) {
-      console.error("Database query error:", error);
-      throw error;
+      console.error("Error updating department:", error);
+    }
+  }
+
+  async updateProductCategoryByName(name: string, updates: { name: string }): Promise<void> {
+    try {
+      await this.db
+        .update(productCategories)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(productCategories.name, name));
+    } catch (error) {
+      console.error("Error updating product category:", error);
     }
   }
 }

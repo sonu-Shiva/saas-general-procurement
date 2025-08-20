@@ -4551,19 +4551,27 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       // Handle sort order for new options
       if (!optionData.sortOrder) {
         // Get the maximum sort order for this configuration and add 1
-        const maxSort = await storage.executeRawQuery(`
-          SELECT COALESCE(MAX(sort_order), 0) as max_sort 
-          FROM dropdown_options 
-          WHERE configuration_id = $1
-        `, [req.body.configurationId]);
-        optionData.sortOrder = (maxSort.rows[0].max_sort || 0) + 1;
+        const existingOptions = await storage.db
+          .select({ sortOrder: dropdownOptions.sortOrder })
+          .from(dropdownOptions)
+          .where(eq(dropdownOptions.configurationId, req.body.configurationId));
+        
+        const maxSortOrder = Math.max(0, ...existingOptions.map(o => o.sortOrder || 0));
+        optionData.sortOrder = maxSortOrder + 1;
       } else {
         // If sort order is specified, shift existing items
-        await storage.executeRawQuery(`
-          UPDATE dropdown_options 
-          SET sort_order = sort_order + 1, updated_at = NOW()
-          WHERE configuration_id = $1 AND sort_order >= $2
-        `, [req.body.configurationId, optionData.sortOrder]);
+        await storage.db
+          .update(dropdownOptions)
+          .set({ 
+            sortOrder: sql`sort_order + 1`,
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(dropdownOptions.configurationId, req.body.configurationId),
+              gte(dropdownOptions.sortOrder, optionData.sortOrder)
+            )
+          );
       }
 
       const option = await storage.createDropdownOption(optionData);
@@ -4573,18 +4581,37 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
       if (config) {
         if (config.fieldName === 'department' && req.body.label && req.body.value) {
           // Add to departments table
-          await storage.executeRawQuery(`
-            INSERT INTO departments (id, name, code, created_at, updated_at) 
-            VALUES (gen_random_uuid(), $1, $2, NOW(), NOW())
-            ON CONFLICT (code) DO NOTHING
-          `, [req.body.label, req.body.value]);
+          try {
+            await storage.createDepartment({
+              id: uuidv4(),
+              name: req.body.label,
+              code: req.body.value,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          } catch (error: any) {
+            // Ignore conflicts (department already exists)
+            if (!error.message?.includes('duplicate') && !error.message?.includes('constraint')) {
+              throw error;
+            }
+          }
         } else if (config.fieldName === 'category' && req.body.label && req.body.value) {
           // Add to product_categories table
-          await storage.executeRawQuery(`
-            INSERT INTO product_categories (id, name, code, level, created_at, updated_at) 
-            VALUES (gen_random_uuid(), $1, $2, 1, NOW(), NOW())
-            ON CONFLICT (code) DO NOTHING
-          `, [req.body.label, req.body.value]);
+          try {
+            await storage.createProductCategory({
+              id: uuidv4(),
+              name: req.body.label,
+              code: req.body.value,
+              level: 1,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          } catch (error: any) {
+            // Ignore conflicts (category already exists)
+            if (!error.message?.includes('duplicate') && !error.message?.includes('constraint')) {
+              throw error;
+            }
+          }
         }
       }
 
@@ -4640,19 +4667,11 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
 
       // Sync with source table based on configuration type
       if (config.fieldName === 'department' && updates.label && option.value) {
-        // Update departments table
-        await storage.executeRawQuery(`
-          UPDATE departments 
-          SET name = $1, updated_at = NOW() 
-          WHERE code = $2
-        `, [updates.label, option.value]);
+        // Update departments table using Drizzle
+        await storage.updateDepartmentByCode(option.value, { name: updates.label });
       } else if (config.fieldName === 'category' && updates.label && option.value) {
-        // Update product_categories table
-        await storage.executeRawQuery(`
-          UPDATE product_categories 
-          SET name = $1, updated_at = NOW() 
-          WHERE LOWER(REPLACE(name, ' ', '_')) = $2
-        `, [updates.label, option.value]);
+        // Update product_categories table using Drizzle
+        await storage.updateProductCategoryByName(option.label || option.value, { name: updates.label });
       }
 
       res.json(updatedOption);
