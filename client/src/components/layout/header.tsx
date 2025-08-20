@@ -87,7 +87,9 @@ export default function Header() {
                     {(user as any)?.role && (
                       <Badge variant="secondary" className="text-xs ml-2">
                         {(user as any).role === 'admin' ? 'Admin' :
-                         (user as any).role === 'buyer_user' ? 'Buyer' :
+                         (user as any).role === 'department_requester' ? 'Department Requester' :
+                         (user as any).role === 'dept_approver' ? 'Department Approver' :
+                         (user as any).role === 'sourcing_exec' ? 'Sourcing Executive' :
                          (user as any).role === 'sourcing_manager' ? 'Sourcing Manager' :
                          (user as any).role === 'vendor' ? 'Vendor' : (user as any).role}
                       </Badge>

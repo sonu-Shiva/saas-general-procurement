@@ -272,7 +272,7 @@ export const isBuyer: RequestHandler = async (req: any, res, next) => {
     const { storage } = await import('./storage');
     const user = await storage.getUser(userId);
     
-    if (!user || !['buyer_admin', 'buyer_user', 'sourcing_manager'].includes(user.role)) {
+    if (!user || !['sourcing_exec', 'sourcing_manager', 'admin'].includes(user.role)) {
       return res.status(403).json({ message: "Access denied. Buyer role required." });
     }
     
