@@ -47,10 +47,9 @@ interface User {
 
 const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
-  { value: "requester", label: "Requester" },
+  { value: "department_requester", label: "Department Requester" },
   { value: "dept_approver", label: "Department Approver" },
-  { value: "buyer", label: "Buyer" },
-  { value: "procurement_approver", label: "Procurement Approver" },
+  { value: "buyer_user", label: "Buyer" },
   { value: "sourcing_manager", label: "Sourcing Manager" },
   { value: "sourcing_exec", label: "Sourcing Executive" },
   { value: "vendor", label: "Vendor" },
@@ -227,10 +226,9 @@ export default function AdminUserManagement() {
       sourcing_manager: "bg-blue-100 text-blue-800",
       sourcing_exec: "bg-purple-100 text-purple-800",
       dept_approver: "bg-green-100 text-green-800",
-      buyer: "bg-yellow-100 text-yellow-800",
-      procurement_approver: "bg-orange-100 text-orange-800",
+      buyer_user: "bg-yellow-100 text-yellow-800",
+      department_requester: "bg-indigo-100 text-indigo-800",
       vendor: "bg-gray-100 text-gray-800",
-      requester: "bg-indigo-100 text-indigo-800",
     };
     return colors[role] || "bg-gray-100 text-gray-800";
   };

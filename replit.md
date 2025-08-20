@@ -34,7 +34,7 @@ Role-based access control priority: Strict enforcement of user role permissions 
 - **Provider**: Replit OpenID Connect (OIDC) authentication.
 - **Session Management**: PostgreSQL-backed session management for persistent login.
 - **Strategy**: Passport.js with OpenID Connect strategy.
-- **Authorization**: Role-based access control (buyer_admin, buyer_user, sourcing_manager, vendor, department_requester, dept_approver, sourcing_exec).
+- **Authorization**: Role-based access control (admin, buyer_user, sourcing_manager, vendor, department_requester, dept_approver, sourcing_exec).
 
 ### Database Layer
 - **Database**: PostgreSQL (configured for Neon serverless).
