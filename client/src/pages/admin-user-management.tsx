@@ -46,13 +46,41 @@ interface User {
 }
 
 const ROLE_OPTIONS = [
-  { value: "admin", label: "Admin" },
-  { value: "department_requester", label: "Department Requester" },
-  { value: "dept_approver", label: "Department Approver" },
-  { value: "buyer_user", label: "Buyer" },
-  { value: "sourcing_manager", label: "Sourcing Manager" },
-  { value: "sourcing_exec", label: "Sourcing Executive" },
-  { value: "vendor", label: "Vendor" },
+  { 
+    value: "admin", 
+    label: "Admin",
+    description: "Full system access - manage users, configure dropdowns, view all data, override approvals"
+  },
+  { 
+    value: "department_requester", 
+    label: "Department Requester",
+    description: "Create procurement requests, upload BOMs, view own requests and department data"
+  },
+  { 
+    value: "dept_approver", 
+    label: "Department Approver", 
+    description: "Approve/reject procurement requests from their department, view department analytics"
+  },
+  { 
+    value: "buyer_user", 
+    label: "Buyer",
+    description: "Create purchase orders, manage vendor relationships, process approved requests"
+  },
+  { 
+    value: "sourcing_manager", 
+    label: "Sourcing Manager",
+    description: "Approve procurement methods, manage RFx processes, oversee sourcing strategy"
+  },
+  { 
+    value: "sourcing_exec", 
+    label: "Sourcing Executive",
+    description: "Execute sourcing activities, conduct vendor negotiations, manage auction processes"
+  },
+  { 
+    value: "vendor", 
+    label: "Vendor",
+    description: "Submit bids, respond to RFx, view assigned opportunities, update company profile"
+  },
 ];
 
 const DEPARTMENT_OPTIONS = [
@@ -313,7 +341,10 @@ export default function AdminUserManagement() {
                   <SelectContent>
                     {ROLE_OPTIONS.map((role) => (
                       <SelectItem key={role.value} value={role.value}>
-                        {role.label}
+                        <div className="flex flex-col">
+                          <span className="font-medium">{role.label}</span>
+                          <span className="text-xs text-gray-500 mt-1">{role.description}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -544,6 +575,98 @@ export default function AdminUserManagement() {
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Role Access Control Documentation */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Role Permissions & Access Control
+          </CardTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Understanding what each role can access and manage in the procurement platform
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {ROLE_OPTIONS.map((role) => (
+              <div key={role.value} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge className={getRoleBadgeColor(role.value)}>
+                    {role.label}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {role.description}
+                </p>
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                    Key Permissions
+                  </h4>
+                  <ul className="text-xs space-y-1 text-gray-600 dark:text-gray-400">
+                    {role.value === "admin" && (
+                      <>
+                        <li>• Manage all users and roles</li>
+                        <li>• Configure dropdown values</li>
+                        <li>• Access all modules and data</li>
+                        <li>• Override any approval workflow</li>
+                      </>
+                    )}
+                    {role.value === "department_requester" && (
+                      <>
+                        <li>• Create procurement requests</li>
+                        <li>• Upload and manage BOMs</li>
+                        <li>• View own department's data</li>
+                        <li>• Submit requests for approval</li>
+                      </>
+                    )}
+                    {role.value === "dept_approver" && (
+                      <>
+                        <li>• Approve/reject department requests</li>
+                        <li>• View department analytics</li>
+                        <li>• Manage department procurement</li>
+                        <li>• Set department policies</li>
+                      </>
+                    )}
+                    {role.value === "buyer_user" && (
+                      <>
+                        <li>• Create and manage purchase orders</li>
+                        <li>• Manage vendor relationships</li>
+                        <li>• Process approved requests</li>
+                        <li>• Execute procurement transactions</li>
+                      </>
+                    )}
+                    {role.value === "sourcing_manager" && (
+                      <>
+                        <li>• Approve procurement methods</li>
+                        <li>• Manage RFx processes</li>
+                        <li>• Oversee sourcing strategy</li>
+                        <li>• Review vendor performance</li>
+                      </>
+                    )}
+                    {role.value === "sourcing_exec" && (
+                      <>
+                        <li>• Execute sourcing activities</li>
+                        <li>• Conduct vendor negotiations</li>
+                        <li>• Manage auction processes</li>
+                        <li>• Handle vendor communications</li>
+                      </>
+                    )}
+                    {role.value === "vendor" && (
+                      <>
+                        <li>• Submit bids and proposals</li>
+                        <li>• Respond to RFx requests</li>
+                        <li>• Update company profile</li>
+                        <li>• View assigned opportunities</li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
