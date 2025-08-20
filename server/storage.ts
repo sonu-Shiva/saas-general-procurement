@@ -97,6 +97,12 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Admin user management operations
+  getAllUsers(filters?: { role?: string; isActive?: boolean; search?: string }): Promise<User[]>;
+  createUser(user: Partial<User>): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User>;
+  deleteUser(id: string): Promise<boolean>;
 
   // Organization operations
   createOrganization(org: InsertOrganization): Promise<Organization>;
@@ -347,6 +353,64 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  // Admin user management operations
+  async getAllUsers(filters?: { role?: string; isActive?: boolean; search?: string }): Promise<User[]> {
+    let query = this.db.select().from(users);
+
+    const conditions = [];
+
+    if (filters?.role) {
+      conditions.push(eq(users.role, filters.role as any));
+    }
+
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(users.isActive, filters.isActive));
+    }
+
+    if (filters?.search) {
+      conditions.push(
+        or(
+          like(users.firstName, `%${filters.search}%`),
+          like(users.lastName, `%${filters.search}%`),
+          like(users.email, `%${filters.search}%`)
+        )
+      );
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    return await query.orderBy(desc(users.createdAt));
+  }
+
+  async createUser(userData: Partial<User>): Promise<User> {
+    const userId = userData.id || nanoid();
+    const userToCreate = {
+      ...userData,
+      id: userId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    const [user] = await this.db.insert(users).values(userToCreate).returning();
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    const [updatedUser] = await this.db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await this.db.delete(users).where(eq(users.id, id));
+    return result.rowCount > 0;
   }
 
   // Organization operations

@@ -34,6 +34,7 @@ const navigation = [
   { name: "Analytics", href: "/analytics", icon: BarChart3, allowedRoles: ['sourcing_manager', 'buyer_admin', 'admin'] },
   { name: "Method Approval", href: "/method-approval", icon: CheckCircle, allowedRoles: ['sourcing_manager', 'admin'] },
   { name: "Admin: Dropdown Config", href: "/admin/dropdown-config", icon: Settings, allowedRoles: ['admin'] },
+  { name: "Admin: User Management", href: "/admin/user-management", icon: Users, allowedRoles: ['admin'] },
 ];
 
 export default function Sidebar() {
