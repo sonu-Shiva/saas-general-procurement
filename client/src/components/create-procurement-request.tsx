@@ -130,11 +130,11 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
 
   // Fetch urgency options from dropdown configuration
   const { data: urgencyConfig } = useQuery({
-    queryKey: ['/api/admin/dropdown-configurations', 'urgency', 'procurement-requests'],
+    queryKey: ['/api/admin/dropdown-configurations', 'urgency_level', 'procurement-requests'],
     queryFn: async () => {
       const configs = await apiRequest('/api/admin/dropdown-configurations');
       return configs.find((config: any) => 
-        config.fieldName === 'urgency' && config.screen === 'procurement-requests'
+        config.fieldName === 'urgency_level' && config.screen === 'procurement-requests'
       );
     }
   });
