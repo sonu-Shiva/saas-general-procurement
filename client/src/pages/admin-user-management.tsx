@@ -72,8 +72,8 @@ export default function AdminUserManagement() {
   const queryClient = useQueryClient();
   
   const [filters, setFilters] = useState({
-    role: "",
-    isActive: "",
+    role: "all",
+    isActive: "all",
     search: "",
   });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -96,8 +96,8 @@ export default function AdminUserManagement() {
     queryKey: ["/api/admin/users", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filters.role) params.append("role", filters.role);
-      if (filters.isActive) params.append("isActive", filters.isActive);
+      if (filters.role && filters.role !== "all") params.append("role", filters.role);
+      if (filters.isActive && filters.isActive !== "all") params.append("isActive", filters.isActive);
       if (filters.search) params.append("search", filters.search);
       
       const response = await apiRequest(`/api/admin/users?${params.toString()}`);
@@ -427,7 +427,7 @@ export default function AdminUserManagement() {
                   <SelectValue placeholder="All roles" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All roles</SelectItem>
+                  <SelectItem value="all">All roles</SelectItem>
                   {ROLE_OPTIONS.map((role) => (
                     <SelectItem key={role.value} value={role.value}>
                       {role.label}
@@ -443,7 +443,7 @@ export default function AdminUserManagement() {
                   <SelectValue placeholder="All users" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All users</SelectItem>
+                  <SelectItem value="all">All users</SelectItem>
                   <SelectItem value="true">Active only</SelectItem>
                   <SelectItem value="false">Inactive only</SelectItem>
                 </SelectContent>
@@ -452,7 +452,7 @@ export default function AdminUserManagement() {
             <div className="flex items-end">
               <Button
                 variant="outline"
-                onClick={() => setFilters({ role: "", isActive: "", search: "" })}
+                onClick={() => setFilters({ role: "all", isActive: "all", search: "" })}
                 className="w-full"
                 data-testid="button-clear-filters"
               >
