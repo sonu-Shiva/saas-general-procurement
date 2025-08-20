@@ -91,6 +91,61 @@ export default function DirectProcurement() {
   });
   const boms = Array.isArray(bomsData) ? bomsData : [];
 
+  // Fetch payment terms options from dropdown configuration
+  const { data: paymentTermsConfig } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', 'payment-terms', 'purchase-orders'],
+    queryFn: async () => {
+      const configs = await apiRequest('/api/admin/dropdown-configurations');
+      return configs.find((config: any) => 
+        config.fieldName === 'payment-terms' && config.screen === 'purchase-orders'
+      );
+    }
+  });
+
+  const { data: paymentTermsOptions = [] } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', paymentTermsConfig?.id, 'options'],
+    queryFn: async () => {
+      if (!paymentTermsConfig?.id) return [];
+      return apiRequest(`/api/admin/dropdown-configurations/${paymentTermsConfig.id}/options`);
+    },
+    enabled: !!paymentTermsConfig?.id
+  });
+
+  // Fetch priority options from dropdown configuration
+  const { data: priorityConfig } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', 'priority', 'purchase-orders'],
+    queryFn: async () => {
+      const configs = await apiRequest('/api/admin/dropdown-configurations');
+      return configs.find((config: any) => 
+        config.fieldName === 'priority' && config.screen === 'purchase-orders'
+      );
+    }
+  });
+
+  const { data: priorityOptions = [] } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', priorityConfig?.id, 'options'],
+    queryFn: async () => {
+      if (!priorityConfig?.id) return [];
+      return apiRequest(`/api/admin/dropdown-configurations/${priorityConfig.id}/options`);
+    },
+    enabled: !!priorityConfig?.id
+  });
+
+  // Transform options with proper sorting
+  const paymentTermsChoices = paymentTermsOptions
+    .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    .map((option: any) => ({
+      value: option.value,
+      label: option.label
+    }));
+
+  const priorityChoices = priorityOptions
+    .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    .map((option: any) => ({
+      value: option.value,
+      label: option.label
+    }));
+
   const form = useForm<DirectProcurementForm>({
     resolver: zodResolver(directProcurementSchema),
     defaultValues: {
@@ -557,12 +612,23 @@ export default function DirectProcurement() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="Net 15">Net 15</SelectItem>
-                                  <SelectItem value="Net 30">Net 30</SelectItem>
-                                  <SelectItem value="Net 45">Net 45</SelectItem>
-                                  <SelectItem value="Net 60">Net 60</SelectItem>
-                                  <SelectItem value="Due on Receipt">Due on Receipt</SelectItem>
-                                  <SelectItem value="COD">Cash on Delivery</SelectItem>
+                                  {paymentTermsChoices.length > 0 ? (
+                                    paymentTermsChoices.map((choice) => (
+                                      <SelectItem key={choice.value} value={choice.value}>
+                                        {choice.label}
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    // Fallback to hardcoded values if configuration not loaded
+                                    <>
+                                      <SelectItem value="Net 15">Net 15</SelectItem>
+                                      <SelectItem value="Net 30">Net 30</SelectItem>
+                                      <SelectItem value="Net 45">Net 45</SelectItem>
+                                      <SelectItem value="Net 60">Net 60</SelectItem>
+                                      <SelectItem value="Due on Receipt">Due on Receipt</SelectItem>
+                                      <SelectItem value="COD">Cash on Delivery</SelectItem>
+                                    </>
+                                  )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -583,10 +649,21 @@ export default function DirectProcurement() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="low">Low</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="high">High</SelectItem>
-                                  <SelectItem value="urgent">Urgent</SelectItem>
+                                  {priorityChoices.length > 0 ? (
+                                    priorityChoices.map((choice) => (
+                                      <SelectItem key={choice.value} value={choice.value}>
+                                        {choice.label}
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    // Fallback to hardcoded values if configuration not loaded
+                                    <>
+                                      <SelectItem value="low">Low</SelectItem>
+                                      <SelectItem value="medium">Medium</SelectItem>
+                                      <SelectItem value="high">High</SelectItem>
+                                      <SelectItem value="urgent">Urgent</SelectItem>
+                                    </>
+                                  )}
                                 </SelectContent>
                               </Select>
                               <FormMessage />

@@ -86,6 +86,34 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     retry: false,
   });
 
+  // Fetch category options from dropdown configuration
+  const { data: categoryConfig } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', 'category', 'bom-create'],
+    queryFn: async () => {
+      const configs = await apiRequest('/api/admin/dropdown-configurations');
+      return configs.find((config: any) => 
+        config.fieldName === 'category' && config.screen === 'bom-create'
+      );
+    }
+  });
+
+  const { data: categoryOptions = [] } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', categoryConfig?.id, 'options'],
+    queryFn: async () => {
+      if (!categoryConfig?.id) return [];
+      return apiRequest(`/api/admin/dropdown-configurations/${categoryConfig.id}/options`);
+    },
+    enabled: !!categoryConfig?.id
+  });
+
+  // Transform category options with proper sorting
+  const categoryChoices = categoryOptions
+    .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    .map((option: any) => ({
+      value: option.value,
+      label: option.label
+    }));
+
   // Load existing BOM items when editing
   useEffect(() => {
     if (existingBom?.id) {
@@ -450,12 +478,23 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
                                 <SelectValue placeholder="Select category" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="electronics">Electronics</SelectItem>
-                                <SelectItem value="industrial">Industrial</SelectItem>
-                                <SelectItem value="office">Office Equipment</SelectItem>
-                                <SelectItem value="automotive">Automotive</SelectItem>
-                                <SelectItem value="construction">Construction</SelectItem>
-                                <SelectItem value="furniture">Furniture</SelectItem>
+                                {categoryChoices.length > 0 ? (
+                                  categoryChoices.map((choice) => (
+                                    <SelectItem key={choice.value} value={choice.value}>
+                                      {choice.label}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  // Fallback to hardcoded values if configuration not loaded
+                                  <>
+                                    <SelectItem value="electronics">Electronics</SelectItem>
+                                    <SelectItem value="industrial">Industrial</SelectItem>
+                                    <SelectItem value="office">Office Equipment</SelectItem>
+                                    <SelectItem value="automotive">Automotive</SelectItem>
+                                    <SelectItem value="construction">Construction</SelectItem>
+                                    <SelectItem value="furniture">Furniture</SelectItem>
+                                  </>
+                                )}
                               </SelectContent>
                             </Select>
                           </FormControl>
