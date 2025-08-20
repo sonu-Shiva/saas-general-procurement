@@ -200,7 +200,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
           notes: data.notes,
           bomLineItems: data.bomLineItems,
           selectedBomId: data.selectedBomId,
-          requestedBy: user?.id,
+          requestedBy: user?.id || '',
         }),
         headers: {
           'Content-Type': 'application/json',
@@ -228,7 +228,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
   const resetForm = () => {
     setFormData({
       title: "",
-      department: user?.department || "",
+      department: (user as any)?.department || "",
       needByDate: "",
       urgency: "medium",
       budgetCode: "",
@@ -513,7 +513,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                     <SelectValue placeholder="Select a department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {departments.map((dept) => (
+                    {departments.map((dept: any) => (
                       <SelectItem key={dept.id} value={dept.code}>
                         {dept.name} ({dept.code})
                       </SelectItem>
@@ -543,7 +543,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
                   </SelectTrigger>
                   <SelectContent>
                     {urgencyChoices.length > 0 ? (
-                      urgencyChoices.map((choice) => (
+                      urgencyChoices.map((choice: any) => (
                         <SelectItem key={choice.value} value={choice.value}>
                           {choice.label}
                         </SelectItem>
