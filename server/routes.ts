@@ -569,14 +569,21 @@ Focus on established businesses with verifiable contact information.`;
     }
   }
 
-  // Product routes - Only vendors can create products
-  app.post('/api/products', isAuthenticated, isVendor, async (req: any, res) => {
+  // Product routes - Admin, sourcing, and vendor roles can create products
+  app.post('/api/products', isAuthenticated, async (req: any, res) => {
     try {
       console.log("=== PRODUCT CREATION ===");
       console.log("User ID:", req.user.claims.sub);
       console.log("Request body:", JSON.stringify(req.body, null, 2));
 
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Check if user has permission to create products
+      if (!user || !['admin', 'sourcing_exec', 'sourcing_manager', 'vendor'].includes(user.role)) {
+        return res.status(403).json({ message: "Access denied. Product creation requires admin, sourcing, or vendor role." });
+      }
+
       const validatedData = {
         ...req.body,
         createdBy: userId,
@@ -645,13 +652,13 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(404).json({ message: "Product not found" });
       }
 
-      // Check if user is the creator of the product or is a vendor
+      // Check if user has permission to edit products
       const user = await storage.getUser(userId);
-      const isVendor = user?.role === 'vendor';
+      const hasEditPermission = user && ['admin', 'sourcing_exec', 'sourcing_manager', 'vendor'].includes(user.role);
       const isOwner = existingProduct.createdBy === userId;
 
-      if (!isVendor && !isOwner) {
-        return res.status(403).json({ message: "You can only edit products you created" });
+      if (!hasEditPermission && !isOwner) {
+        return res.status(403).json({ message: "Access denied. Product editing requires admin, sourcing, or vendor role." });
       }
 
       const updates = req.body;
@@ -682,18 +689,18 @@ Focus on established businesses with verifiable contact information.`;
       console.log("Product found:", existingProduct.itemName);
       console.log("Product created by:", existingProduct.createdBy);
 
-      // Check if user is the creator of the product or is a vendor
+      // Check if user has permission to delete products
       const user = await storage.getUser(userId);
-      const isVendor = user?.role === 'vendor';
+      const hasDeletePermission = user && ['admin', 'sourcing_exec', 'sourcing_manager', 'vendor'].includes(user.role);
       const isOwner = existingProduct.createdBy === userId;
 
       console.log("User role:", user?.role);
-      console.log("Is vendor:", isVendor);
+      console.log("Has delete permission:", hasDeletePermission);
       console.log("Is owner:", isOwner);
 
-      if (!isVendor && !isOwner) {
+      if (!hasDeletePermission && !isOwner) {
         console.log("Permission denied - user cannot delete this product");
-        return res.status(403).json({ message: "You can only delete products you created" });
+        return res.status(403).json({ message: "Access denied. Product deletion requires admin, sourcing, or vendor role." });
       }
 
       await storage.deleteProduct(productId);
