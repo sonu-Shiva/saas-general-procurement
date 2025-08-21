@@ -2966,6 +2966,41 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Get sourcing queue (approved procurement requests for sourcing executives)
+  app.get("/api/procurement-requests/sourcing-queue", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Only sourcing executives and managers can access this endpoint
+      if (!['sourcing_exec', 'sourcing_manager', 'admin'].includes(user.role)) {
+        return res.status(403).json({ message: "Access denied: insufficient permissions" });
+      }
+
+      // Get approved procurement requests that need sourcing method selection
+      const filters = { 
+        status: 'request_approved'  // Only approved requests
+      };
+      
+      const approvedRequests = await storage.getProcurementRequests(filters);
+      
+      // Filter for requests that don't have procurement methods assigned yet
+      const pendingSourcingRequests = approvedRequests.filter(req => 
+        req.overallStatus === 'request_approved' && 
+        (!req.procurementMethod || req.procurementMethodStatus === 'pending')
+      );
+      
+      res.json(pendingSourcingRequests);
+    } catch (error) {
+      console.error("Error fetching sourcing queue:", error);
+      res.status(500).json({ message: "Failed to fetch sourcing queue" });
+    }
+  });
+
   // Get procurement requests (LIST - must come before single resource route)
   app.get("/api/procurement-requests", isAuthenticated, async (req, res) => {
     try {
@@ -2983,6 +3018,9 @@ Focus on established businesses with verifiable contact information.`;
         filters = { requestedBy: userId };
       } else if (user.role === 'dept_approver') {
         filters = { department: user.department };
+      } else if (user.role === 'sourcing_exec' || user.role === 'sourcing_manager') {
+        // Sourcing executives see all requests for their workflow management
+        filters = {};
       }
 
       const requests = await storage.getProcurementRequests(filters);
