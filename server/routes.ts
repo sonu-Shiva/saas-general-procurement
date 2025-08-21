@@ -4209,6 +4209,185 @@ ITEM-003,Sample Item 3,METER,25,Length measurement item`;
     }
   });
 
+  // Approval Hierarchy Configuration Routes (Admin only)
+  app.get('/api/admin/approval-hierarchies', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const entityType = req.query.entityType as 'procurement_request' | 'purchase_order' | undefined;
+      const hierarchies = await storage.getApprovalHierarchies(entityType);
+      
+      // Get levels for each hierarchy
+      const hierarchiesWithLevels = await Promise.all(
+        hierarchies.map(async (hierarchy) => {
+          const levels = await storage.getApprovalLevels(hierarchy.id);
+          return { ...hierarchy, levels };
+        })
+      );
+
+      res.json(hierarchiesWithLevels);
+    } catch (error) {
+      console.error('Error fetching approval hierarchies:', error);
+      res.status(500).json({ message: 'Failed to fetch approval hierarchies' });
+    }
+  });
+
+  app.get('/api/admin/approval-hierarchies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const hierarchy = await storage.getApprovalHierarchy(req.params.id);
+      if (!hierarchy) {
+        return res.status(404).json({ message: "Approval hierarchy not found" });
+      }
+
+      const levels = await storage.getApprovalLevels(hierarchy.id);
+      res.json({ ...hierarchy, levels });
+    } catch (error) {
+      console.error('Error fetching approval hierarchy:', error);
+      res.status(500).json({ message: 'Failed to fetch approval hierarchy' });
+    }
+  });
+
+  app.post('/api/admin/approval-hierarchies', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const hierarchyData = {
+        ...req.body,
+        createdBy: req.user.claims.sub,
+      };
+
+      const newHierarchy = await storage.createApprovalHierarchy(hierarchyData);
+      res.status(201).json(newHierarchy);
+    } catch (error) {
+      console.error('Error creating approval hierarchy:', error);
+      res.status(500).json({ message: 'Failed to create approval hierarchy' });
+    }
+  });
+
+  app.put('/api/admin/approval-hierarchies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const updatedHierarchy = await storage.updateApprovalHierarchy(req.params.id, req.body);
+      if (!updatedHierarchy) {
+        return res.status(404).json({ message: "Approval hierarchy not found" });
+      }
+
+      res.json(updatedHierarchy);
+    } catch (error) {
+      console.error('Error updating approval hierarchy:', error);
+      res.status(500).json({ message: 'Failed to update approval hierarchy' });
+    }
+  });
+
+  app.delete('/api/admin/approval-hierarchies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const deleted = await storage.deleteApprovalHierarchy(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Approval hierarchy not found" });
+      }
+
+      res.json({ message: "Approval hierarchy deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting approval hierarchy:', error);
+      res.status(500).json({ message: 'Failed to delete approval hierarchy' });
+    }
+  });
+
+  // Approval Level Routes
+  app.post('/api/admin/approval-hierarchies/:hierarchyId/levels', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const levelData = {
+        ...req.body,
+        hierarchyId: req.params.hierarchyId,
+        createdBy: req.user.claims.sub,
+      };
+
+      const newLevel = await storage.createApprovalLevel(levelData);
+      res.status(201).json(newLevel);
+    } catch (error) {
+      console.error('Error creating approval level:', error);
+      res.status(500).json({ message: 'Failed to create approval level' });
+    }
+  });
+
+  app.put('/api/admin/approval-levels/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const updatedLevel = await storage.updateApprovalLevel(req.params.id, req.body);
+      if (!updatedLevel) {
+        return res.status(404).json({ message: "Approval level not found" });
+      }
+
+      res.json(updatedLevel);
+    } catch (error) {
+      console.error('Error updating approval level:', error);
+      res.status(500).json({ message: 'Failed to update approval level' });
+    }
+  });
+
+  app.delete('/api/admin/approval-levels/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const deleted = await storage.deleteApprovalLevel(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Approval level not found" });
+      }
+
+      res.json({ message: "Approval level deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting approval level:', error);
+      res.status(500).json({ message: 'Failed to delete approval level' });
+    }
+  });
+
+  app.put('/api/admin/approval-hierarchies/:hierarchyId/reorder-levels', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      await storage.reorderApprovalLevels(req.params.hierarchyId, req.body.levelOrders);
+      res.json({ message: "Approval levels reordered successfully" });
+    } catch (error) {
+      console.error('Error reordering approval levels:', error);
+      res.status(500).json({ message: 'Failed to reorder approval levels' });
+    }
+  });
+
   // Audit Log routes (Admin only)
   app.get('/api/audit-logs', isAuthenticated, async (req: any, res) => {
     try {

@@ -89,6 +89,12 @@ import {
   auditLogs,
   type AuditLog,
   type InsertAuditLog,
+  approvalHierarchies,
+  approvalLevels,
+  type ApprovalHierarchy,
+  type InsertApprovalHierarchy,
+  type ApprovalLevel,
+  type InsertApprovalLevel,
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from "nanoid";
@@ -2629,6 +2635,92 @@ export class DatabaseStorage implements IStorage {
       .offset(filters?.offset || 0);
 
     return logs;
+  }
+
+  // Approval Hierarchy Methods
+  async getApprovalHierarchies(entityType?: 'procurement_request' | 'purchase_order'): Promise<ApprovalHierarchy[]> {
+    let query = this.db.select().from(approvalHierarchies);
+    
+    if (entityType) {
+      query = query.where(eq(approvalHierarchies.entityType, entityType));
+    }
+    
+    return query.orderBy(asc(approvalHierarchies.name));
+  }
+
+  async getApprovalHierarchy(id: string): Promise<ApprovalHierarchy | undefined> {
+    const [hierarchy] = await this.db
+      .select()
+      .from(approvalHierarchies)
+      .where(eq(approvalHierarchies.id, id));
+    return hierarchy;
+  }
+
+  async createApprovalHierarchy(hierarchy: InsertApprovalHierarchy): Promise<ApprovalHierarchy> {
+    const [newHierarchy] = await this.db
+      .insert(approvalHierarchies)
+      .values(hierarchy)
+      .returning();
+    return newHierarchy;
+  }
+
+  async updateApprovalHierarchy(id: string, updates: Partial<InsertApprovalHierarchy>): Promise<ApprovalHierarchy | undefined> {
+    const [updatedHierarchy] = await this.db
+      .update(approvalHierarchies)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(approvalHierarchies.id, id))
+      .returning();
+    return updatedHierarchy;
+  }
+
+  async deleteApprovalHierarchy(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(approvalHierarchies)
+      .where(eq(approvalHierarchies.id, id));
+    return (result as any).rowCount > 0;
+  }
+
+  async getApprovalLevels(hierarchyId: string): Promise<ApprovalLevel[]> {
+    return this.db
+      .select()
+      .from(approvalLevels)
+      .where(eq(approvalLevels.hierarchyId, hierarchyId))
+      .orderBy(asc(approvalLevels.sortOrder), asc(approvalLevels.levelNumber));
+  }
+
+  async createApprovalLevel(level: InsertApprovalLevel): Promise<ApprovalLevel> {
+    const [newLevel] = await this.db
+      .insert(approvalLevels)
+      .values(level)
+      .returning();
+    return newLevel;
+  }
+
+  async updateApprovalLevel(id: string, updates: Partial<InsertApprovalLevel>): Promise<ApprovalLevel | undefined> {
+    const [updatedLevel] = await this.db
+      .update(approvalLevels)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(approvalLevels.id, id))
+      .returning();
+    return updatedLevel;
+  }
+
+  async deleteApprovalLevel(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(approvalLevels)
+      .where(eq(approvalLevels.id, id));
+    return (result as any).rowCount > 0;
+  }
+
+  async reorderApprovalLevels(hierarchyId: string, levelOrders: Array<{ id: string; sortOrder: number; levelNumber: number }>): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      for (const { id, sortOrder, levelNumber } of levelOrders) {
+        await tx
+          .update(approvalLevels)
+          .set({ sortOrder, levelNumber, updatedAt: new Date() })
+          .where(eq(approvalLevels.id, id));
+      }
+    });
   }
 
   async getAuditLogStats(timeRange: 'day' | 'week' | 'month' = 'day'): Promise<{

@@ -1238,3 +1238,59 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
+// Approval Hierarchy Configuration Tables
+export const approvalHierarchies = pgTable("approval_hierarchies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  entityType: varchar("entity_type", { enum: ["procurement_request", "purchase_order"] }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(), // e.g., "Default PR Approval", "High Value PO Approval"
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false), // Only one default per entity type
+  conditions: jsonb("conditions"), // Conditions for when this hierarchy applies (e.g., amount thresholds)
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_approval_hierarchies_entity_type").on(table.entityType),
+]);
+
+export const approvalLevels = pgTable("approval_levels", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hierarchyId: uuid("hierarchy_id").references(() => approvalHierarchies.id, { onDelete: "cascade" }).notNull(),
+  levelNumber: integer("level_number").notNull(), // 1, 2, 3, etc.
+  name: varchar("name", { length: 255 }).notNull(), // e.g., "Department Approval", "Sourcing Manager Approval"
+  description: text("description"),
+  requiredRole: varchar("required_role", { enum: ["dept_approver", "sourcing_manager", "sourcing_exec", "admin"] }).notNull(),
+  requiredCount: integer("required_count").default(1), // How many approvers of this role are needed
+  isParallel: boolean("is_parallel").default(false), // Can approvers at this level approve in parallel?
+  timeoutHours: integer("timeout_hours"), // Auto-escalation timeout
+  escalationLevelId: uuid("escalation_level_id"), // Which level to escalate to
+  conditions: jsonb("conditions"), // Additional conditions for this level
+  sortOrder: integer("sort_order").default(0),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_approval_levels_hierarchy").on(table.hierarchyId),
+  index("idx_approval_levels_sort_order").on(table.hierarchyId, table.sortOrder),
+  unique("unique_level_number_per_hierarchy").on(table.hierarchyId, table.levelNumber),
+]);
+
+// Zod schemas for approval hierarchy configuration
+export const insertApprovalHierarchySchema = createInsertSchema(approvalHierarchies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertApprovalLevelSchema = createInsertSchema(approvalLevels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertApprovalHierarchy = z.infer<typeof insertApprovalHierarchySchema>;
+export type ApprovalHierarchy = typeof approvalHierarchies.$inferSelect;
+export type InsertApprovalLevel = z.infer<typeof insertApprovalLevelSchema>;
+export type ApprovalLevel = typeof approvalLevels.$inferSelect;
+

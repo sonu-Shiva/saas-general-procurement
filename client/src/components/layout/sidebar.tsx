@@ -19,6 +19,7 @@ import {
   CheckCircle,
   Settings,
   Shield,
+  GitBranch,
 } from "lucide-react";
 
 const navigation = [
@@ -37,6 +38,7 @@ const navigation = [
   { name: "Admin: Dropdown Config", href: "/admin/dropdown-config", icon: Settings, allowedRoles: ['admin'] },
   { name: "Admin: User Management", href: "/admin/user-management", icon: Users, allowedRoles: ['admin'] },
   { name: "Admin: Audit Logs", href: "/admin/audit-logs", icon: Shield, allowedRoles: ['admin'] },
+  { name: "Admin: Approval Hierarchies", href: "/admin/approval-hierarchies", icon: GitBranch, allowedRoles: ['admin'] },
 ];
 
 export default function Sidebar() {
