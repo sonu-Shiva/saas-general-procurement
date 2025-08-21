@@ -1218,12 +1218,14 @@ export default function ProductCatalogue() {
                 .filter(product => {
                   console.log('Filtering product:', product.itemName, 'categoryId:', product.categoryId, 'category:', product.category, 'selectedCategoryId:', selectedCategory?.id);
                   // Show products that are NOT already in the selected category
+                  // Handle both null and "None" string values for unassigned products
                   const isNotInCategory = product.categoryId !== selectedCategory?.id;
                   const searchMatches = searchQuery === "" || 
                    product.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                    (product.internalCode && product.internalCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
                    (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
                   
+                  console.log('Product filter result:', product.itemName, '- isNotInCategory:', isNotInCategory, '- searchMatches:', searchMatches);
                   return isNotInCategory && searchMatches;
                 })
                 .map((product) => (
