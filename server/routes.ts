@@ -3500,6 +3500,18 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Get audit logs statistics (Admin only)
+  app.get("/api/audit-logs/stats", async (req, res) => {
+    try {
+      const { timeRange = 'day' } = req.query;
+      const stats = await storage.getAuditLogStats(timeRange as 'day' | 'week' | 'month');
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching audit log stats:", error);
+      res.status(500).json({ message: "Failed to fetch audit log stats" });
+    }
+  });
+
   // Get all users (Admin only)
   app.get("/api/admin/users", async (req, res) => {
     try {

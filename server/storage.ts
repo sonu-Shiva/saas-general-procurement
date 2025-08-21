@@ -2799,13 +2799,18 @@ export class DatabaseStorage implements IStorage {
         eq(auditLogs.severity, 'critical')
       ));
 
-    // Get security events count
+    // Get security events count (role switches and authentication events)
     const [securityEventsResult] = await this.db
       .select({ count: count() })
       .from(auditLogs)
       .where(and(
         gte(auditLogs.timestamp, startDate),
-        eq(auditLogs.entityType, 'security')
+        or(
+          eq(auditLogs.action, 'role_switch'),
+          eq(auditLogs.action, 'login'),
+          eq(auditLogs.action, 'logout'),
+          eq(auditLogs.entityType, 'security')
+        )
       ));
 
     // Get active users count (simplified - count distinct user IDs)
