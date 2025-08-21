@@ -70,7 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(currentDevUser);
     });
 
-    app.patch('/api/auth/user/role', (req, res) => {
+    app.patch('/api/auth/user/role', async (req, res) => {
       if (!isLoggedIn) {
         return res.status(401).json({ message: 'Not authenticated' });
       }
@@ -82,7 +82,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid role' });
       }
 
+      const previousRole = currentDevUser.role;
       currentDevUser.role = role;
+      
+      // Create audit log for role switch (critical security event)
+      try {
+        await storage.createAuditLog({
+          userId: currentDevUser.id,
+          entityType: "user",
+          entityId: currentDevUser.id,
+          action: "role_switch",
+          description: `Role switched from ${previousRole} to ${role}`,
+          previousData: { role: previousRole },
+          newData: { role: role },
+          severity: "critical",
+          sessionId: req.sessionID,
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+      } catch (auditError) {
+        console.error("Failed to create audit log for role switch:", auditError);
+      }
+      
       res.json(currentDevUser);
     });
 
@@ -176,6 +197,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: userId,
       };
       const vendor = await storage.createVendor(validatedData);
+      
+      // Create audit log for vendor creation
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "vendor",
+        entityId: vendor.id,
+        action: "create",
+        description: `Created vendor: ${vendor.companyName}`,
+        newData: vendor,
+        severity: "medium",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.json(vendor);
     } catch (error) {
       console.error("Error creating vendor:", error);
@@ -592,6 +628,21 @@ Focus on established businesses with verifiable contact information.`;
       console.log("Validated data:", JSON.stringify(validatedData, null, 2));
       const product = await storage.createProduct(validatedData);
       console.log("Product created successfully:", product.id);
+      
+      // Create audit log
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "product",
+        entityId: product.id,
+        action: "create",
+        description: `Created product: ${product.itemName}`,
+        newData: product,
+        severity: "medium",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.json(product);
     } catch (error) {
       console.error("Error creating product:", error);
@@ -663,6 +714,22 @@ Focus on established businesses with verifiable contact information.`;
 
       const updates = req.body;
       const product = await storage.updateProduct(productId, updates);
+      
+      // Create audit log for product update
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "product",
+        entityId: product.id,
+        action: "update",
+        description: `Updated product: ${product.itemName}`,
+        previousData: existingProduct,
+        newData: product,
+        severity: "medium",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
@@ -709,6 +776,22 @@ Focus on established businesses with verifiable contact information.`;
       const product = await storage.updateProduct(productId, updates);
       console.log("Product updated successfully:", product.id);
       console.log("Updated category:", product.categoryId, product.category);
+      
+      // Create audit log for product patch update
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "product",
+        entityId: product.id,
+        action: "update",
+        description: `Updated product: ${product.itemName}`,
+        previousData: existingProduct,
+        newData: product,
+        severity: "medium",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.json(product);
     } catch (error) {
       console.error("Error updating product:", error);
@@ -755,6 +838,21 @@ Focus on established businesses with verifiable contact information.`;
 
       await storage.deleteProduct(productId);
       console.log("Product deleted successfully");
+      
+      // Create audit log for product deletion
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "product",
+        entityId: productId,
+        action: "delete",
+        description: `Deleted product: ${existingProduct.itemName}`,
+        previousData: existingProduct,
+        severity: "high",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.json({ message: "Product deleted successfully" });
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -814,6 +912,21 @@ Focus on established businesses with verifiable contact information.`;
       }
 
       const category = await storage.createProductCategory(validatedData);
+      
+      // Create audit log for category creation
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "product_category",
+        entityId: category.id,
+        action: "create",
+        description: `Created product category: ${category.name}`,
+        newData: category,
+        severity: "medium",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.json(category);
     } catch (error) {
       console.error("Error creating product category:", error);
@@ -927,6 +1040,21 @@ Focus on established businesses with verifiable contact information.`;
       console.log("Validated BOM data:", validatedData);
       const bom = await storage.createBom(validatedData);
       console.log("BOM created successfully:", bom);
+      
+      // Create audit log for BOM creation
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "bom",
+        entityId: bom.id,
+        action: "create",
+        description: `Created BOM: ${bom.name}`,
+        newData: bom,
+        severity: "medium",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.json(bom);
     } catch (error) {
       console.error("Error creating BOM:", error);
@@ -2919,6 +3047,20 @@ Focus on established businesses with verifiable contact information.`;
       // Create the procurement request
       const request = await storage.createProcurementRequest(requestData);
 
+      // Create audit log for procurement request creation
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "procurement_request",
+        entityId: request.id,
+        action: "create",
+        description: `Created procurement request: ${request.title}`,
+        newData: request,
+        severity: "medium",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
       // Initialize approval workflow using the approval hierarchy system
       try {
         const workflowContext = {
@@ -2986,6 +3128,21 @@ Focus on established businesses with verifiable contact information.`;
         approvalComments: comments || null,
       });
 
+      // Create audit log for procurement request approval
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "procurement_request",
+        entityId: requestId,
+        action: "approve",
+        description: `Approved procurement request: ${request.title}`,
+        previousData: request,
+        newData: { ...request, overallStatus: 'request_approved', approvedBy: userId },
+        severity: "high",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
       res.json({
         message: "Request approved successfully",
         status: 'approved',
@@ -3029,6 +3186,21 @@ Focus on established businesses with verifiable contact information.`;
         rejectedAt: new Date(),
         currentRequestApprover: userId,
         approvalComments: comments || null,
+      });
+
+      // Create audit log for procurement request rejection
+      await storage.createAuditLog({
+        userId: userId,
+        entityType: "procurement_request",
+        entityId: requestId,
+        action: "reject",
+        description: `Rejected procurement request: ${request.title}`,
+        previousData: request,
+        newData: { ...request, overallStatus: 'rejected', rejectedBy: userId },
+        severity: "high",
+        sessionId: req.sessionID,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
       });
 
       res.json({
