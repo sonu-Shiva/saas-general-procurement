@@ -234,12 +234,26 @@ export default function ProductCatalogue() {
       return;
     }
 
-    // Add the selected category ID to the form data for vendor products
+    // Validate category selection
+    const categoryId = selectedCategory?.id || data.categoryId;
+    if (!categoryId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a category",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Find the category details for legacy compatibility
+    const categoryDetails = selectedCategory || categoryHierarchy.find(cat => cat.id === data.categoryId);
+
+    // Add the selected category ID to the form data
     const productData = {
       ...data,
-      categoryId: selectedCategory?.id || undefined,
+      categoryId: categoryId,
       // Keep legacy category fields for backward compatibility
-      category: selectedCategory?.name || data.category,
+      category: categoryDetails?.name || data.category,
     };
     
     createProductMutation.mutate(productData);
@@ -933,12 +947,37 @@ export default function ProductCatalogue() {
                 />
               </div>
               
-              {selectedCategory && (
+              {selectedCategory ? (
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
                     Will be added to category: <strong>{selectedCategory.name}</strong> ({selectedCategory.code})
                   </p>
                 </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category *</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categoryHierarchy.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name} ({category.code})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
               
               <FormField
