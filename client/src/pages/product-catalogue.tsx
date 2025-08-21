@@ -340,6 +340,65 @@ export default function ProductCatalogue() {
     });
   };
 
+  // Mutation for removing products from a category
+  const removeFromCategoryMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      return await apiRequest(`/api/products/${productId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          categoryId: null,
+          category: null,
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: "Product removed from category successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: `Failed to remove product from category: ${(error as Error).message || 'Unknown error'}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRemoveFromCategory = (product: Product) => {
+    if (!selectedCategory) return;
+    
+    // Show confirmation toast
+    toast({
+      title: "Confirm Removal",
+      description: `Remove "${product.itemName}" from "${selectedCategory.name}" category?`,
+      action: (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => removeFromCategoryMutation.mutate(product.id)}
+          >
+            Remove
+          </Button>
+        </div>
+      ),
+    });
+  };
+
   const filteredProducts = products?.filter((product: Product) => {
     const matchesSearch = product.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.internalCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -504,14 +563,25 @@ export default function ProductCatalogue() {
                                         <Eye className="w-3 h-3" />
                                       </Button>
                                       {canManageProducts && (
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm"
-                                          onClick={() => handleEditProduct(product)}
-                                          className="h-7 w-7 p-0"
-                                        >
-                                          <Edit className="w-3 h-3" />
-                                        </Button>
+                                        <>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm"
+                                            onClick={() => handleEditProduct(product)}
+                                            className="h-7 w-7 p-0"
+                                          >
+                                            <Edit className="w-3 h-3" />
+                                          </Button>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm"
+                                            onClick={() => handleRemoveFromCategory(product)}
+                                            className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                            title="Remove from category"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </>
                                       )}
                                     </div>
                                   </div>
