@@ -36,7 +36,8 @@ import {
   Monitor,
   ChevronDown,
   ChevronUp,
-  Copy
+  Copy,
+  RefreshCw
 } from "lucide-react";
 
 // Define types for dropdown configuration
@@ -457,24 +458,12 @@ export default function AdminDropdownConfig() {
                       Add Option
                     </Button>
                     <Button
-                      data-testid={`edit-config-${config.id}`}
+                      data-testid={`refresh-options-${config.id}`}
                       variant="outline"
                       size="sm"
-                      onClick={() => openConfigDialog(config)}
+                      onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/admin/dropdown-configurations/${config.id}/options`] })}
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      data-testid={`delete-config-${config.id}`}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this configuration?')) {
-                          deleteConfigMutation.mutate(config.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
+                      <RefreshCw className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

@@ -3078,6 +3078,41 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Add dropdown option
+  app.post("/api/admin/dropdown-options", async (req, res) => {
+    try {
+      const option = await storage.createDropdownOption(req.body);
+      res.json(option);
+    } catch (error) {
+      console.error("Error creating dropdown option:", error);
+      res.status(500).json({ message: "Failed to create dropdown option" });
+    }
+  });
+
+  // Update dropdown option
+  app.put("/api/admin/dropdown-options/:id", async (req, res) => {
+    try {
+      const optionId = req.params.id;
+      const option = await storage.updateDropdownOption(optionId, req.body);
+      res.json(option);
+    } catch (error) {
+      console.error("Error updating dropdown option:", error);
+      res.status(500).json({ message: "Failed to update dropdown option" });
+    }
+  });
+
+  // Delete dropdown option
+  app.delete("/api/admin/dropdown-options/:id", async (req, res) => {
+    try {
+      const optionId = req.params.id;
+      await storage.deleteDropdownOption(optionId);
+      res.json({ message: "Option deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting dropdown option:", error);
+      res.status(500).json({ message: "Failed to delete dropdown option" });
+    }
+  });
+
   // WebSocket server for real-time auction functionality
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 

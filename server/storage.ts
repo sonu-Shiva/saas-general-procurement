@@ -2856,6 +2856,30 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return hierarchy;
   }
+
+  // Dropdown option operations
+  async createDropdownOption(optionData: any): Promise<any> {
+    const [option] = await this.db
+      .insert(dropdownOptions)
+      .values(optionData)
+      .returning();
+    return option;
+  }
+
+  async updateDropdownOption(optionId: string, optionData: any): Promise<any> {
+    const [option] = await this.db
+      .update(dropdownOptions)
+      .set(optionData)
+      .where(eq(dropdownOptions.id, optionId))
+      .returning();
+    return option;
+  }
+
+  async deleteDropdownOption(optionId: string): Promise<void> {
+    await this.db
+      .delete(dropdownOptions)
+      .where(eq(dropdownOptions.id, optionId));
+  }
 }
 
 export const storage = new DatabaseStorage();
