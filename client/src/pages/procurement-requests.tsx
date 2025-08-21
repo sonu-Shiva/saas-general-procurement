@@ -78,7 +78,7 @@ function ApprovalActions({ request }: { request: ProcurementRequest }) {
   
   const approveMutation = useMutation({
     mutationFn: async (action: 'approve' | 'reject') => {
-      return apiRequest(`/api/approval-requests/${request.id}/${action}`, {
+      return apiRequest(`/api/procurement-requests/${request.id}/${action}`, {
         method: 'POST',
         body: JSON.stringify({ comments }),
       });

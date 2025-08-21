@@ -33,6 +33,10 @@ Role-based access control priority: Strict enforcement of user role permissions 
   - ✅ Fixed API route ordering issue - individual procurement request endpoints (GET /:id, DELETE /:id) now return proper JSON
   - ✅ All CRUD operations working: Create, Read (list & individual), Update, Delete procurement requests
   - ✅ Frontend form submission fixed to use correct /api/procurement-requests endpoint
+  - ✅ CRITICAL APPROVAL BUG RESOLVED: Fixed approval/rejection API endpoints mismatch
+  - ✅ Added direct procurement request approval endpoints: POST /api/procurement-requests/:id/approve and POST /api/procurement-requests/:id/reject
+  - ✅ Frontend approval mutations now correctly target working API endpoints
+  - ✅ Approval and rejection operations fully functional with proper JSON responses
 
 ## System Architecture
 

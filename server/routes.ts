@@ -2875,6 +2875,108 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Procurement Request Approval Actions (must come before other procurement routes)
+  app.post("/api/procurement-requests/:id/approve", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const requestId = req.params.id;
+      const { comments } = req.body;
+
+      // Get the procurement request
+      const request = await storage.getProcurementRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Find the pending approval for this request and current user
+      const approvals = await storage.getApprovalsByApprover(userId);
+      const pendingApproval = approvals.find(a => 
+        a.entityId === requestId && 
+        a.entityType === 'procurement_request' && 
+        a.status === 'pending'
+      );
+
+      if (!pendingApproval) {
+        return res.status(404).json({ message: "No pending approval found for this request" });
+      }
+
+      // Process the approval using the workflow engine
+      const result = await approvalWorkflowEngine.processApprovalAction(
+        pendingApproval.id,
+        'approve',
+        userId,
+        comments
+      );
+
+      // If workflow is complete, update the entity status
+      if (result.workflowComplete) {
+        await storage.updateProcurementRequest(requestId, {
+          overallStatus: result.finalStatus === 'approved' ? 'approved' : 'rejected',
+          approvedAt: result.finalStatus === 'approved' ? new Date() : null,
+        });
+      }
+
+      res.json({
+        message: "Request approved successfully",
+        workflowComplete: result.workflowComplete,
+        finalStatus: result.finalStatus,
+        nextStep: result.nextStep,
+      });
+    } catch (error) {
+      console.error("Error approving procurement request:", error);
+      res.status(500).json({ message: "Failed to approve request" });
+    }
+  });
+
+  app.post("/api/procurement-requests/:id/reject", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const requestId = req.params.id;
+      const { comments } = req.body;
+
+      // Get the procurement request
+      const request = await storage.getProcurementRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+
+      // Find the pending approval for this request and current user
+      const approvals = await storage.getApprovalsByApprover(userId);
+      const pendingApproval = approvals.find(a => 
+        a.entityId === requestId && 
+        a.entityType === 'procurement_request' && 
+        a.status === 'pending'
+      );
+
+      if (!pendingApproval) {
+        return res.status(404).json({ message: "No pending approval found for this request" });
+      }
+
+      // Process the rejection using the workflow engine
+      const result = await approvalWorkflowEngine.processApprovalAction(
+        pendingApproval.id,
+        'reject',
+        userId,
+        comments
+      );
+
+      // Update the entity status to rejected
+      await storage.updateProcurementRequest(requestId, {
+        overallStatus: 'rejected',
+        rejectedAt: new Date(),
+      });
+
+      res.json({
+        message: "Request rejected successfully",
+        workflowComplete: true,
+        finalStatus: 'rejected',
+      });
+    } catch (error) {
+      console.error("Error rejecting procurement request:", error);
+      res.status(500).json({ message: "Failed to reject request" });
+    }
+  });
+
   // Get procurement requests (LIST - must come before single resource route)
   app.get("/api/procurement-requests", isAuthenticated, async (req, res) => {
     try {
