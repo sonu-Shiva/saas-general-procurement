@@ -3,7 +3,7 @@ import type { ApprovalHierarchy, ApprovalLevel, InsertApproval } from '@shared/s
 
 export interface WorkflowContext {
   entityId: string;
-  entityType: 'procurement_request' | 'purchase_order';
+  entityType: 'procurement_request' | 'po';
   amount?: number;
   department?: string;
   requesterId: string;
@@ -64,7 +64,7 @@ export class ApprovalWorkflowEngine {
     // Create approval steps based on the configured levels
     const approvalSteps: ApprovalStep[] = [];
     
-    for (const level of levels.sort((a, b) => a.sortOrder - b.sortOrder)) {
+    for (const level of levels.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))) {
       // Get users with the required role for this level
       const eligibleApprovers = await this.getEligibleApprovers(level, context);
       
@@ -78,12 +78,12 @@ export class ApprovalWorkflowEngine {
 
       const approvalStep: ApprovalStep = {
         levelId: level.id,
-        levelNumber: level.levelNumber,
+        levelNumber: level.levelNumber || 0,
         name: level.name,
         requiredRole: level.requiredRole,
-        requiredCount: level.requiredCount,
-        isParallel: level.isParallel,
-        timeoutHours: level.timeoutHours,
+        requiredCount: level.requiredCount || 1,
+        isParallel: level.isParallel || false,
+        timeoutHours: level.timeoutHours || undefined,
         status: 'pending',
         approvers: selectedApprovers.map(approverId => ({
           userId: approverId,
@@ -99,11 +99,7 @@ export class ApprovalWorkflowEngine {
           entityType: context.entityType,
           entityId: context.entityId,
           approverId: approverId,
-          requiredBy: level.timeoutHours ? new Date(Date.now() + level.timeoutHours * 60 * 60 * 1000) : null,
-          levelId: level.id,
-          levelNumber: level.levelNumber,
           status: 'pending',
-          assignedAt: new Date(),
         };
 
         await storage.createApproval(approvalData);
@@ -140,7 +136,7 @@ export class ApprovalWorkflowEngine {
   private selectApprovers(eligibleApprovers: string[], level: ApprovalLevel): string[] {
     if (level.isParallel) {
       // For parallel approval, select up to requiredCount approvers
-      return eligibleApprovers.slice(0, level.requiredCount);
+      return eligibleApprovers.slice(0, level.requiredCount || 1);
     } else {
       // For sequential approval, select one approver
       // In future, this could be based on workload, availability, etc.
@@ -160,7 +156,7 @@ export class ApprovalWorkflowEngine {
     // Update the approval record
     const approval = await storage.updateApproval(approvalId, {
       status: action === 'approve' ? 'approved' : 'rejected',
-      approvedBy: approverId,
+      approverId: approverId,
       approvedAt: new Date(),
       comments: comments,
     });
@@ -174,7 +170,7 @@ export class ApprovalWorkflowEngine {
     const approvalsByLevel = this.groupApprovalsByLevel(entityApprovals);
 
     // Check if current level is complete
-    const currentLevel = approvalsByLevel[approval.levelNumber!];
+    const currentLevel = approvalsByLevel[approval.levelNumber || 0];
     const levelComplete = this.isLevelComplete(currentLevel);
 
     if (action === 'reject') {
@@ -191,7 +187,7 @@ export class ApprovalWorkflowEngine {
     }
 
     // Current level is complete, check if there's a next level
-    const nextLevelNumber = approval.levelNumber! + 1;
+    const nextLevelNumber = (approval.levelNumber || 0) + 1;
     const nextLevel = approvalsByLevel[nextLevelNumber];
 
     if (!nextLevel || nextLevel.length === 0) {

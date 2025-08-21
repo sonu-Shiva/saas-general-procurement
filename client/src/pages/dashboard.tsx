@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   BarChart3,
   Package,
+  Settings,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -102,11 +103,12 @@ export default function Dashboard() {
           ]
         };
       
-      case 'sourcing_exec':
+      case 'admin':
         return {
           title: 'Admin Dashboard',
           subtitle: 'Configure system settings, manage users, and oversee all procurement activities',
           quickActions: [
+            { label: 'Approval Hierarchies', href: '/admin/approval-hierarchies', icon: Settings, variant: 'default' as const },
             { label: 'Product Catalogue', href: '/products', icon: Package, variant: 'default' as const },
             { label: 'Vendor Management', href: '/vendors', icon: Users, variant: 'default' as const },
             { label: 'Analytics', href: '/analytics', icon: BarChart3, variant: 'default' as const },

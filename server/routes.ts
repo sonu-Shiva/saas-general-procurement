@@ -55,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       email: 'dev@sclen.com',
       firstName: 'Developer',
       lastName: 'User',
-      role: 'buyer_admin'
+      role: 'admin'
     };
     let isLoggedIn = true;
 
@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { role } = req.body;
-      const validRoles = ['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'];
+      const validRoles = ['admin', 'department_requester', 'dept_approver', 'sourcing_exec', 'sourcing_manager', 'vendor'];
       
       if (!validRoles.includes(role)) {
         return res.status(400).json({ message: 'Invalid role' });
@@ -2531,7 +2531,7 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      if (!['buyer_admin', 'buyer_user', 'sourcing_manager', 'vendor'].includes(role)) {
+      if (!['admin', 'department_requester', 'dept_approver', 'sourcing_exec', 'sourcing_manager', 'vendor'].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
 

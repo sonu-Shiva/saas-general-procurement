@@ -6,7 +6,7 @@ let currentDevUser = {
   email: 'dev@sclen.com',
   firstName: 'Developer',
   lastName: 'User',
-  role: 'sourcing_exec'
+  role: 'admin'
 };
 
 let isLoggedIn = true;
