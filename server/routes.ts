@@ -670,6 +670,56 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  app.patch('/api/products/:id', async (req: any, res) => {
+    try {
+      console.log("=== PRODUCT PATCH UPDATE ===");
+      console.log("Product ID:", req.params.id);
+      console.log("Update data:", JSON.stringify(req.body, null, 2));
+      
+      // Development mode authentication check
+      if (process.env.NODE_ENV === 'development') {
+        console.log('DEVELOPMENT MODE: Bypassing authentication');
+      }
+      
+      const userId = process.env.NODE_ENV === 'development' ? 'dev-user-123' : req.user?.claims?.sub;
+      const productId = req.params.id;
+
+      // Get the existing product to check ownership
+      const existingProduct = await storage.getProduct(productId);
+      if (!existingProduct) {
+        console.log("Product not found:", productId);
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      // Check if user has permission to edit products
+      const user = await storage.getUser(userId);
+      const hasEditPermission = user && ['admin', 'sourcing_exec', 'sourcing_manager', 'vendor'].includes(user.role);
+      const isOwner = existingProduct.createdBy === userId;
+
+      console.log("User role:", user?.role);
+      console.log("Has edit permission:", hasEditPermission);
+      console.log("Is owner:", isOwner);
+
+      if (!hasEditPermission && !isOwner) {
+        console.log("Permission denied");
+        return res.status(403).json({ message: "Access denied. Product editing requires admin, sourcing, or vendor role." });
+      }
+
+      const updates = req.body;
+      const product = await storage.updateProduct(productId, updates);
+      console.log("Product updated successfully:", product.id);
+      console.log("Updated category:", product.categoryId, product.category);
+      res.json(product);
+    } catch (error) {
+      console.error("Error updating product:", error);
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      res.status(400).json({ message: `Failed to update product: ${error instanceof Error ? error.message : 'Unknown error'}` });
+    }
+  });
+
   app.delete('/api/products/:id', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
