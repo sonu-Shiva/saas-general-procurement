@@ -19,7 +19,21 @@ import {
   directProcurementOrders,
   notifications
 } from "@shared/schema";
-// Schema imports temporarily disabled due to compilation issues
+import { 
+  insertVendorSchema,
+  insertProductSchema,
+  insertProductCategorySchema,
+  insertBomSchema,
+  insertBomItemSchema,
+  insertRfxEventSchema,
+  insertRfxInvitationSchema,
+  insertRfxResponseSchema,
+  insertAuctionSchema,
+  insertPurchaseOrderSchema,
+  insertPoLineItemSchema,
+  insertDirectProcurementOrderSchema,
+  insertProcurementRequestSchema
+} from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
 import { z } from "zod";
 
@@ -691,10 +705,17 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  // Product Category routes - Only vendors can create/manage categories
-  app.post('/api/product-categories', isAuthenticated, isVendor, async (req: any, res) => {
+  // Product Category routes - Admin and sourcing roles can create/manage categories
+  app.post('/api/product-categories', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Check if user has permission to create categories
+      if (!user || !['admin', 'sourcing_exec', 'sourcing_manager', 'vendor'].includes(user.role)) {
+        return res.status(403).json({ message: "Access denied. Category creation requires admin, sourcing, or vendor role." });
+      }
+
       const validatedData = insertProductCategorySchema.parse({
         ...req.body,
         createdBy: userId,

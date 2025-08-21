@@ -248,9 +248,9 @@ export const isVendor: RequestHandler = async (req: any, res, next) => {
     const user = await storage.getUser(userId);
     console.log("User from database:", user ? `${user.email} (${user.role})` : "not found");
     
-    if (!user || user.role !== 'vendor') {
-      console.log("Access denied - not a vendor role");
-      return res.status(403).json({ message: "Access denied. Vendor role required." });
+    if (!user || !['admin', 'sourcing_exec', 'sourcing_manager', 'vendor'].includes(user.role)) {
+      console.log("Access denied - not authorized role");
+      return res.status(403).json({ message: "Access denied. Admin, sourcing, or vendor role required." });
     }
     
     console.log("Vendor role confirmed, proceeding");
