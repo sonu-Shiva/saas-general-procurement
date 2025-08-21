@@ -86,32 +86,18 @@ export default function BomBuilder({ onClose, existingBom }: BomBuilderProps) {
     retry: false,
   });
 
-  // Fetch category options from dropdown configuration
-  const { data: categoryConfig } = useQuery({
-    queryKey: ['/api/admin/dropdown-configurations', 'category', 'bom-create'],
-    queryFn: async () => {
-      const configs = await apiRequest('/api/admin/dropdown-configurations');
-      return configs.find((config: any) => 
-        config.fieldName === 'category' && config.screen === 'bom-create'
-      );
-    }
+  // Fetch product categories from hierarchy API
+  const { data: productCategories = [] } = useQuery({
+    queryKey: ['/api/product-categories/hierarchy'],
+    retry: false,
   });
 
-  const { data: categoryOptions = [] } = useQuery({
-    queryKey: ['/api/admin/dropdown-configurations', categoryConfig?.id, 'options'],
-    queryFn: async () => {
-      if (!categoryConfig?.id) return [];
-      return apiRequest(`/api/admin/dropdown-configurations/${categoryConfig.id}/options`);
-    },
-    enabled: !!categoryConfig?.id
-  });
-
-  // Transform category options with proper sorting
-  const categoryChoices = categoryOptions
-    .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
-    .map((option: any) => ({
-      value: option.value,
-      label: option.label
+  // Transform product categories into dropdown choices
+  const categoryChoices = productCategories
+    .filter((category: any) => category.isActive)
+    .map((category: any) => ({
+      value: category.name.toLowerCase().replace(/\s+/g, '_'),
+      label: category.name
     }));
 
   // Load existing BOM items when editing
