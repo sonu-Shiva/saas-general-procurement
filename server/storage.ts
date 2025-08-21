@@ -2815,6 +2815,47 @@ export class DatabaseStorage implements IStorage {
       recentActivities,
     };
   }
+
+  // Dropdown configuration operations
+  async getDropdownConfigurations(): Promise<any[]> {
+    const configs = await this.db
+      .select()
+      .from(dropdownConfigurations)
+      .orderBy(dropdownConfigurations.sortOrder);
+    return configs;
+  }
+
+  async getDropdownOptions(configurationId: string): Promise<any[]> {
+    const options = await this.db
+      .select()
+      .from(dropdownOptions)
+      .where(eq(dropdownOptions.configurationId, configurationId))
+      .orderBy(dropdownOptions.sortOrder);
+    return options;
+  }
+
+  // User management operations
+  async getAllUsers(): Promise<User[]> {
+    const allUsers = await this.db.select().from(users).orderBy(users.firstName);
+    return allUsers;
+  }
+
+  // Approval hierarchy operations
+  async getApprovalHierarchies(): Promise<any[]> {
+    const hierarchies = await this.db
+      .select()
+      .from(approvalConfigurations)
+      .orderBy(approvalConfigurations.isDefault, approvalConfigurations.name);
+    return hierarchies;
+  }
+
+  async createApprovalHierarchy(hierarchyData: any): Promise<any> {
+    const [hierarchy] = await this.db
+      .insert(approvalConfigurations)
+      .values(hierarchyData)
+      .returning();
+    return hierarchy;
+  }
 }
 
 export const storage = new DatabaseStorage();

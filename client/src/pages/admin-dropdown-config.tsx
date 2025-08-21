@@ -392,13 +392,7 @@ export default function AdminDropdownConfig() {
           </SelectContent>
         </Select>
 
-        <Button 
-          data-testid="add-configuration-button"
-          onClick={() => openConfigDialog()}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Configuration
-        </Button>
+
       </div>
 
       {/* Configurations List */}
@@ -417,10 +411,9 @@ export default function AdminDropdownConfig() {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Get started by creating your first dropdown configuration.
               </p>
-              <Button onClick={() => openConfigDialog()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Configuration
-              </Button>
+              <p className="text-sm text-gray-500">
+                Dropdown configurations are managed by system administrators.
+              </p>
             </CardContent>
           </Card>
         ) : (

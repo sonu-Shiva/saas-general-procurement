@@ -3003,6 +3003,81 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // ===============================================
+  // ADMIN ROUTES
+  // ===============================================
+  
+  // Get all dropdown configurations (Admin only)
+  app.get("/api/admin/dropdown-configurations", async (req, res) => {
+    try {
+      const configurations = await storage.getDropdownConfigurations();
+      res.json(configurations);
+    } catch (error) {
+      console.error("Error fetching dropdown configurations:", error);
+      res.status(500).json({ message: "Failed to fetch dropdown configurations" });
+    }
+  });
+
+  // Get dropdown options for a specific configuration
+  app.get("/api/admin/dropdown-configurations/:id/options", async (req, res) => {
+    try {
+      const configId = req.params.id;
+      const options = await storage.getDropdownOptions(configId);
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching dropdown options:", error);
+      res.status(500).json({ message: "Failed to fetch dropdown options" });
+    }
+  });
+
+  // Get audit logs (Admin only)
+  app.get("/api/audit-logs", async (req, res) => {
+    try {
+      const { limit = 50, offset = 0 } = req.query;
+      const logs = await storage.getAuditLogs({
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  // Get all users (Admin only)
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Get approval hierarchies
+  app.get("/api/admin/approval-hierarchies", async (req, res) => {
+    try {
+      const hierarchies = await storage.getApprovalHierarchies();
+      res.json(hierarchies);
+    } catch (error) {
+      console.error("Error fetching approval hierarchies:", error);
+      res.status(500).json({ message: "Failed to fetch approval hierarchies" });
+    }
+  });
+
+  // Create approval hierarchy
+  app.post("/api/admin/approval-hierarchies", async (req, res) => {
+    try {
+      const hierarchy = await storage.createApprovalHierarchy(req.body);
+      res.json(hierarchy);
+    } catch (error) {
+      console.error("Error creating approval hierarchy:", error);
+      res.status(500).json({ message: "Failed to create approval hierarchy" });
+    }
+  });
+
   // WebSocket server for real-time auction functionality
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
