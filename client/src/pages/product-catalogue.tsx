@@ -63,7 +63,6 @@ export default function ProductCatalogue() {
   console.log("DEBUG: Selected category:", selectedCategory);
   console.log("DEBUG: isCreateDialogOpen state:", isCreateDialogOpen);
   console.log("DEBUG: activeTab:", activeTab);
-  console.log("DEBUG: categoryHierarchy length:", categoryHierarchy.length);
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),
@@ -113,6 +112,8 @@ export default function ProductCatalogue() {
     queryKey: ["/api/product-categories/hierarchy"],
     retry: false,
   });
+
+  console.log("DEBUG: categoryHierarchy length:", categoryHierarchy.length);
 
   const createProductMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -949,47 +950,38 @@ export default function ProductCatalogue() {
                 />
               </div>
               
-              {/* Category Selection - Debug */}
-              <div className="border p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                  DEBUG: selectedCategory = {selectedCategory ? `${selectedCategory.name} (${selectedCategory.id})` : 'null'}
-                </p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                  DEBUG: categoryHierarchy length = {categoryHierarchy.length}
-                </p>
-                {selectedCategory ? (
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      Will be added to category: <strong>{selectedCategory.name}</strong> ({selectedCategory.code})
-                    </p>
-                  </div>
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="categoryId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category *</FormLabel>
-                        <FormControl>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categoryHierarchy.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name} ({category.code})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
+              {selectedCategory ? (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    Will be added to category: <strong>{selectedCategory.name}</strong> ({selectedCategory.code})
+                  </p>
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category *</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categoryHierarchy.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name} ({category.code})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               
               <FormField
                 control={form.control}
