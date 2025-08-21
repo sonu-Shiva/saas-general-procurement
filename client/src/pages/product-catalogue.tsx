@@ -66,9 +66,6 @@ export default function ProductCatalogue() {
       internalCode: "",
       externalCode: "",
       description: "",
-      categoryId: "",
-      category: "",
-      subCategory: "",
       uom: "",
       basePrice: "",
       specifications: {},
@@ -1067,37 +1064,12 @@ export default function ProductCatalogue() {
                 />
               </div>
               
-              {selectedCategory ? (
+              {selectedCategory && (
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
                     Will be added to category: <strong>{selectedCategory.name}</strong> ({selectedCategory.code})
                   </p>
                 </div>
-              ) : (
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category *</FormLabel>
-                      <FormControl>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categoryHierarchy.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name} ({category.code})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               )}
               
               <FormField
