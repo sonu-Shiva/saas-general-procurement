@@ -10,17 +10,13 @@ import {
   vendors,
   vendors as vendorsTable,
   products,
-  categories,
   bomItems,
   boms,
   rfxEvents,
   rfxResponses,
   auctions,
-  auctionBids,
   purchaseOrders,
-  purchaseOrderItems,
   directProcurementOrders,
-  directProcurementOrderItems,
   notifications
 } from "@shared/schema";
 import {
@@ -93,6 +89,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(currentDevUser);
     });
 
+    // Test vendors for role selector
+    app.get('/api/auth/test-vendors', (req, res) => {
+      res.json([
+        {
+          id: "vendor-1",
+          companyName: "TechCorp Solutions",
+          email: "contact@techcorp.com",
+          firstName: "John",
+          lastName: "Doe"
+        },
+        {
+          id: "vendor-2", 
+          companyName: "Industrial Supply Co",
+          email: "sales@industrial.com",
+          firstName: "Jane",
+          lastName: "Smith"
+        }
+      ]);
+    });
+
     // Auth middleware for protected routes
     app.use('/api', (req, res, next) => {
       // Skip auth check for auth routes and vendor discovery
@@ -132,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error downloading object:", error);
-      if (error instanceof ObjectNotFoundError) {
+      if (error && (error as any).name === 'ObjectNotFoundError') {
         return res.sendStatus(404);
       }
       return res.sendStatus(500);

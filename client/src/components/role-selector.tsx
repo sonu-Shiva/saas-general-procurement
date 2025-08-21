@@ -137,7 +137,7 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
   const { data: testVendors = [] } = useQuery({
     queryKey: ['/api/auth/test-vendors'],
     enabled: open, // Only fetch when dialog is open
-  });
+  }) as { data: TestVendor[] };
 
   const handleRoleSelect = async () => {
     if (!selectedRole) {
@@ -167,7 +167,7 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
     try {
       await switchRole(selectedRole, selectedVendorId || undefined);
       const roleName = selectedRole === 'vendor' && selectedVendorId
-        ? testVendors.find(v => v.id === selectedVendorId)?.companyName || 'Vendor'
+        ? testVendors.find((v: TestVendor) => v.id === selectedVendorId)?.companyName || 'Vendor'
         : roleOptions.find(r => r.id === selectedRole)?.title;
       
       toast({
@@ -260,7 +260,7 @@ export default function RoleSelector({ open, onClose, currentRole }: RoleSelecto
                             <SelectValue placeholder="Choose a vendor to test with..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {testVendors.map((vendor) => (
+                            {testVendors.map((vendor: TestVendor) => (
                               <SelectItem key={vendor.id} value={vendor.id}>
                                 <div className="flex flex-col">
                                   <span className="font-medium">{vendor.companyName}</span>
