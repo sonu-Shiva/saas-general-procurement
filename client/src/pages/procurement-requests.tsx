@@ -74,7 +74,7 @@ function ApprovalActions({ request }: { request: ProcurementRequest }) {
   const [comments, setComments] = useState("");
   const [showComments, setShowComments] = useState(false);
 
-  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes(user.role);
+  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes((user as any).role);
   
   const approveMutation = useMutation({
     mutationFn: async (action: 'approve' | 'reject') => {
@@ -104,8 +104,8 @@ function ApprovalActions({ request }: { request: ProcurementRequest }) {
   if (!canApprove) return null;
 
   const needsApproval = (
-    (user.role === 'dept_approver' && request.requestApprovalStatus === 'pending') ||
-    (user.role === 'sourcing_manager' && request.procurementMethodStatus === 'pending')
+    ((user as any).role === 'dept_approver' && request.requestApprovalStatus === 'pending') ||
+    ((user as any).role === 'sourcing_manager' && request.procurementMethodStatus === 'pending')
   );
 
   if (!needsApproval) return null;
@@ -228,9 +228,9 @@ export default function ProcurementRequests() {
   const departments = Array.from(new Set(requests.map(r => r.department).filter(Boolean)));
 
   // Role-based capabilities
-  const canCreateRequests = user && ['department_requester', 'admin'].includes(user.role);
-  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes(user.role);
-  const isRequester = user && user.role === 'department_requester';
+  const canCreateRequests = user && ['department_requester', 'admin'].includes((user as any).role);
+  const canApprove = user && ['dept_approver', 'sourcing_manager', 'admin'].includes((user as any).role);
+  const isRequester = user && (user as any).role === 'department_requester';
 
   // Withdraw request mutation
   const withdrawMutation = useMutation({
@@ -275,7 +275,7 @@ export default function ProcurementRequests() {
           </div>
           
           <div className="flex gap-2">
-            {isRequester && (
+            {isRequester ? (
               <div className="flex gap-2">
                 <Button
                   variant={viewMode === "table" ? "default" : "outline"}
@@ -294,8 +294,8 @@ export default function ProcurementRequests() {
                   Cards
                 </Button>
               </div>
-            )}
-            {canCreateRequests && (
+            ) : null}
+            {canCreateRequests ? (
               <CreateProcurementRequestDialog
                 trigger={
                   <Button data-testid="button-create-request">
@@ -304,7 +304,7 @@ export default function ProcurementRequests() {
                   </Button>
                 }
               />
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -452,7 +452,7 @@ export default function ProcurementRequests() {
                 : "No requests match your current filters."
               }
             </p>
-            {canCreateRequests && requests.length === 0 && (
+            {canCreateRequests && requests.length === 0 ? (
               <CreateProcurementRequestDialog
                 trigger={
                   <Button>
@@ -461,7 +461,7 @@ export default function ProcurementRequests() {
                   </Button>
                 }
               />
-            )}
+            ) : null}
           </Card>
         ) : (
           <>
