@@ -929,6 +929,10 @@ export const insertProductSchema = createInsertSchema(products).omit({
   basePrice: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
   ),
+}).partial({
+  categoryId: true,
+  category: true,
+  subCategory: true,
 });
 
 export const insertBomSchema = createInsertSchema(boms).omit({
