@@ -301,6 +301,8 @@ export default function ProductCatalogue() {
                          (statusFilter === "active" && product.isActive) ||
                          (statusFilter === "inactive" && !product.isActive);
     
+
+    
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -316,7 +318,13 @@ export default function ProductCatalogue() {
             </div>
 
             {/* Tabs for Category Management and Product Listing */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={(value) => {
+              setActiveTab(value);
+              // Clear category filter when switching to Products tab to show all products
+              if (value === "products") {
+                setSelectedCategory(null);
+              }
+            }} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="categories" className="flex items-center gap-2">
                   <FolderTree className="h-4 w-4" />
