@@ -228,26 +228,13 @@ export default function ProductCatalogue() {
       return;
     }
 
-    // Validate category selection
-    const categoryId = selectedCategory?.id || data.categoryId;
-    if (!categoryId) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a category",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Find the category details for legacy compatibility
-    const categoryDetails = selectedCategory || categoryHierarchy.find(cat => cat.id === data.categoryId);
-
-    // Add the selected category ID to the form data
+    // Only add category if creating from a selected category context
     const productData = {
       ...data,
-      categoryId: categoryId,
-      // Keep legacy category fields for backward compatibility
-      category: categoryDetails?.name || data.category,
+      ...(selectedCategory && {
+        categoryId: selectedCategory.id,
+        category: selectedCategory.name,
+      }),
     };
     
     createProductMutation.mutate(productData);
