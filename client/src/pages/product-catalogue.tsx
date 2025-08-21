@@ -50,15 +50,15 @@ export default function ProductCatalogue() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if user is a vendor (can create/edit products and categories)
-  const isVendor = (user as any)?.role === 'vendor';
+  // Check if user can create/edit products and categories (admin, sourcing, vendor roles)
+  const canManageProducts = (user as any)?.role === 'vendor' || (user as any)?.role === 'admin' || (user as any)?.role === 'sourcing_exec' || (user as any)?.role === 'sourcing_manager';
   // Check if user is a buyer (can view products and create BOMs)
   const isBuyer = (user as any)?.role === 'sourcing_exec' || (user as any)?.role === 'sourcing_manager' || (user as any)?.role === 'admin';
-  // All users can view the catalog, only vendors can manage it
+  // All users can view the catalog, authorized roles can manage it
   
   console.log("DEBUG: User object:", user);
   console.log("DEBUG: User role:", (user as any)?.role);
-  console.log("DEBUG: Is vendor:", isVendor);
+  console.log("DEBUG: Can manage products:", canManageProducts);
   console.log("DEBUG: Is buyer:", isBuyer);
   console.log("DEBUG: Selected category:", selectedCategory);
   console.log("DEBUG: isCreateDialogOpen state:", isCreateDialogOpen);
@@ -252,7 +252,7 @@ export default function ProductCatalogue() {
     console.log("Current dialog state:", isCreateDialogOpen);
     console.log("Selected category:", selectedCategory);
     console.log("User role:", (user as any)?.role);
-    console.log("Is vendor:", isVendor);
+    console.log("Can manage products:", canManageProducts);
     form.reset();
     setIsCreateDialogOpen(true);
     console.log("Dialog state set to true");
@@ -373,7 +373,7 @@ export default function ProductCatalogue() {
                                 <Badge variant="outline" className="text-xs">
                                   {filteredProducts.filter(p => p.categoryId === selectedCategory.id || p.category === selectedCategory.name).length} items
                                 </Badge>
-                                {isVendor ? (
+                                {canManageProducts ? (
                                   <Button 
                                     size="sm" 
                                     onClick={handleOpenAddProductDialog}
@@ -385,7 +385,7 @@ export default function ProductCatalogue() {
                                   </Button>
                                 ) : (
                                   <div className="text-xs text-muted-foreground bg-red-100 p-2 rounded">
-                                    Vendor access required (Current role: {(user as any)?.role || 'none'})
+                                    Admin, sourcing, or vendor access required (Current role: {(user as any)?.role || 'none'})
                                   </div>
                                 )}
                               </div>
@@ -431,7 +431,7 @@ export default function ProductCatalogue() {
                                       >
                                         <Eye className="w-3 h-3" />
                                       </Button>
-                                      {isVendor && (
+                                      {canManageProducts && (
                                         <Button 
                                           variant="ghost" 
                                           size="sm"
@@ -449,7 +449,7 @@ export default function ProductCatalogue() {
                               <div className="text-center py-6 text-muted-foreground border border-dashed border-muted rounded-lg">
                                 <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                                 <p className="text-sm">No products in this category yet</p>
-                                {isVendor && (
+                                {canManageProducts && (
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
@@ -507,7 +507,7 @@ export default function ProductCatalogue() {
                       )}
                     </div>
                     <div className="flex space-x-3">
-                      {isVendor && (
+                      {canManageProducts && (
                         <>
                           <Button variant="outline">
                             <Tag className="w-4 h-4 mr-2" />
@@ -580,7 +580,7 @@ export default function ProductCatalogue() {
                             : "Get started by creating your first product."
                           }
                         </p>
-                        {isVendor && (
+                        {canManageProducts && (
                           <Button onClick={() => setIsCreateDialogOpen(true)}>
                             <Plus className="w-4 h-4 mr-2" />
                             Add Product
@@ -649,7 +649,7 @@ export default function ProductCatalogue() {
                                   >
                                     <Eye className="w-4 h-4" />
                                   </Button>
-                                  {isVendor && (
+                                  {canManageProducts && (
                                     <>
                                       <Button 
                                         variant="outline" 
