@@ -41,6 +41,7 @@ export default function ProductCatalogue() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isAddExistingDialogOpen, setIsAddExistingDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -56,13 +57,7 @@ export default function ProductCatalogue() {
   const isBuyer = (user as any)?.role === 'sourcing_exec' || (user as any)?.role === 'sourcing_manager' || (user as any)?.role === 'admin';
   // All users can view the catalog, authorized roles can manage it
   
-  console.log("DEBUG: User object:", user);
-  console.log("DEBUG: User role:", (user as any)?.role);
-  console.log("DEBUG: Can manage products:", canManageProducts);
-  console.log("DEBUG: Is buyer:", isBuyer);
-  console.log("DEBUG: Selected category:", selectedCategory);
-  console.log("DEBUG: isCreateDialogOpen state:", isCreateDialogOpen);
-  console.log("DEBUG: activeTab:", activeTab);
+
 
   const form = useForm({
     resolver: zodResolver(insertProductSchema),
@@ -105,15 +100,14 @@ export default function ProductCatalogue() {
     retry: false,
   });
 
-  console.log("DEBUG: Products data from API:", products);
-  console.log("DEBUG: Products count:", products?.length);
+
 
   const { data: categoryHierarchy = [] } = useQuery<ProductCategory[]>({
     queryKey: ["/api/product-categories/hierarchy"],
     retry: false,
   });
 
-  console.log("DEBUG: categoryHierarchy length:", categoryHierarchy.length);
+
 
   const createProductMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -264,16 +258,8 @@ export default function ProductCatalogue() {
 
   // Reset form when dialog opens
   const handleOpenAddProductDialog = () => {
-    console.log("=== BUTTON CLICKED ===");
-    console.log("Opening Add Product dialog");
-    console.log("Current dialog state:", isCreateDialogOpen);
-    console.log("Selected category:", selectedCategory);
-    console.log("User role:", (user as any)?.role);
-    console.log("Can manage products:", canManageProducts);
     form.reset();
     setIsCreateDialogOpen(true);
-    console.log("Dialog state set to true");
-    console.log("=== END BUTTON CLICK ===");
   };
 
   const onEditSubmit = (data: any) => {
@@ -303,6 +289,55 @@ export default function ProductCatalogue() {
     };
     editForm.reset(formData);
     setIsEditDialogOpen(true);
+  };
+
+  // Mutation for assigning existing products to a category
+  const assignProductMutation = useMutation({
+    mutationFn: async ({ productId, categoryId, categoryName }: { productId: string, categoryId: string, categoryName: string }) => {
+      return await apiRequest(`/api/products/${productId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          categoryId: categoryId,
+          category: categoryName,
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({
+        title: "Success",
+        description: "Product assigned to category successfully",
+      });
+      setIsAddExistingDialogOpen(false);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: `Failed to assign product to category: ${(error as Error).message || 'Unknown error'}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAssignProductToCategory = (product: Product) => {
+    if (!selectedCategory) return;
+    
+    assignProductMutation.mutate({
+      productId: product.id,
+      categoryId: selectedCategory.id,
+      categoryName: selectedCategory.name,
+    });
   };
 
   const filteredProducts = products?.filter((product: Product) => {
@@ -399,15 +434,27 @@ export default function ProductCatalogue() {
                                   {filteredProducts.filter(p => p.categoryId === selectedCategory.id || p.category === selectedCategory.name).length} items
                                 </Badge>
                                 {canManageProducts ? (
-                                  <Button 
-                                    size="sm" 
-                                    onClick={handleOpenAddProductDialog}
-                                    className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white"
-                                    style={{ pointerEvents: 'auto' }}
-                                  >
-                                    <Plus className="w-3 h-3 mr-1" />
-                                    Add Product
-                                  </Button>
+                                  <div className="flex gap-2">
+                                    <Button 
+                                      size="sm" 
+                                      onClick={handleOpenAddProductDialog}
+                                      className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white"
+                                      style={{ pointerEvents: 'auto' }}
+                                    >
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      Add New Product
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => setIsAddExistingDialogOpen(true)}
+                                      className="cursor-pointer"
+                                      style={{ pointerEvents: 'auto' }}
+                                    >
+                                      <Layers className="w-3 h-3 mr-1" />
+                                      Add from Existing
+                                    </Button>
+                                  </div>
                                 ) : (
                                   <div className="text-xs text-muted-foreground bg-red-100 p-2 rounded">
                                     Admin, sourcing, or vendor access required (Current role: {(user as any)?.role || 'none'})
@@ -1066,6 +1113,114 @@ export default function ProductCatalogue() {
                 disabled={deleteProductMutation.isPending}
               >
                 {deleteProductMutation.isPending ? "Deleting..." : "Delete Product"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add from Existing Products Dialog */}
+      <Dialog open={isAddExistingDialogOpen} onOpenChange={setIsAddExistingDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Products to Category: {selectedCategory?.name}</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Select existing products to add to the "{selectedCategory?.name}" category
+            </p>
+          </DialogHeader>
+          <div className="py-4">
+            {/* Search and Filter for Available Products */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Available Products List */}
+            <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-4">
+              {filteredProducts
+                .filter(product => 
+                  // Show products that are NOT already in the selected category
+                  product.categoryId !== selectedCategory?.id && 
+                  product.category !== selectedCategory?.name &&
+                  // Apply search filter
+                  (searchQuery === "" || 
+                   product.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                   (product.internalCode && product.internalCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                   (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                  )
+                )
+                .map((product) => (
+                  <div 
+                    key={product.id} 
+                    className="flex items-center justify-between p-3 border border-border rounded-md hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-sm truncate">{product.itemName}</p>
+                        {product.isActive ? (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs h-5">
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 text-xs h-5">
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        {product.internalCode && <span>Code: {product.internalCode}</span>}
+                        {product.category && <span>Current: {product.category}</span>}
+                        {product.uom && <span>UOM: {product.uom}</span>}
+                        {product.basePrice && (
+                          <div className="flex items-center text-green-600 font-medium">
+                            <TbCurrencyRupee className="w-3 h-3" />
+                            {formatCurrency(parseFloat(product.basePrice))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm"
+                      onClick={() => handleAssignProductToCategory(product)}
+                      className="ml-2"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add to Category
+                    </Button>
+                  </div>
+                ))}
+              
+              {filteredProducts.filter(product => 
+                product.categoryId !== selectedCategory?.id && 
+                product.category !== selectedCategory?.name &&
+                (searchQuery === "" || 
+                 product.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                 (product.internalCode && product.internalCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                 (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                )
+              ).length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">
+                    {searchQuery ? "No products found matching your search" : "No available products to add"}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAddExistingDialogOpen(false)}
+              >
+                Close
               </Button>
             </div>
           </div>
