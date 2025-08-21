@@ -1214,7 +1214,7 @@ export default function ProductCatalogue() {
 
             {/* Available Products List */}
             <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-4">
-              {filteredProducts
+              {products
                 .filter(product => {
                   console.log('Filtering product:', product.itemName, 'categoryId:', product.categoryId, 'category:', product.category, 'selectedCategoryId:', selectedCategory?.id);
                   // Show products that are NOT already in the selected category
@@ -1269,7 +1269,7 @@ export default function ProductCatalogue() {
                   </div>
                 ))}
               
-              {filteredProducts.filter(product => {
+              {products.filter(product => {
                 const isNotInCategory = product.categoryId !== selectedCategory?.id;
                 const searchMatches = searchQuery === "" || 
                  product.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
