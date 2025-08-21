@@ -28,7 +28,7 @@ const rfxPOSchema = z.object({
   deliveryDate: z.string().min(1, "Delivery date is required"),
   paymentTerms: z.string().min(1, "Payment terms are required"),
   notes: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "urgent"]),
+  priority: z.string().min(1, "Priority is required"),
 });
 
 type RfxPOForm = z.infer<typeof rfxPOSchema>;
@@ -41,6 +41,33 @@ interface CreatePOFromRfxDialogProps {
 
 export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromRfxDialogProps) {
   const { toast } = useToast();
+
+  // Fetch priority options from dropdown configuration
+  const { data: priorityConfig } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', 'priority_level', 'purchase-orders'],
+    queryFn: async () => {
+      const configs = await apiRequest('/api/admin/dropdown-configurations');
+      return configs.find((config: any) => 
+        config.fieldName === 'priority_level' && config.screen === 'purchase-orders'
+      );
+    }
+  });
+
+  const { data: priorityOptions = [] } = useQuery({
+    queryKey: ['/api/admin/dropdown-configurations', priorityConfig?.id, 'options'],
+    queryFn: async () => {
+      if (!priorityConfig?.id) return [];
+      return apiRequest(`/api/admin/dropdown-configurations/${priorityConfig.id}/options`);
+    },
+    enabled: !!priorityConfig?.id
+  });
+
+  const priorityChoices = priorityOptions
+    .sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    .map((option: any) => ({
+      value: option.value,
+      label: option.label
+    }));
 
   // Check if RFx has BOM linked
   const hasBom = rfx.bomId;
@@ -475,10 +502,11 @@ export function CreatePOFromRfxDialog({ rfx, onClose, onSuccess }: CreatePOFromR
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    {priorityChoices.map((choice: any) => (
+                      <SelectItem key={choice.value} value={choice.value}>
+                        {choice.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

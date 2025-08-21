@@ -93,11 +93,11 @@ export default function DirectProcurement() {
 
   // Fetch payment terms options from dropdown configuration
   const { data: paymentTermsConfig } = useQuery({
-    queryKey: ['/api/admin/dropdown-configurations', 'payment-terms', 'purchase-orders'],
+    queryKey: ['/api/admin/dropdown-configurations', 'payment_terms', 'purchase-orders'],
     queryFn: async () => {
       const configs = await apiRequest('/api/admin/dropdown-configurations');
       return configs.find((config: any) => 
-        config.fieldName === 'payment-terms' && config.screen === 'purchase-orders'
+        config.fieldName === 'payment_terms' && config.screen === 'purchase-orders'
       );
     }
   });
@@ -113,11 +113,11 @@ export default function DirectProcurement() {
 
   // Fetch priority options from dropdown configuration
   const { data: priorityConfig } = useQuery({
-    queryKey: ['/api/admin/dropdown-configurations', 'priority', 'purchase-orders'],
+    queryKey: ['/api/admin/dropdown-configurations', 'priority_level', 'purchase-orders'],
     queryFn: async () => {
       const configs = await apiRequest('/api/admin/dropdown-configurations');
       return configs.find((config: any) => 
-        config.fieldName === 'priority' && config.screen === 'purchase-orders'
+        config.fieldName === 'priority_level' && config.screen === 'purchase-orders'
       );
     }
   });
@@ -617,23 +617,11 @@ export default function DirectProcurement() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {paymentTermsChoices.length > 0 ? (
-                                    paymentTermsChoices.map((choice) => (
-                                      <SelectItem key={choice.value} value={choice.value}>
-                                        {choice.label}
-                                      </SelectItem>
-                                    ))
-                                  ) : (
-                                    // Fallback to hardcoded values if configuration not loaded
-                                    <>
-                                      <SelectItem value="Net 15">Net 15</SelectItem>
-                                      <SelectItem value="Net 30">Net 30</SelectItem>
-                                      <SelectItem value="Net 45">Net 45</SelectItem>
-                                      <SelectItem value="Net 60">Net 60</SelectItem>
-                                      <SelectItem value="Due on Receipt">Due on Receipt</SelectItem>
-                                      <SelectItem value="COD">Cash on Delivery</SelectItem>
-                                    </>
-                                  )}
+                                  {paymentTermsChoices.map((choice: any) => (
+                                    <SelectItem key={choice.value} value={choice.value}>
+                                      {choice.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -654,21 +642,11 @@ export default function DirectProcurement() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {priorityChoices.length > 0 ? (
-                                    priorityChoices.map((choice) => (
-                                      <SelectItem key={choice.value} value={choice.value}>
-                                        {choice.label}
-                                      </SelectItem>
-                                    ))
-                                  ) : (
-                                    // Fallback to hardcoded values if configuration not loaded
-                                    <>
-                                      <SelectItem value="low">Low</SelectItem>
-                                      <SelectItem value="medium">Medium</SelectItem>
-                                      <SelectItem value="high">High</SelectItem>
-                                      <SelectItem value="urgent">Urgent</SelectItem>
-                                    </>
-                                  )}
+                                  {priorityChoices.map((choice: any) => (
+                                    <SelectItem key={choice.value} value={choice.value}>
+                                      {choice.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />

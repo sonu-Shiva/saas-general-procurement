@@ -359,9 +359,14 @@ export default function ProcurementRequests() {
                 <SelectContent>
                   <SelectItem value="all">All Priorities</SelectItem>
                   <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="below_normal">Below Normal</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="above_normal">Above Normal</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="emergency">Emergency</SelectItem>
                 </SelectContent>
               </Select>
             </div>
