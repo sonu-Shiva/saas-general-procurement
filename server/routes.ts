@@ -3062,6 +3062,22 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Create approval (for testing)
+  app.post("/api/approvals", isAuthenticated, async (req, res) => {
+    try {
+      const approvalData = req.body;
+      const newApproval = await storage.createApproval({
+        ...approvalData,
+        id: nanoid(),
+        createdAt: new Date(),
+      });
+      res.json(newApproval);
+    } catch (error) {
+      console.error("Error creating approval:", error);
+      res.status(500).json({ message: "Failed to create approval" });
+    }
+  });
+
   // Process approval (approve)
   app.post("/api/approvals/:id/approve", isAuthenticated, async (req, res) => {
     try {

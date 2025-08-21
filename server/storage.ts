@@ -225,6 +225,8 @@ export interface IStorage {
   // Approval operations
   createApproval(approval: InsertApproval): Promise<Approval>;
   getApprovals(approverId: string): Promise<Approval[]>;
+  getApprovalsByApprover(approverId: string): Promise<Approval[]>;
+  getApproval(id: string): Promise<Approval | undefined>;
   updateApproval(id: string, updates: Partial<InsertApproval>): Promise<Approval>;
 
   // Notification operations
@@ -1789,6 +1791,20 @@ export class DatabaseStorage implements IStorage {
 
   async getApprovals(approverId: string): Promise<Approval[]> {
     return await this.db.select().from(approvals).where(eq(approvals.approverId, approverId)).orderBy(desc(approvals.createdAt));
+  }
+
+  // Alias method for compatibility with approval workflow
+  async getApprovalsByApprover(approverId: string): Promise<Approval[]> {
+    return this.getApprovals(approverId);
+  }
+
+  async getApproval(id: string): Promise<Approval | undefined> {
+    const [approval] = await this.db
+      .select()
+      .from(approvals)
+      .where(eq(approvals.id, id))
+      .limit(1);
+    return approval;
   }
 
   async updateApproval(id: string, updates: Partial<InsertApproval>): Promise<Approval> {
