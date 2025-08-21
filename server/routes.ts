@@ -956,6 +956,25 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // GET BOM items
+  app.get('/api/boms/:id/items', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      console.log("=== FETCHING BOM ITEMS ===");
+      console.log("BOM ID:", id);
+      console.log("User ID:", req.user?.claims?.sub);
+
+      const items = await storage.getBomItems(id);
+      console.log("Found BOM items:", items.length);
+      console.log("Items:", items);
+
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching BOM items:", error);
+      res.status(500).json({ message: "Failed to fetch BOM items" });
+    }
+  });
+
   app.post('/api/boms/:id/items', isAuthenticated, async (req, res) => {
     try {
       console.log("Creating BOM item for BOM:", req.params.id);

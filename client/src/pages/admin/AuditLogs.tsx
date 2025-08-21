@@ -310,9 +310,9 @@ export default function AuditLogs() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All Severities</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="info">Info</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="error">Error</SelectItem>
                   <SelectItem value="critical">Critical</SelectItem>
                 </SelectContent>
               </Select>

@@ -830,7 +830,7 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
     setFormData(prev => ({
       ...prev,
       selectedBomItems: prev.selectedBomItems.includes(itemId)
-        ? prev.selectedBomItems.filter(id => id !== itemId)
+        ? prev.selectedBomItems.filter((id: any) => id !== itemId)
         : [...prev.selectedBomItems, itemId]
     }));
 
@@ -858,7 +858,7 @@ function CreateAuctionFormEmbedded({ procurementRequest, bomItems, allBoms, vend
 
   const calculateCeilingPrice = () => {
     let total = 0;
-    formData.selectedBomItems.forEach(itemId => {
+    formData.selectedBomItems.forEach((itemId: any) => {
       const editableItem = editableBomItems[itemId];
       if (editableItem) {
         total += editableItem.quantity * editableItem.unitPrice;

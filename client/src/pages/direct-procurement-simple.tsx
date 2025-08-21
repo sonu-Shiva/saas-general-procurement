@@ -58,6 +58,17 @@ export default function DirectProcurementSimple() {
   });
   const vendors = Array.isArray(vendorsData) ? vendorsData : [];
 
+  // Fetch dropdown configurations
+  const { data: paymentTermsOptions = [] } = useQuery({
+    queryKey: ["/api/admin/dropdown-configurations/4b844108-db4f-40f6-98f1-22bd6ce93890/options"],
+    retry: false,
+  });
+
+  const { data: priorityOptions = [] } = useQuery({
+    queryKey: ["/api/admin/dropdown-configurations/9d31c65f-38ae-43e3-ab20-961d31f3d1bd/options"],
+    retry: false,
+  });
+
   const { data: bomsData = [] } = useQuery({
     queryKey: ["/api/boms"],
     retry: false,
@@ -204,7 +215,7 @@ export default function DirectProcurementSimple() {
 
   const totalValue = formData.bomItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
 
-  if (!user || user.role === 'vendor') {
+  if (!user || (user as any).role === 'vendor') {
     return (
       <div className="max-w-2xl mx-auto text-center p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Restricted</h1>
@@ -364,12 +375,11 @@ export default function DirectProcurementSimple() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Net 15">Net 15</SelectItem>
-                            <SelectItem value="Net 30">Net 30</SelectItem>
-                            <SelectItem value="Net 45">Net 45</SelectItem>
-                            <SelectItem value="Net 60">Net 60</SelectItem>
-                            <SelectItem value="Due on Receipt">Due on Receipt</SelectItem>
-                            <SelectItem value="COD">Cash on Delivery</SelectItem>
+                            {(paymentTermsOptions as any[]).map((option: any) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -384,10 +394,11 @@ export default function DirectProcurementSimple() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="urgent">Urgent</SelectItem>
+                            {(priorityOptions as any[]).map((option: any) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>

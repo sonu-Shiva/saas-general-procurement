@@ -300,10 +300,10 @@ export default function BomManagement() {
                                 <SelectValue placeholder="Select budget" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="low">Under ₹50,000</SelectItem>
-                                <SelectItem value="medium">₹50,000 - ₹2,00,000</SelectItem>
-                                <SelectItem value="high">₹2,00,000 - ₹10,00,000</SelectItem>
-                                <SelectItem value="enterprise">Above ₹10,00,000</SelectItem>
+                                <SelectItem value="under_50k">Under ₹50,000</SelectItem>
+                                <SelectItem value="50k_to_2l">₹50,000 - ₹2,00,000</SelectItem>
+                                <SelectItem value="2l_to_10l">₹2,00,000 - ₹10,00,000</SelectItem>
+                                <SelectItem value="above_10l">Above ₹10,00,000</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
