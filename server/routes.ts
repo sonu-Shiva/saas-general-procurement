@@ -2888,39 +2888,32 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(404).json({ message: "Procurement request not found" });
       }
 
-      // Find the pending approval for this request and current user
-      const approvals = await storage.getApprovalsByApprover(userId);
-      const pendingApproval = approvals.find(a => 
-        a.entityId === requestId && 
-        a.entityType === 'procurement_request' && 
-        a.status === 'pending'
-      );
-
-      if (!pendingApproval) {
-        return res.status(404).json({ message: "No pending approval found for this request" });
+      // Check if user has approval permissions
+      const userRole = (req.user as any)?.role || 'dept_approver';
+      if (!['dept_approver', 'sourcing_manager', 'admin'].includes(userRole)) {
+        return res.status(403).json({ message: "You are not authorized to approve this request" });
       }
 
-      // Process the approval using the workflow engine
-      const result = await approvalWorkflowEngine.processApprovalAction(
-        pendingApproval.id,
-        'approve',
-        userId,
-        comments
-      );
-
-      // If workflow is complete, update the entity status
-      if (result.workflowComplete) {
-        await storage.updateProcurementRequest(requestId, {
-          overallStatus: result.finalStatus === 'approved' ? 'approved' : 'rejected',
-          approvedAt: result.finalStatus === 'approved' ? new Date() : null,
-        });
+      // Check if request is in appropriate status for approval
+      if (!['request_approval_pending', 'pending'].includes(request.overallStatus)) {
+        return res.status(400).json({ message: "Request is not in a state that can be approved" });
       }
+
+      // Update the request status to approved
+      await storage.updateProcurementRequest(requestId, {
+        overallStatus: 'request_approved',
+        requestApprovalStatus: 'approved',
+        approvedAt: new Date(),
+        currentRequestApprover: userId,
+        approvalComments: comments || null,
+      });
 
       res.json({
         message: "Request approved successfully",
-        workflowComplete: result.workflowComplete,
-        finalStatus: result.finalStatus,
-        nextStep: result.nextStep,
+        status: 'approved',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        comments: comments || null,
       });
     } catch (error) {
       console.error("Error approving procurement request:", error);
@@ -2940,36 +2933,32 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(404).json({ message: "Procurement request not found" });
       }
 
-      // Find the pending approval for this request and current user
-      const approvals = await storage.getApprovalsByApprover(userId);
-      const pendingApproval = approvals.find(a => 
-        a.entityId === requestId && 
-        a.entityType === 'procurement_request' && 
-        a.status === 'pending'
-      );
-
-      if (!pendingApproval) {
-        return res.status(404).json({ message: "No pending approval found for this request" });
+      // Check if user has approval permissions
+      const userRole = (req.user as any)?.role || 'dept_approver';
+      if (!['dept_approver', 'sourcing_manager', 'admin'].includes(userRole)) {
+        return res.status(403).json({ message: "You are not authorized to reject this request" });
       }
 
-      // Process the rejection using the workflow engine
-      const result = await approvalWorkflowEngine.processApprovalAction(
-        pendingApproval.id,
-        'reject',
-        userId,
-        comments
-      );
+      // Check if request is in appropriate status for rejection
+      if (!['request_approval_pending', 'pending'].includes(request.overallStatus)) {
+        return res.status(400).json({ message: "Request is not in a state that can be rejected" });
+      }
 
-      // Update the entity status to rejected
+      // Update the request status to rejected
       await storage.updateProcurementRequest(requestId, {
         overallStatus: 'rejected',
+        requestApprovalStatus: 'rejected',
         rejectedAt: new Date(),
+        currentRequestApprover: userId,
+        approvalComments: comments || null,
       });
 
       res.json({
         message: "Request rejected successfully",
-        workflowComplete: true,
-        finalStatus: 'rejected',
+        status: 'rejected',
+        rejectedBy: userId,
+        rejectedAt: new Date(),
+        comments: comments || null,
       });
     } catch (error) {
       console.error("Error rejecting procurement request:", error);
