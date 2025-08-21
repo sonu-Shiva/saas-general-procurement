@@ -2723,6 +2723,28 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  // Additional methods to support approval workflow engine
+  async getUsersByRole(role: string): Promise<User[]> {
+    return this.db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.role, role),
+        eq(users.isActive, true)
+      ));
+  }
+
+  async getApprovalsByEntity(entityId: string, entityType: string): Promise<Approval[]> {
+    return this.db
+      .select()
+      .from(approvals)
+      .where(and(
+        eq(approvals.entityId, entityId),
+        eq(approvals.entityType, entityType)
+      ))
+      .orderBy(asc(approvals.levelNumber), asc(approvals.assignedAt));
+  }
+
   async getAuditLogStats(timeRange: 'day' | 'week' | 'month' = 'day'): Promise<{
     totalActions: number;
     criticalEvents: number;

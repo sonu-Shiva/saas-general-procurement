@@ -458,7 +458,7 @@ export const procurementRequests = pgTable("procurement_requests", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   department: varchar("department", { length: 100 }).notNull(),
-  bomId: uuid("bom_id").references(() => boms.id).notNull(),
+  bomId: uuid("bom_id").references(() => boms.id),
   priority: varchar("priority", { enum: ["low", "medium", "high", "urgent"] }).default("medium"),
   requestedBy: varchar("requested_by").references(() => users.id).notNull(),
   requestedDeliveryDate: timestamp("requested_delivery_date").notNull(),
