@@ -2875,7 +2875,7 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  // Get procurement requests
+  // Get procurement requests (LIST - must come before single resource route)
   app.get("/api/procurement-requests", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
@@ -2899,6 +2899,48 @@ Focus on established businesses with verifiable contact information.`;
     } catch (error) {
       console.error("Error fetching procurement requests:", error);
       res.status(500).json({ message: "Failed to fetch procurement requests" });
+    }
+  });
+
+  // Get single procurement request (DETAIL - must come after list route)
+  app.get("/api/procurement-requests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = req.params.id;
+      const request = await storage.getProcurementRequest(requestId);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+      
+      res.json(request);
+    } catch (error) {
+      console.error("Error fetching procurement request:", error);
+      res.status(500).json({ message: "Failed to fetch procurement request" });
+    }
+  });
+
+  // Delete procurement request
+  app.delete("/api/procurement-requests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = req.params.id;
+      const userId = req.user?.id || 'dev-user-123';
+      
+      // Get the request to check ownership
+      const request = await storage.getProcurementRequest(requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Procurement request not found" });
+      }
+      
+      // Only allow the requester to delete their own requests
+      if (request.requestedBy !== userId) {
+        return res.status(403).json({ message: "You can only delete your own requests" });
+      }
+      
+      await storage.deleteProcurementRequest(requestId);
+      res.json({ message: "Procurement request deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting procurement request:", error);
+      res.status(500).json({ message: "Failed to delete procurement request" });
     }
   });
 

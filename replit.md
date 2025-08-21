@@ -30,6 +30,9 @@ Role-based access control priority: Strict enforcement of user role permissions 
   - ✅ Eliminated all schema import validation errors temporarily to restore functionality
   - ✅ Confirmed all APIs return proper JSON responses: procurement requests, BOM items, role switching, dropdown configurations
   - ✅ All core functionality fully operational: role switching, request creation, BOM access, dropdown loading
+  - ✅ Fixed API route ordering issue - individual procurement request endpoints (GET /:id, DELETE /:id) now return proper JSON
+  - ✅ All CRUD operations working: Create, Read (list & individual), Update, Delete procurement requests
+  - ✅ Frontend form submission fixed to use correct /api/procurement-requests endpoint
 
 ## System Architecture
 

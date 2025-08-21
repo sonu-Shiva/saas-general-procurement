@@ -189,7 +189,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       // Use JSON for form submission (skip file attachments for now)
-      return apiRequest('/api/pr', {
+      return apiRequest('/api/procurement-requests', {
         method: 'POST',
         body: JSON.stringify({
           title: data.title,
@@ -200,7 +200,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
           notes: data.notes,
           bomLineItems: data.bomLineItems,
           selectedBomId: data.selectedBomId,
-          requestedBy: user?.id || '',
+          requestedBy: (user as any)?.id || '',
         }),
         headers: {
           'Content-Type': 'application/json',
@@ -211,7 +211,7 @@ export function CreateProcurementRequestDialog({ trigger }: CreateProcurementReq
       queryClient.invalidateQueries({ queryKey: ['/api/procurement-requests'] });
       toast({
         title: "Success",
-        description: `Procurement request ${result.prId} created successfully`,
+        description: `Procurement request ${result.requestNumber || 'created'} created successfully`,
       });
       setOpen(false);
       resetForm();
