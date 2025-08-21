@@ -1215,17 +1215,17 @@ export default function ProductCatalogue() {
             {/* Available Products List */}
             <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-4">
               {filteredProducts
-                .filter(product => 
+                .filter(product => {
+                  console.log('Filtering product:', product.itemName, 'categoryId:', product.categoryId, 'category:', product.category, 'selectedCategoryId:', selectedCategory?.id);
                   // Show products that are NOT already in the selected category
-                  product.categoryId !== selectedCategory?.id && 
-                  product.category !== selectedCategory?.name &&
-                  // Apply search filter
-                  (searchQuery === "" || 
+                  const isNotInCategory = product.categoryId !== selectedCategory?.id;
+                  const searchMatches = searchQuery === "" || 
                    product.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                    (product.internalCode && product.internalCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                   (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
-                  )
-                )
+                   (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
+                  
+                  return isNotInCategory && searchMatches;
+                })
                 .map((product) => (
                   <div 
                     key={product.id} 
@@ -1267,15 +1267,14 @@ export default function ProductCatalogue() {
                   </div>
                 ))}
               
-              {filteredProducts.filter(product => 
-                product.categoryId !== selectedCategory?.id && 
-                product.category !== selectedCategory?.name &&
-                (searchQuery === "" || 
+              {filteredProducts.filter(product => {
+                const isNotInCategory = product.categoryId !== selectedCategory?.id;
+                const searchMatches = searchQuery === "" || 
                  product.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                  (product.internalCode && product.internalCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                 (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
-                )
-              ).length === 0 && (
+                 (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
+                return isNotInCategory && searchMatches;
+              }).length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">
