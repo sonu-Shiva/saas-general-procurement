@@ -463,8 +463,8 @@ export default function ProcurementRequests() {
           </Card>
         ) : (
           <>
-            {/* Table View for Requesters */}
-            {isRequester && viewMode === "table" && (
+            {/* Table View */}
+            {viewMode === "table" && (
               <Card>
                 <CardContent className="p-0">
                   <Table>
@@ -542,7 +542,7 @@ export default function ProcurementRequests() {
             )}
 
             {/* Cards View */}
-            {(!isRequester || viewMode === "cards") && (
+            {viewMode === "cards" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredRequests.map((request) => (
                   <Card key={request.id} className="hover:shadow-lg transition-shadow">
