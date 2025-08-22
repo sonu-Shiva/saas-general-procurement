@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CreatePOFromAuctionDialog } from "@/components/CreatePOFromAuctionDialog";
 import { TermsUploader } from "@/components/TermsUploader";
 import { TermsAcceptanceDialog } from "@/components/TermsAcceptanceDialog";
+import AuctionResults from "./auction-results-clean";
 import { 
   Plus, 
   Search, 
@@ -448,9 +449,8 @@ export default function AuctionCenter() {
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
             {selectedAuction && (
-              <LiveBiddingInterface 
+              <AuctionResultsContainer 
                 auction={selectedAuction}
-                ws={ws}
                 onClose={() => setIsLiveBiddingOpen(false)}
               />
             )}
@@ -851,7 +851,45 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
 }
 
 // Live Bidding Interface Component - Shows Results and Live Bidding
-function LiveBiddingInterface({ auction, ws, onClose }: any) {
+function AuctionResultsContainer({ auction, onClose }: any) {
+  // Fetch current bids
+  const { data: auctionBids = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "bids"],
+    retry: false,
+  });
+
+  // Fetch challenge prices
+  const { data: challengePrices = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "challenge-prices"],
+    retry: false,
+  });
+
+  // Calculate rankings from bids
+  const rankings = React.useMemo(() => {
+    if (!Array.isArray(auctionBids)) return [];
+    
+    // Get best bid per vendor
+    const vendorBids = auctionBids.reduce((acc: any, bid: any) => {
+      if (!acc[bid.vendorId] || parseFloat(bid.amount) < parseFloat(acc[bid.vendorId].amount)) {
+        acc[bid.vendorId] = bid;
+      }
+      return acc;
+    }, {});
+
+    return Object.values(vendorBids)
+      .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
+  }, [auctionBids]);
+
+  return (
+    <AuctionResults 
+      auction={auction}
+      rankings={rankings}
+      challengePrices={challengePrices || []}
+    />
+  );
+}
+
+function LiveBiddingInterfaceOld({ auction, ws, onClose }: any) {
   const [currentBid, setCurrentBid] = useState('');
   const [bids, setBids] = useState<any[]>([]);
   const [counterAmount, setCounterAmount] = useState('');
