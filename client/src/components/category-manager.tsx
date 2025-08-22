@@ -251,6 +251,7 @@ export default function CategoryManager({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/product-categories/hierarchy"] });
       toast({
         title: "Success",
         description: "Category updated successfully",
@@ -271,9 +272,12 @@ export default function CategoryManager({
         }, 500);
         return;
       }
+      
+      // Enhanced error handling to show specific error message
+      const errorMessage = (error as any)?.message || 'Unknown error';
       toast({
         title: "Error",
-        description: "Failed to update category",
+        description: `Failed to update category: ${errorMessage}`,
         variant: "destructive",
       });
     },
@@ -287,6 +291,7 @@ export default function CategoryManager({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/product-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/product-categories/hierarchy"] });
       toast({
         title: "Success",
         description: "Category deleted successfully",
@@ -304,9 +309,12 @@ export default function CategoryManager({
         }, 500);
         return;
       }
+      
+      // Enhanced error handling to show specific error message
+      const errorMessage = (error as any)?.message || 'Unknown error';
       toast({
         title: "Error",
-        description: "Failed to delete category",
+        description: `Failed to delete category: ${errorMessage}`,
         variant: "destructive",
       });
     },

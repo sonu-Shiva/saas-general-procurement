@@ -972,18 +972,25 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.put('/api/product-categories/:id', isAuthenticated, isVendor, async (req: any, res) => {
+  app.put('/api/product-categories/:id', isAuthenticated, async (req: any, res) => {
     try {
       const categoryId = req.params.id;
       const userId = req.user.claims.sub;
 
-      // Check if category exists and user has permission to edit it
+      // Check if category exists
       const existingCategory = await storage.getProductCategory(categoryId);
       if (!existingCategory) {
         return res.status(404).json({ message: "Category not found" });
       }
 
-      if (existingCategory.createdBy !== userId) {
+      // Get user role to determine permissions
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Admin can edit any category, others can only edit categories they created
+      if (user.role !== 'admin' && existingCategory.createdBy !== userId) {
         return res.status(403).json({ message: "You can only edit categories you created" });
       }
 
@@ -1021,7 +1028,13 @@ Focus on established businesses with verifiable contact information.`;
       // Check if category has children or products
       const children = await storage.getProductCategories({ parentId: categoryId });
       if (children.length > 0) {
-        return res.status(400).json({ message: "Cannot delete category with subcategories" });
+        return res.status(400).json({ message: "Cannot delete category with subcategories. Please delete all subcategories first." });
+      }
+
+      // Check if category has products assigned
+      const products = await storage.getProducts({ categoryId: categoryId });
+      if (products.length > 0) {
+        return res.status(400).json({ message: `Cannot delete category with ${products.length} products. Please reassign or remove products first.` });
       }
 
       await storage.deleteProductCategory(categoryId);
