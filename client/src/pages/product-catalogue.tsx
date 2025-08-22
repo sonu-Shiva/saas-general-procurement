@@ -784,11 +784,34 @@ export default function ProductCatalogue() {
                                   {product.description}
                                 </p>
                               )}
+                              
+                              {/* HSN/Tax Information in Cards */}
+                              {product.taxApplicable && product.hsnSacCode && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-xs">
+                                  <span className="text-muted-foreground">HSN: </span>
+                                  <span className="font-mono font-semibold text-blue-600">{product.hsnSacCode}</span>
+                                  {product.customGstPercentage && (
+                                    <span className="ml-2 text-orange-600">({product.customGstPercentage}% GST)</span>
+                                  )}
+                                </div>
+                              )}
+                              {product.taxApplicable && !product.hsnSacCode && product.customGstPercentage && (
+                                <div className="bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded text-xs">
+                                  <span className="text-muted-foreground">Custom GST: </span>
+                                  <span className="font-semibold text-orange-600">{product.customGstPercentage}%</span>
+                                </div>
+                              )}
+                              
                               <div className="flex justify-between items-center">
-                                <div>
+                                <div className="flex flex-col gap-1">
                                   {product.category && (
                                     <span className="text-xs text-muted-foreground">
                                       {product.category}
+                                    </span>
+                                  )}
+                                  {product.internalCode && (
+                                    <span className="text-xs font-mono text-muted-foreground">
+                                      {product.internalCode}
                                     </span>
                                   )}
                                 </div>
@@ -848,6 +871,7 @@ export default function ProductCatalogue() {
                             <TableRow>
                               <TableHead>Product</TableHead>
                               <TableHead>Category</TableHead>
+                              <TableHead>HSN/Tax</TableHead>
                               <TableHead>Price</TableHead>
                               <TableHead>UOM</TableHead>
                               <TableHead>Status</TableHead>
@@ -875,6 +899,31 @@ export default function ProductCatalogue() {
                                     <span className="text-xs text-muted-foreground">{product.category}</span>
                                   ) : (
                                     <span className="text-muted-foreground text-sm">Uncategorized</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {product.taxApplicable ? (
+                                    <div className="space-y-1">
+                                      {product.hsnSacCode && (
+                                        <div className="font-mono text-sm text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                                          {product.hsnSacCode}
+                                        </div>
+                                      )}
+                                      {product.customGstPercentage && (
+                                        <div className="text-xs text-orange-600">
+                                          {product.customGstPercentage}% GST
+                                        </div>
+                                      )}
+                                      {!product.hsnSacCode && !product.customGstPercentage && (
+                                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+                                          Tax: Yes
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <Badge variant="outline" className="text-xs">
+                                      No Tax
+                                    </Badge>
                                   )}
                                 </TableCell>
                                 <TableCell>
@@ -960,7 +1009,7 @@ export default function ProductCatalogue() {
 
       {/* View Product Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Product Details</DialogTitle>
           </DialogHeader>
@@ -984,15 +1033,20 @@ export default function ProductCatalogue() {
                 </div>
               </div>
               
+              {/* Basic Information */}
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Internal Code</p>
-                    <p>{selectedProduct.internalCode || "Not specified"}</p>
+                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded">{selectedProduct.internalCode || "Not specified"}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">External Code</p>
-                    <p>{selectedProduct.externalCode || "Not specified"}</p>
+                    <p className="font-mono text-sm bg-muted px-2 py-1 rounded">{selectedProduct.externalCode || "Not specified"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Unit of Measure</p>
+                    <p>{selectedProduct.uom || "Not specified"}</p>
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -1002,12 +1056,98 @@ export default function ProductCatalogue() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <Badge variant={selectedProduct.isActive ? "secondary" : "outline"}>
-                      {selectedProduct.isActive ? "Active" : "Inactive"}
+                    <Badge variant={selectedProduct.isActive ? "secondary" : "outline"} className={selectedProduct.isActive ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}>
+                      {selectedProduct.isActive ? (
+                        <>
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Active
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3 mr-1" />
+                          Inactive
+                        </>
+                      )}
                     </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Created By</p>
+                    <p>{selectedProduct.createdBy || "System"}</p>
                   </div>
                 </div>
               </div>
+
+              {/* GST/Tax Information Section */}
+              <div className="border-t pt-4">
+                <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Tag className="w-5 h-5" />
+                  GST/Tax Information
+                </h4>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Tax Applicable</p>
+                      <Badge variant={selectedProduct.taxApplicable ? "secondary" : "outline"} className={selectedProduct.taxApplicable ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : ""}>
+                        {selectedProduct.taxApplicable ? "Yes" : "No"}
+                      </Badge>
+                    </div>
+                    {selectedProduct.taxApplicable && selectedProduct.hsnSacCode && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">HSN/SAC Code</p>
+                        <p className="font-mono text-lg font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded border">
+                          {selectedProduct.hsnSacCode}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {selectedProduct.taxApplicable && selectedProduct.customGstPercentage && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Custom GST Rate</p>
+                        <p className="text-lg font-semibold text-orange-600">
+                          {selectedProduct.customGstPercentage}%
+                        </p>
+                      </div>
+                    )}
+                    {selectedProduct.taxApplicable && !selectedProduct.hsnSacCode && !selectedProduct.customGstPercentage && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Tax Configuration</p>
+                        <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                          ⚠️ No HSN code or custom rate specified
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Product Details */}
+              {(selectedProduct.specifications && Object.keys(selectedProduct.specifications).length > 0) && (
+                <div className="border-t pt-4">
+                  <h4 className="text-lg font-semibold text-foreground mb-4">Specifications</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {Object.entries(selectedProduct.specifications).map(([key, value]) => (
+                      <div key={key}>
+                        <p className="text-sm font-medium text-muted-foreground">{key}</p>
+                        <p className="text-sm">{value as string}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(selectedProduct.tags && selectedProduct.tags.length > 0) && (
+                <div className="border-t pt-4">
+                  <h4 className="text-lg font-semibold text-foreground mb-4">Tags</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProduct.tags.map((tag, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
