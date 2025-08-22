@@ -40,35 +40,49 @@ interface BomItem {
 export default function BomView({ bom, onClose }: BomViewProps) {
   const [bomItems, setBomItems] = useState<BomItem[]>([]);
 
-  // Fetch BOM items
-  const { data: bomItemsData, isLoading, error } = useQuery<BomItem[]>({
-    queryKey: ["/api/boms", bom.id, "items"],
+  // Fetch BOM items with force refresh
+  const { data: bomItemsData, isLoading, error, refetch } = useQuery<BomItem[]>({
+    queryKey: ["/api/boms", bom.id, "items", Date.now()], // Force unique query key
     queryFn: async () => {
-      console.log("BOM View - Fetching items for BOM:", bom.id);
+      console.log("🚀 BOM View - STARTING API CALL for BOM:", bom.id);
       const rawResponse = await apiRequest("GET", `/api/boms/${bom.id}/items`);
-      console.log("BOM View - Raw response type:", typeof rawResponse);
+      console.log("🚀 BOM View - Raw response received:", rawResponse.status);
       
       const response = await rawResponse.json();
-      console.log("BOM View - Items fetched:", response?.length || 0);
-      console.log("BOM View - Items data:", response);
+      console.log("🚀 BOM View - Items fetched count:", response?.length || 0);
+      console.log("🚀 BOM View - Full items data:", JSON.stringify(response, null, 2));
       
       return response || [];
     },
     retry: false,
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 0, // Don't cache
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
+  // Force refresh on component mount
   useEffect(() => {
-    console.log("BOM View - bomItemsData changed:", bomItemsData);
-    console.log("BOM View - bomItemsData type:", typeof bomItemsData);
-    console.log("BOM View - bomItemsData is array:", Array.isArray(bomItemsData));
-    console.log("BOM View - error:", error);
+    console.log("🔄 BOM View - Component mounted, forcing refresh");
+    refetch();
+  }, [refetch]);
+
+  // Force refresh on component mount
+  useEffect(() => {
+    console.log("🔄 BOM View - Component mounted, forcing refresh");
+    refetch();
+  }, [refetch]);
+
+  useEffect(() => {
+    console.log("🔄 BOM View - bomItemsData changed:", bomItemsData);
+    console.log("🔄 BOM View - bomItemsData type:", typeof bomItemsData);
+    console.log("🔄 BOM View - bomItemsData is array:", Array.isArray(bomItemsData));
+    console.log("🔄 BOM View - error:", error);
     if (bomItemsData && Array.isArray(bomItemsData)) {
-      console.log("BOM View - Setting BOM items:", bomItemsData);
+      console.log("✅ BOM View - Setting BOM items:", bomItemsData);
       setBomItems(bomItemsData);
     } else {
-      console.log("BOM View - No bomItemsData or not array, setting empty array");
+      console.log("❌ BOM View - No bomItemsData or not array, setting empty array");
       setBomItems([]);
     }
   }, [bomItemsData, error]);
