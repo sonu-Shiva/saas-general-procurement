@@ -855,12 +855,23 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
   const [currentBids, setCurrentBids] = useState<any[]>([]);
   const [rankings, setRankings] = useState<any[]>([]);
   const [newBidAmount, setNewBidAmount] = useState('');
+  const [counterAmount, setCounterAmount] = useState('');
+  const [counterNotes, setCounterNotes] = useState('');
+  const [selectedChallenge, setSelectedChallenge] = useState<any>(null);
+  const [isCounterDialogOpen, setIsCounterDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: bids = [] } = useQuery({
     queryKey: ["/api/auctions", auction.id, "bids"],
     refetchInterval: 2000, // Refresh every 2 seconds
+  });
+
+  // Fetch challenge prices
+  const { data: challengePrices = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "challenge-prices"],
+    refetchInterval: 3000, // Refresh every 3 seconds
   });
 
   useEffect(() => {
@@ -917,6 +928,54 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
     }
   };
 
+  // Challenge price response mutations
+  const respondToChallengeMutation = useMutation({
+    mutationFn: async ({ challengeId, action }: { challengeId: string; action: 'accept' | 'reject' }) => {
+      const response = await fetch(`/api/auctions/${auction.id}/challenge-prices/${challengeId}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return response.json();
+    },
+    onSuccess: (_, { action }) => {
+      toast({ title: "Success", description: `Challenge price ${action}ed successfully` });
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions", auction.id, "challenge-prices"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to respond to challenge price",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSendChallenge = async (vendorId: string, bidId: string) => {
+    try {
+      const challengeAmount = parseFloat(newBidAmount);
+      if (!challengeAmount || challengeAmount <= 0) return;
+
+      const response = await fetch(`/api/auctions/${auction.id}/challenge-prices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId,
+          bidId,
+          challengeAmount,
+          notes: "Challenge price for better value"
+        })
+      });
+
+      if (response.ok) {
+        toast({ title: "Success", description: "Challenge price sent successfully" });
+        setNewBidAmount('');
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to send challenge price", variant: "destructive" });
+    }
+  };
+
   const getRankColor = (rank: number) => {
     switch (rank) {
       case 1: return 'bg-green-100 text-green-700 border-green-200';
@@ -964,26 +1023,93 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {rankings.map((bid: any, index: number) => (
-                <div key={bid.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center space-x-3">
-                    <Badge className={getRankColor(bid.rank)}>
-                      {bid.rankLabel}
-                    </Badge>
-                    <div>
-                      <div className="font-medium">{bid.vendorName || `Vendor ${bid.vendorId.slice(0, 8)}`}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Bid: ₹{bid.amount}
+              {rankings.map((bid: any, index: number) => {
+                const vendorChallenges = challengePrices.filter((cp: any) => cp.vendorId === bid.vendorId);
+                const hasAcceptedChallenge = vendorChallenges.some((cp: any) => cp.status === 'accepted');
+                const hasPendingChallenge = vendorChallenges.some((cp: any) => cp.status === 'pending');
+                
+                return (
+                  <div key={bid.id} className="space-y-2">
+                    <div className="flex items-center justify-between p-3 rounded-lg border">
+                      <div className="flex items-center space-x-3">
+                        <Badge className={getRankColor(bid.rank)}>
+                          {bid.rankLabel}
+                        </Badge>
+                        <div>
+                          <div className="font-medium">{bid.vendorName || `Vendor ${bid.vendorId.slice(0, 8)}`}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Bid: ₹{bid.amount}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right space-x-2 flex items-center">
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(bid.timestamp).toLocaleTimeString()}
+                        </div>
+                        {user?.role === 'SOURCING_EXECUTIVE' && bid.rank <= 3 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSendChallenge(bid.vendorId, bid.id)}
+                            disabled={hasAcceptedChallenge || hasPendingChallenge}
+                          >
+                            {hasAcceptedChallenge ? 'Accepted' : hasPendingChallenge ? 'Sent' : 'Challenge'}
+                          </Button>
+                        )}
                       </div>
                     </div>
+                    
+                    {/* Challenge Price Status */}
+                    {vendorChallenges.map((challenge: any) => (
+                      <div key={challenge.id} className="ml-8 p-2 bg-blue-50 rounded border-l-4 border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium">Challenge Price: ₹{challenge.challengeAmount}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Status: <Badge variant={
+                                challenge.status === 'accepted' ? 'default' :
+                                challenge.status === 'rejected' ? 'destructive' : 'secondary'
+                              }>
+                                {challenge.status}
+                              </Badge>
+                            </div>
+                          </div>
+                          {challenge.status === 'pending' && user?.role === 'SOURCING_MANAGER' && (
+                            <div className="space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => respondToChallengeMutation.mutate({ challengeId: challenge.id, action: 'accept' })}
+                                disabled={respondToChallengeMutation.isPending}
+                              >
+                                Accept
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => respondToChallengeMutation.mutate({ challengeId: challenge.id, action: 'reject' })}
+                                disabled={respondToChallengeMutation.isPending}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          )}
+                          {challenge.status === 'accepted' && (
+                            <div className="text-sm text-green-600 font-medium">
+                              ✓ Counter Price Accepted
+                            </div>
+                          )}
+                          {challenge.status === 'rejected' && (
+                            <div className="text-sm text-red-600 font-medium">
+                              ✗ Counter Price Rejected
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(bid.timestamp).toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -993,31 +1119,38 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Gavel className="w-5 h-5" />
-              <span>Place Bid</span>
+              <span>{user?.role === 'VENDOR' ? 'Place Bid' : 'Challenge Price'}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Your Bid Amount (₹)</Label>
+                <Label>{user?.role === 'VENDOR' ? 'Your Bid Amount (₹)' : 'Challenge Amount (₹)'}</Label>
                 <Input
                   type="number"
                   value={newBidAmount}
                   onChange={(e) => setNewBidAmount(e.target.value)}
-                  placeholder="Enter bid amount"
+                  placeholder={user?.role === 'VENDOR' ? "Enter bid amount" : "Enter challenge amount"}
                   max={auction.reservePrice}
                 />
                 <div className="text-sm text-muted-foreground">
                   Must be less than ceiling price of ₹{auction.reservePrice}
                 </div>
               </div>
-              <Button 
-                onClick={submitBid} 
-                className="w-full"
-                disabled={!newBidAmount || parseFloat(newBidAmount) >= parseFloat(auction.reservePrice)}
-              >
-                Submit Bid
-              </Button>
+              {user?.role === 'VENDOR' && (
+                <Button 
+                  onClick={submitBid} 
+                  className="w-full"
+                  disabled={!newBidAmount || parseFloat(newBidAmount) >= parseFloat(auction.reservePrice)}
+                >
+                  Submit Bid
+                </Button>
+              )}
+              {user?.role === 'SOURCING_EXECUTIVE' && (
+                <div className="text-sm text-muted-foreground">
+                  Click "Challenge" button next to L1, L2, or L3 vendors to send challenge price
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1047,6 +1180,42 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Counter Price Dialog */}
+      <Dialog open={isCounterDialogOpen} onOpenChange={setIsCounterDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Counter Price</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Counter Amount (₹)</Label>
+              <Input
+                type="number"
+                value={counterAmount}
+                onChange={(e) => setCounterAmount(e.target.value)}
+                placeholder="Enter counter amount"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Input
+                value={counterNotes}
+                onChange={(e) => setCounterNotes(e.target.value)}
+                placeholder="Optional notes"
+              />
+            </div>
+            <div className="flex space-x-2 justify-end">
+              <Button variant="outline" onClick={() => setIsCounterDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {}}>
+                Send Counter
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
