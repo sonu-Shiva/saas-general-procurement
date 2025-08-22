@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CreatePOFromAuctionDialog } from "@/components/CreatePOFromAuctionDialog";
 import { TermsUploader } from "@/components/TermsUploader";
 import { TermsAcceptanceDialog } from "@/components/TermsAcceptanceDialog";
-import AuctionResults from "./auction-results-clean";
+import AuctionResults from "./auction-results-checkpoint";
 import { 
   Plus, 
   Search, 
