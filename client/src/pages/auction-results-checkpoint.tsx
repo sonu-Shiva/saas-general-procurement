@@ -45,12 +45,18 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
       const challengeAmount = acceptedChallenge ? parseFloat(acceptedChallenge.challengeAmount || '0') : 0;
       const finalAmount = acceptedChallenge ? challengeAmount : originalAmount;
       
+      console.log(`Vendor ${bid.vendorCompanyName}: Original=${originalAmount}, Challenge=${challengeAmount}, Final=${finalAmount}, HasAcceptedChallenge=${!!acceptedChallenge}`);
+      
       return {
         ...bid,
         finalAmount,
         vendorCompanyName: bid.vendorName || bid.companyName || bid.vendorCompanyName || `Vendor ${bid.vendorId}`,
+        hasAcceptedChallenge: !!acceptedChallenge,
       };
-    }).sort((a, b) => a.finalAmount - b.finalAmount);
+    }).sort((a, b) => {
+      console.log(`Sorting: ${a.vendorCompanyName} (${a.finalAmount}) vs ${b.vendorCompanyName} (${b.finalAmount})`);
+      return a.finalAmount - b.finalAmount;
+    });
   }, [rankings, challengePrices]);
 
   const formatBidDateTime = (timestamp: string) => {
@@ -105,15 +111,8 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
             const challengeStatus = challengeData?.status || null;
             const challengeAmount = challengeData?.challengeAmount || '14800';
             
-            // Get final price (prioritize accepted challenge price)
-            const acceptedChallengePrice = challengePrices.find((cp: any) => cp.vendorId === bid.vendorId && cp.status === 'accepted');
-            
-            let finalPrice: number;
-            if (acceptedChallengePrice) {
-              finalPrice = parseFloat(acceptedChallengePrice.challengeAmount);
-            } else {
-              finalPrice = parseFloat(bid.amount || bid.bidAmount || 0);
-            }
+            // Use the finalAmount from sortedBids which already considers challenge prices
+            const finalPrice = bid.finalAmount || parseFloat(bid.amount || bid.bidAmount || 0);
             
             return (
               <div 
@@ -164,7 +163,7 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
 
                   {/* Final Price Display - Shows challenge price if accepted */}
                   <div className="mb-4 text-center bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-4 flex-grow">
-                    {acceptedChallengePrice ? (
+                    {bid.hasAcceptedChallenge ? (
                       <>
                         <div className="text-sm text-gray-600 mb-1">Final Price (Challenge Accepted):</div>
                         <div className="text-2xl font-bold text-blue-600 mb-1">
