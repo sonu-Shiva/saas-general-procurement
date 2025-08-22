@@ -921,7 +921,7 @@ function EnhancedAuctionView({ auction }: { auction: any }) {
           </div>
           <div className="text-center">
             <div className="text-lg font-bold text-orange-600">{bidStats.leadingVendor || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Current Leader</div>
+            <div className="text-sm text-gray-600">Bid Winner</div>
           </div>
         </div>
       </div>
@@ -992,16 +992,42 @@ function EnhancedAuctionView({ auction }: { auction: any }) {
         </div>
       )}
 
-      {/* Invited Vendors Section */}
+      {/* Invited Vendors Section - Enhanced with bid participation status */}
       <div>
-        <Label className="text-sm font-medium">Invited Vendors ({auction.vendors?.length || 0})</Label>
+        <Label className="text-sm font-medium">Participating Vendors ({bidStats.uniqueVendors})</Label>
         <div className="mt-2 space-y-2">
-          {auction.vendors?.map((vendor: any) => (
-            <div key={vendor.id} className="flex items-center justify-between p-2 border rounded">
-              <span>{vendor.name}</span>
-              <Badge variant="outline">{vendor.status || 'Invited'}</Badge>
+          {Array.from(new Set(auctionBids.map((bid: any) => ({
+            id: bid.vendorId,
+            name: bid.vendorCompanyName || bid.vendorName,
+            email: bid.vendorEmail,
+            hasBids: true,
+            hasChallenge: challengePrices.some((cp: any) => cp.vendorId === bid.vendorId)
+          })))).map((vendor: any, index: number) => (
+            <div key={vendor.id || index} className="flex items-center justify-between p-3 border rounded bg-white">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                  {vendor.name?.charAt(0) || 'V'}
+                </div>
+                <div>
+                  <div className="font-medium">{vendor.name}</div>
+                  <div className="text-sm text-gray-500">{vendor.email}</div>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  Active Bidder
+                </Badge>
+                {vendor.hasChallenge && (
+                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                    Challenge Submitted
+                  </Badge>
+                )}
+              </div>
             </div>
-          )) || <p className="text-sm text-muted-foreground">No vendors invited</p>}
+          ))}
+          {bidStats.uniqueVendors === 0 && (
+            <p className="text-sm text-muted-foreground">No vendors have participated yet</p>
+          )}
         </div>
       </div>
     </div>
