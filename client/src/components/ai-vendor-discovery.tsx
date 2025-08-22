@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Bot, User, Send, Sparkles, MapPin, Phone, Mail, Globe, Building, MessageSquare } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface DiscoveredVendor {
   name: string;
@@ -44,47 +45,49 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleAddToNetwork = async (vendor: DiscoveredVendor) => {
-    try {
-      const response = await fetch('/api/vendors', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+  // Create vendor mutation with proper cache invalidation
+  const addVendorMutation = useMutation({
+    mutationFn: async (vendor: DiscoveredVendor) => {
+      return await apiRequest("/api/vendors", {
+        method: "POST",
         body: JSON.stringify({
           companyName: vendor.name,
           email: vendor.email,
           phone: vendor.phone,
           address: vendor.address,
           website: vendor.website,
-          category: vendor.category,
+          categories: vendor.category ? [vendor.category] : [],
           description: vendor.description,
           status: 'active'
         }),
       });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: `${vendor.name} has been added to your vendor network`,
-        });
-      } else {
-        throw new Error('Failed to add vendor');
-      }
-    } catch (error) {
+    },
+    onSuccess: (data, vendor) => {
+      // Invalidate vendors cache to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/vendors"] });
+      toast({
+        title: "Success",
+        description: `${vendor.name} has been added to your vendor network`,
+      });
+    },
+    onError: (error: any, vendor) => {
       console.error('Error adding vendor:', error);
       toast({
         title: "Error",
-        description: "Failed to add vendor to network. Please try again.",
+        description: `Failed to add ${vendor.name} to network. Please try again.`,
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  const handleAddToNetwork = (vendor: DiscoveredVendor) => {
+    addVendorMutation.mutate(vendor);
   };
 
   const handleContact = (vendor: DiscoveredVendor) => {
