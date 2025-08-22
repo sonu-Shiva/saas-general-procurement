@@ -8,6 +8,15 @@ interface AuctionResultsProps {
 }
 
 function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsProps) {
+  // Debug logging
+  console.log('AuctionResults received:', {
+    auction: auction?.name,
+    rankingsLength: rankings?.length,
+    rankingsData: rankings,
+    challengePricesLength: challengePrices?.length,
+    challengePricesData: challengePrices
+  });
+
   // Sort bids by final amount (considering accepted challenge prices)
   const sortedBids = React.useMemo(() => {
     if (!rankings?.length) return [];
