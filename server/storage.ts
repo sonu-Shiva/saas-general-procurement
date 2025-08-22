@@ -95,6 +95,12 @@ import {
   type InsertApprovalHierarchy,
   type ApprovalLevel,
   type InsertApprovalLevel,
+  companyProfile,
+  companyBranches,
+  type CompanyProfile,
+  type InsertCompanyProfile,
+  type CompanyBranch,
+  type InsertCompanyBranch,
 } from "@shared/schema";
 import { db } from "./db";
 import { nanoid } from "nanoid";
