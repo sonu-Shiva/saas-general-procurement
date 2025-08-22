@@ -293,8 +293,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ message: "Vendor deleted successfully" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting vendor:", error);
+      
+      // Handle specific constraint errors with user-friendly messages
+      if (error.message && error.message.includes('Cannot delete vendor')) {
+        return res.status(409).json({ 
+          message: error.message,
+          type: "dependency_error" 
+        });
+      }
+      
+      if (error.code === '23503') {
+        return res.status(409).json({ 
+          message: "Cannot delete vendor: vendor is still referenced by purchase orders or other records. Please remove all related records first.",
+          type: "foreign_key_constraint" 
+        });
+      }
+
       res.status(500).json({ message: "Failed to delete vendor" });
     }
   });

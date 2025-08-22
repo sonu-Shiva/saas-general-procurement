@@ -520,10 +520,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteVendor(id: string): Promise<boolean> {
-    const result = await this.db.delete(vendors).where(eq(vendors.id, id));
-    // Remove from in-memory store
-    this.vendors = this.vendors.filter(v => v.id !== id);
-    return result.rowCount > 0;
+    // First check if vendor has any dependencies that would prevent deletion
+    const [purchaseOrderCount] = await this.db
+      .select({ count: count() })
+      .from(purchaseOrders)
+      .where(eq(purchaseOrders.vendorId, id));
+
+    const [rfxInvitationCount] = await this.db
+      .select({ count: count() })
+      .from(rfxInvitations)
+      .where(eq(rfxInvitations.vendorId, id));
+
+    // If vendor has dependencies, throw a descriptive error
+    if (purchaseOrderCount.count > 0 || rfxInvitationCount.count > 0) {
+      const dependencies = [];
+      if (purchaseOrderCount.count > 0) dependencies.push(`${purchaseOrderCount.count} purchase order(s)`);
+      if (rfxInvitationCount.count > 0) dependencies.push(`${rfxInvitationCount.count} RFx invitation(s)`);
+      
+      throw new Error(`Cannot delete vendor: vendor is still referenced by ${dependencies.join(' and ')}`);
+    }
+
+    // Only attempt deletion if no dependencies exist
+    try {
+      const result = await this.db.delete(vendors).where(eq(vendors.id, id));
+      // Remove from in-memory store
+      this.vendors = this.vendors.filter(v => v.id !== id);
+      return result.rowCount > 0;
+    } catch (error: any) {
+      // This shouldn't happen now since we check dependencies first
+      if (error.code === '23503') {
+        throw new Error('Cannot delete vendor: vendor is still referenced by other records. Please remove all related records first.');
+      }
+      throw error;
+    }
   }
 
   // Product Category operations

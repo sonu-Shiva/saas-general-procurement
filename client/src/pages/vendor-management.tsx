@@ -96,11 +96,29 @@ export default function VendorManagement() {
       setVendorToDelete(null);
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete vendor. Please try again.",
-        variant: "destructive",
-      });
+      // Parse backend error response for better user experience
+      let errorMessage = "Failed to delete vendor. Please try again.";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Show more descriptive error for dependency conflicts
+      if (errorMessage.includes('still referenced by')) {
+        toast({
+          title: "Cannot Delete Vendor",
+          description: errorMessage + " Remove these records first before deleting the vendor.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     },
   });
 
