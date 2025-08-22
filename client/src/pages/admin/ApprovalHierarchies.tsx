@@ -62,6 +62,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { BackNavigation } from "@/components/ui/back-navigation";
 
 interface ApprovalHierarchy {
   id: string;
@@ -353,6 +354,9 @@ export default function ApprovalHierarchies() {
 
   return (
     <div className="p-6 space-y-6" data-testid="approval-hierarchies-page">
+      {/* Back Navigation */}
+      <BackNavigation href="/admin" label="Back to Admin Configurations" />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -65,6 +65,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { BackNavigation } from "@/components/ui/back-navigation";
 
 // GST Master form schema
 const gstMasterSchema = z.object({
@@ -393,6 +394,9 @@ export default function GSTManagement() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Back Navigation */}
+      <BackNavigation href="/admin" label="Back to Admin Configurations" />
+      
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>

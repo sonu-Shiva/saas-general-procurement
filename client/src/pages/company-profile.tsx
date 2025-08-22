@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { BackNavigation } from "@/components/ui/back-navigation";
 import { 
   Building2, 
   MapPin, 
@@ -282,6 +283,9 @@ export default function CompanyProfilePage() {
 
   return (
     <div className="container mx-auto p-6 space-y-8">
+      {/* Back Navigation */}
+      <BackNavigation href="/admin" label="Back to Admin Configurations" />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Company Profile</h1>

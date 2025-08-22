@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { BackNavigation } from "@/components/ui/back-navigation";
 import {
   Shield,
   Activity,
@@ -150,6 +151,9 @@ export default function AuditLogsPage() {
 
   return (
     <div className="p-6 space-y-6" data-testid="audit-logs-page">
+      {/* Back Navigation */}
+      <BackNavigation href="/admin" label="Back to Admin Configurations" />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

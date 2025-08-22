@@ -19,6 +19,7 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { BackNavigation } from "@/components/ui/back-navigation";
 import { 
   Plus, 
   Search, 
@@ -347,6 +348,9 @@ export default function AdminDropdownConfig() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Back Navigation */}
+      <BackNavigation href="/admin" label="Back to Admin Configurations" />
+      
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Dropdown Configuration Management
