@@ -870,27 +870,20 @@ function AuctionResultsContainer({ auction, onClose }: any) {
 
   // Calculate rankings from bids - ensure we have proper bid data
   const rankings = React.useMemo(() => {
-    console.log('AuctionResultsContainer processing bids:', auctionBids);
-    
     if (!Array.isArray(auctionBids) || auctionBids.length === 0) {
-      console.log('No valid auctionBids array:', auctionBids);
       return [];
     }
     
     // Get best bid per vendor
     const vendorBids = auctionBids.reduce((acc: any, bid: any) => {
-      console.log('Processing bid:', bid);
       if (!acc[bid.vendorId] || parseFloat(bid.amount) < parseFloat(acc[bid.vendorId].amount)) {
         acc[bid.vendorId] = bid;
       }
       return acc;
     }, {});
 
-    const result = Object.values(vendorBids)
+    return Object.values(vendorBids)
       .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
-    
-    console.log('Final rankings calculated:', result);
-    return result;
   }, [auctionBids]);
 
   return (

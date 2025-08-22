@@ -8,24 +8,8 @@ interface AuctionResultsProps {
 }
 
 function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsProps) {
-  // Debug logging
-  console.log('AuctionResults received auction:', auction);
-  console.log('AuctionResults received rankings:', rankings);
-  console.log('AuctionResults received challengePrices:', challengePrices);
-  
-  // Debug challenge prices in detail
-  if (challengePrices?.length > 0) {
-    console.log('CHALLENGE PRICES BREAKDOWN:');
-    challengePrices.forEach((cp: any, index: number) => {
-      console.log(`Challenge ${index + 1}:`, {
-        vendorId: cp.vendorId,
-        amount: cp.challengeAmount || cp.amount,
-        status: cp.status,
-        type: cp.type || 'challenge',
-        fullObject: cp
-      });
-    });
-  }
+  // Debug logging - simplified
+  console.log('AuctionResults - Rankings:', rankings?.length, 'Challenge Prices:', challengePrices?.length);
   
   if (rankings?.length) {
     console.log('First ranking item:', rankings[0]);
@@ -59,7 +43,7 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
       const challengeAmount = acceptedChallenge ? parseFloat(acceptedChallenge.challengeAmount || '0') : 0;
       const finalAmount = acceptedChallenge ? challengeAmount : originalAmount;
       
-      console.log(`Vendor ${bid.vendorCompanyName}: Original=${originalAmount}, Challenge=${challengeAmount}, Final=${finalAmount}, HasAcceptedChallenge=${!!acceptedChallenge}`);
+      // console.log(`Vendor ${bid.vendorCompanyName}: Original=${originalAmount}, Challenge=${challengeAmount}, Final=${finalAmount}`);
       
       return {
         ...bid,
@@ -67,10 +51,7 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
         vendorCompanyName: bid.vendorName || bid.companyName || bid.vendorCompanyName || `Vendor ${bid.vendorId}`,
         hasAcceptedChallenge: !!acceptedChallenge,
       };
-    }).sort((a, b) => {
-      console.log(`Sorting: ${a.vendorCompanyName} (${a.finalAmount}) vs ${b.vendorCompanyName} (${b.finalAmount})`);
-      return a.finalAmount - b.finalAmount;
-    });
+    }).sort((a, b) => a.finalAmount - b.finalAmount);
   }, [rankings, challengePrices]);
 
   const formatBidDateTime = (timestamp: string) => {
