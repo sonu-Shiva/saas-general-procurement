@@ -31,6 +31,7 @@ import AuditLogsPage from "./pages/AuditLogsPage";
 import ApprovalHierarchies from "./pages/admin/ApprovalHierarchies";
 import GSTManagement from "./pages/gst-management";
 import CompanyProfile from "./pages/company-profile";
+import AdminConfigurations from "./pages/admin-configurations";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -123,6 +124,7 @@ function Router() {
           <Route path="/vendor/rfx-response/:id" component={VendorRfxResponse} />
           <Route path="/purchase-orders" component={PurchaseOrders} />
           <Route path="/analytics" component={Analytics} />
+          <Route path="/admin" component={AdminConfigurations} />
           <Route path="/admin/dropdown-config" component={AdminDropdownConfig} />
           <Route path="/admin/user-management" component={AdminUserManagement} />
           <Route path="/admin/audit-logs" component={AuditLogsPage} />
