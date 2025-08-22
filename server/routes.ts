@@ -195,11 +195,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/vendors', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log("=== VENDOR CREATION ===");
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
       const validatedData = {
         ...req.body,
         createdBy: userId,
+        // Ensure logoUrl is properly passed through
+        logoUrl: req.body.logoUrl || null,
       };
+      console.log("Validated data:", JSON.stringify(validatedData, null, 2));
+      
       const vendor = await storage.createVendor(validatedData);
+      console.log("Created vendor:", JSON.stringify(vendor, null, 2));
       
       // Create audit log for vendor creation
       await storage.createAuditLog({

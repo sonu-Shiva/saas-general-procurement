@@ -64,6 +64,7 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
           website: vendor.website,
           categories: vendor.category ? [vendor.category] : [],
           description: vendor.description,
+          logoUrl: vendor.logoUrl || null,
           status: 'active'
         }),
       });
@@ -87,6 +88,11 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
   });
 
   const handleAddToNetwork = (vendor: DiscoveredVendor) => {
+    console.log("Adding vendor to network:", {
+      name: vendor.name,
+      logoUrl: vendor.logoUrl,
+      hasLogo: !!vendor.logoUrl && vendor.logoUrl !== 'Not available'
+    });
     addVendorMutation.mutate(vendor);
   };
 
@@ -229,16 +235,27 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
                           {vendor.category || 'General'}
                         </Badge>
                       </div>
-                      {vendor.logoUrl && (
-                        <img 
-                          src={vendor.logoUrl} 
-                          alt={`${vendor.name} logo`}
-                          className="w-8 h-8 rounded object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      )}
+                      <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                        {vendor.logoUrl && vendor.logoUrl !== 'Not available' ? (
+                          <img 
+                            src={vendor.logoUrl} 
+                            alt={`${vendor.name} logo`}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              // Fallback to company initial when logo fails to load
+                              const target = e.currentTarget;
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `<div class="w-full h-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-bold">${vendor.name.charAt(0)}</div>`;
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-bold">
+                            {vendor.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-1 text-xs">
@@ -282,9 +299,10 @@ export default function AIVendorDiscovery({ onVendorsFound }: AIVendorDiscoveryP
                         size="sm" 
                         className="text-xs h-6 flex-1"
                         onClick={() => handleAddToNetwork(vendor)}
+                        disabled={addVendorMutation.isPending}
                         data-testid={`button-add-network-${vendor.name.replace(/\s+/g, '-').toLowerCase()}`}
                       >
-                        Add to Network
+                        {addVendorMutation.isPending ? 'Adding...' : 'Add to Network'}
                       </Button>
                       <Button 
                         size="sm" 
