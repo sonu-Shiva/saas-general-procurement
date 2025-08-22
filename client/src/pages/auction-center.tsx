@@ -1023,8 +1023,8 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {rankings.map((bid: any, index: number) => {
-                const vendorChallenges = challengePrices.filter((cp: any) => cp.vendorId === bid.vendorId);
+              {(rankings || []).map((bid: any, index: number) => {
+                const vendorChallenges = (challengePrices || []).filter((cp: any) => cp.vendorId === bid.vendorId);
                 const hasAcceptedChallenge = vendorChallenges.some((cp: any) => cp.status === 'accepted');
                 const hasPendingChallenge = vendorChallenges.some((cp: any) => cp.status === 'pending');
                 
@@ -1036,7 +1036,7 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                           {bid.rankLabel}
                         </Badge>
                         <div>
-                          <div className="font-medium">{bid.vendorName || `Vendor ${bid.vendorId.slice(0, 8)}`}</div>
+                          <div className="font-medium">{bid.vendorName || `Vendor ${bid.vendorId?.slice(0, 8) || 'Unknown'}`}</div>
                           <div className="text-sm text-muted-foreground">
                             Bid: ₹{bid.amount}
                           </div>
@@ -1163,13 +1163,13 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 max-h-60 overflow-y-auto">
-            {currentBids.slice().reverse().map((bid: any) => (
+            {(currentBids || []).slice().reverse().map((bid: any) => (
               <div key={bid.id} className="flex items-center justify-between p-2 border-b last:border-b-0">
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span className="font-medium">₹{bid.amount}</span>
                   <span className="text-sm text-muted-foreground">
-                    by {bid.vendorName || `Vendor ${bid.vendorId.slice(0, 8)}`}
+                    by {bid.vendorName || `Vendor ${bid.vendorId?.slice(0, 8) || 'Unknown'}`}
                   </span>
                 </div>
                 <span className="text-sm text-muted-foreground">
