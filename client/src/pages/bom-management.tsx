@@ -233,167 +233,65 @@ export default function BomManagement() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Page Header */}
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">BOM Management</h1>
-                <p className="text-muted-foreground">Create and manage Bills of Materials for grouped procurement</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex gap-2">
-                  <Button
-                    variant={viewMode === "table" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setViewMode("table")}
-                    data-testid="button-table-view"
-                  >
-                    Table
-                  </Button>
-                  <Button
-                    variant={viewMode === "cards" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setViewMode("cards")}
-                    data-testid="button-cards-view"
-                  >
-                    Cards
-                  </Button>
-                </div>
-                <div className="flex space-x-3">
-                {!isBuyer && (
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">
-                      {isVendor 
-                        ? "BOM creation is restricted to authorized roles. Switch to Department Requester, Sourcing Executive, or Admin role to create BOMs."
-                        : "Please select an authorized role to access BOM management features."
-                      }
-                    </p>
-                  </div>
-                )}
-                {isBuyer && (
-                  <>
-                    <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-                          <Bot className="w-4 h-4 mr-2" />
-                          AI BOM Builder
-                        </Button>
-                      </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center">
-                        <Bot className="w-5 h-5 mr-2 text-primary" />
-                        AI-Powered BOM Creation
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-6">
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">AI Assistant</h3>
-                        <p className="text-sm text-blue-700 dark:text-blue-200">
-                          Describe what you want to build, and I'll suggest components from your catalogue.
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium text-foreground mb-2 block">
-                            What do you want to build?
-                          </label>
-                          <Input
-                            placeholder="e.g., 'Office workstation setup', 'Industrial pump assembly', 'Electronic device prototype'"
-                            className="text-lg py-3"
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-foreground mb-2 block">
-                              Quantity Needed
-                            </label>
-                            <Input type="number" placeholder="100" />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-foreground mb-2 block">
-                              Budget Range
-                            </label>
-                            <Select>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select budget" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="under_50k">Under ₹50,000</SelectItem>
-                                <SelectItem value="50k_to_2l">₹50,000 - ₹2,00,000</SelectItem>
-                                <SelectItem value="2l_to_10l">₹2,00,000 - ₹10,00,000</SelectItem>
-                                <SelectItem value="above_10l">Above ₹10,00,000</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-end space-x-3">
-                          <Button variant="outline" onClick={() => setIsAiDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button className="bg-primary hover:bg-primary/90">
-                            <Bot className="w-4 h-4 mr-2" />
-                            Generate BOM
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="bg-primary hover:bg-primary/90">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create BOM
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>{editingBom && !isEditDialogOpen ? 'Copy BOM' : 'Create New BOM'}</DialogTitle>
-                        </DialogHeader>
-                        <BomBuilder 
-                          existingBom={editingBom && !isEditDialogOpen ? editingBom : undefined}
-                          onClose={() => {
-                            setIsCreateDialogOpen(false);
-                            setEditingBom(null);
-                          }} 
-                        />
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* Edit BOM Dialog */}
-                    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Edit BOM: {editingBom?.name}</DialogTitle>
-                        </DialogHeader>
-                        {editingBom && (
-                          <BomBuilder 
-                            onClose={handleCloseEditDialog} 
-                            existingBom={editingBom}
-                          />
-                        )}
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* View BOM Dialog */}
-                    <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>BOM Details: {viewingBom?.name}</DialogTitle>
-                        </DialogHeader>
-                        {viewingBom && <BomView bom={viewingBom} onClose={handleCloseViewDialog} />}
-                      </DialogContent>
-                    </Dialog>
-                  </>
-                )}
-              </div>
+      {/* Page Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">BOM Management</h1>
+          <p className="text-muted-foreground">Create and manage Bills of Materials for grouped procurement</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === "table" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              data-testid="button-table-view"
+            >
+              Table
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              data-testid="button-cards-view"
+            >
+              Cards
+            </Button>
+          </div>
+          {!isBuyer && (
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                {isVendor 
+                  ? "BOM creation is restricted to authorized roles. Switch to Department Requester, Sourcing Executive, or Admin role to create BOMs."
+                  : "Please select an authorized role to access BOM management features."
+                }
+              </p>
             </div>
+          )}
+          {isBuyer && (
+            <div className="flex space-x-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAiDialogOpen(true)}
+                className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800"
+              >
+                <Bot className="w-4 h-4 mr-2" />
+                AI BOM Builder
+              </Button>
+              <Button 
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create BOM
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -487,31 +385,19 @@ export default function BomManagement() {
 
             {/* BOMs Display */}
             {isLoading ? (
-              viewMode === "cards" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <Card key={i}>
-                      <CardContent className="p-6">
-                        <div className="animate-pulse">
-                          <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                          <div className="h-3 bg-muted rounded w-1/2 mb-4"></div>
-                          <div className="h-8 bg-muted rounded w-full"></div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="animate-pulse space-y-3">
-                      <div className="h-4 bg-muted rounded w-full"></div>
-                      <div className="h-4 bg-muted rounded w-full"></div>
-                      <div className="h-4 bg-muted rounded w-full"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6">
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-muted rounded w-1/2 mb-4"></div>
+                        <div className="h-8 bg-muted rounded w-full"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : filteredBoms && filteredBoms.length > 0 ? (
               viewMode === "cards" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -738,7 +624,87 @@ export default function BomManagement() {
                 </CardContent>
               </Card>
             )}
-      </div>
+
+      {/* Dialogs */}
+      <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Bot className="w-5 h-5 mr-2 text-primary" />
+              AI-Powered BOM Creation
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">AI Assistant</h3>
+              <p className="text-sm text-blue-700 dark:text-blue-200">
+                Describe what you want to build, and I'll suggest components from your catalogue.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  What do you want to build?
+                </label>
+                <Input
+                  placeholder="e.g., 'Office workstation setup', 'Industrial pump assembly', 'Electronic device prototype'"
+                  className="text-lg py-3"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <Button variant="outline" onClick={() => setIsAiDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Bot className="w-4 h-4 mr-2" />
+                  Generate BOM
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create BOM Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingBom && !isEditDialogOpen ? 'Copy BOM' : 'Create New BOM'}</DialogTitle>
+          </DialogHeader>
+          <BomBuilder 
+            existingBom={editingBom && !isEditDialogOpen ? editingBom : undefined}
+            onClose={() => {
+              setIsCreateDialogOpen(false);
+              setEditingBom(null);
+            }} 
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit BOM Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit BOM: {editingBom?.name}</DialogTitle>
+          </DialogHeader>
+          {editingBom && (
+            <BomBuilder 
+              onClose={handleCloseEditDialog} 
+              existingBom={editingBom}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View BOM Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>BOM Details: {viewingBom?.name}</DialogTitle>
+          </DialogHeader>
+          {viewingBom && <BomView bom={viewingBom} onClose={handleCloseViewDialog} />}
+        </DialogContent>
+      </Dialog>
 
       {/* Copy BOM Dialog */}
       <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
