@@ -2108,7 +2108,16 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-
+  // Get challenge prices for an auction
+  app.get('/api/auctions/:id/challenge-prices', isAuthenticated, async (req, res) => {
+    try {
+      const challengePrices = await storage.getChallengePrices({ auctionId: req.params.id });
+      res.json(challengePrices || []);
+    } catch (error) {
+      console.error("Error fetching challenge prices:", error);
+      res.status(500).json({ message: "Failed to fetch challenge prices" });
+    }
+  });
 
   // Purchase Order routes
   app.post('/api/purchase-orders', isAuthenticated, async (req: any, res) => {
