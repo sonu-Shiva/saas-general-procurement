@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,62 +37,61 @@ interface BomItem {
 
 export default function BomView({ bom, onClose }: BomViewProps) {
   const [bomItems, setBomItems] = useState<BomItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch BOM items with force refresh
-  const { data: bomItemsData, isLoading, error, refetch } = useQuery<BomItem[]>({
-    queryKey: ["/api/boms", bom.id, "items", Date.now()], // Force unique query key
-    queryFn: async () => {
-      console.log("🚀 BOM View - STARTING API CALL for BOM:", bom.id);
-      const rawResponse = await apiRequest("GET", `/api/boms/${bom.id}/items`);
-      console.log("🚀 BOM View - Raw response received:", rawResponse.status);
-      
-      const response = await rawResponse.json();
-      console.log("🚀 BOM View - Items fetched count:", response?.length || 0);
-      console.log("🚀 BOM View - Full items data:", JSON.stringify(response, null, 2));
-      
-      return response || [];
-    },
-    retry: false,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-  });
-
-  // Force refresh on component mount
+  // Direct API call without React Query to avoid caching issues
   useEffect(() => {
-    console.log("🔄 BOM View - Component mounted, forcing refresh");
-    refetch();
-  }, [refetch]);
+    const fetchBomItems = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        console.log("🚀 BOM View - Direct API call for BOM:", bom.id);
+        
+        const response = await fetch(`/api/boms/${bom.id}/items`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log("🚀 BOM View - Response status:", response.status);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const items = await response.json();
+        console.log("🚀 BOM View - Items received:", items.length);
+        console.log("🚀 BOM View - Items data:", JSON.stringify(items, null, 2));
+        
+        setBomItems(items || []);
+        setIsLoading(false);
+      } catch (err) {
+        console.error("❌ BOM View - Error fetching items:", err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch BOM items');
+        setBomItems([]);
+        setIsLoading(false);
+      }
+    };
 
-  // Force refresh on component mount
-  useEffect(() => {
-    console.log("🔄 BOM View - Component mounted, forcing refresh");
-    refetch();
-  }, [refetch]);
-
-  useEffect(() => {
-    console.log("🔄 BOM View - bomItemsData changed:", bomItemsData);
-    console.log("🔄 BOM View - bomItemsData type:", typeof bomItemsData);
-    console.log("🔄 BOM View - bomItemsData is array:", Array.isArray(bomItemsData));
-    console.log("🔄 BOM View - error:", error);
-    if (bomItemsData && Array.isArray(bomItemsData)) {
-      console.log("✅ BOM View - Setting BOM items:", bomItemsData);
-      setBomItems(bomItemsData);
-    } else {
-      console.log("❌ BOM View - No bomItemsData or not array, setting empty array");
-      setBomItems([]);
+    if (bom?.id) {
+      fetchBomItems();
     }
-  }, [bomItemsData, error]);
+  }, [bom.id]);
 
   const totalBomValue = bomItems.reduce((sum, item) => {
     const totalPrice = parseFloat(item.totalPrice || '0');
     return sum + totalPrice;
   }, 0);
 
-  console.log("BOM View - Current bomItems state:", bomItems);
-  console.log("BOM View - Total BOM value:", totalBomValue);
-  console.log("BOM View - isLoading:", isLoading);
+  console.log("✅ BOM View - Current state:", {
+    bomId: bom.id,
+    bomItemsCount: bomItems.length,
+    totalBomValue,
+    isLoading,
+    error
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -197,14 +194,19 @@ export default function BomView({ bom, onClose }: BomViewProps) {
                 </div>
               ))}
             </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-600">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Error loading BOM items</p>
+              <p className="text-xs mt-2">Error: {error}</p>
+            </div>
           ) : bomItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No items found in this BOM</p>
-              <p className="text-xs mt-2">Debug: bomItems = {JSON.stringify(bomItems)}</p>
-              <p className="text-xs">Debug: bomItemsData = {JSON.stringify(bomItemsData)}</p>  
+              <p className="text-xs mt-2">Debug: bomItems = {bomItems.length}</p>
               <p className="text-xs">Debug: isLoading = {String(isLoading)}</p>
-              <p className="text-xs">Debug: error = {JSON.stringify(error)}</p>
+              <p className="text-xs">Debug: error = {error || 'none'}</p>
             </div>
           ) : (
             <div className="space-y-4">
