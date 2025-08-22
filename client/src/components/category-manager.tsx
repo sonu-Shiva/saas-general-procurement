@@ -185,6 +185,8 @@ export default function CategoryManager({
   const { data: categoryHierarchy = [], isLoading } = useQuery<CategoryNode[]>({
     queryKey: ["/api/product-categories/hierarchy"],
     retry: false,
+    staleTime: 0, // Force fresh data every time
+    cacheTime: 0, // Don't cache results
   });
 
   const form = useForm({
