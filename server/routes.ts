@@ -1328,7 +1328,7 @@ Focus on established businesses with verifiable contact information.`;
       const { status, type } = req.query;
 
       // Buyers/admins see all RFx they created
-      if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager') {
+      if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager' || user.role === 'admin' || user.role === 'department_requester' || user.role === 'dept_approver' || user.role === 'sourcing_exec') {
         const rfxEvents = await storage.getRfxEvents({
           status: status as string,
           type: type as string,
@@ -1717,7 +1717,7 @@ Focus on established businesses with verifiable contact information.`;
       }
 
       // Buyers/admins see all auctions they created
-      if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager') {
+      if (user.role === 'buyer_admin' || user.role === 'buyer_user' || user.role === 'sourcing_manager' || user.role === 'admin' || user.role === 'department_requester' || user.role === 'dept_approver' || user.role === 'sourcing_exec') {
         const auctions = await storage.getAuctions({ createdBy: userId });
         res.json(auctions);
       } 
