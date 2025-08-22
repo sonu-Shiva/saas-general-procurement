@@ -592,6 +592,33 @@ export default function ProcurementRequests() {
                           </p>
                         </div>
                       )}
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLocation(`/pr-approval/${request.id}`)}
+                          data-testid={`button-view-card-${request.id}`}
+                          className="flex items-center gap-2 flex-1"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View
+                        </Button>
+                        {request.overallStatus === 'request_approval_pending' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => withdrawMutation.mutate(request.id)}
+                            disabled={withdrawMutation.isPending}
+                            data-testid={`button-withdraw-card-${request.id}`}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Withdraw
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

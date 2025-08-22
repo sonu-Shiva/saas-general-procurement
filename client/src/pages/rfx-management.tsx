@@ -986,6 +986,10 @@ function RfxCard({ rfx, isVendor, onViewDetails, onRespond, onViewResponses, onC
                   Close
                 </Button>
               )}
+              <Button variant="ghost" size="sm" onClick={() => onDelete(rfx.id)}>
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete
+              </Button>
             </>
           )}
         </div>
