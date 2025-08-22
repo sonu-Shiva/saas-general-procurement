@@ -1,8 +1,14 @@
 export interface DashboardStats {
-  totalSpend: number;
-  activeVendors: number;
+  totalSpend?: number;
+  totalVendors: number;
+  totalProducts: number;
+  totalBoms: number;
+  totalRfx: number;
+  totalAuctions: number;
+  totalPurchaseOrders: number;
   pendingApprovals: number;
-  costSavings: number;
+  costSavings?: number;
+  recentActivity: any[];
 }
 
 export interface AuctionBid {

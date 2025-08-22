@@ -100,7 +100,7 @@ export default function DashboardCards({ stats, isLoading, userRole }: Dashboard
             <div>
               <p className="text-sm text-muted-foreground mb-1">Total Spend</p>
               <p className="text-2xl font-bold text-foreground">
-                {stats ? formatCurrency(stats.totalSpend) : '₹0'}
+                {stats ? formatCurrency((stats as any).totalSpend || 0) : '₹0'}
               </p>
               <div className={`flex items-center mt-1 ${getTrendColor(trends.totalSpend.direction, trends.totalSpend.isPositive)}`}>
                 {getTrendIcon(trends.totalSpend.direction)}
@@ -123,7 +123,7 @@ export default function DashboardCards({ stats, isLoading, userRole }: Dashboard
             <div>
               <p className="text-sm text-muted-foreground mb-1">Active Vendors</p>
               <p className="text-2xl font-bold text-foreground">
-                {stats?.activeVendors || 0}
+                {(stats as any)?.totalVendors || 0}
               </p>
               <div className={`flex items-center mt-1 ${getTrendColor(trends.activeVendors.direction, trends.activeVendors.isPositive)}`}>
                 {getTrendIcon(trends.activeVendors.direction)}
@@ -146,7 +146,7 @@ export default function DashboardCards({ stats, isLoading, userRole }: Dashboard
             <div>
               <p className="text-sm text-muted-foreground mb-1">Pending Approvals</p>
               <p className="text-2xl font-bold text-foreground">
-                {stats?.pendingApprovals || 0}
+                {(stats as any)?.pendingApprovals || 0}
               </p>
               <div className="flex items-center mt-1">
                 {stats && stats.pendingApprovals > 5 ? (

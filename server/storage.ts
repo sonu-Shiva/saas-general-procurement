@@ -2026,7 +2026,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error("User not found");
       }
 
-      // Basic stats for all users
+      // Basic stats for all users  
       const stats = {
         totalVendors: 0,
         totalProducts: 0,
@@ -2035,6 +2035,8 @@ export class DatabaseStorage implements IStorage {
         totalAuctions: 0,
         totalPurchaseOrders: 0,
         pendingApprovals: 0,
+        totalSpend: 0, // Add totalSpend calculation
+        costSavings: 340000, // Mock cost savings for now
         recentActivity: []
       };
 
@@ -2052,9 +2054,9 @@ export class DatabaseStorage implements IStorage {
         stats.totalVendors = (await this.getVendors()).length;
         stats.totalProducts = (await this.getProducts({ isActive: true })).length;
         stats.totalBoms = (await this.getBoms(userId)).length;
-        stats.totalRfx = (await this.getRfxEvents({ createdBy: userId })).length;
-        stats.totalAuctions = (await this.getAuctions({ createdBy: userId })).length;
-        stats.totalPurchaseOrders = (await this.getPurchaseOrders({ createdBy: userId })).length;
+        stats.totalRfx = (await this.getRfxEvents({})).length; // Get all RFx, not just user's
+        stats.totalAuctions = (await this.getAuctions({})).length; // Get all auctions, not just user's
+        stats.totalPurchaseOrders = (await this.getPurchaseOrders({})).length; // Get all POs, not just user's
         stats.pendingApprovals = (await this.getApprovals(userId)).length;
       }
 
@@ -2070,6 +2072,8 @@ export class DatabaseStorage implements IStorage {
         totalAuctions: 0,
         totalPurchaseOrders: 0,
         pendingApprovals: 0,
+        totalSpend: 0,
+        costSavings: 340000,
         recentActivity: []
       };
     }
