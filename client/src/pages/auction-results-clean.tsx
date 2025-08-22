@@ -18,12 +18,19 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
       const vendorChallenges = Array.isArray(challengePrices) ? challengePrices.filter((cp: any) => cp.vendorId === bid.vendorId) : [];
       const acceptedChallenge = vendorChallenges.find((cp: any) => cp.status === 'accepted');
       
+      // Ensure we have valid amounts
+      const originalAmount = parseFloat(bid.amount || bid.bidAmount || '0');
+      const challengeAmount = acceptedChallenge ? parseFloat(acceptedChallenge.challengeAmount || '0') : 0;
+      const finalAmount = acceptedChallenge ? challengeAmount : originalAmount;
+      
       return {
         ...bid,
-        finalAmount: acceptedChallenge ? acceptedChallenge.challengeAmount : bid.amount,
+        finalAmount: finalAmount.toString(),
         hasAcceptedChallenge: !!acceptedChallenge,
         challengePrices: vendorChallenges,
-        originalBidAmount: bid.amount
+        originalBidAmount: originalAmount.toString(),
+        vendorName: bid.vendorName || bid.companyName || bid.vendorCompanyName || `Vendor ${bid.vendorId}`,
+        vendorEmail: bid.vendorEmail || bid.email || 'No email provided'
       };
     }).sort((a: any, b: any) => parseFloat(a.finalAmount) - parseFloat(b.finalAmount))
       .map((bid: any, index: number) => ({
@@ -81,7 +88,7 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
                   {bid.rankLabel}
                 </Badge>
                 <div className="text-right">
-                  <div className="text-2xl font-bold">₹{parseFloat(bid.finalAmount).toLocaleString()}</div>
+                  <div className="text-2xl font-bold">₹{parseFloat(bid.finalAmount || 0).toLocaleString()}</div>
                   {bid.hasAcceptedChallenge && (
                     <div className="text-xs text-green-600 font-medium">
                       ✓ Challenge Accepted
