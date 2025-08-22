@@ -52,6 +52,7 @@ export default function RfxManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
@@ -259,8 +260,29 @@ export default function RfxManagement() {
             </div>
           )}
         </div>
-        {!isVendor && (
-          <div className="flex space-x-3">
+        <div className="flex items-center space-x-3">
+          {/* Table/Cards Toggle */}
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === "table" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              data-testid="button-table-view"
+            >
+              Table
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              data-testid="button-cards-view"
+            >
+              Cards
+            </Button>
+          </div>
+          {!isVendor && (
+            <>
+            <div className="h-4 w-px bg-border"></div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-primary hover:bg-primary/90">
@@ -337,8 +359,9 @@ export default function RfxManagement() {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
-        )}
+            </>
+          )}
+        </div>
         {!isVendor && (
           <div className="flex items-center space-x-2">
             {/* Development Test Buttons */}

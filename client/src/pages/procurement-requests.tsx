@@ -275,26 +275,24 @@ export default function ProcurementRequests() {
           </div>
           
           <div className="flex gap-2">
-            {isRequester ? (
-              <div className="flex gap-2">
-                <Button
-                  variant={viewMode === "table" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("table")}
-                  data-testid="button-table-view"
-                >
-                  Table
-                </Button>
-                <Button
-                  variant={viewMode === "cards" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("cards")}
-                  data-testid="button-cards-view"
-                >
-                  Cards
-                </Button>
-              </div>
-            ) : null}
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "table" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                data-testid="button-table-view"
+              >
+                Table
+              </Button>
+              <Button
+                variant={viewMode === "cards" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("cards")}
+                data-testid="button-cards-view"
+              >
+                Cards
+              </Button>
+            </div>
             {canCreateRequests ? (
               <CreateProcurementRequestDialog
                 trigger={
