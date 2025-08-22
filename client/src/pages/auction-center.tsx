@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -850,82 +850,58 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
   );
 }
 
-// Live Bidding Interface Component
+// Live Bidding Interface Component - Shows Results and Live Bidding
 function LiveBiddingInterface({ auction, ws, onClose }: any) {
-  const [currentBids, setCurrentBids] = useState<any[]>([]);
-  const [rankings, setRankings] = useState<any[]>([]);
-  const [newBidAmount, setNewBidAmount] = useState('');
-  const { user } = useAuth();
+  const [currentBid, setCurrentBid] = useState('');
+  const [bids, setBids] = useState<any[]>([]);
+  const [counterAmount, setCounterAmount] = useState('');
+  const [counterNotes, setCounterNotes] = useState('');
+  const [selectedChallenge, setSelectedChallenge] = useState<any>(null);
+  const [isCounterDialogOpen, setIsCounterDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  
-  const isLiveAuction = auction.status === 'live';
-  const isClosedAuction = auction.status === 'closed' || auction.status === 'completed';
 
-  const { data: bids = [] } = useQuery({
+  // Fetch current bids
+  const { data: auctionBids = [] } = useQuery({
     queryKey: ["/api/auctions", auction.id, "bids"],
-    refetchInterval: isLiveAuction ? 2000 : false, // Only refresh for live auctions
+    refetchInterval: auction.status === 'live' ? 2000 : false, // Refresh for live auctions only
+    retry: false,
   });
 
-  // Fetch challenge prices
+  // Fetch challenge prices for this vendor
   const { data: challengePrices = [] } = useQuery({
     queryKey: ["/api/auctions", auction.id, "challenge-prices"],
-    refetchInterval: isLiveAuction ? 3000 : false, // Only refresh for live auctions
+    refetchInterval: auction.status === 'live' ? 3000 : false, // Refresh for live auctions only
+    retry: false,
   });
 
   useEffect(() => {
-    if (Array.isArray(bids)) {
-      setCurrentBids(bids);
-      
-      // Calculate rankings
-      const vendorBids = bids.reduce((acc: any, bid: any) => {
-        if (!acc[bid.vendorId] || bid.amount < acc[bid.vendorId].amount) {
-          acc[bid.vendorId] = bid;
-        }
-        return acc;
-      }, {});
+    setBids(Array.isArray(auctionBids) ? auctionBids : []);
+  }, [auctionBids]);
 
-      const ranked = Object.values(vendorBids)
-        .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount))
-        .map((bid: any, index: number) => ({
-          ...bid,
-          rank: index + 1,
-          rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`
-        }));
+  // Calculate rankings from bids
+  const rankings = React.useMemo(() => {
+    if (!Array.isArray(bids)) return [];
+    
+    // Get best bid per vendor
+    const vendorBids = bids.reduce((acc: any, bid: any) => {
+      if (!acc[bid.vendorId] || parseFloat(bid.amount) < parseFloat(acc[bid.vendorId].amount)) {
+        acc[bid.vendorId] = bid;
+      }
+      return acc;
+    }, {});
 
-      setRankings(ranked);
-    }
+    return Object.values(vendorBids)
+      .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount))
+      .map((bid: any, index: number) => ({
+        ...bid,
+        rank: index + 1,
+        rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`
+      }));
   }, [bids]);
 
-  const submitBid = async () => {
-    if (!newBidAmount || parseFloat(newBidAmount) <= 0) return;
 
-    try {
-      const response = await fetch("/api/bids", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          auctionId: auction.id,
-          amount: newBidAmount,
-        }),
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        setNewBidAmount('');
-        toast({
-          title: "Bid Submitted",
-          description: `Your bid of ₹${newBidAmount} has been submitted`,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit bid",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Challenge price response mutations
   const respondToChallengeMutation = useMutation({
@@ -950,30 +926,27 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
     }
   });
 
-  const handleSendChallenge = async (vendorId: string, bidId: string) => {
-    try {
-      const challengeAmount = parseFloat(newBidAmount);
-      if (!challengeAmount || challengeAmount <= 0) return;
 
-      const response = await fetch(`/api/auctions/${auction.id}/challenge-prices`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vendorId,
-          bidId,
-          challengeAmount,
-          notes: "Challenge price for better value"
-        })
-      });
 
-      if (response.ok) {
-        toast({ title: "Success", description: "Challenge price sent successfully" });
-        setNewBidAmount('');
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to send challenge price", variant: "destructive" });
-    }
-  };
+  // Get final ranked bids with challenge prices
+  const finalRankings = React.useMemo(() => {
+    return rankings.map((bid: any) => {
+      const vendorChallenges = Array.isArray(challengePrices) ? challengePrices.filter((cp: any) => cp.vendorId === bid.vendorId) : [];
+      const acceptedChallenge = vendorChallenges.find((cp: any) => cp.status === 'accepted');
+      
+      return {
+        ...bid,
+        finalAmount: acceptedChallenge ? acceptedChallenge.challengeAmount : bid.amount,
+        hasAcceptedChallenge: !!acceptedChallenge,
+        challengePrices: vendorChallenges
+      };
+    }).sort((a: any, b: any) => parseFloat(a.finalAmount) - parseFloat(b.finalAmount))
+      .map((bid: any, index: number) => ({
+        ...bid,
+        rank: index + 1,
+        rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`
+      }));
+  }, [rankings, challengePrices]);
 
   const getRankColor = (rank: number) => {
     switch (rank) {
@@ -984,237 +957,169 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
     }
   };
 
+  if (!rankings.length) {
+    return (
+      <div className="text-center py-8">
+        <Trophy className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-foreground mb-2">No Bids Received</h3>
+        <p className="text-muted-foreground">This auction received no bids.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
-      {/* Auction Info */}
+      {/* Auction Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">
           <div className="text-center">
-            <Target className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+            <Trophy className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
+            <div className="text-sm text-muted-foreground">Winner</div>
+            <div className="text-lg font-bold">{finalRankings[0]?.vendorName || 'No Winner'}</div>
+            {finalRankings[0] && (
+              <div className="text-sm text-muted-foreground">₹{finalRankings[0].finalAmount}</div>
+            )}
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-center">
+            <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+            <div className="text-sm text-muted-foreground">Total Bidders</div>
+            <div className="text-xl font-bold">{rankings.length}</div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-center">
+            <Target className="w-8 h-8 mx-auto mb-2 text-green-600" />
             <div className="text-sm text-muted-foreground">Ceiling Price</div>
-            <div className="text-xl font-bold">₹{auction.reservePrice}</div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <TrendingDown className="w-8 h-8 mx-auto mb-2 text-green-600" />
-            <div className="text-sm text-muted-foreground">Current L1</div>
-            <div className="text-xl font-bold">₹{rankings[0]?.amount || 'No bids'}</div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <Timer className="w-8 h-8 mx-auto mb-2 text-red-600" />
-            <div className="text-sm text-muted-foreground">Time Remaining</div>
-            <div className="text-xl font-bold">15:30</div>
+            <div className="text-xl font-bold">₹{auction.reservePrice || 'Not Set'}</div>
           </div>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Live Rankings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Trophy className="w-5 h-5" />
-              <span>Live Rankings</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {(rankings || []).map((bid: any, index: number) => {
-                const vendorChallenges = (challengePrices || []).filter((cp: any) => cp.vendorId === bid.vendorId);
-                const hasAcceptedChallenge = vendorChallenges.some((cp: any) => cp.status === 'accepted');
-                const hasPendingChallenge = vendorChallenges.some((cp: any) => cp.status === 'pending');
-                
-                return (
-                  <div key={bid.id} className="space-y-2">
-                    <div className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center space-x-3">
-                        <Badge className={getRankColor(bid.rank)}>
-                          {bid.rankLabel}
-                        </Badge>
-                        <div>
-                          <div className="font-medium">{bid.vendorName || `Vendor ${bid.vendorId?.slice(0, 8) || 'Unknown'}`}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Bid: ₹{bid.amount}
-                          </div>
-                        </div>
+      {/* Bidding Results */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bidding Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {finalRankings.map((bid: any) => (
+              <div key={bid.id} className="space-y-2">
+                <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${
+                  bid.rank === 1 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'
+                }`}>
+                  <div className="flex items-center space-x-4">
+                    <Badge className={getRankColor(bid.rank)}>
+                      {bid.rankLabel}
+                    </Badge>
+                    <div>
+                      <div className="font-medium text-foreground">{bid.vendorName}</div>
+                      <div className="text-sm text-muted-foreground">{bid.vendorEmail}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-foreground">₹{parseFloat(bid.finalAmount).toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(bid.timestamp).toLocaleDateString()} {new Date(bid.timestamp).toLocaleTimeString()}
+                    </div>
+                    {bid.hasAcceptedChallenge && (
+                      <div className="text-xs text-green-600 font-medium mt-1">
+                        ✓ Challenge Price Accepted
                       </div>
-                      <div className="text-right space-x-2 flex items-center">
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(bid.timestamp).toLocaleTimeString()}
+                    )}
+                  </div>
+                </div>
+
+                {/* Challenge Price Details */}
+                {bid.challengePrices.map((challenge: any) => (
+                  <div key={challenge.id} className="ml-8 p-3 bg-blue-50 rounded border-l-4 border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">Challenge Price: ₹{challenge.challengeAmount}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Status: <Badge variant={
+                            challenge.status === 'accepted' ? 'default' :
+                            challenge.status === 'rejected' ? 'destructive' : 'secondary'
+                          }>
+                            {challenge.status}
+                          </Badge>
                         </div>
-                        {user?.role === 'SOURCING_EXECUTIVE' && bid.rank <= 3 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSendChallenge(bid.vendorId, bid.id)}
-                            disabled={hasAcceptedChallenge || hasPendingChallenge}
-                          >
-                            {hasAcceptedChallenge ? 'Accepted' : hasPendingChallenge ? 'Sent' : 'Challenge'}
-                          </Button>
+                        {challenge.notes && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Notes: {challenge.notes}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        {challenge.status === 'accepted' && (
+                          <div className="text-sm text-green-600 font-medium">
+                            ✓ Counter Price Accepted
+                          </div>
+                        )}
+                        {challenge.status === 'rejected' && (
+                          <div className="text-sm text-red-600 font-medium">
+                            ✗ Counter Price Rejected
+                          </div>
                         )}
                       </div>
                     </div>
-                    
-                    {/* Challenge Price Status */}
-                    {vendorChallenges.map((challenge: any) => (
-                      <div key={challenge.id} className="ml-8 p-2 bg-blue-50 rounded border-l-4 border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-sm font-medium">Challenge Price: ₹{challenge.challengeAmount}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Status: <Badge variant={
-                                challenge.status === 'accepted' ? 'default' :
-                                challenge.status === 'rejected' ? 'destructive' : 'secondary'
-                              }>
-                                {challenge.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          {challenge.status === 'pending' && user?.role === 'SOURCING_MANAGER' && (
-                            <div className="space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => respondToChallengeMutation.mutate({ challengeId: challenge.id, action: 'accept' })}
-                                disabled={respondToChallengeMutation.isPending}
-                              >
-                                Accept
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => respondToChallengeMutation.mutate({ challengeId: challenge.id, action: 'reject' })}
-                                disabled={respondToChallengeMutation.isPending}
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                          {challenge.status === 'accepted' && (
-                            <div className="text-sm text-green-600 font-medium">
-                              ✓ Counter Price Accepted
-                            </div>
-                          )}
-                          {challenge.status === 'rejected' && (
-                            <div className="text-sm text-red-600 font-medium">
-                              ✗ Counter Price Rejected
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bidding Interface */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Gavel className="w-5 h-5" />
-              <span>{user?.role === 'VENDOR' ? 'Place Bid' : 'Challenge Price'}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>{user?.role === 'VENDOR' ? 'Your Bid Amount (₹)' : 'Challenge Amount (₹)'}</Label>
-                <Input
-                  type="number"
-                  value={newBidAmount}
-                  onChange={(e) => setNewBidAmount(e.target.value)}
-                  placeholder={user?.role === 'VENDOR' ? "Enter bid amount" : "Enter challenge amount"}
-                  max={auction.reservePrice}
-                />
-                <div className="text-sm text-muted-foreground">
-                  Must be less than ceiling price of ₹{auction.reservePrice}
-                </div>
-              </div>
-              {user?.role === 'VENDOR' && (
-                <Button 
-                  onClick={submitBid} 
-                  className="w-full"
-                  disabled={!newBidAmount || parseFloat(newBidAmount) >= parseFloat(auction.reservePrice)}
-                >
-                  Submit Bid
-                </Button>
-              )}
-              {user?.role === 'SOURCING_EXECUTIVE' && (
-                <div className="text-sm text-muted-foreground">
-                  Click "Challenge" button next to L1, L2, or L3 vendors to send challenge price
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Bids */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Bidding Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {(currentBids || []).slice().reverse().map((bid: any) => (
-              <div key={bid.id} className="flex items-center justify-between p-2 border-b last:border-b-0">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="font-medium">₹{bid.amount}</span>
-                  <span className="text-sm text-muted-foreground">
-                    by {bid.vendorName || `Vendor ${bid.vendorId?.slice(0, 8) || 'Unknown'}`}
-                  </span>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {new Date(bid.timestamp).toLocaleTimeString()}
-                </span>
+                ))}
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Counter Price Dialog */}
-      <Dialog open={isCounterDialogOpen} onOpenChange={setIsCounterDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Counter Price</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Counter Amount (₹)</Label>
-              <Input
-                type="number"
-                value={counterAmount}
-                onChange={(e) => setCounterAmount(e.target.value)}
-                placeholder="Enter counter amount"
-              />
+      {/* Auction Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Auction Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm font-medium">Auction Name</Label>
+              <p className="text-sm text-muted-foreground">{auction.name}</p>
             </div>
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Input
-                value={counterNotes}
-                onChange={(e) => setCounterNotes(e.target.value)}
-                placeholder="Optional notes"
-              />
+            <div>
+              <Label className="text-sm font-medium">Status</Label>
+              <Badge className={
+                auction.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
+                auction.status === 'live' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                'bg-gray-100 text-gray-700 border-gray-200'
+              }>
+                {auction.status}
+              </Badge>
             </div>
-            <div className="flex space-x-2 justify-end">
-              <Button variant="outline" onClick={() => setIsCounterDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => {}}>
-                Send Counter
-              </Button>
+            <div>
+              <Label className="text-sm font-medium">Start Time</Label>
+              <p className="text-sm text-muted-foreground">
+                {new Date(auction.startTime).toLocaleDateString()} {new Date(auction.startTime).toLocaleTimeString()}
+              </p>
             </div>
+            <div>
+              <Label className="text-sm font-medium">End Time</Label>
+              <p className="text-sm text-muted-foreground">
+                {new Date(auction.endTime).toLocaleDateString()} {new Date(auction.endTime).toLocaleTimeString()}
+              </p>
+            </div>
+            {auction.reservePrice && (
+              <div>
+                <Label className="text-sm font-medium">Ceiling Price</Label>
+                <p className="text-sm text-muted-foreground">₹{parseFloat(auction.reservePrice).toLocaleString()}</p>
+              </div>
+            )}
+            {auction.description && (
+              <div className="col-span-2">
+                <Label className="text-sm font-medium">Description</Label>
+                <p className="text-sm text-muted-foreground">{auction.description}</p>
+              </div>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 }
