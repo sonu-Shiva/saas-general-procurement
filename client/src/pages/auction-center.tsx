@@ -921,7 +921,9 @@ function EnhancedAuctionView({ auction }: { auction: any }) {
           </div>
           <div className="text-center">
             <div className="text-lg font-bold text-orange-600">{bidStats.leadingVendor || 'N/A'}</div>
-            <div className="text-sm text-gray-600">Bid Winner</div>
+            <div className="text-sm text-gray-600">
+              {auction.status === 'live' || auction.status === 'scheduled' ? 'Current Leader' : 'Bid Winner'}
+            </div>
           </div>
         </div>
       </div>
