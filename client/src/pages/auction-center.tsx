@@ -836,12 +836,16 @@ function EnhancedAuctionView({ auction }: { auction: any }) {
 
     // Consider challenge prices for actual leading bid
     let actualLowestAmount = parseFloat(lowestBid.amount);
-    let leadingVendor = lowestBid.vendorCompanyName;
+    let leadingVendor = lowestBid.vendorCompanyName || lowestBid.vendorName;
 
+    // Process all accepted challenge prices to find the actual lowest
     challengePrices.forEach((challenge: any) => {
-      if (challenge.status === 'accepted' && parseFloat(challenge.challengeAmount) < actualLowestAmount) {
-        actualLowestAmount = parseFloat(challenge.challengeAmount);
-        leadingVendor = challenge.vendorCompanyName;
+      if (challenge.status === 'accepted') {
+        const challengeAmount = parseFloat(challenge.challengeAmount);
+        if (challengeAmount < actualLowestAmount) {
+          actualLowestAmount = challengeAmount;
+          leadingVendor = challenge.vendorCompanyName || challenge.vendorName;
+        }
       }
     });
 
