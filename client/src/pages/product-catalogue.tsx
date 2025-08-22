@@ -1027,7 +1027,7 @@ export default function ProductCatalogue() {
                   name="itemName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Item Name</FormLabel>
+                      <FormLabel>Item Name *</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -1040,7 +1040,7 @@ export default function ProductCatalogue() {
                   name="internalCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Internal Code</FormLabel>
+                      <FormLabel>Internal Code *</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -1065,10 +1065,37 @@ export default function ProductCatalogue() {
                 />
                 <FormField
                   control={editForm.control}
+                  name="uom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit of Measure *</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select UOM" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pieces">Pieces</SelectItem>
+                            <SelectItem value="kg">Kilograms</SelectItem>
+                            <SelectItem value="meters">Meters</SelectItem>
+                            <SelectItem value="liters">Liters</SelectItem>
+                            <SelectItem value="boxes">Boxes</SelectItem>
+                            <SelectItem value="units">Units</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={editForm.control}
                   name="basePrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Base Price (₹)</FormLabel>
+                      <FormLabel>Base Price (₹) *</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} />
                       </FormControl>
@@ -1082,7 +1109,7 @@ export default function ProductCatalogue() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description *</FormLabel>
                     <FormControl>
                       <Textarea {...field} />
                     </FormControl>
@@ -1094,46 +1121,11 @@ export default function ProductCatalogue() {
               {/* GST/Tax Information Section */}
               <div className="border-t pt-4">
                 <h4 className="text-sm font-medium text-foreground mb-3">GST/Tax Information</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={editForm.control}
-                    name="hsnSacCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>HSN/SAC Code</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g. 8517, 998312" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={editForm.control}
-                    name="customGstPercentage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Custom GST %</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            min="0" 
-                            max="100" 
-                            {...field} 
-                            placeholder="18.00" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
                 <FormField
                   control={editForm.control}
                   name="taxApplicable"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-4">
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 mb-4">
                       <FormControl>
                         <input
                           type="checkbox"
@@ -1153,6 +1145,48 @@ export default function ProductCatalogue() {
                     </FormItem>
                   )}
                 />
+                {editForm.watch("taxApplicable") && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="hsnSacCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>HSN/SAC Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g. 8517, 998312" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editForm.control}
+                      name="customGstPercentage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Custom GST %</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              min="0" 
+                              max="100" 
+                              {...field} 
+                              placeholder="18.00" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+                {editForm.watch("taxApplicable") && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    * When tax is applicable, either HSN/SAC Code or Custom GST % must be provided
+                  </p>
+                )}
               </div>
               
               <FormField
@@ -1214,7 +1248,7 @@ export default function ProductCatalogue() {
                   name="internalCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Internal Code</FormLabel>
+                      <FormLabel>Internal Code *</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="e.g. PRD-001" />
                       </FormControl>
@@ -1242,7 +1276,7 @@ export default function ProductCatalogue() {
                   name="uom"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unit of Measure</FormLabel>
+                      <FormLabel>Unit of Measure *</FormLabel>
                       <FormControl>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <SelectTrigger>
@@ -1277,7 +1311,7 @@ export default function ProductCatalogue() {
                 name="basePrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Base Price (₹)</FormLabel>
+                    <FormLabel>Base Price (₹) *</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} placeholder="0.00" />
                     </FormControl>
@@ -1290,7 +1324,7 @@ export default function ProductCatalogue() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description *</FormLabel>
                     <FormControl>
                       <Textarea {...field} placeholder="Product description..." />
                     </FormControl>
@@ -1302,46 +1336,11 @@ export default function ProductCatalogue() {
               {/* GST/Tax Information Section */}
               <div className="border-t pt-4">
                 <h4 className="text-sm font-medium text-foreground mb-3">GST/Tax Information</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="hsnSacCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>HSN/SAC Code</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g. 8517, 998312" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="customGstPercentage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Custom GST %</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            min="0" 
-                            max="100" 
-                            {...field} 
-                            placeholder="18.00" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
                 <FormField
                   control={form.control}
                   name="taxApplicable"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-4">
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 mb-4">
                       <FormControl>
                         <input
                           type="checkbox"
@@ -1361,6 +1360,48 @@ export default function ProductCatalogue() {
                     </FormItem>
                   )}
                 />
+                {form.watch("taxApplicable") && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="hsnSacCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>HSN/SAC Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g. 8517, 998312" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customGstPercentage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Custom GST %</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              min="0" 
+                              max="100" 
+                              {...field} 
+                              placeholder="18.00" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+                {form.watch("taxApplicable") && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    * When tax is applicable, either HSN/SAC Code or Custom GST % must be provided
+                  </p>
+                )}
               </div>
               
               <div className="flex justify-end space-x-3">

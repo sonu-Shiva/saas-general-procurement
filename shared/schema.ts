@@ -930,17 +930,29 @@ export const insertProductSchema = createInsertSchema(products).omit({
   updatedAt: true,
 }).extend({
   itemName: z.string().min(1, "Item name is required"),
-  basePrice: z.union([z.string(), z.number()]).optional().transform((val) =>
-    val ? String(val) : undefined
-  ),
-  hsnSacCode: z.string().optional().refine(
+  internalCode: z.string().min(1, "Internal code is required"),
+  description: z.string().min(1, "Description is required"),
+  uom: z.string().min(1, "Unit of measure is required"),
+  basePrice: z.union([z.string(), z.number()]).transform((val) => {
+    if (!val || val === "") return null;
+    return String(val);
+  }).refine((val) => {
+    if (val === null) return false;
+    const num = parseFloat(val);
+    return !isNaN(num) && num > 0;
+  }, { message: "Base price is required and must be greater than 0" }),
+  hsnSacCode: z.string().optional().transform((val) => {
+    if (!val || val === "") return null;
+    return val;
+  }).refine(
     (val) => !val || /^[A-Za-z0-9]+$/.test(val),
     { message: "HSN/SAC Code must be alphanumeric" }
   ),
   taxApplicable: z.boolean().default(true),
-  customGstPercentage: z.union([z.string(), z.number()]).optional().transform((val) =>
-    val ? String(val) : undefined
-  ).refine(
+  customGstPercentage: z.union([z.string(), z.number()]).optional().transform((val) => {
+    if (!val || val === "") return null;
+    return val ? String(val) : null;
+  }).refine(
     (val) => !val || (parseFloat(val) >= 0 && parseFloat(val) <= 100),
     { message: "Custom GST percentage must be between 0 and 100" }
   ),

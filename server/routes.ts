@@ -639,12 +639,29 @@ Focus on established businesses with verifiable contact information.`;
         return res.status(403).json({ message: "Access denied. Product creation requires admin, sourcing, or vendor role." });
       }
 
-      const validatedData = {
-        ...req.body,
+      // Validate request body using schema
+      const parseResult = insertProductSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        console.log("Validation errors:", parseResult.error.errors);
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: parseResult.error.errors 
+        });
+      }
+
+      // Transform empty strings to null for numeric fields
+      const cleanedData = {
+        ...parseResult.data,
         createdBy: userId,
+        basePrice: parseResult.data.basePrice === "" ? null : parseResult.data.basePrice,
+        customGstPercentage: parseResult.data.customGstPercentage === "" ? null : parseResult.data.customGstPercentage,
+        hsnSacCode: parseResult.data.hsnSacCode === "" ? null : parseResult.data.hsnSacCode,
+        externalCode: parseResult.data.externalCode === "" ? null : parseResult.data.externalCode,
       };
 
-      console.log("Validated data:", JSON.stringify(validatedData, null, 2));
+      const validatedData = cleanedData;
+
+      console.log("Cleaned and validated data:", JSON.stringify(validatedData, null, 2));
       const product = await storage.createProduct(validatedData);
       console.log("Product created successfully:", product.id);
       
