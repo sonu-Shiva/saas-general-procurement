@@ -1,8 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -20,6 +22,8 @@ import {
   Settings,
   Shield,
   GitBranch,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 const navigation = [
@@ -35,17 +39,24 @@ const navigation = [
   { name: "Purchase Orders", href: "/purchase-orders", icon: FileText, vendorLabel: "Purchase Orders", buyerLabel: "Purchase Orders", allowedRoles: ['sourcing_exec', 'sourcing_manager', 'vendor', 'admin'] },
   { name: "Analytics", href: "/analytics", icon: BarChart3, allowedRoles: ['sourcing_manager', 'sourcing_exec', 'admin'] },
   { name: "Method Approval", href: "/method-approval", icon: CheckCircle, allowedRoles: ['sourcing_manager', 'admin'] },
-  { name: "Admin: Dropdown Config", href: "/admin/dropdown-config", icon: Settings, allowedRoles: ['admin'] },
-  { name: "Admin: User Management", href: "/admin/user-management", icon: Users, allowedRoles: ['admin'] },
-  { name: "Admin: Audit Logs", href: "/admin/audit-logs", icon: Shield, allowedRoles: ['admin'] },
-  { name: "Admin: Approval Hierarchies", href: "/admin/approval-hierarchies", icon: GitBranch, allowedRoles: ['admin'] },
-  { name: "Admin: GST Management", href: "/admin/gst-management", icon: Settings, allowedRoles: ['admin'] },
-  { name: "Admin: Company Profile", href: "/admin/company-profile", icon: Settings, allowedRoles: ['admin'] },
+];
+
+const adminConfigurations = [
+  { name: "Dropdown Config", href: "/admin/dropdown-config", icon: Settings },
+  { name: "User Management", href: "/admin/user-management", icon: Users },
+  { name: "Audit Logs", href: "/admin/audit-logs", icon: Shield },
+  { name: "Approval Hierarchies", href: "/admin/approval-hierarchies", icon: GitBranch },
+  { name: "GST Management", href: "/admin/gst-management", icon: Settings },
+  { name: "Company Profile", href: "/admin/company-profile", icon: Settings },
 ];
 
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  
+  // Auto-expand admin configurations if we're on an admin config page
+  const isOnAdminConfigPage = adminConfigurations.some(config => location === config.href);
+  const [isAdminConfigOpen, setIsAdminConfigOpen] = useState(isOnAdminConfigPage);
 
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-border shadow-sm">
@@ -98,6 +109,54 @@ export default function Sidebar() {
                 </Link>
               );
             })}
+
+          {/* Admin Configurations Section */}
+          {(user as any)?.role === 'admin' && (
+            <Collapsible 
+              open={isAdminConfigOpen || isOnAdminConfigPage} 
+              onOpenChange={setIsAdminConfigOpen} 
+              className="mt-2"
+            >
+              <CollapsibleTrigger
+                className={cn(
+                  "sidebar-nav w-full justify-between",
+                  isOnAdminConfigPage
+                    ? "text-primary bg-primary/10 border-r-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <div className="flex items-center space-x-3">
+                  <Settings className="w-5 h-5" />
+                  <span className="font-medium">Admin Configurations</span>
+                </div>
+                {(isAdminConfigOpen || isOnAdminConfigPage) ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="ml-8 mt-1 space-y-1">
+                {adminConfigurations.map((config) => {
+                  const isActive = location === config.href;
+                  return (
+                    <Link
+                      key={config.name}
+                      href={config.href}
+                      className={cn(
+                        "flex items-center space-x-3 px-3 py-2 rounded-md text-sm transition-colors",
+                        isActive
+                          ? "text-primary bg-primary/10 border-r-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <config.icon className="w-4 h-4" />
+                      <span>{config.name}</span>
+                    </Link>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </nav>
 
         {/* AI Assistant Quick Access */}
