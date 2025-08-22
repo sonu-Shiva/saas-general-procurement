@@ -49,6 +49,8 @@ export default function AuctionCenter() {
   const [selectedAuctionForPO, setSelectedAuctionForPO] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedAuctionForView, setSelectedAuctionForView] = useState<any>(null);
+  const [isResultsDialogOpen, setIsResultsDialogOpen] = useState(false);
+  const [selectedAuctionForResults, setSelectedAuctionForResults] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -178,6 +180,11 @@ export default function AuctionCenter() {
   const handleViewAuction = (auction: any) => {
     setSelectedAuctionForView(auction);
     setIsViewDialogOpen(true);
+  };
+
+  const handleViewResults = (auction: any) => {
+    setSelectedAuctionForResults(auction);
+    setIsResultsDialogOpen(true);
   };
 
   const deleteAuctionMutation = useMutation({
@@ -388,6 +395,16 @@ export default function AuctionCenter() {
                             <Play className="w-4 h-4" />
                           </Button>
                         )}
+                        {(auction.status === 'live' || auction.status === 'completed' || auction.status === 'closed') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewResults(auction)}
+                            data-testid={`button-results-${auction.id}`}
+                          >
+                            <Trophy className="w-4 h-4" />
+                          </Button>
+                        )}
                         {!isVendor && auction.status !== 'live' && (
                           <Button
                             size="sm"
@@ -414,6 +431,7 @@ export default function AuctionCenter() {
                   onViewLive={() => handleViewLiveBidding(auction)}
                   onCreatePO={handleCreatePOFromAuction}
                   onView={() => handleViewAuction(auction)}
+                  onViewResults={() => handleViewResults(auction)}
                   onDelete={() => handleDeleteAuction(auction.id)}
                   isLive={liveAuctions.has(auction.id)}
                   isVendor={isVendor}
@@ -517,12 +535,182 @@ export default function AuctionCenter() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Auction Results Dialog */}
+      <Dialog open={isResultsDialogOpen} onOpenChange={setIsResultsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Auction Results - {selectedAuctionForResults?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+            {selectedAuctionForResults && (
+              <AuctionResults 
+                auction={selectedAuctionForResults}
+                onClose={() => setIsResultsDialogOpen(false)}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Auction Results Component
+function AuctionResults({ auction, onClose }: any) {
+  const { data: bids = [] } = useQuery({
+    queryKey: ["/api/auctions", auction.id, "bids"],
+    refetchInterval: 2000, // Refresh every 2 seconds
+  });
+
+  const rankings = Array.isArray(bids) ? bids
+    .sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount))
+    .map((bid: any, index: number) => ({
+      ...bid,
+      rank: index + 1,
+      rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`
+    })) : [];
+
+  const winner = rankings.length > 0 ? rankings[0] : null;
+
+  const getRankColor = (rank: number) => {
+    switch (rank) {
+      case 1: return 'bg-green-100 text-green-700 border-green-200';
+      case 2: return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 3: return 'bg-orange-100 text-orange-700 border-orange-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Auction Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-4">
+          <div className="text-center">
+            <Trophy className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
+            <div className="text-sm text-muted-foreground">Winner</div>
+            <div className="text-lg font-bold">{winner ? winner.vendorName : 'No bids'}</div>
+            {winner && (
+              <div className="text-sm text-muted-foreground">₹{winner.amount}</div>
+            )}
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-center">
+            <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+            <div className="text-sm text-muted-foreground">Total Bidders</div>
+            <div className="text-xl font-bold">{rankings.length}</div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-center">
+            <TrendingDown className="w-8 h-8 mx-auto mb-2 text-green-600" />
+            <div className="text-sm text-muted-foreground">Cost Savings</div>
+            <div className="text-xl font-bold">
+              {auction.reservePrice && winner ? 
+                `₹${(parseFloat(auction.reservePrice) - parseFloat(winner.amount)).toLocaleString()}` : 
+                'N/A'
+              }
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Bidding Results */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Bidding Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {rankings.length === 0 ? (
+            <div className="text-center py-8">
+              <Trophy className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No Bids Received</h3>
+              <p className="text-muted-foreground">This auction received no bids.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {rankings.map((bid: any, index: number) => (
+                <div key={bid.id} className={`flex items-center justify-between p-4 rounded-lg border-2 ${
+                  index === 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'
+                }`}>
+                  <div className="flex items-center space-x-4">
+                    <Badge className={getRankColor(bid.rank)}>
+                      {bid.rankLabel}
+                    </Badge>
+                    <div>
+                      <div className="font-medium text-foreground">{bid.vendorName}</div>
+                      <div className="text-sm text-muted-foreground">{bid.vendorEmail}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-foreground">₹{parseFloat(bid.amount).toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(bid.timestamp).toLocaleDateString()} {new Date(bid.timestamp).toLocaleTimeString()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Auction Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Auction Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm font-medium">Auction Name</Label>
+              <p className="text-sm text-muted-foreground">{auction.name}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Status</Label>
+              <Badge className={
+                auction.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
+                auction.status === 'live' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                'bg-gray-100 text-gray-700 border-gray-200'
+              }>
+                {auction.status}
+              </Badge>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Start Time</Label>
+              <p className="text-sm text-muted-foreground">
+                {new Date(auction.startTime).toLocaleDateString()} {new Date(auction.startTime).toLocaleTimeString()}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">End Time</Label>
+              <p className="text-sm text-muted-foreground">
+                {new Date(auction.endTime).toLocaleDateString()} {new Date(auction.endTime).toLocaleTimeString()}
+              </p>
+            </div>
+            {auction.reservePrice && (
+              <div>
+                <Label className="text-sm font-medium">Ceiling Price</Label>
+                <p className="text-sm text-muted-foreground">₹{parseFloat(auction.reservePrice).toLocaleString()}</p>
+              </div>
+            )}
+            {auction.description && (
+              <div className="col-span-2">
+                <Label className="text-sm font-medium">Description</Label>
+                <p className="text-sm text-muted-foreground">{auction.description}</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
 // Auction Card Component
-function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onView, onDelete, isLive, isVendor }: any) {
+function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onView, onViewResults, onDelete, isLive, isVendor }: any) {
   const getRemainingTime = (endTime: string) => {
     const end = new Date(endTime);
     const now = new Date();
@@ -596,6 +784,12 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onView, onDelet
             <Button variant="ghost" size="sm" onClick={onViewLive}>
               <Play className="w-4 h-4 mr-1" />
               {isVendor ? "Bid Now" : "Live"}
+            </Button>
+          )}
+          {(auction.status === 'live' || auction.status === 'completed' || auction.status === 'closed') && (
+            <Button variant="ghost" size="sm" onClick={() => onViewResults && onViewResults(auction)}>
+              <Trophy className="w-4 h-4 mr-1" />
+              Results
             </Button>
           )}
           {!isVendor && (auction.status === 'live' || auction.status === 'completed') && (
