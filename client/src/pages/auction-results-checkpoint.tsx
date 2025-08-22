@@ -12,7 +12,21 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
   const sortedBids = React.useMemo(() => {
     if (!rankings?.length) return [];
     
-    return rankings.map((bid: any) => {
+    // First, group bids by vendor and get the latest bid for each vendor
+    const bidsByVendor = new Map();
+    rankings.forEach((bid: any) => {
+      const vendorId = bid.vendorId;
+      const existing = bidsByVendor.get(vendorId);
+      
+      if (!existing || new Date(bid.timestamp) > new Date(existing.timestamp)) {
+        bidsByVendor.set(vendorId, bid);
+      }
+    });
+    
+    // Convert to array and process with challenge prices
+    const latestBids = Array.from(bidsByVendor.values());
+    
+    return latestBids.map((bid: any) => {
       const vendorChallenges = Array.isArray(challengePrices) ? challengePrices.filter((cp: any) => cp.vendorId === bid.vendorId) : [];
       const acceptedChallenge = vendorChallenges.find((cp: any) => cp.status === 'accepted');
       
