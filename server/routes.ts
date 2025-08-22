@@ -3685,5 +3685,270 @@ Focus on established businesses with verifiable contact information.`;
     });
   });
 
+  // =============================
+  // GST MANAGEMENT ROUTES
+  // =============================
+
+  // Check if user is admin
+  const requireAdmin = (req: any, res: any, next: any) => {
+    const user = req.user;
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+  };
+
+  // Get all GST masters
+  app.get("/api/gst-masters", isAuthenticated, async (req, res) => {
+    try {
+      const { hsnCode, status, effectiveDate } = req.query;
+      
+      let query = `
+        SELECT * FROM gst_masters 
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      
+      if (hsnCode) {
+        query += ` AND hsn_code = $${params.length + 1}`;
+        params.push(hsnCode);
+      }
+      
+      if (status && status !== 'all') {
+        query += ` AND status = $${params.length + 1}`;
+        params.push(status);
+      }
+      
+      if (effectiveDate) {
+        query += ` AND effective_from <= $${params.length + 1} AND (effective_to IS NULL OR effective_to >= $${params.length + 1})`;
+        params.push(effectiveDate, effectiveDate);
+      }
+      
+      query += ` ORDER BY hsn_code, effective_from DESC`;
+      
+      const result = await db.query(query, params);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error fetching GST masters:', error);
+      res.status(500).json({ error: 'Failed to fetch GST masters' });
+    }
+  });
+
+  // Get GST master by ID
+  app.get("/api/gst-masters/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await db.query('SELECT * FROM gst_masters WHERE id = $1', [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'GST master not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error fetching GST master:', error);
+      res.status(500).json({ error: 'Failed to fetch GST master' });
+    }
+  });
+
+  // Create new GST master (Admin only)
+  app.post("/api/gst-masters", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const {
+        hsnCode, hsnDescription, gstRate, cgstRate, sgstRate, igstRate,
+        cessRate = 0, uom, effectiveFrom, effectiveTo, status = 'active', notes = ''
+      } = req.body;
+      
+      const user = req.user;
+      const userEmail = user?.claims?.email || 'admin';
+      
+      const query = `
+        INSERT INTO gst_masters (
+          hsn_code, hsn_description, gst_rate, cgst_rate, sgst_rate, igst_rate,
+          cess_rate, uom, effective_from, effective_to, status, notes,
+          created_by, updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *
+      `;
+      
+      const result = await db.query(query, [
+        hsnCode, hsnDescription, parseFloat(gstRate), parseFloat(cgstRate),
+        parseFloat(sgstRate), parseFloat(igstRate), parseFloat(cessRate),
+        uom, effectiveFrom, effectiveTo || null, status, notes, userEmail, userEmail
+      ]);
+      
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      console.error('Error creating GST master:', error);
+      if (error.code === '23505') { // Unique constraint violation
+        res.status(400).json({ error: 'HSN Code with this effective date already exists' });
+      } else {
+        res.status(500).json({ error: 'Failed to create GST master' });
+      }
+    }
+  });
+
+  // Update GST master (Admin only)
+  app.put("/api/gst-masters/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const {
+        hsnCode, hsnDescription, gstRate, cgstRate, sgstRate, igstRate,
+        cessRate = 0, uom, effectiveFrom, effectiveTo, status = 'active', notes = ''
+      } = req.body;
+      
+      const user = req.user;
+      const userEmail = user?.claims?.email || 'admin';
+      
+      const query = `
+        UPDATE gst_masters SET
+          hsn_code = $1, hsn_description = $2, gst_rate = $3, cgst_rate = $4,
+          sgst_rate = $5, igst_rate = $6, cess_rate = $7, uom = $8,
+          effective_from = $9, effective_to = $10, status = $11, notes = $12,
+          updated_by = $13, updated_at = NOW()
+        WHERE id = $14
+        RETURNING *
+      `;
+      
+      const result = await db.query(query, [
+        hsnCode, hsnDescription, parseFloat(gstRate), parseFloat(cgstRate),
+        parseFloat(sgstRate), parseFloat(igstRate), parseFloat(cessRate),
+        uom, effectiveFrom, effectiveTo || null, status, notes, userEmail, id
+      ]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'GST master not found' });
+      }
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error updating GST master:', error);
+      res.status(500).json({ error: 'Failed to update GST master' });
+    }
+  });
+
+  // Delete GST master (Admin only)
+  app.delete("/api/gst-masters/:id", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      const result = await db.query('DELETE FROM gst_masters WHERE id = $1 RETURNING *', [id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'GST master not found' });
+      }
+      
+      res.json({ message: 'GST master deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting GST master:', error);
+      res.status(500).json({ error: 'Failed to delete GST master' });
+    }
+  });
+
+  // Calculate tax for given amount and HSN code
+  app.post("/api/gst-calculate", isAuthenticated, async (req, res) => {
+    try {
+      const { hsnCode, amount, isInterstate = false, effectiveDate } = req.body;
+      
+      if (!hsnCode || amount === undefined) {
+        return res.status(400).json({ error: 'HSN code and amount are required' });
+      }
+      
+      const searchDate = effectiveDate || new Date().toISOString();
+      
+      const query = `
+        SELECT * FROM gst_masters 
+        WHERE hsn_code = $1 AND status = 'active' 
+        AND effective_from <= $2 
+        AND (effective_to IS NULL OR effective_to >= $2)
+        ORDER BY effective_from DESC
+        LIMIT 1
+      `;
+      
+      const result = await db.query(query, [hsnCode, searchDate]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ 
+          error: `No active GST configuration found for HSN code: ${hsnCode}` 
+        });
+      }
+      
+      const config = result.rows[0];
+      const baseAmount = parseFloat(amount);
+      
+      let taxCalculation;
+      
+      if (isInterstate) {
+        // Interstate transaction - use IGST
+        const igstAmount = (baseAmount * parseFloat(config.igst_rate)) / 100;
+        const cessAmount = (baseAmount * parseFloat(config.cess_rate)) / 100;
+        const totalTax = igstAmount + cessAmount;
+        
+        taxCalculation = {
+          hsnCode: config.hsn_code,
+          hsnDescription: config.hsn_description,
+          baseAmount,
+          cgstRate: 0,
+          sgstRate: 0,
+          igstRate: parseFloat(config.igst_rate),
+          cessRate: parseFloat(config.cess_rate),
+          cgstAmount: 0,
+          sgstAmount: 0,
+          igstAmount,
+          cessAmount,
+          totalTax,
+          totalAmount: baseAmount + totalTax,
+          uom: config.uom,
+          transactionType: 'interstate',
+        };
+      } else {
+        // Domestic transaction - use CGST + SGST
+        const cgstAmount = (baseAmount * parseFloat(config.cgst_rate)) / 100;
+        const sgstAmount = (baseAmount * parseFloat(config.sgst_rate)) / 100;
+        const cessAmount = (baseAmount * parseFloat(config.cess_rate)) / 100;
+        const totalTax = cgstAmount + sgstAmount + cessAmount;
+        
+        taxCalculation = {
+          hsnCode: config.hsn_code,
+          hsnDescription: config.hsn_description,
+          baseAmount,
+          cgstRate: parseFloat(config.cgst_rate),
+          sgstRate: parseFloat(config.sgst_rate),
+          igstRate: 0,
+          cessRate: parseFloat(config.cess_rate),
+          cgstAmount,
+          sgstAmount,
+          igstAmount: 0,
+          cessAmount,
+          totalTax,
+          totalAmount: baseAmount + totalTax,
+          uom: config.uom,
+          transactionType: 'domestic',
+        };
+      }
+      
+      res.json(taxCalculation);
+    } catch (error) {
+      console.error('Error calculating tax:', error);
+      res.status(500).json({ error: 'Failed to calculate tax' });
+    }
+  });
+
+  // Get HSN codes for autocomplete
+  app.get("/api/gst-hsn-codes", isAuthenticated, async (req, res) => {
+    try {
+      const result = await db.query(`
+        SELECT DISTINCT hsn_code FROM gst_masters 
+        WHERE status = 'active' 
+        ORDER BY hsn_code
+      `);
+      
+      res.json(result.rows.map(row => row.hsn_code));
+    } catch (error) {
+      console.error('Error fetching HSN codes:', error);
+      res.status(500).json({ error: 'Failed to fetch HSN codes' });
+    }
+  });
+
   return httpServer;
 }

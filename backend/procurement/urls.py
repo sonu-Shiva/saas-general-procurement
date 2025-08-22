@@ -37,4 +37,5 @@ urlpatterns = [
     path('api/approvals/', include('procurement.apps.approvals.urls')),
     path('api/notifications/', include('procurement.apps.notifications.urls')),
     path('api/direct-procurement/', include('procurement.apps.direct_procurement.urls')),
+    path('api/', include('gst.urls')),
 ]

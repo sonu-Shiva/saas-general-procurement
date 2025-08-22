@@ -39,6 +39,7 @@ const navigation = [
   { name: "Admin: User Management", href: "/admin/user-management", icon: Users, allowedRoles: ['admin'] },
   { name: "Admin: Audit Logs", href: "/admin/audit-logs", icon: Shield, allowedRoles: ['admin'] },
   { name: "Admin: Approval Hierarchies", href: "/admin/approval-hierarchies", icon: GitBranch, allowedRoles: ['admin'] },
+  { name: "Admin: GST Management", href: "/admin/gst-management", icon: Settings, allowedRoles: ['admin'] },
 ];
 
 export default function Sidebar() {

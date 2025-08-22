@@ -29,6 +29,7 @@ import AdminDropdownConfig from "./pages/admin-dropdown-config";
 import AdminUserManagement from "./pages/admin-user-management";
 import AuditLogsPage from "./pages/AuditLogsPage";
 import ApprovalHierarchies from "./pages/admin/ApprovalHierarchies";
+import GSTManagement from "./pages/gst-management";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -125,6 +126,7 @@ function Router() {
           <Route path="/admin/user-management" component={AdminUserManagement} />
           <Route path="/admin/audit-logs" component={AuditLogsPage} />
           <Route path="/admin/approval-hierarchies" component={ApprovalHierarchies} />
+          <Route path="/admin/gst-management" component={GSTManagement} />
           <Route path="/direct-procurement" component={DirectProcurement} />
           <Route>
             <div className="p-8 text-center">
