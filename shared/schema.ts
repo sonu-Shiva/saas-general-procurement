@@ -1436,5 +1436,122 @@ export type ApprovalHierarchy = typeof approvalHierarchies.$inferSelect;
 export type InsertApprovalLevel = z.infer<typeof insertApprovalLevelSchema>;
 export type ApprovalLevel = typeof approvalLevels.$inferSelect;
 
+// Company Profile Management - Admin only access
+export const companyProfile = pgTable("company_profile", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  companyName: varchar("company_name", { length: 255 }).notNull(),
+  legalName: varchar("legal_name", { length: 255 }),
+  incorporationDate: timestamp("incorporation_date"),
+  companyType: varchar("company_type", { length: 100 }), // e.g., "Private Limited", "Public Limited", "Partnership"
+  industryType: varchar("industry_type", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  logoUrl: varchar("logo_url", { length: 500 }), // Logo URL
+  // Head Office Details
+  headOfficeAddress: text("head_office_address").notNull(),
+  headOfficeCity: varchar("head_office_city", { length: 100 }),
+  headOfficeState: varchar("head_office_state", { length: 100 }),
+  headOfficeCountry: varchar("head_office_country", { length: 100 }).default("India"),
+  headOfficePincode: varchar("head_office_pincode", { length: 20 }),
+  headOfficePhone: varchar("head_office_phone", { length: 50 }),
+  headOfficeEmail: varchar("head_office_email", { length: 255 }),
+  headOfficeGstNumber: varchar("head_office_gst_number", { length: 50 }),
+  // Tax and Legal Information
+  panNumber: varchar("pan_number", { length: 50 }).notNull(),
+  tanNumber: varchar("tan_number", { length: 50 }),
+  cinNumber: varchar("cin_number", { length: 50 }), // Corporate Identity Number
+  udhyamRegistration: varchar("udhyam_registration", { length: 50 }), // MSME Registration
+  // Banking Information
+  primaryBankName: varchar("primary_bank_name", { length: 255 }),
+  primaryAccountNumber: varchar("primary_account_number", { length: 100 }),
+  primaryIfscCode: varchar("primary_ifsc_code", { length: 20 }),
+  // Key Personnel
+  ceoName: varchar("ceo_name", { length: 255 }),
+  ceoEmail: varchar("ceo_email", { length: 255 }),
+  cfoName: varchar("cfo_name", { length: 255 }),
+  cfoEmail: varchar("cfo_email", { length: 255 }),
+  procurementHeadName: varchar("procurement_head_name", { length: 255 }),
+  procurementHeadEmail: varchar("procurement_head_email", { length: 255 }),
+  // Company Settings
+  financialYearStart: varchar("financial_year_start", { length: 10 }).default("April"), // Month name
+  baseCurrency: varchar("base_currency", { length: 10 }).default("INR"),
+  timeZone: varchar("time_zone", { length: 50 }).default("Asia/Kolkata"),
+  // Audit fields
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Company Branch Offices - Multiple branches can be added
+export const companyBranches = pgTable("company_branches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  companyProfileId: uuid("company_profile_id").references(() => companyProfile.id, { onDelete: "cascade" }),
+  branchName: varchar("branch_name", { length: 255 }).notNull(),
+  branchCode: varchar("branch_code", { length: 50 }).notNull(), // Unique identifier for branch
+  branchType: varchar("branch_type", { length: 100 }).default("Regional Office"), // e.g., "Regional Office", "Sales Office", "Warehouse", "Manufacturing Unit"
+  // Address Details
+  address: text("address").notNull(),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("India"),
+  pincode: varchar("pincode", { length: 20 }),
+  // Contact Details
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  managerName: varchar("manager_name", { length: 255 }),
+  managerEmail: varchar("manager_email", { length: 255 }),
+  managerPhone: varchar("manager_phone", { length: 50 }),
+  // Tax Information
+  gstNumber: varchar("gst_number", { length: 50 }),
+  stateCode: varchar("state_code", { length: 10 }), // GST State Code
+  // Operational Details
+  operationalSince: timestamp("operational_since"),
+  employeeCount: integer("employee_count"),
+  isWarehouse: boolean("is_warehouse").default(false),
+  isManufacturing: boolean("is_manufacturing").default(false),
+  isSalesOffice: boolean("is_sales_office").default(false),
+  // Status
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueBranchCode: unique("unique_branch_code").on(table.branchCode),
+}));
+
+// Insert schemas for company profile
+export const insertCompanyProfileSchema = createInsertSchema(companyProfile).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  companyName: z.string().min(1, "Company name is required"),
+  panNumber: z.string().min(10, "PAN number is required (minimum 10 characters)"),
+  headOfficeAddress: z.string().min(10, "Head office address is required"),
+  incorporationDate: z.union([z.string(), z.date()]).optional().transform((val) =>
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
+});
+
+export const insertCompanyBranchSchema = createInsertSchema(companyBranches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  branchName: z.string().min(1, "Branch name is required"),
+  branchCode: z.string().min(1, "Branch code is required"),
+  address: z.string().min(10, "Branch address is required"),
+  operationalSince: z.union([z.string(), z.date()]).optional().transform((val) =>
+    val ? (typeof val === 'string' ? new Date(val) : val) : undefined
+  ),
+});
+
+export type CompanyProfile = typeof companyProfile.$inferSelect;
+export type InsertCompanyProfile = z.infer<typeof insertCompanyProfileSchema>;
+export type CompanyBranch = typeof companyBranches.$inferSelect;
+export type InsertCompanyBranch = z.infer<typeof insertCompanyBranchSchema>;
+
 
 

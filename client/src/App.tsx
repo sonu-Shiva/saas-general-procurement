@@ -30,6 +30,7 @@ import AdminUserManagement from "./pages/admin-user-management";
 import AuditLogsPage from "./pages/AuditLogsPage";
 import ApprovalHierarchies from "./pages/admin/ApprovalHierarchies";
 import GSTManagement from "./pages/gst-management";
+import CompanyProfile from "./pages/company-profile";
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -127,6 +128,7 @@ function Router() {
           <Route path="/admin/audit-logs" component={AuditLogsPage} />
           <Route path="/admin/approval-hierarchies" component={ApprovalHierarchies} />
           <Route path="/admin/gst-management" component={GSTManagement} />
+          <Route path="/admin/company-profile" component={CompanyProfile} />
           <Route path="/direct-procurement" component={DirectProcurement} />
           <Route>
             <div className="p-8 text-center">

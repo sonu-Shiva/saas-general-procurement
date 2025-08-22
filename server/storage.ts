@@ -320,6 +320,19 @@ export interface IStorage {
   updateDropdownOption(id: string, updates: Partial<InsertDropdownOption>): Promise<DropdownOption>;
   deleteDropdownOption(id: string): Promise<boolean>;
   bulkUpdateDropdownOptions(configurationId: string, options: InsertDropdownOption[]): Promise<DropdownOption[]>;
+
+  // Company Profile operations (Admin only)
+  createCompanyProfile(profile: InsertCompanyProfile): Promise<CompanyProfile>;
+  getCompanyProfile(): Promise<CompanyProfile | undefined>;
+  updateCompanyProfile(id: string, updates: Partial<InsertCompanyProfile>): Promise<CompanyProfile>;
+  deleteCompanyProfile(id: string): Promise<boolean>;
+
+  // Company Branch operations (Admin only)
+  createCompanyBranch(branch: InsertCompanyBranch): Promise<CompanyBranch>;
+  getCompanyBranch(id: string): Promise<CompanyBranch | undefined>;
+  getCompanyBranches(companyProfileId?: string): Promise<CompanyBranch[]>;
+  updateCompanyBranch(id: string, updates: Partial<InsertCompanyBranch>): Promise<CompanyBranch>;
+  deleteCompanyBranch(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2957,6 +2970,120 @@ export class DatabaseStorage implements IStorage {
     await this.db
       .delete(dropdownOptions)
       .where(eq(dropdownOptions.id, optionId));
+  }
+  // Company Profile operations (Admin only)
+  async createCompanyProfile(profile: InsertCompanyProfile): Promise<CompanyProfile> {
+    // Only allow one company profile - check if one already exists
+    const existing = await this.getCompanyProfile();
+    if (existing) {
+      throw new Error("Company profile already exists. Use update to modify existing profile.");
+    }
+    
+    const [newProfile] = await this.db.insert(companyProfile).values(profile).returning();
+    return newProfile;
+  }
+
+  async getCompanyProfile(): Promise<CompanyProfile | undefined> {
+    const [profile] = await this.db.select().from(companyProfile).where(eq(companyProfile.isActive, true));
+    return profile;
+  }
+
+  async updateCompanyProfile(id: string, updates: Partial<InsertCompanyProfile>): Promise<CompanyProfile> {
+    const [updated] = await this.db
+      .update(companyProfile)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(companyProfile.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error("Company profile not found");
+    }
+    
+    return updated;
+  }
+
+  async deleteCompanyProfile(id: string): Promise<boolean> {
+    // Soft delete by setting isActive to false
+    const result = await this.db
+      .update(companyProfile)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(companyProfile.id, id));
+    
+    return (result as any).rowCount > 0;
+  }
+
+  // Company Branch operations (Admin only)
+  async createCompanyBranch(branch: InsertCompanyBranch): Promise<CompanyBranch> {
+    // Ensure the company profile exists
+    const profile = await this.getCompanyProfile();
+    if (!profile) {
+      throw new Error("Company profile must be created before adding branches");
+    }
+    
+    // Set the company profile ID if not provided
+    if (!branch.companyProfileId) {
+      branch.companyProfileId = profile.id;
+    }
+    
+    const [newBranch] = await this.db.insert(companyBranches).values(branch).returning();
+    return newBranch;
+  }
+
+  async getCompanyBranch(id: string): Promise<CompanyBranch | undefined> {
+    const [branch] = await this.db.select().from(companyBranches).where(eq(companyBranches.id, id));
+    return branch;
+  }
+
+  async getCompanyBranches(companyProfileId?: string): Promise<CompanyBranch[]> {
+    if (companyProfileId) {
+      return await this.db
+        .select()
+        .from(companyBranches)
+        .where(and(
+          eq(companyBranches.companyProfileId, companyProfileId),
+          eq(companyBranches.isActive, true)
+        ))
+        .orderBy(companyBranches.branchName);
+    }
+    
+    // Get all branches for the active company profile
+    const profile = await this.getCompanyProfile();
+    if (!profile) {
+      return [];
+    }
+    
+    return await this.db
+      .select()
+      .from(companyBranches)
+      .where(and(
+        eq(companyBranches.companyProfileId, profile.id),
+        eq(companyBranches.isActive, true)
+      ))
+      .orderBy(companyBranches.branchName);
+  }
+
+  async updateCompanyBranch(id: string, updates: Partial<InsertCompanyBranch>): Promise<CompanyBranch> {
+    const [updated] = await this.db
+      .update(companyBranches)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(companyBranches.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error("Company branch not found");
+    }
+    
+    return updated;
+  }
+
+  async deleteCompanyBranch(id: string): Promise<boolean> {
+    // Soft delete by setting isActive to false
+    const result = await this.db
+      .update(companyBranches)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(companyBranches.id, id));
+    
+    return (result as any).rowCount > 0;
   }
 }
 

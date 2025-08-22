@@ -33,7 +33,9 @@ import {
   insertPurchaseOrderSchema,
   insertPoLineItemSchema,
   insertDirectProcurementOrderSchema,
-  insertProcurementRequestSchema
+  insertProcurementRequestSchema,
+  insertCompanyProfileSchema,
+  insertCompanyBranchSchema
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
 import { z } from "zod";
@@ -4175,6 +4177,227 @@ Focus on established businesses with verifiable contact information.`;
         error: 'Failed to import HSN codes', 
         details: error.message 
       });
+    }
+  });
+
+  // ======= ADMIN-ONLY ENDPOINTS: Company Profile Management =======
+  // POST /api/company-profile - Create company profile (Admin only)
+  app.post('/api/company-profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can manage company profile' });
+      }
+
+      const parsedData = insertCompanyProfileSchema.parse(req.body);
+      const profileData = {
+        ...parsedData,
+        createdBy: userId,
+        updatedBy: userId,
+      };
+      
+      const profile = await storage.createCompanyProfile(profileData);
+      res.status(201).json(profile);
+    } catch (error: any) {
+      console.error('Error creating company profile:', error);
+      if (error.message.includes('already exists')) {
+        return res.status(409).json({ error: 'Company profile already exists. Use PUT to update existing profile.' });
+      }
+      res.status(400).json({ error: 'Failed to create company profile', message: error.message });
+    }
+  });
+
+  // GET /api/company-profile - Get company profile (Admin only)
+  app.get('/api/company-profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can access company profile' });
+      }
+
+      const profile = await storage.getCompanyProfile();
+      if (!profile) {
+        return res.status(404).json({ error: 'Company profile not found' });
+      }
+      res.json(profile);
+    } catch (error: any) {
+      console.error('Error fetching company profile:', error);
+      res.status(500).json({ error: 'Failed to fetch company profile', message: error.message });
+    }
+  });
+
+  // PUT /api/company-profile/:id - Update company profile (Admin only)
+  app.put('/api/company-profile/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can manage company profile' });
+      }
+
+      const { id } = req.params;
+      const updates = {
+        ...req.body,
+        updatedBy: userId,
+      };
+      
+      const profile = await storage.updateCompanyProfile(id, updates);
+      res.json(profile);
+    } catch (error: any) {
+      console.error('Error updating company profile:', error);
+      if (error.message.includes('not found')) {
+        return res.status(404).json({ error: 'Company profile not found' });
+      }
+      res.status(400).json({ error: 'Failed to update company profile', message: error.message });
+    }
+  });
+
+  // DELETE /api/company-profile/:id - Delete company profile (Admin only)
+  app.delete('/api/company-profile/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can manage company profile' });
+      }
+
+      const { id } = req.params;
+      const success = await storage.deleteCompanyProfile(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Company profile not found' });
+      }
+      
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting company profile:', error);
+      res.status(500).json({ error: 'Failed to delete company profile', message: error.message });
+    }
+  });
+
+  // ======= ADMIN-ONLY ENDPOINTS: Company Branch Management =======
+  // POST /api/company-branches - Create company branch (Admin only)
+  app.post('/api/company-branches', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can manage company branches' });
+      }
+
+      const parsedData = insertCompanyBranchSchema.parse(req.body);
+      const branchData = {
+        ...parsedData,
+        createdBy: userId,
+        updatedBy: userId,
+      };
+      
+      const branch = await storage.createCompanyBranch(branchData);
+      res.status(201).json(branch);
+    } catch (error: any) {
+      console.error('Error creating company branch:', error);
+      res.status(400).json({ error: 'Failed to create company branch', message: error.message });
+    }
+  });
+
+  // GET /api/company-branches - Get company branches (Admin only)
+  app.get('/api/company-branches', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can access company branches' });
+      }
+
+      const { companyProfileId } = req.query;
+      const branches = await storage.getCompanyBranches(companyProfileId as string);
+      res.json(branches);
+    } catch (error: any) {
+      console.error('Error fetching company branches:', error);
+      res.status(500).json({ error: 'Failed to fetch company branches', message: error.message });
+    }
+  });
+
+  // GET /api/company-branches/:id - Get company branch by ID (Admin only)
+  app.get('/api/company-branches/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can access company branches' });
+      }
+
+      const { id } = req.params;
+      const branch = await storage.getCompanyBranch(id);
+      
+      if (!branch) {
+        return res.status(404).json({ error: 'Company branch not found' });
+      }
+      
+      res.json(branch);
+    } catch (error: any) {
+      console.error('Error fetching company branch:', error);
+      res.status(500).json({ error: 'Failed to fetch company branch', message: error.message });
+    }
+  });
+
+  // PUT /api/company-branches/:id - Update company branch (Admin only)
+  app.put('/api/company-branches/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can manage company branches' });
+      }
+
+      const { id } = req.params;
+      const updates = {
+        ...req.body,
+        updatedBy: userId,
+      };
+      
+      const branch = await storage.updateCompanyBranch(id, updates);
+      res.json(branch);
+    } catch (error: any) {
+      console.error('Error updating company branch:', error);
+      if (error.message.includes('not found')) {
+        return res.status(404).json({ error: 'Company branch not found' });
+      }
+      res.status(400).json({ error: 'Failed to update company branch', message: error.message });
+    }
+  });
+
+  // DELETE /api/company-branches/:id - Delete company branch (Admin only)
+  app.delete('/api/company-branches/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Only admins can manage company branches' });
+      }
+
+      const { id } = req.params;
+      const success = await storage.deleteCompanyBranch(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Company branch not found' });
+      }
+      
+      res.status(204).send();
+    } catch (error: any) {
+      console.error('Error deleting company branch:', error);
+      res.status(500).json({ error: 'Failed to delete company branch', message: error.message });
     }
   });
 
