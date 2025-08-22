@@ -124,6 +124,10 @@ export const products = pgTable("products", {
   specifications: jsonb("specifications"),
   tags: text("tags").array(),
   isActive: boolean("is_active").default(true),
+  // New GST/Tax related fields
+  hsnSacCode: varchar("hsn_sac_code", { length: 20 }), // HSN/SAC Code for tax calculations
+  taxApplicable: boolean("tax_applicable").default(true), // Whether tax is applicable
+  customGstPercentage: decimal("custom_gst_percentage", { precision: 5, scale: 2 }), // Custom GST rate override
   approvedBy: varchar("approved_by").references(() => users.id),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -928,6 +932,17 @@ export const insertProductSchema = createInsertSchema(products).omit({
   itemName: z.string().min(1, "Item name is required"),
   basePrice: z.union([z.string(), z.number()]).optional().transform((val) =>
     val ? String(val) : undefined
+  ),
+  hsnSacCode: z.string().optional().refine(
+    (val) => !val || /^[A-Za-z0-9]+$/.test(val),
+    { message: "HSN/SAC Code must be alphanumeric" }
+  ),
+  taxApplicable: z.boolean().default(true),
+  customGstPercentage: z.union([z.string(), z.number()]).optional().transform((val) =>
+    val ? String(val) : undefined
+  ).refine(
+    (val) => !val || (parseFloat(val) >= 0 && parseFloat(val) <= 100),
+    { message: "Custom GST percentage must be between 0 and 100" }
   ),
 }).partial({
   categoryId: true,

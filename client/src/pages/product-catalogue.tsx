@@ -73,6 +73,9 @@ export default function ProductCatalogue() {
       specifications: {},
       tags: [],
       isActive: true,
+      hsnSacCode: "",
+      taxApplicable: true,
+      customGstPercentage: "",
     },
   });
 
@@ -91,6 +94,9 @@ export default function ProductCatalogue() {
       specifications: {},
       tags: [],
       isActive: true,
+      hsnSacCode: "",
+      taxApplicable: true,
+      customGstPercentage: "",
     },
   });
 
@@ -1084,6 +1090,71 @@ export default function ProductCatalogue() {
                   </FormItem>
                 )}
               />
+              
+              {/* GST/Tax Information Section */}
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-foreground mb-3">GST/Tax Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editForm.control}
+                    name="hsnSacCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>HSN/SAC Code</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g. 8517, 998312" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="customGstPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom GST %</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            max="100" 
+                            {...field} 
+                            placeholder="18.00" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={editForm.control}
+                  name="taxApplicable"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-4">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="h-4 w-4 rounded border border-input"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-sm font-normal">
+                          Tax Applicable
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                          Check this if tax/GST is applicable for this product
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
               <FormField
                 control={editForm.control}
                 name="isActive"
@@ -1227,6 +1298,71 @@ export default function ProductCatalogue() {
                   </FormItem>
                 )}
               />
+              
+              {/* GST/Tax Information Section */}
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-foreground mb-3">GST/Tax Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="hsnSacCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>HSN/SAC Code</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g. 8517, 998312" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="customGstPercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom GST %</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            max="100" 
+                            {...field} 
+                            placeholder="18.00" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="taxApplicable"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-4">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="h-4 w-4 rounded border border-input"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-sm font-normal">
+                          Tax Applicable
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                          Check this if tax/GST is applicable for this product
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
               <div className="flex justify-end space-x-3">
                 <Button 
                   type="button" 
