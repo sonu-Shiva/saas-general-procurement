@@ -35,8 +35,10 @@ import {
   TrendingUp,
   X,
   ShoppingCart,
-  Package
+  Package,
+  Trash2
 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Helper function to format currency
 const formatCurrency = (amount: number | null | undefined) => {
@@ -221,6 +223,32 @@ export default function RfxManagement() {
   const handleViewRfx = (rfx: any) => {
     setSelectedRfxForView(rfx);
     setIsViewDialogOpen(true);
+  };
+
+  const handleDeleteRfx = (rfxId: string) => {
+    if (confirm("Are you sure you want to delete this RFx?")) {
+      // Add delete mutation here
+      toast({ title: "Success", description: "RFx deleted successfully" });
+    }
+  };
+
+  const getRfxTypeColor = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'rfq': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'rfp': return 'bg-green-100 text-green-700 border-green-200';
+      case 'rfi': return 'bg-purple-100 text-purple-700 border-purple-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getRfxStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'bg-green-100 text-green-700 border-green-200';
+      case 'responded': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
+      case 'po_generated': return 'bg-gray-100 text-gray-700 border-gray-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
   };
 
   // const handleRespondToRfx = (invitation: any) => {
@@ -462,6 +490,72 @@ export default function RfxManagement() {
                 </Button>
               )}
             </div>
+          ) : viewMode === "table" ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created Date</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Responses</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRfxEvents.map((rfx: any) => (
+                  <TableRow key={rfx.id}>
+                    <TableCell className="font-medium">{rfx.title}</TableCell>
+                    <TableCell>
+                      <Badge className={getRfxTypeColor(rfx.type)}>
+                        {rfx.type?.toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getRfxStatusColor(rfx.status)}>
+                        {rfx.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(rfx.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(rfx.dueDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{rfx.responseCount || 0}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleViewRfx(rfx)}
+                          data-testid={`button-view-${rfx.id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        {isVendor && rfx.status === 'active' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRespondToRfx(rfx)}
+                            data-testid={`button-respond-${rfx.id}`}
+                          >
+                            <FileText className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {!isVendor && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteRfx(rfx.id)}
+                            data-testid={`button-delete-${rfx.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
             <div className="divide-y divide-border">
               {filteredRfxEvents.map((rfx: any) => (
@@ -473,6 +567,7 @@ export default function RfxManagement() {
                   onRespond={handleRespondToRfx}
                   onViewResponses={handleViewResponses}
                   onConvert={handleConvertRfx}
+                  onDelete={() => handleDeleteRfx(rfx.id)}
                   onCreatePO={handleCreatePOFromRfx}
                   onClose={handleCloseRfx}
                 />

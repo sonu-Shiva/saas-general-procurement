@@ -32,8 +32,10 @@ import {
   Eye,
   Bell,
   Calendar,
-  ShoppingCart
+  ShoppingCart,
+  Trash2
 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function AuctionCenter() {
   const { user } = useAuth();
@@ -45,6 +47,8 @@ export default function AuctionCenter() {
   const [isLiveBiddingOpen, setIsLiveBiddingOpen] = useState(false);
   const [isPODialogOpen, setIsPODialogOpen] = useState(false);
   const [selectedAuctionForPO, setSelectedAuctionForPO] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedAuctionForView, setSelectedAuctionForView] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -169,6 +173,29 @@ export default function AuctionCenter() {
   const handleCreatePOFromAuction = (auction: any) => {
     setSelectedAuctionForPO(auction);
     setIsPODialogOpen(true);
+  };
+
+  const handleViewAuction = (auction: any) => {
+    setSelectedAuctionForView(auction);
+    setIsViewDialogOpen(true);
+  };
+
+  const deleteAuctionMutation = useMutation({
+    mutationFn: (auctionId: string) => 
+      fetch(`/api/auctions/${auctionId}`, { method: 'DELETE' }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auctions"] });
+      toast({ title: "Success", description: "Auction deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete auction", variant: "destructive" });
+    }
+  });
+
+  const handleDeleteAuction = (auctionId: string) => {
+    if (confirm("Are you sure you want to delete this auction?")) {
+      deleteAuctionMutation.mutate(auctionId);
+    }
   };
 
   const isVendor = (user as any)?.role === 'vendor';
@@ -315,6 +342,68 @@ export default function AuctionCenter() {
                 </Button>
               )}
             </div>
+          ) : viewMode === "table" ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Start Time</TableHead>
+                  <TableHead>End Time</TableHead>
+                  <TableHead>Vendors</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAuctions.map((auction: any) => (
+                  <TableRow key={auction.id}>
+                    <TableCell className="font-medium">{auction.name}</TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(auction.status)}>
+                        {auction.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="capitalize">{auction.type}</TableCell>
+                    <TableCell>{new Date(auction.startTime).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(auction.endTime).toLocaleDateString()}</TableCell>
+                    <TableCell>{auction.vendors?.length || 0}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleViewAuction(auction)}
+                          data-testid={`button-view-${auction.id}`}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        {auction.status === 'live' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewLiveBidding(auction)}
+                            data-testid={`button-live-${auction.id}`}
+                          >
+                            <Play className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {!isVendor && auction.status !== 'live' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteAuction(auction.id)}
+                            data-testid={`button-delete-${auction.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
             <div className="divide-y divide-border">
               {filteredAuctions.map((auction: any) => (
@@ -324,6 +413,8 @@ export default function AuctionCenter() {
                   onStart={() => handleStartAuction(auction.id)}
                   onViewLive={() => handleViewLiveBidding(auction)}
                   onCreatePO={handleCreatePOFromAuction}
+                  onView={() => handleViewAuction(auction)}
+                  onDelete={() => handleDeleteAuction(auction.id)}
                   isLive={liveAuctions.has(auction.id)}
                   isVendor={isVendor}
                 />
@@ -346,6 +437,60 @@ export default function AuctionCenter() {
                 ws={ws}
                 onClose={() => setIsLiveBiddingOpen(false)}
               />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Auction Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Auction Details - {selectedAuctionForView?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+            {selectedAuctionForView && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Name</Label>
+                    <p className="text-sm text-muted-foreground">{selectedAuctionForView.name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Status</Label>
+                    <Badge className={getStatusColor(selectedAuctionForView.status)}>
+                      {selectedAuctionForView.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Type</Label>
+                    <p className="text-sm text-muted-foreground capitalize">{selectedAuctionForView.type}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Duration</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(selectedAuctionForView.startTime).toLocaleDateString()} - {new Date(selectedAuctionForView.endTime).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                {selectedAuctionForView.description && (
+                  <div>
+                    <Label className="text-sm font-medium">Description</Label>
+                    <p className="text-sm text-muted-foreground">{selectedAuctionForView.description}</p>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-sm font-medium">Invited Vendors ({selectedAuctionForView.vendors?.length || 0})</Label>
+                  <div className="mt-2 space-y-2">
+                    {selectedAuctionForView.vendors?.map((vendor: any) => (
+                      <div key={vendor.id} className="flex items-center justify-between p-2 border rounded">
+                        <span>{vendor.name}</span>
+                        <Badge variant="outline">{vendor.status || 'Invited'}</Badge>
+                      </div>
+                    )) || <p className="text-sm text-muted-foreground">No vendors invited</p>}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </DialogContent>
@@ -377,7 +522,7 @@ export default function AuctionCenter() {
 }
 
 // Auction Card Component
-function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendor }: any) {
+function AuctionCard({ auction, onStart, onViewLive, onCreatePO, onView, onDelete, isLive, isVendor }: any) {
   const getRemainingTime = (endTime: string) => {
     const end = new Date(endTime);
     const now = new Date();
@@ -437,6 +582,10 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
           </div>
         </div>
         <div className="flex space-x-2 ml-4">
+          <Button variant="ghost" size="sm" onClick={() => onView(auction)}>
+            <Eye className="w-4 h-4 mr-1" />
+            View
+          </Button>
           {!isVendor && auction.status === 'scheduled' && (
             <Button variant="ghost" size="sm" onClick={onStart}>
               <Play className="w-4 h-4 mr-1" />
@@ -445,20 +594,20 @@ function AuctionCard({ auction, onStart, onViewLive, onCreatePO, isLive, isVendo
           )}
           {auction.status === 'live' && (
             <Button variant="ghost" size="sm" onClick={onViewLive}>
-              <Eye className="w-4 h-4 mr-1" />
-              {isVendor ? "Bid Now" : "View Live"}
-            </Button>
-          )}
-          {(auction.status === 'live' || auction.status === 'completed') && (
-            <Button variant="ghost" size="sm">
-              <Trophy className="w-4 h-4 mr-1" />
-              Results
+              <Play className="w-4 h-4 mr-1" />
+              {isVendor ? "Bid Now" : "Live"}
             </Button>
           )}
           {!isVendor && (auction.status === 'live' || auction.status === 'completed') && (
             <Button variant="ghost" size="sm" onClick={() => onCreatePO(auction)}>
               <ShoppingCart className="w-4 h-4 mr-1" />
-              Create Purchase Order
+              PO
+            </Button>
+          )}
+          {!isVendor && auction.status !== 'live' && (
+            <Button variant="ghost" size="sm" onClick={() => onDelete(auction.id)}>
+              <Trash2 className="w-4 h-4 mr-1" />
+              Delete
             </Button>
           )}
         </div>
@@ -667,8 +816,8 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Auction"}
+        <Button type="submit" disabled={createAuctionMutation.isPending}>
+          {createAuctionMutation.isPending ? "Creating..." : "Create Auction"}
         </Button>
       </div>
     </form>
