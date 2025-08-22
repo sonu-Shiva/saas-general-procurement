@@ -1271,6 +1271,27 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  app.get('/api/boms/:id/items', isAuthenticated, async (req, res) => {
+    try {
+      console.log("=== GET BOM ITEMS ENDPOINT ===");
+      console.log("BOM ID:", req.params.id);
+      
+      const items = await storage.getBomItems(req.params.id);
+      console.log("BOM items retrieved:", items.length);
+      console.log("Items data:", items.map(item => ({
+        id: item.id,
+        itemName: item.itemName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice
+      })));
+      
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching BOM items:", error);
+      res.status(500).json({ message: "Failed to fetch BOM items" });
+    }
+  });
+
   app.delete('/api/boms/:id/items', isAuthenticated, async (req, res) => {
     try {
       await storage.deleteBomItems(req.params.id);
