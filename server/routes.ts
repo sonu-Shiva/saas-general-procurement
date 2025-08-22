@@ -996,18 +996,25 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
-  app.delete('/api/product-categories/:id', isAuthenticated, isVendor, async (req: any, res) => {
+  app.delete('/api/product-categories/:id', isAuthenticated, async (req: any, res) => {
     try {
       const categoryId = req.params.id;
       const userId = req.user.claims.sub;
 
-      // Check if category exists and user has permission to delete it
+      // Check if category exists
       const existingCategory = await storage.getProductCategory(categoryId);
       if (!existingCategory) {
         return res.status(404).json({ message: "Category not found" });
       }
 
-      if (existingCategory.createdBy !== userId) {
+      // Get user role to determine permissions
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Admin can delete any category, others can only delete categories they created
+      if (user.role !== 'admin' && existingCategory.createdBy !== userId) {
         return res.status(403).json({ message: "You can only delete categories you created" });
       }
 
