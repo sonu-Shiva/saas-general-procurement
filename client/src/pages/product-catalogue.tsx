@@ -495,9 +495,6 @@ export default function ProductCatalogue() {
                             <div className="flex justify-between items-center mb-4">
                               <h4 className="font-semibold">Products in this Category</h4>
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {filteredProducts.filter(p => p.categoryId === selectedCategory.id || p.category === selectedCategory.name).length} items
-                                </Badge>
                                 {canManageProducts ? (
                                   <div className="flex gap-2">
                                     <Button 
@@ -785,9 +782,9 @@ export default function ProductCatalogue() {
                               <div className="flex justify-between items-center">
                                 <div>
                                   {product.category && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <span className="text-xs text-muted-foreground">
                                       {product.category}
-                                    </Badge>
+                                    </span>
                                   )}
                                 </div>
                                 {product.basePrice && (
@@ -870,7 +867,7 @@ export default function ProductCatalogue() {
                                 </TableCell>
                                 <TableCell>
                                   {product.category ? (
-                                    <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                                    <span className="text-xs text-muted-foreground">{product.category}</span>
                                   ) : (
                                     <span className="text-muted-foreground text-sm">Uncategorized</span>
                                   )}
