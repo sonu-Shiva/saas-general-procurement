@@ -18,7 +18,7 @@ import VendorPortal from "./pages/vendor-portal";
 import VendorRfxDetails from "./pages/vendor-rfx-details";
 import VendorRfxResponse from "./pages/vendor-rfx-response";
 import ProcurementRequests from "@/pages/procurement-requests";
-import { lazy } from "react";
+import PrApproval from "./pages/pr-approval";
 
 import SimpleLogin from "@/pages/simple-login";
 import Sidebar from "@/components/layout/sidebar";
@@ -110,7 +110,7 @@ function Router() {
           <Route path="/products" component={ProductCatalogue} />
           <Route path="/boms" component={BomManagement} />
           <Route path="/procurement-requests" component={ProcurementRequests} />
-          <Route path="/pr-approval/:id" component={lazy(() => import('./pages/pr-approval'))} />
+          <Route path="/pr-approval/:id" component={PrApproval} />
           <Route path="/rfx" component={RfxManagement} />
           <Route path="/auctions" component={AuctionCenter} />
           <Route path="/sourcing-intake" component={SourcingIntake} />

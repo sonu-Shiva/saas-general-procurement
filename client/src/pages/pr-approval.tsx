@@ -113,7 +113,7 @@ export default function PRApproval() {
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/pr/${id}/approve`, {
+      return apiRequest(`/api/procurement-requests/${id}/approve`, {
         method: 'POST',
       });
     },
@@ -137,7 +137,7 @@ export default function PRApproval() {
   // Reject mutation
   const rejectMutation = useMutation({
     mutationFn: async (reason: string) => {
-      return apiRequest(`/api/pr/${id}/reject`, {
+      return apiRequest(`/api/procurement-requests/${id}/reject`, {
         method: 'POST',
         body: JSON.stringify({ reason }),
         headers: {
@@ -167,7 +167,7 @@ export default function PRApproval() {
   // Send back mutation
   const sendBackMutation = useMutation({
     mutationFn: async (reason: string) => {
-      return apiRequest(`/api/pr/${id}/sendback`, {
+      return apiRequest(`/api/procurement-requests/${id}/sendback`, {
         method: 'POST',
         body: JSON.stringify({ reason }),
         headers: {
