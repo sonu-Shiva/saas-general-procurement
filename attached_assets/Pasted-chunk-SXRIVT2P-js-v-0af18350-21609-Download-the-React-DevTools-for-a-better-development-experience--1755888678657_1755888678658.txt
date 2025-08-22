@@ -1,0 +1,26 @@
+chunk-SXRIVT2P.js?v=0af18350:21609 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+Fetch finished loading: GET "<URL>".
+auction-center.tsx:83 WebSocket connected for auction updates
+auction-results-checkpoint.tsx:12 AuctionResults received auction: {id: 'c288f23b-dc17-46d2-b22e-4b3cacc4c9e5', name: 'Auction for Req_001 (PR-1755498423889-SV0QF)', description: 'IT Procurement', items: null, startTime: '2025-08-19T06:38:00.000Z', …}
+auction-results-checkpoint.tsx:13 AuctionResults received rankings: []
+auction-results-checkpoint.tsx:14 AuctionResults received challengePrices: []
+auction-results-checkpoint.tsx:12 AuctionResults received auction: {id: 'c288f23b-dc17-46d2-b22e-4b3cacc4c9e5', name: 'Auction for Req_001 (PR-1755498423889-SV0QF)', description: 'IT Procurement', items: null, startTime: '2025-08-19T06:38:00.000Z', …}
+auction-results-checkpoint.tsx:13 AuctionResults received rankings: [{…}]
+auction-results-checkpoint.tsx:14 AuctionResults received challengePrices: []
+auction-results-checkpoint.tsx:17 First ranking item: {id: 'c79be023-fd97-46b9-89a6-68ce5a74da5f', name: 'Test Auction - Data Persistence Check', description: 'Testing if auction data persists', items: null, startTime: '2025-08-25T09:00:00.000Z', …}
+auction-results-checkpoint.tsx:18 Vendor name from first item: undefined undefined undefined
+auction-results-checkpoint.tsx:12 AuctionResults received auction: {id: 'c288f23b-dc17-46d2-b22e-4b3cacc4c9e5', name: 'Auction for Req_001 (PR-1755498423889-SV0QF)', description: 'IT Procurement', items: null, startTime: '2025-08-19T06:38:00.000Z', …}
+auction-results-checkpoint.tsx:13 AuctionResults received rankings: [{…}]
+auction-results-checkpoint.tsx:14 AuctionResults received challengePrices: (16) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+auction-results-checkpoint.tsx:17 First ranking item: {id: 'c79be023-fd97-46b9-89a6-68ce5a74da5f', name: 'Test Auction - Data Persistence Check', description: 'Testing if auction data persists', items: null, startTime: '2025-08-25T09:00:00.000Z', …}
+auction-results-checkpoint.tsx:18 Vendor name from first item: undefined undefined undefined
+auction-results-checkpoint.tsx:12 AuctionResults received auction: {id: 'c288f23b-dc17-46d2-b22e-4b3cacc4c9e5', name: 'Auction for Req_001 (PR-1755498423889-SV0QF)', description: 'IT Procurement', items: null, startTime: '2025-08-19T06:38:00.000Z', …}
+auction-results-checkpoint.tsx:13 AuctionResults received rankings: [{…}]
+auction-results-checkpoint.tsx:14 AuctionResults received challengePrices: (16) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+auction-results-checkpoint.tsx:17 First ranking item: {id: 'c79be023-fd97-46b9-89a6-68ce5a74da5f', name: 'Test Auction - Data Persistence Check', description: 'Testing if auction data persists', items: null, startTime: '2025-08-25T09:00:00.000Z', …}
+auction-results-checkpoint.tsx:18 Vendor name from first item: undefined undefined undefined
