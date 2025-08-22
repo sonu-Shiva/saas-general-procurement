@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Plus, Building2, Mail, Phone, MapPin, Globe, MoreVertical, Trash2, UserX, UserCheck } from "lucide-react";
 
 export default function VendorManagement() {
@@ -33,6 +34,7 @@ export default function VendorManagement() {
     );
   }
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
   const [vendorToDelete, setVendorToDelete] = useState<string | null>(null);
   const [vendorToDisengage, setVendorToDisengage] = useState<string | null>(null);
@@ -163,10 +165,30 @@ export default function VendorManagement() {
                   Manage your vendor network and discover new suppliers
                 </p>
               </div>
-              <Button onClick={() => setIsAddVendorOpen(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Vendors
-              </Button>
+              <div className="flex gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === "table" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("table")}
+                    data-testid="button-table-view"
+                  >
+                    Table
+                  </Button>
+                  <Button
+                    variant={viewMode === "cards" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("cards")}
+                    data-testid="button-cards-view"
+                  >
+                    Cards
+                  </Button>
+                </div>
+                <Button onClick={() => setIsAddVendorOpen(true)} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Vendors
+                </Button>
+              </div>
             </div>
 
             {/* Search and Filters */}
@@ -186,22 +208,34 @@ export default function VendorManagement() {
               </CardContent>
             </Card>
 
-            {/* Vendors Grid */}
+            {/* Vendors Display */}
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-6">
-                      <div className="space-y-3">
-                        <div className="h-4 bg-muted rounded w-3/4"></div>
-                        <div className="h-3 bg-muted rounded w-1/2"></div>
-                        <div className="h-3 bg-muted rounded w-full"></div>
-                        <div className="h-3 bg-muted rounded w-2/3"></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              viewMode === "cards" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, i) => (
+                    <Card key={i} className="animate-pulse">
+                      <CardContent className="p-6">
+                        <div className="space-y-3">
+                          <div className="h-4 bg-muted rounded w-3/4"></div>
+                          <div className="h-3 bg-muted rounded w-1/2"></div>
+                          <div className="h-3 bg-muted rounded w-full"></div>
+                          <div className="h-3 bg-muted rounded w-2/3"></div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-muted rounded w-full"></div>
+                      <div className="h-4 bg-muted rounded w-full"></div>
+                      <div className="h-4 bg-muted rounded w-full"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
             ) : filteredVendors.length === 0 ? (
               <Card>
                 <CardContent className="p-12 text-center">
@@ -216,7 +250,7 @@ export default function VendorManagement() {
                   </Button>
                 </CardContent>
               </Card>
-            ) : (
+            ) : viewMode === "cards" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredVendors.map((vendor: any) => (
                   <Card key={vendor.id} className="border-2 border-border hover:border-primary/50 transition-colors">
@@ -342,6 +376,137 @@ export default function VendorManagement() {
                   </Card>
                 ))}
               </div>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Categories</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="w-16">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredVendors.map((vendor: any) => (
+                        <TableRow key={vendor.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-shrink-0">
+                                {vendor.logoUrl ? (
+                                  <img 
+                                    src={vendor.logoUrl} 
+                                    alt={`${vendor.companyName || vendor.name} logo`}
+                                    className="w-8 h-8 object-cover rounded border"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const fallback = target.nextElementSibling as HTMLElement;
+                                      if (fallback) fallback.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <div 
+                                  className={`w-8 h-8 bg-muted rounded border flex items-center justify-center ${vendor.logoUrl ? 'hidden' : 'flex'}`}
+                                >
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              </div>
+                              <div>
+                                <div className="font-medium">{vendor.companyName || vendor.name || "Unknown Vendor"}</div>
+                                {vendor.description && (
+                                  <div className="text-sm text-muted-foreground truncate max-w-48">
+                                    {vendor.description}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1 text-sm">
+                              {vendor.email && (
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3 text-muted-foreground" />
+                                  <span className="truncate max-w-48">{vendor.email}</span>
+                                </div>
+                              )}
+                              {vendor.phone && (
+                                <div className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3 text-muted-foreground" />
+                                  <span>{vendor.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {vendor.categories && vendor.categories.length > 0 ? (
+                                vendor.categories.slice(0, 2).map((category: string, index: number) => (
+                                  <Badge key={index} variant="outline" className="text-xs">{category}</Badge>
+                                ))
+                              ) : (
+                                <Badge variant="outline" className="text-xs">General</Badge>
+                              )}
+                              {vendor.categories && vendor.categories.length > 2 && (
+                                <Badge variant="outline" className="text-xs">+{vendor.categories.length - 2}</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge {...getStatusBadge(vendor.status)} className="text-xs">
+                              {getStatusBadge(vendor.status).label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge {...getTypeBadge(vendor.type)} className="text-xs">
+                              {getTypeBadge(vendor.type).label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {vendor.status === "inactive" ? (
+                                  <DropdownMenuItem
+                                    onClick={() => setVendorToReactivate(vendor.id)}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <UserCheck className="h-4 w-4 mr-2" />
+                                    Reactivate Vendor
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem
+                                    onClick={() => setVendorToDisengage(vendor.id)}
+                                    className="text-orange-600 hover:text-orange-700"
+                                  >
+                                    <UserX className="h-4 w-4 mr-2" />
+                                    Remove Vendor
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => setVendorToDelete(vendor.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Vendor
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             )}
       </div>
 

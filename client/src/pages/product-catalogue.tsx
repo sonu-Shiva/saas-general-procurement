@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProductSchema } from "@shared/schema";
@@ -40,6 +41,7 @@ export default function ProductCatalogue() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAddExistingDialogOpen, setIsAddExistingDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -410,6 +412,26 @@ export default function ProductCatalogue() {
                 <h1 className="text-3xl font-bold text-foreground">Product Catalogue</h1>
                 <p className="text-muted-foreground">Manage your centralized product and service catalogue with hierarchical categories</p>
               </div>
+              {activeTab === "products" && (
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === "table" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("table")}
+                    data-testid="button-table-view"
+                  >
+                    Table
+                  </Button>
+                  <Button
+                    variant={viewMode === "cards" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("cards")}
+                    data-testid="button-cards-view"
+                  >
+                    Cards
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Tabs for Category Management and Product Listing */}
@@ -680,21 +702,33 @@ export default function ProductCatalogue() {
                     </CardContent>
                   </Card>
 
-                  {/* Products Grid */}
+                  {/* Products Display */}
                   {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {[...Array(6)].map((_, i) => (
-                        <Card key={i} className="animate-pulse">
-                          <CardContent className="p-6">
-                            <div className="space-y-3">
-                              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                    viewMode === "cards" ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[...Array(6)].map((_, i) => (
+                          <Card key={i} className="animate-pulse">
+                            <CardContent className="p-6">
+                              <div className="space-y-3">
+                                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                                <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="animate-pulse space-y-3">
+                            <div className="h-4 bg-gray-200 rounded w-full"></div>
+                            <div className="h-4 bg-gray-200 rounded w-full"></div>
+                            <div className="h-4 bg-gray-200 rounded w-full"></div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
                   ) : filteredProducts.length === 0 ? (
                     <Card>
                       <CardContent className="text-center py-12">
@@ -714,7 +748,7 @@ export default function ProductCatalogue() {
                         )}
                       </CardContent>
                     </Card>
-                  ) : (
+                  ) : viewMode === "cards" ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {filteredProducts.map((product) => (
                         <Card key={product.id} className="hover:shadow-lg transition-shadow">
@@ -804,6 +838,118 @@ export default function ProductCatalogue() {
                         </Card>
                       ))}
                     </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Product</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead>Price</TableHead>
+                              <TableHead>UOM</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="w-32">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredProducts.map((product) => (
+                              <TableRow key={product.id}>
+                                <TableCell>
+                                  <div>
+                                    <div className="font-medium">{product.itemName}</div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {product.internalCode && `Code: ${product.internalCode}`}
+                                    </div>
+                                    {product.description && (
+                                      <div className="text-sm text-muted-foreground truncate max-w-48">
+                                        {product.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {product.category ? (
+                                    <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">Uncategorized</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {product.basePrice ? (
+                                    <div className="flex items-center text-green-600 font-medium">
+                                      <TbCurrencyRupee className="w-4 h-4" />
+                                      {formatCurrency(parseFloat(product.basePrice))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm">{product.uom || "-"}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant={product.isActive ? "secondary" : "outline"}
+                                    className={product.isActive ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
+                                  >
+                                    {product.isActive ? (
+                                      <>
+                                        <CheckCircle className="w-3 h-3 mr-1" />
+                                        Active
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Clock className="w-3 h-3 mr-1" />
+                                        Inactive
+                                      </>
+                                    )}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center space-x-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedProduct(product);
+                                        setIsViewDialogOpen(true);
+                                      }}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                    {canManageProducts && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleEditProduct(product)}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedProduct(product);
+                                            setIsDeleteDialogOpen(true);
+                                          }}
+                                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
               </TabsContent>

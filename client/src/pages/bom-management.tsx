@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
@@ -42,6 +43,7 @@ export default function BomManagement() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -230,7 +232,6 @@ export default function BomManagement() {
   };
 
   return (
-    <>
     <div className="max-w-7xl mx-auto px-6 py-8">
             {/* Page Header */}
             <div className="flex justify-between items-center mb-8">
@@ -238,7 +239,26 @@ export default function BomManagement() {
                 <h1 className="text-3xl font-bold text-foreground">BOM Management</h1>
                 <p className="text-muted-foreground">Create and manage Bills of Materials for grouped procurement</p>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex items-center space-x-3">
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === "table" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("table")}
+                    data-testid="button-table-view"
+                  >
+                    Table
+                  </Button>
+                  <Button
+                    variant={viewMode === "cards" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("cards")}
+                    data-testid="button-cards-view"
+                  >
+                    Cards
+                  </Button>
+                </div>
+                <div className="flex space-x-3">
                 {!isBuyer && (
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">
@@ -465,23 +485,36 @@ export default function BomManagement() {
               </CardContent>
             </Card>
 
-            {/* BOMs Grid */}
+            {/* BOMs Display */}
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <Card key={i}>
-                    <CardContent className="p-6">
-                      <div className="animate-pulse">
-                        <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-muted rounded w-1/2 mb-4"></div>
-                        <div className="h-8 bg-muted rounded w-full"></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              viewMode === "cards" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-6">
+                        <div className="animate-pulse">
+                          <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-muted rounded w-1/2 mb-4"></div>
+                          <div className="h-8 bg-muted rounded w-full"></div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-muted rounded w-full"></div>
+                      <div className="h-4 bg-muted rounded w-full"></div>
+                      <div className="h-4 bg-muted rounded w-full"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
             ) : filteredBoms && filteredBoms.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              viewMode === "cards" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredBoms.map((bom: Bom) => (
                   <Card key={bom.id} className="hover:shadow-lg transition-shadow">
                     <CardHeader className="pb-3">
@@ -581,7 +614,104 @@ export default function BomManagement() {
                     </CardContent>
                   </Card>
                 ))}
-              </div>
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>BOM</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Created</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-32">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredBoms.map((bom: Bom) => (
+                          <TableRow key={bom.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center text-white">
+                                  <Layers className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">{bom.name}</div>
+                                  <div className="text-sm text-muted-foreground">v{bom.version}</div>
+                                  {bom.description && (
+                                    <div className="text-sm text-muted-foreground truncate max-w-48">
+                                      {bom.description}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {bom.category ? (
+                                <Badge variant="outline" className="text-xs">{bom.category}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">{new Date(bom.createdAt || '').toLocaleDateString()}</span>
+                              {bom.validTo && (
+                                <div className="text-xs text-muted-foreground">
+                                  Valid until {new Date(bom.validTo).toLocaleDateString()}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={bom.isActive ? "default" : "secondary"}>
+                                {bom.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleViewBom(bom)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditBom(bom)}
+                                  disabled={!isBuyer}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleCopyBom(bom)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteBom(bom)}
+                                  disabled={!isBuyer}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )
             ) : (
               <Card>
                 <CardContent className="p-12 text-center">
@@ -671,6 +801,6 @@ export default function BomManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
