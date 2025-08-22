@@ -855,23 +855,22 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
   const [currentBids, setCurrentBids] = useState<any[]>([]);
   const [rankings, setRankings] = useState<any[]>([]);
   const [newBidAmount, setNewBidAmount] = useState('');
-  const [counterAmount, setCounterAmount] = useState('');
-  const [counterNotes, setCounterNotes] = useState('');
-  const [selectedChallenge, setSelectedChallenge] = useState<any>(null);
-  const [isCounterDialogOpen, setIsCounterDialogOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const isLiveAuction = auction.status === 'live';
+  const isClosedAuction = auction.status === 'closed' || auction.status === 'completed';
 
   const { data: bids = [] } = useQuery({
     queryKey: ["/api/auctions", auction.id, "bids"],
-    refetchInterval: 2000, // Refresh every 2 seconds
+    refetchInterval: isLiveAuction ? 2000 : false, // Only refresh for live auctions
   });
 
   // Fetch challenge prices
   const { data: challengePrices = [] } = useQuery({
     queryKey: ["/api/auctions", auction.id, "challenge-prices"],
-    refetchInterval: 3000, // Refresh every 3 seconds
+    refetchInterval: isLiveAuction ? 3000 : false, // Only refresh for live auctions
   });
 
   useEffect(() => {
