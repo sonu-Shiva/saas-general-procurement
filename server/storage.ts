@@ -905,12 +905,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBom(id: string, updates: Partial<InsertBom>): Promise<Bom> {
-    const [updatedBom] = await this.db
-      .update(boms)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(boms.id, id))
-      .returning();
-    return updatedBom;
+    try {
+      console.log("Storage - Updating BOM with data:", JSON.stringify(updates, null, 2));
+      
+      // Ensure proper date conversion for all timestamp fields
+      const updateData = {
+        ...updates,
+        validFrom: updates.validFrom ? new Date(updates.validFrom) : updates.validFrom,
+        validTo: updates.validTo ? new Date(updates.validTo) : updates.validTo,
+        updatedAt: new Date(),
+      };
+      
+      console.log("Storage - Processed update data:", JSON.stringify(updateData, null, 2));
+      
+      const [updatedBom] = await this.db
+        .update(boms)
+        .set(updateData)
+        .where(eq(boms.id, id))
+        .returning();
+        
+      console.log("Storage - BOM updated successfully:", updatedBom);
+      return updatedBom;
+    } catch (error) {
+      console.error("Storage - Error updating BOM:", error);
+      throw error;
+    }
   }
 
   async deleteBom(id: string): Promise<void> {
