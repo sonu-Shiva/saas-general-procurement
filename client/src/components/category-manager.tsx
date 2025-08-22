@@ -234,11 +234,23 @@ export default function CategoryManager({
         }, 500);
         return;
       }
-      toast({
-        title: "Error",
-        description: `Failed to create category: ${(error as any)?.message || 'Unknown error'}`,
-        variant: "destructive",
-      });
+      // Enhanced error handling to show specific error message
+      const errorMessage = (error as any)?.message || 'Unknown error';
+      
+      // Check for duplicate code error
+      if (errorMessage.includes('duplicate key') && errorMessage.includes('code')) {
+        toast({
+          title: "Error",
+          description: "Category code conflict detected. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to create category: ${errorMessage}`,
+          variant: "destructive",
+        });
+      }
     },
   });
 

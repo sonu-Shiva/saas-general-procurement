@@ -538,16 +538,27 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Parent category not found');
       }
 
-      // Get sibling count to determine next number
-      const siblings = await this.db.select().from(productCategories).where(eq(productCategories.parentId, category.parentId));
-      const nextSiblingNumber = siblings.length + 1;
-
+      // Get existing sibling codes to find the next available number
+      const siblings = await this.db.select({ code: productCategories.code }).from(productCategories).where(eq(productCategories.parentId, category.parentId));
+      
+      // Extract numbers from sibling codes and find the highest
+      const siblingNumbers = siblings
+        .map(s => s.code.split('.').pop()) // Get last part after the dot
+        .map(s => parseInt(s || '0', 10))
+        .filter(n => !isNaN(n));
+      
+      const nextSiblingNumber = siblingNumbers.length > 0 ? Math.max(...siblingNumbers) + 1 : 1;
       hierarchicalCode = `${parent.code}.${nextSiblingNumber}`;
     } else {
-      // Root category - get count of root categories
-      const rootCategories = await this.db.select().from(productCategories).where(isNull(productCategories.parentId));
-      const nextRootNumber = rootCategories.length + 1;
-
+      // Root category - find highest existing root code number
+      const rootCategories = await this.db.select({ code: productCategories.code }).from(productCategories).where(isNull(productCategories.parentId));
+      
+      // Extract numbers from root codes and find the highest
+      const rootNumbers = rootCategories
+        .map(c => parseInt(c.code, 10))
+        .filter(n => !isNaN(n));
+      
+      const nextRootNumber = rootNumbers.length > 0 ? Math.max(...rootNumbers) + 1 : 1;
       hierarchicalCode = nextRootNumber.toString();
     }
 
