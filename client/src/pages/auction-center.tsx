@@ -458,55 +458,15 @@ export default function AuctionCenter() {
         </DialogContent>
       </Dialog>
 
-      {/* View Auction Dialog */}
+      {/* View Auction Dialog - Enhanced with Bid Information */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Auction Details - {selectedAuctionForView?.name}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
             {selectedAuctionForView && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">Name</Label>
-                    <p className="text-sm text-muted-foreground">{selectedAuctionForView.name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Status</Label>
-                    <Badge className={getStatusColor(selectedAuctionForView.status)}>
-                      {selectedAuctionForView.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Type</Label>
-                    <p className="text-sm text-muted-foreground capitalize">{selectedAuctionForView.type}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Duration</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(selectedAuctionForView.startTime).toLocaleDateString()} - {new Date(selectedAuctionForView.endTime).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                {selectedAuctionForView.description && (
-                  <div>
-                    <Label className="text-sm font-medium">Description</Label>
-                    <p className="text-sm text-muted-foreground">{selectedAuctionForView.description}</p>
-                  </div>
-                )}
-                <div>
-                  <Label className="text-sm font-medium">Invited Vendors ({selectedAuctionForView.vendors?.length || 0})</Label>
-                  <div className="mt-2 space-y-2">
-                    {selectedAuctionForView.vendors?.map((vendor: any) => (
-                      <div key={vendor.id} className="flex items-center justify-between p-2 border rounded">
-                        <span>{vendor.name}</span>
-                        <Badge variant="outline">{vendor.status || 'Invited'}</Badge>
-                      </div>
-                    )) || <p className="text-sm text-muted-foreground">No vendors invited</p>}
-                  </div>
-                </div>
-              </div>
+              <EnhancedAuctionView auction={selectedAuctionForView} />
             )}
           </div>
         </DialogContent>
@@ -847,6 +807,200 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
         </Button>
       </div>
     </form>
+  );
+}
+
+// Enhanced Auction View Component - Shows comprehensive auction details with bid information
+function EnhancedAuctionView({ auction }: { auction: any }) {
+  // Fetch auction bids for detailed view
+  const { data: auctionBids = [] } = useQuery({
+    queryKey: [`/api/auctions/${auction.id}/bids`],
+    staleTime: 0,
+    cacheTime: 0,
+  });
+
+  // Fetch challenge prices for bid analysis
+  const { data: challengePrices = [] } = useQuery({
+    queryKey: [`/api/auctions/${auction.id}/challenge-prices`],
+    staleTime: 0,
+    cacheTime: 0,
+  });
+
+  // Calculate bid statistics
+  const bidStats = React.useMemo(() => {
+    if (!auctionBids?.length) return { totalBids: 0, uniqueVendors: 0, lowestBid: null, leadingVendor: null };
+
+    const uniqueVendors = new Set(auctionBids.map((bid: any) => bid.vendorId)).size;
+    const sortedBids = [...auctionBids].sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount));
+    const lowestBid = sortedBids[0];
+
+    // Consider challenge prices for actual leading bid
+    let actualLowestAmount = parseFloat(lowestBid.amount);
+    let leadingVendor = lowestBid.vendorCompanyName;
+
+    challengePrices.forEach((challenge: any) => {
+      if (challenge.status === 'accepted' && parseFloat(challenge.challengeAmount) < actualLowestAmount) {
+        actualLowestAmount = parseFloat(challenge.challengeAmount);
+        leadingVendor = challenge.vendorCompanyName;
+      }
+    });
+
+    return {
+      totalBids: auctionBids.length,
+      uniqueVendors,
+      lowestBid: actualLowestAmount,
+      leadingVendor
+    };
+  }, [auctionBids, challengePrices]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'live': return 'bg-green-100 text-green-700 border-green-200';
+      case 'completed': return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'closed': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Basic Auction Information */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-sm font-medium">Name</Label>
+          <p className="text-sm text-muted-foreground">{auction.name}</p>
+        </div>
+        <div>
+          <Label className="text-sm font-medium">Status</Label>
+          <Badge className={getStatusColor(auction.status)}>
+            {auction.status}
+          </Badge>
+        </div>
+        <div>
+          <Label className="text-sm font-medium">Type</Label>
+          <p className="text-sm text-muted-foreground capitalize">{auction.type || 'Standard'}</p>
+        </div>
+        <div>
+          <Label className="text-sm font-medium">Duration</Label>
+          <p className="text-sm text-muted-foreground">
+            {new Date(auction.startTime).toLocaleDateString()} - {new Date(auction.endTime).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+
+      {auction.description && (
+        <div>
+          <Label className="text-sm font-medium">Description</Label>
+          <p className="text-sm text-muted-foreground">{auction.description}</p>
+        </div>
+      )}
+
+      {/* Bid Summary Section */}
+      <div className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-green-50">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Bid Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{bidStats.totalBids}</div>
+            <div className="text-sm text-gray-600">Total Bids</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">{bidStats.uniqueVendors}</div>
+            <div className="text-sm text-gray-600">Participating Vendors</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {bidStats.lowestBid ? `₹${bidStats.lowestBid.toLocaleString()}` : 'N/A'}
+            </div>
+            <div className="text-sm text-gray-600">Lowest Bid</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-orange-600">{bidStats.leadingVendor || 'N/A'}</div>
+            <div className="text-sm text-gray-600">Current Leader</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Bids Section */}
+      {auctionBids?.length > 0 && (
+        <div>
+          <Label className="text-sm font-medium">Recent Bids</Label>
+          <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+            {auctionBids.slice(0, 5).map((bid: any, index: number) => (
+              <div key={bid.id} className="flex items-center justify-between p-3 border rounded bg-white">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                    index === 0 ? 'bg-green-500' : index === 1 ? 'bg-blue-500' : 'bg-gray-500'
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <div>
+                    <div className="font-medium">{bid.vendorCompanyName}</div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(bid.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-lg">₹{parseFloat(bid.amount).toLocaleString()}</div>
+                  <div className="text-sm text-gray-500">MT</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Challenge Prices Section */}
+      {challengePrices?.length > 0 && (
+        <div>
+          <Label className="text-sm font-medium">Challenge Prices</Label>
+          <div className="mt-2 space-y-2">
+            {challengePrices.map((challenge: any) => (
+              <div key={challenge.id} className="flex items-center justify-between p-3 border rounded bg-white">
+                <div className="flex items-center space-x-3">
+                  <div className={`px-2 py-1 rounded text-xs font-medium ${
+                    challenge.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                    challenge.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {challenge.status}
+                  </div>
+                  <div>
+                    <div className="font-medium">{challenge.vendorCompanyName}</div>
+                    <div className="text-sm text-gray-500">
+                      Challenge: ₹{parseFloat(challenge.challengeAmount).toLocaleString()}/MT
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500">
+                    Original: ₹{parseFloat(challenge.originalBidAmount).toLocaleString()}
+                  </div>
+                  {challenge.notes && (
+                    <div className="text-xs text-gray-400 max-w-32 truncate">{challenge.notes}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Invited Vendors Section */}
+      <div>
+        <Label className="text-sm font-medium">Invited Vendors ({auction.vendors?.length || 0})</Label>
+        <div className="mt-2 space-y-2">
+          {auction.vendors?.map((vendor: any) => (
+            <div key={vendor.id} className="flex items-center justify-between p-2 border rounded">
+              <span>{vendor.name}</span>
+              <Badge variant="outline">{vendor.status || 'Invited'}</Badge>
+            </div>
+          )) || <p className="text-sm text-muted-foreground">No vendors invited</p>}
+        </div>
+      </div>
+    </div>
   );
 }
 
