@@ -928,26 +928,6 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
 
 
 
-  // Get final ranked bids with challenge prices
-  const finalRankings = React.useMemo(() => {
-    return rankings.map((bid: any) => {
-      const vendorChallenges = Array.isArray(challengePrices) ? challengePrices.filter((cp: any) => cp.vendorId === bid.vendorId) : [];
-      const acceptedChallenge = vendorChallenges.find((cp: any) => cp.status === 'accepted');
-      
-      return {
-        ...bid,
-        finalAmount: acceptedChallenge ? acceptedChallenge.challengeAmount : bid.amount,
-        hasAcceptedChallenge: !!acceptedChallenge,
-        challengePrices: vendorChallenges
-      };
-    }).sort((a: any, b: any) => parseFloat(a.finalAmount) - parseFloat(b.finalAmount))
-      .map((bid: any, index: number) => ({
-        ...bid,
-        rank: index + 1,
-        rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`
-      }));
-  }, [rankings, challengePrices]);
-
   const getRankColor = (rank: number) => {
     switch (rank) {
       case 1: return 'bg-green-100 text-green-700 border-green-200';
@@ -967,124 +947,174 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
     );
   }
 
+  // Calculate final rankings with proper challenge price logic
+  const finalRankings = React.useMemo(() => {
+    if (!rankings.length) return [];
+    
+    // Get the latest bid per vendor
+    const vendorLatestBids = new Map();
+    rankings.forEach((bid: any) => {
+      const vendorId = bid.vendorId;
+      if (!vendorLatestBids.has(vendorId) || new Date(bid.timestamp) > new Date(vendorLatestBids.get(vendorId).timestamp)) {
+        vendorLatestBids.set(vendorId, bid);
+      }
+    });
+
+    const latestBids = Array.from(vendorLatestBids.values());
+
+    return latestBids.map((bid: any) => {
+      const vendorChallenges = Array.isArray(challengePrices) ? challengePrices.filter((cp: any) => cp.vendorId === bid.vendorId) : [];
+      const acceptedChallenge = vendorChallenges.find((cp: any) => cp.status === 'accepted');
+      
+      return {
+        ...bid,
+        finalAmount: acceptedChallenge ? acceptedChallenge.challengeAmount : bid.amount,
+        hasAcceptedChallenge: !!acceptedChallenge,
+        challengePrices: vendorChallenges,
+        originalBidAmount: bid.amount
+      };
+    }).sort((a: any, b: any) => parseFloat(a.finalAmount) - parseFloat(b.finalAmount))
+      .map((bid: any, index: number) => ({
+        ...bid,
+        rank: index + 1,
+        rankLabel: index === 0 ? 'L1' : index === 1 ? 'L2' : index === 2 ? 'L3' : `L${index + 1}`,
+        rankColor: index === 0 ? 'border-green-200 bg-green-50' : index === 1 ? 'border-yellow-200 bg-yellow-50' : index === 2 ? 'border-orange-200 bg-orange-50' : 'border-gray-200 bg-gray-50'
+      }));
+  }, [rankings, challengePrices]);
+
   return (
     <div className="space-y-6 p-6">
-      {/* Auction Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <div className="text-center">
-            <Trophy className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
-            <div className="text-sm text-muted-foreground">Winner</div>
-            <div className="text-lg font-bold">{finalRankings[0]?.vendorName || 'No Winner'}</div>
-            {finalRankings[0] && (
-              <div className="text-sm text-muted-foreground">₹{finalRankings[0].finalAmount}</div>
+      {/* Winner Summary */}
+      <div className="text-center mb-6">
+        <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold">Auction Results</h2>
+        <p className="text-muted-foreground">{auction.name}</p>
+        {finalRankings[0] && (
+          <div className="mt-4">
+            <p className="text-lg">🏆 <strong>Winner: {finalRankings[0].vendorName}</strong></p>
+            <p className="text-2xl font-bold text-green-600">Final Amount: ₹{parseFloat(finalRankings[0].finalAmount).toLocaleString()}</p>
+            {finalRankings[0].hasAcceptedChallenge && (
+              <p className="text-sm text-green-600 mt-1">✓ Won with accepted challenge price</p>
             )}
           </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-            <div className="text-sm text-muted-foreground">Total Bidders</div>
-            <div className="text-xl font-bold">{rankings.length}</div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <Target className="w-8 h-8 mx-auto mb-2 text-green-600" />
-            <div className="text-sm text-muted-foreground">Ceiling Price</div>
-            <div className="text-xl font-bold">₹{auction.reservePrice || 'Not Set'}</div>
-          </div>
-        </Card>
+        )}
       </div>
 
-      {/* Bidding Results */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Bidding Results</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {finalRankings.map((bid: any) => (
-              <div key={bid.id} className="space-y-2">
-                <div className={`flex items-center justify-between p-4 rounded-lg border-2 ${
-                  bid.rank === 1 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'
-                }`}>
-                  <div className="flex items-center space-x-4">
-                    <Badge className={getRankColor(bid.rank)}>
-                      {bid.rankLabel}
-                    </Badge>
-                    <div>
-                      <div className="font-medium text-foreground">{bid.vendorName}</div>
-                      <div className="text-sm text-muted-foreground">{bid.vendorEmail}</div>
+      {/* Rankings Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {finalRankings.slice(0, 3).map((bid: any) => (
+          <Card key={bid.id} className={`border-2 ${bid.rankColor}`}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <Badge className={getRankColor(bid.rank)} variant="secondary">
+                  {bid.rankLabel}
+                </Badge>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">₹{parseFloat(bid.finalAmount).toLocaleString()}</div>
+                  {bid.hasAcceptedChallenge && (
+                    <div className="text-xs text-green-600 font-medium">
+                      ✓ Challenge Accepted
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-foreground">₹{parseFloat(bid.finalAmount).toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(bid.timestamp).toLocaleDateString()} {new Date(bid.timestamp).toLocaleTimeString()}
-                    </div>
-                    {bid.hasAcceptedChallenge && (
-                      <div className="text-xs text-green-600 font-medium mt-1">
-                        ✓ Challenge Price Accepted
-                      </div>
-                    )}
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div>
+                  <div className="font-semibold text-lg">{bid.vendorName}</div>
+                  <div className="text-sm text-muted-foreground">{bid.vendorEmail}</div>
+                </div>
+                
+                <div className="text-sm">
+                  <div>Original Bid: ₹{parseFloat(bid.originalBidAmount).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(bid.timestamp).toLocaleDateString()} at {new Date(bid.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
 
-                {/* Challenge Price Details */}
+                {/* Challenge Prices */}
                 {bid.challengePrices.map((challenge: any) => (
-                  <div key={challenge.id} className="ml-8 p-3 bg-blue-50 rounded border-l-4 border-blue-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">Challenge Price: ₹{challenge.challengeAmount}</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Status: <Badge variant={
-                            challenge.status === 'accepted' ? 'default' :
-                            challenge.status === 'rejected' ? 'destructive' : 'secondary'
-                          }>
-                            {challenge.status}
-                          </Badge>
-                        </div>
-                        {challenge.notes && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Notes: {challenge.notes}
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        {challenge.status === 'accepted' && (
-                          <div className="text-sm text-green-600 font-medium">
-                            ✓ Counter Price Accepted
-                          </div>
-                        )}
-                        {challenge.status === 'rejected' && (
-                          <div className="text-sm text-red-600 font-medium">
-                            ✗ Counter Price Rejected
-                          </div>
-                        )}
-                      </div>
+                  <div key={challenge.id} className="p-2 bg-blue-50 rounded border">
+                    <div className="text-sm">
+                      <strong>Challenge: ₹{parseFloat(challenge.challengeAmount).toLocaleString()}</strong>
                     </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <Badge variant={
+                        challenge.status === 'accepted' ? 'default' :
+                        challenge.status === 'rejected' ? 'destructive' : 'secondary'
+                      } className="text-xs">
+                        {challenge.status}
+                      </Badge>
+                      {challenge.status === 'accepted' && (
+                        <span className="text-xs text-green-600 font-medium">✓ Accepted</span>
+                      )}
+                      {challenge.status === 'rejected' && (
+                        <span className="text-xs text-red-600 font-medium">✗ Rejected</span>
+                      )}
+                    </div>
+                    {challenge.notes && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {challenge.notes}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      {/* Auction Details */}
+      {/* All Participants Table */}
+      {finalRankings.length > 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>All Participants</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {finalRankings.slice(3).map((bid: any) => (
+                <div key={bid.id} className="flex items-center justify-between p-3 border rounded">
+                  <div className="flex items-center space-x-3">
+                    <Badge variant="outline">{bid.rankLabel}</Badge>
+                    <div>
+                      <div className="font-medium">{bid.vendorName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Final: ₹{parseFloat(bid.finalAmount).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(bid.timestamp).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Auction Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Auction Details</CardTitle>
+          <CardTitle>Auction Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium">Auction Name</Label>
-              <p className="text-sm text-muted-foreground">{auction.name}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{finalRankings.length}</div>
+              <div className="text-sm text-muted-foreground">Total Bidders</div>
             </div>
-            <div>
-              <Label className="text-sm font-medium">Status</Label>
+            <div className="text-center">
+              <div className="text-2xl font-bold">₹{auction.reservePrice ? parseFloat(auction.reservePrice).toLocaleString() : 'N/A'}</div>
+              <div className="text-sm text-muted-foreground">Ceiling Price</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">{challengePrices.filter((cp: any) => cp.status === 'accepted').length}</div>
+              <div className="text-sm text-muted-foreground">Accepted Challenges</div>
+            </div>
+            <div className="text-center">
               <Badge className={
                 auction.status === 'completed' ? 'bg-green-100 text-green-700 border-green-200' :
                 auction.status === 'live' ? 'bg-blue-100 text-blue-700 border-blue-200' :
@@ -1093,30 +1123,6 @@ function LiveBiddingInterface({ auction, ws, onClose }: any) {
                 {auction.status}
               </Badge>
             </div>
-            <div>
-              <Label className="text-sm font-medium">Start Time</Label>
-              <p className="text-sm text-muted-foreground">
-                {new Date(auction.startTime).toLocaleDateString()} {new Date(auction.startTime).toLocaleTimeString()}
-              </p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">End Time</Label>
-              <p className="text-sm text-muted-foreground">
-                {new Date(auction.endTime).toLocaleDateString()} {new Date(auction.endTime).toLocaleTimeString()}
-              </p>
-            </div>
-            {auction.reservePrice && (
-              <div>
-                <Label className="text-sm font-medium">Ceiling Price</Label>
-                <p className="text-sm text-muted-foreground">₹{parseFloat(auction.reservePrice).toLocaleString()}</p>
-              </div>
-            )}
-            {auction.description && (
-              <div className="col-span-2">
-                <Label className="text-sm font-medium">Description</Label>
-                <p className="text-sm text-muted-foreground">{auction.description}</p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
