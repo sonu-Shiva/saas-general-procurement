@@ -13,6 +13,20 @@ function AuctionResults({ auction, rankings, challengePrices }: AuctionResultsPr
   console.log('AuctionResults received rankings:', rankings);
   console.log('AuctionResults received challengePrices:', challengePrices);
   
+  // Debug challenge prices in detail
+  if (challengePrices?.length > 0) {
+    console.log('CHALLENGE PRICES BREAKDOWN:');
+    challengePrices.forEach((cp: any, index: number) => {
+      console.log(`Challenge ${index + 1}:`, {
+        vendorId: cp.vendorId,
+        amount: cp.challengeAmount || cp.amount,
+        status: cp.status,
+        type: cp.type || 'challenge',
+        fullObject: cp
+      });
+    });
+  }
+  
   if (rankings?.length) {
     console.log('First ranking item:', rankings[0]);
     console.log('Vendor name from first item:', rankings[0]?.vendorCompanyName, rankings[0]?.vendorName, rankings[0]?.companyName);
