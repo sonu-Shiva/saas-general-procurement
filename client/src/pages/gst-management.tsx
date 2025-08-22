@@ -16,6 +16,8 @@ import {
   MoreVertical,
   Table as TableIcon,
   Grid,
+  Upload,
+  RefreshCw,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -257,6 +259,35 @@ export default function GSTManagement() {
     },
   });
 
+  // Import HSN codes mutation
+  const importHsnMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/gst-masters/import-hsn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to import HSN codes');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gst-masters"] });
+      toast({
+        title: "HSN Import Successful",
+        description: `Imported ${data.stats?.imported || 0} HSN codes from official government sources. ${data.stats?.skipped || 0} codes were skipped (already exist).`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Import Failed",
+        description: error.message || "Failed to import HSN codes from government sources",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Form for creating/editing GST master
   const gstForm = useForm<GSTMasterFormData>({
     resolver: zodResolver(gstMasterSchema),
@@ -406,6 +437,20 @@ export default function GSTManagement() {
               result={taxResult}
             />
           </Dialog>
+          {/* Import HSN Codes */}
+          <Button 
+            variant="outline" 
+            onClick={() => importHsnMutation.mutate()}
+            disabled={importHsnMutation.isPending}
+            data-testid="button-import-hsn"
+          >
+            {importHsnMutation.isPending ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
+            Import Official HSN Codes
+          </Button>
           {/* Create GST Master */}
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>

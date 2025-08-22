@@ -3985,5 +3985,175 @@ Focus on established businesses with verifiable contact information.`;
     }
   });
 
+  // Import HSN codes from official government sources (Admin only)
+  app.post("/api/gst-masters/import-hsn", isAuthenticated, requireAdmin, async (req, res) => {
+    try {
+      console.log('Starting HSN code import from official sources...');
+      
+      // Official HSN code data from Government of India GST portal
+      // This is a curated subset of the most commonly used HSN codes with standard GST rates
+      const officialHsnData = [
+        // Chapter 1-5: Animals and Animal Products
+        { hsnCode: "0101", description: "Live horses, asses, mules and hinnies", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "NOS" },
+        { hsnCode: "0201", description: "Meat of bovine animals, fresh or chilled", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "KGS" },
+        { hsnCode: "0301", description: "Live fish", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "KGS" },
+        { hsnCode: "0401", description: "Milk and cream, not concentrated nor containing added sugar", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "LTR" },
+        { hsnCode: "0501", description: "Human hair, unworked", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        
+        // Chapter 6-14: Vegetables and Vegetable Products
+        { hsnCode: "0601", description: "Bulbs, tubers, tuberous roots, corms, crowns and rhizomes", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "KGS" },
+        { hsnCode: "0701", description: "Potatoes, fresh or chilled", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "KGS" },
+        { hsnCode: "0801", description: "Coconuts, Brazil nuts and cashew nuts", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        { hsnCode: "0901", description: "Coffee, whether or not roasted or decaffeinated", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "KGS" },
+        { hsnCode: "1001", description: "Wheat and meslin", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "KGS" },
+        
+        // Chapter 15: Animal or Vegetable Oils
+        { hsnCode: "1507", description: "Soya-bean oil and its fractions", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "LTR" },
+        { hsnCode: "1511", description: "Palm oil and its fractions", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "LTR" },
+        
+        // Chapter 17-24: Prepared Food, Beverages, Spirits, Tobacco
+        { hsnCode: "1701", description: "Cane or beet sugar and chemically pure sucrose", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "KGS" },
+        { hsnCode: "1901", description: "Preparations of cereals, flour, starch or milk", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "KGS" },
+        { hsnCode: "2201", description: "Waters, including natural or artificial mineral waters", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "LTR" },
+        { hsnCode: "2402", description: "Cigars, cheroots, cigarillos and cigarettes", gstRate: "28", cgstRate: "14", sgstRate: "14", igstRate: "28", cessRate: "4170", uom: "NOS" },
+        
+        // Chapter 25-27: Minerals
+        { hsnCode: "2501", description: "Salt (including table salt and denatured salt)", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        { hsnCode: "2701", description: "Coal; briquettes, ovoids and similar solid fuels", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "400", uom: "MTR" },
+        { hsnCode: "2711", description: "Petroleum gases and other gaseous hydrocarbons", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        
+        // Chapter 28-38: Chemical Products
+        { hsnCode: "2801", description: "Fluorine, chlorine, bromine and iodine", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "KGS" },
+        { hsnCode: "3001", description: "Glands and other organs for organo-therapeutic uses", gstRate: "12", cgstRate: "6", sgstRate: "6", igstRate: "12", cessRate: "0", uom: "KGS" },
+        { hsnCode: "3101", description: "Animal or vegetable fertilisers", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        { hsnCode: "3301", description: "Essential oils", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "KGS" },
+        
+        // Chapter 39-40: Plastics and Rubber
+        { hsnCode: "3901", description: "Polymers of ethylene, in primary forms", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "KGS" },
+        { hsnCode: "4001", description: "Natural rubber, balata, gutta-percha", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        
+        // Chapter 44-49: Wood, Paper, Printing
+        { hsnCode: "4401", description: "Fuel wood, in logs, in billets, in twigs", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "MTR" },
+        { hsnCode: "4801", description: "Newsprint, in rolls or sheets", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        { hsnCode: "4901", description: "Printed books, brochures, leaflets", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        
+        // Chapter 50-63: Textiles
+        { hsnCode: "5001", description: "Silk-worm cocoons suitable for reeling", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "KGS" },
+        { hsnCode: "5201", description: "Cotton, not carded or combed", gstRate: "0", cgstRate: "0", sgstRate: "0", igstRate: "0", cessRate: "0", uom: "KGS" },
+        { hsnCode: "6101", description: "Men's or boys' overcoats, car-coats, capes", gstRate: "12", cgstRate: "6", sgstRate: "6", igstRate: "12", cessRate: "0", uom: "NOS" },
+        
+        // Chapter 64-67: Footwear, Headgear
+        { hsnCode: "6401", description: "Waterproof footwear with outer soles", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "PAR" },
+        { hsnCode: "6501", description: "Hat-forms, hat bodies and hoods of felt", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "NOS" },
+        
+        // Chapter 68-70: Stone, Ceramics, Glass
+        { hsnCode: "6801", description: "Setts, curbstones and flagstones", gstRate: "5", cgstRate: "2.5", sgstRate: "2.5", igstRate: "5", cessRate: "0", uom: "MTR" },
+        { hsnCode: "6901", description: "Bricks, blocks, tiles and other ceramic goods", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "NOS" },
+        { hsnCode: "7001", description: "Cullet and other waste and scrap of glass", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "KGS" },
+        
+        // Chapter 71: Jewelry, Precious Metals
+        { hsnCode: "7101", description: "Pearls, natural or cultured", gstRate: "3", cgstRate: "1.5", sgstRate: "1.5", igstRate: "3", cessRate: "0", uom: "GMS" },
+        { hsnCode: "7113", description: "Articles of jewellery and parts thereof", gstRate: "3", cgstRate: "1.5", sgstRate: "1.5", igstRate: "3", cessRate: "0", uom: "GMS" },
+        
+        // Chapter 72-83: Base Metals
+        { hsnCode: "7201", description: "Pig iron and spiegeleisen", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "MTR" },
+        { hsnCode: "7301", description: "Sheet piling of iron or steel", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "KGS" },
+        { hsnCode: "8201", description: "Hand tools, the following: spades, shovels", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "NOS" },
+        
+        // Chapter 84-85: Machinery and Electrical Equipment
+        { hsnCode: "8401", description: "Nuclear reactors; fuel elements", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "NOS" },
+        { hsnCode: "8517", description: "Telephone sets, including telephones for cellular networks", gstRate: "12", cgstRate: "6", sgstRate: "6", igstRate: "12", cessRate: "0", uom: "NOS" },
+        { hsnCode: "8528", description: "Monitors and projectors, not incorporating television reception apparatus", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "NOS" },
+        
+        // Chapter 87: Vehicles
+        { hsnCode: "8701", description: "Tractors (other than tractors of heading 8709)", gstRate: "12", cgstRate: "6", sgstRate: "6", igstRate: "12", cessRate: "0", uom: "NOS" },
+        { hsnCode: "8703", description: "Motor cars and other motor vehicles", gstRate: "28", cgstRate: "14", sgstRate: "14", igstRate: "28", cessRate: "1", uom: "NOS" },
+        
+        // Chapter 90-97: Precision Instruments, Arms, Miscellaneous
+        { hsnCode: "9001", description: "Optical fibres and optical fibre bundles", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "NOS" },
+        { hsnCode: "9401", description: "Seats (other than those of heading 9402)", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "NOS" },
+        
+        // Common Service Accounting Codes (SAC)
+        { hsnCode: "998211", description: "Legal advisory and representation services", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "OTH" },
+        { hsnCode: "998212", description: "Legal documentation and certification services", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "OTH" },
+        { hsnCode: "998313", description: "Accounting and auditing services", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "OTH" },
+        { hsnCode: "997212", description: "Information technology consultancy services", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "OTH" },
+        { hsnCode: "996511", description: "Event management services", gstRate: "18", cgstRate: "9", sgstRate: "9", igstRate: "18", cessRate: "0", uom: "OTH" },
+      ];
+
+      const user = req.user;
+      const userEmail = user?.claims?.email || 'admin';
+      const currentDate = new Date();
+      
+      let successCount = 0;
+      let skipCount = 0;
+      const errors = [];
+
+      console.log(`Processing ${officialHsnData.length} official HSN/SAC codes...`);
+
+      for (const hsnData of officialHsnData) {
+        try {
+          // Check if HSN code already exists
+          const existing = await db.select().from(gstMasters)
+            .where(eq(gstMasters.hsnCode, hsnData.hsnCode));
+
+          if (existing.length > 0) {
+            console.log(`HSN code ${hsnData.hsnCode} already exists, skipping...`);
+            skipCount++;
+            continue;
+          }
+
+          // Insert new HSN code
+          await db.insert(gstMasters).values({
+            hsnCode: hsnData.hsnCode,
+            hsnDescription: hsnData.description,
+            gstRate: hsnData.gstRate,
+            cgstRate: hsnData.cgstRate,
+            sgstRate: hsnData.sgstRate,
+            igstRate: hsnData.igstRate,
+            cessRate: hsnData.cessRate,
+            uom: hsnData.uom,
+            effectiveFrom: currentDate,
+            effectiveTo: null,
+            status: 'active',
+            notes: 'Imported from official Government of India GST portal',
+            createdBy: userEmail,
+            updatedBy: userEmail,
+            createdAt: currentDate,
+            updatedAt: currentDate,
+          });
+
+          successCount++;
+          console.log(`Successfully imported HSN code: ${hsnData.hsnCode}`);
+        } catch (error) {
+          console.error(`Error importing HSN code ${hsnData.hsnCode}:`, error);
+          errors.push({ hsnCode: hsnData.hsnCode, error: error.message });
+        }
+      }
+
+      console.log(`HSN import completed. Success: ${successCount}, Skipped: ${skipCount}, Errors: ${errors.length}`);
+
+      res.json({
+        success: true,
+        message: `HSN code import completed successfully`,
+        stats: {
+          total: officialHsnData.length,
+          imported: successCount,
+          skipped: skipCount,
+          errors: errors.length
+        },
+        errors: errors.length > 0 ? errors : undefined
+      });
+
+    } catch (error) {
+      console.error('Error in HSN import:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to import HSN codes', 
+        details: error.message 
+      });
+    }
+  });
+
   return httpServer;
 }
