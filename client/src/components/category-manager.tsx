@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -97,7 +96,6 @@ function CategoryTreeItem({
         <div className="flex-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-medium">{category.name}</span>
-            <Badge variant="secondary" className="text-xs">{category.code}</Badge>
           </div>
           
           {isVendor && (

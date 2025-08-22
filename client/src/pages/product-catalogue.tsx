@@ -471,7 +471,6 @@ export default function ProductCatalogue() {
                         <div className="space-y-4">
                           <div>
                             <h3 className="font-semibold text-lg">{selectedCategory.name}</h3>
-                            <Badge variant="secondary" className="mt-1">{selectedCategory.code}</Badge>
                           </div>
                           {selectedCategory.description && (
                             <div>
@@ -640,7 +639,7 @@ export default function ProductCatalogue() {
                       {selectedCategory && (
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">Category:</span>
-                          <Badge variant="outline">{selectedCategory.name} ({selectedCategory.code})</Badge>
+                          <Badge variant="outline">{selectedCategory.name}</Badge>
                           <Button 
                             variant="ghost" 
                             size="sm"
