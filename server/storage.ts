@@ -601,7 +601,7 @@ export class DatabaseStorage implements IStorage {
       query = query.where(and(...conditions));
     }
 
-    return await query.orderBy(asc(productCategories.name));
+    return await query.orderBy(asc(productCategories.sortOrder), asc(productCategories.name));
   }
 
   async updateProductCategory(id: string, updates: Partial<InsertProductCategory>): Promise<ProductCategory> {
@@ -618,7 +618,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProductCategoryHierarchy(): Promise<any[]> {
-    const allCategories = await this.db.select().from(productCategories).orderBy(asc(productCategories.name));
+    const allCategories = await this.db.select().from(productCategories).orderBy(asc(productCategories.sortOrder), asc(productCategories.name));
 
     const rootCategories: any[] = [];
     const categoryMap = new Map();
@@ -637,6 +637,23 @@ export class DatabaseStorage implements IStorage {
         rootCategories.push(categoryMap.get(category.id));
       }
     });
+
+    // Sort children arrays by sortOrder for proper hierarchical ordering
+    const sortChildren = (categories: any[]) => {
+      categories.sort((a, b) => {
+        if (a.sortOrder !== b.sortOrder) {
+          return a.sortOrder - b.sortOrder;
+        }
+        return a.name.localeCompare(b.name);
+      });
+      categories.forEach(category => {
+        if (category.children?.length > 0) {
+          sortChildren(category.children);
+        }
+      });
+    };
+
+    sortChildren(rootCategories);
 
     return rootCategories;
   }
