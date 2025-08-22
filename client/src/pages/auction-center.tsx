@@ -922,7 +922,7 @@ function EnhancedAuctionView({ auction }: { auction: any }) {
           <div className="text-center">
             <div className="text-lg font-bold text-orange-600">{bidStats.leadingVendor || 'N/A'}</div>
             <div className="text-sm text-gray-600">
-              {auction.status === 'live' || auction.status === 'scheduled' ? 'Current Leader' : 'Bid Winner'}
+              {auction.status === 'live' || auction.status === 'scheduled' ? 'Current Leader' : 'Lowest Bidder'}
             </div>
           </div>
         </div>
@@ -998,13 +998,16 @@ function EnhancedAuctionView({ auction }: { auction: any }) {
       <div>
         <Label className="text-sm font-medium">Participating Vendors ({bidStats.uniqueVendors})</Label>
         <div className="mt-2 space-y-2">
-          {Array.from(new Set(auctionBids.map((bid: any) => ({
-            id: bid.vendorId,
-            name: bid.vendorCompanyName || bid.vendorName,
-            email: bid.vendorEmail,
-            hasBids: true,
-            hasChallenge: challengePrices.some((cp: any) => cp.vendorId === bid.vendorId)
-          })))).map((vendor: any, index: number) => (
+          {Array.from(new Map(auctionBids.map((bid: any) => [
+            bid.vendorId,
+            {
+              id: bid.vendorId,
+              name: bid.vendorCompanyName || bid.vendorName,
+              email: bid.vendorEmail,
+              hasBids: true,
+              hasChallenge: challengePrices.some((cp: any) => cp.vendorId === bid.vendorId)
+            }
+          ])).values()).map((vendor: any, index: number) => (
             <div key={vendor.id || index} className="flex items-center justify-between p-3 border rounded bg-white">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
