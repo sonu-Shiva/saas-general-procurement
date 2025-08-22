@@ -852,16 +852,20 @@ function CreateAuctionForm({ onClose, onSuccess, boms, vendors }: any) {
 
 // Live Bidding Interface Component - Shows Results and Live Bidding
 function AuctionResultsContainer({ auction, onClose }: any) {
-  // Fetch current bids
+  // Fetch current bids with fresh data
   const { data: auctionBids = [] } = useQuery({
-    queryKey: ["/api/auctions", auction.id, "bids"],
+    queryKey: [`/api/auctions/${auction.id}/bids`],
     retry: false,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache
   });
 
-  // Fetch challenge prices
+  // Fetch challenge prices with fresh data
   const { data: challengePrices = [] } = useQuery({
-    queryKey: ["/api/auctions", auction.id, "challenge-prices"],
+    queryKey: [`/api/auctions/${auction.id}/challenge-prices`],
     retry: false,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache
   });
 
   // Calculate rankings from bids - ensure we have proper bid data

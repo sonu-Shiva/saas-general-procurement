@@ -1,0 +1,81 @@
+chunk-SXRIVT2P.js?v=0af18350:21609 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+auction-center.tsx:83 WebSocket connected for auction updates
+auction-center.tsx:869 AuctionResultsContainer processing bids: []
+auction-center.tsx:872 No valid auctionBids array: []
+auction-results-checkpoint.tsx:12 AuctionResults received auction: {id: 'c288f23b-dc17-46d2-b22e-4b3cacc4c9e5', name: 'Auction for Req_001 (PR-1755498423889-SV0QF)', description: 'IT Procurement', items: null, startTime: '2025-08-19T06:38:00.000Z', …}
+auction-results-checkpoint.tsx:13 AuctionResults received rankings: []
+auction-results-checkpoint.tsx:14 AuctionResults received challengePrices: []
+auction-center.tsx:869 AuctionResultsContainer processing bids: (16) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+auction-center.tsx:878 Processing bid: {id: 'c79be023-fd97-46b9-89a6-68ce5a74da5f', name: 'Test Auction - Data Persistence Check', description: 'Testing if auction data persists', items: null, startTime: '2025-08-25T09:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: '4a59e4a8-cba4-4eb4-b204-70623cfac9d5', name: 'Vehicle Fleet Auction', description: 'Auction for company vehicle fleet including cars and trucks', items: null, startTime: '2025-09-05T11:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: '2ed5d2c4-09b3-4b6f-8db3-bf947a786842', name: 'Medical Equipment Auction', description: 'Auction for medical equipment and devices', items: null, startTime: '2025-09-02T14:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: '774e0d5a-8c57-43fa-b152-468c4d239856', name: 'Construction Materials Sealed Bid', description: 'Sealed bid auction for construction materials including cement, steel, and lumber', items: null, startTime: '2025-08-15T08:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: '94e14b8f-e250-4609-b7e5-29f1567ab78d', name: 'IT Equipment Reverse Auction', description: 'Reverse auction for laptop procurement - vendors bid down from starting price', items: null, startTime: '2025-08-28T10:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: 'e49ae0a4-1cbf-4440-bf16-fda13fdbc239', name: 'Office Furniture Auction', description: 'Competitive bidding for office furniture including desks and chairs', items: null, startTime: '2025-08-25T09:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: 'be034e1c-b14c-4fb1-b875-bc473730cc88', name: 'Medical Equipment Auction', description: 'Auction for medical equipment and devices', items: null, startTime: '2025-09-02T14:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: 'ff0e323e-d184-4b1d-b652-348b5b053588', name: 'Construction Materials Sealed Bid', description: 'Sealed bid auction for construction materials including cement, steel, and lumber', items: null, startTime: '2025-08-15T08:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: 'be84eb6a-8d5d-4cf1-9c54-91ebaed8729e', name: 'IT Equipment Reverse Auction', description: 'Reverse auction for laptop procurement - vendors bid down from starting price', items: null, startTime: '2025-08-28T10:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: '7822f1af-896b-4d95-bcd5-76ed848b6494', name: 'Office Furniture Auction', description: 'Competitive bidding for office furniture', items: null, startTime: '2025-08-25T09:00:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: 'a125fc38-005d-4065-9080-00d6023dc5d5', name: 'Auction for Req_002 (PR-1755610396618-MUPO9)', description: 'Test notes', items: null, startTime: '2025-08-19T18:02:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: 'c288f23b-dc17-46d2-b22e-4b3cacc4c9e5', name: 'Auction for Req_001 (PR-1755498423889-SV0QF)', description: 'IT Procurement', items: null, startTime: '2025-08-19T06:38:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: '5c43cae7-3e90-415b-9fa4-55f56a67a759', name: 'Test Auction 8', description: 'Test Description', items: null, startTime: '2025-08-12T06:46:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: '47a3cfdf-29ae-43a8-9cc5-0b002218d9e0', name: 'Test Auction_008', description: 'Test Auction', items: null, startTime: '2025-08-12T04:34:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: 'f7690937-d538-49ea-be5a-3444f7af4b1f', name: 'Test Auction_301', description: 'This is a test auction for testing multiple vendors bidding', items: null, startTime: '2025-08-11T12:14:00.000Z', …}
+auction-center.tsx:878 Processing bid: {id: 'a3ac3037-cfe8-48a7-aa9a-43e004d73302', name: 'Industrial Auction', description: 'Test Auction', items: null, startTime: '2025-08-06T07:17:00.000Z', …}
+auction-center.tsx:888 Final rankings calculated: [{…}]
+auction-results-checkpoint.tsx:12 AuctionResults received auction: {id: 'c288f23b-dc17-46d2-b22e-4b3cacc4c9e5', name: 'Auction for Req_001 (PR-1755498423889-SV0QF)', description: 'IT Procurement', items: null, startTime: '2025-08-19T06:38:00.000Z', …}
+auction-results-checkpoint.tsx:13 AuctionResults received rankings: [{…}]
+auction-results-checkpoint.tsx:14 AuctionResults received challengePrices: []
+auction-results-checkpoint.tsx:17 First ranking item: {id: 'c79be023-fd97-46b9-89a6-68ce5a74da5f', name: 'Test Auction - Data Persistence Check', description: 'Testing if auction data persists', items: null, startTime: '2025-08-25T09:00:00.000Z', …}
+auction-results-checkpoint.tsx:18 Vendor name from first item: undefined undefined undefined
+queryClient.ts:58 Fetch finished loading: GET "https://b66231d0-1d21-4c13-a6b7-b97aa4f459d3-00-e3m5sn2rrnzv.kirk.replit.dev/api/auctions?0=c&1=2&2=8&3=8&4=f&5=2&6=3&7=b&8=-&9=d&10=c&11=1&12=7&13=-&14=4&15=6&16=d&17=2&18=-&19=b&20=2&21=2&22=e&23=-&24=4&25=b&26=3&27=c&28=a&29=c&30=c&31=4&32=c&33=9&34=e&35=5".
+queryFn @ queryClient.ts:58
+fetchFn @ @tanstack_react-query.js?v=0af18350:840
+run @ @tanstack_react-query.js?v=0af18350:494
+start @ @tanstack_react-query.js?v=0af18350:536
+fetch @ @tanstack_react-query.js?v=0af18350:926
+executeFetch_fn @ @tanstack_react-query.js?v=0af18350:2211
+onSubscribe @ @tanstack_react-query.js?v=0af18350:1898
+subscribe @ @tanstack_react-query.js?v=0af18350:24
+(anonymous) @ @tanstack_react-query.js?v=0af18350:3022
+subscribeToStore @ chunk-SXRIVT2P.js?v=0af18350:12032
+commitHookEffectListMount @ chunk-SXRIVT2P.js?v=0af18350:16963
+commitPassiveMountOnFiber @ chunk-SXRIVT2P.js?v=0af18350:18206
+commitPassiveMountEffects_complete @ chunk-SXRIVT2P.js?v=0af18350:18179
+commitPassiveMountEffects_begin @ chunk-SXRIVT2P.js?v=0af18350:18169
+commitPassiveMountEffects @ chunk-SXRIVT2P.js?v=0af18350:18159
+flushPassiveEffectsImpl @ chunk-SXRIVT2P.js?v=0af18350:19543
+flushPassiveEffects @ chunk-SXRIVT2P.js?v=0af18350:19500
+commitRootImpl @ chunk-SXRIVT2P.js?v=0af18350:19469
+commitRoot @ chunk-SXRIVT2P.js?v=0af18350:19330
+performSyncWorkOnRoot @ chunk-SXRIVT2P.js?v=0af18350:18948
+flushSyncCallbacks @ chunk-SXRIVT2P.js?v=0af18350:9166
+(anonymous) @ chunk-SXRIVT2P.js?v=0af18350:18677
+queryClient.ts:58 Fetch finished loading: GET "https://b66231d0-1d21-4c13-a6b7-b97aa4f459d3-00-e3m5sn2rrnzv.kirk.replit.dev/api/auctions?0=c&1=2&2=8&3=8&4=f&5=2&6=3&7=b&8=-&9=d&10=c&11=1&12=7&13=-&14=4&15=6&16=d&17=2&18=-&19=b&20=2&21=2&22=e&23=-&24=4&25=b&26=3&27=c&28=a&29=c&30=c&31=4&32=c&33=9&34=e&35=5".
+queryFn @ queryClient.ts:58
+fetchFn @ @tanstack_react-query.js?v=0af18350:840
+run @ @tanstack_react-query.js?v=0af18350:494
+start @ @tanstack_react-query.js?v=0af18350:536
+fetch @ @tanstack_react-query.js?v=0af18350:926
+executeFetch_fn @ @tanstack_react-query.js?v=0af18350:2211
+onSubscribe @ @tanstack_react-query.js?v=0af18350:1898
+subscribe @ @tanstack_react-query.js?v=0af18350:24
+(anonymous) @ @tanstack_react-query.js?v=0af18350:3022
+subscribeToStore @ chunk-SXRIVT2P.js?v=0af18350:12032
+commitHookEffectListMount @ chunk-SXRIVT2P.js?v=0af18350:16963
+commitPassiveMountOnFiber @ chunk-SXRIVT2P.js?v=0af18350:18206
+commitPassiveMountEffects_complete @ chunk-SXRIVT2P.js?v=0af18350:18179
+commitPassiveMountEffects_begin @ chunk-SXRIVT2P.js?v=0af18350:18169
+commitPassiveMountEffects @ chunk-SXRIVT2P.js?v=0af18350:18159
+flushPassiveEffectsImpl @ chunk-SXRIVT2P.js?v=0af18350:19543
+flushPassiveEffects @ chunk-SXRIVT2P.js?v=0af18350:19500
+commitRootImpl @ chunk-SXRIVT2P.js?v=0af18350:19469
+commitRoot @ chunk-SXRIVT2P.js?v=0af18350:19330
+performSyncWorkOnRoot @ chunk-SXRIVT2P.js?v=0af18350:18948
+flushSyncCallbacks @ chunk-SXRIVT2P.js?v=0af18350:9166
+(anonymous) @ chunk-SXRIVT2P.js?v=0af18350:18677
+auction-results-checkpoint.tsx:12 AuctionResults received auction: {id: 'c288f23b-dc17-46d2-b22e-4b3cacc4c9e5', name: 'Auction for Req_001 (PR-1755498423889-SV0QF)', description: 'IT Procurement', items: null, startTime: '2025-08-19T06:38:00.000Z', …}
+auction-results-checkpoint.tsx:13 AuctionResults received rankings: [{…}]
+auction-results-checkpoint.tsx:14 AuctionResults received challengePrices: (16) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+auction-results-checkpoint.tsx:17 First ranking item: {id: 'c79be023-fd97-46b9-89a6-68ce5a74da5f', name: 'Test Auction - Data Persistence Check', description: 'Testing if auction data persists', items: null, startTime: '2025-08-25T09:00:00.000Z', …}
+auction-results-checkpoint.tsx:18 Vendor name from first item: undefined undefined undefined
